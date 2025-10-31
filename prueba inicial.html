@@ -14,6 +14,8 @@
             --color-oliva-claro: #bec092;
             --color-oliva-oscuro: #272b00;
             --color-oliva-medio: #5a6133;
+            --color-verde: #4CAF50;
+            --color-rojo: #f44336;
         }
 
         body {
@@ -245,7 +247,7 @@
             background-color: #f7f7f7;
         }
 
-        .submit-button {
+        .submit-button, .next-button {
             background-color: var(--color-oliva-oscuro);
             color: var(--color-crema);
             border: none;
@@ -255,12 +257,77 @@
             border-radius: 50px;
             cursor: pointer;
             transition: all 0.3s ease;
+            margin: 0 10px;
         }
 
-        .submit-button:hover {
+        .submit-button:hover, .next-button:hover {
             background-color: var(--color-oliva-medio);
             transform: translateY(-3px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .feedback-container {
+            padding: 0 40px 20px 40px;
+            display: none;
+        }
+
+        .feedback-message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .correct-answer {
+            background-color: rgba(76, 175, 80, 0.1);
+            border-left: 5px solid var(--color-verde);
+            color: var(--color-verde);
+        }
+
+        .incorrect-answer {
+            background-color: rgba(244, 67, 54, 0.1);
+            border-left: 5px solid var(--color-rojo);
+            color: var(--color-rojo);
+        }
+
+        .explanation-container {
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .explanation-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--color-oliva-oscuro);
+        }
+
+        .tip-container {
+            background-color: #f0f7ff;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .tip-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--color-oliva-oscuro);
+        }
+
+        .disabled-option {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .correct-option {
+            background-color: rgba(76, 175, 80, 0.2);
+            border-color: var(--color-verde);
+        }
+
+        .incorrect-option {
+            background-color: rgba(244, 67, 54, 0.2);
+            border-color: var(--color-rojo);
         }
     </style>
 </head>
@@ -290,8 +357,21 @@
 
         <div id="options-container" class="options-container"></div>
 
+        <div id="feedback-container" class="feedback-container">
+            <div id="feedback-message" class="feedback-message"></div>
+            <div id="explanation-container" class="explanation-container">
+                <div class="explanation-title">Explicación:</div>
+                <div id="explanation-text"></div>
+            </div>
+            <div id="tip-container" class="tip-container">
+                <div class="tip-title">💡 Truco:</div>
+                <div id="tip-text"></div>
+            </div>
+        </div>
+
         <div class="submit-container">
-            <button id="submit-btn" class="submit-button">Enviar Respuestas</button>
+            <button id="submit-btn" class="submit-button">Enviar Respuesta</button>
+            <button id="next-btn" class="next-button" style="display: none;">Siguiente Pregunta</button>
         </div>
     </main>
 
@@ -300,10 +380,17 @@
             const welcomeOverlay = document.getElementById('welcome-overlay');
             const quizContainer = document.getElementById('quiz-container');
             const startQuizBtn = document.getElementById('start-quiz-btn');
+            const submitBtn = document.getElementById('submit-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const feedbackContainer = document.getElementById('feedback-container');
+            const feedbackMessage = document.getElementById('feedback-message');
+            const explanationText = document.getElementById('explanation-text');
+            const tipText = document.getElementById('tip-text');
 
             let questions = [];
             let currentQuestionIndex = 0;
             let userAnswers = [];
+            let answeredQuestions = [];
 
             welcomeOverlay.classList.remove('hidden');
 
@@ -352,6 +439,9 @@
 
                 questionTextEl.innerHTML = '';
                 optionsContainer.innerHTML = '';
+                feedbackContainer.style.display = 'none';
+                submitBtn.style.display = 'inline-block';
+                nextBtn.style.display = 'none';
 
                 const questionTextSpan = document.createElement('span');
                 questionTextSpan.innerText = question.pregunta;
@@ -367,6 +457,7 @@
                 question.opciones.forEach((option, index) => {
                     const label = document.createElement('label');
                     label.className = 'option-label';
+                    label.id = `option-${index}`;
                     const input = document.createElement('input');
                     input.type = 'radio';
                     input.name = 'answer';
@@ -381,13 +472,57 @@
                 updateProgress();
             }
 
-            document.getElementById('submit-btn').addEventListener('click', () => {
+            submitBtn.addEventListener('click', () => {
                 const selected = document.querySelector('input[name="answer"]:checked');
                 if (!selected) return alert("Por favor, selecciona una respuesta.");
-                userAnswers[currentQuestionIndex] = parseInt(selected.value);
+                
+                const selectedIndex = parseInt(selected.value);
+                userAnswers[currentQuestionIndex] = selectedIndex;
+                
+                // Mostrar retroalimentación
+                showFeedback(selectedIndex);
+                
+                // Deshabilitar opciones
+                const options = document.querySelectorAll('.option-label');
+                options.forEach(option => {
+                    option.classList.add('disabled-option');
+                });
+                
+                // Marcar respuesta correcta e incorrecta
+                const correctIndex = questions[currentQuestionIndex].respuestaCorrecta;
+                document.getElementById(`option-${correctIndex}`).classList.add('correct-option');
+                
+                if (selectedIndex !== correctIndex) {
+                    document.getElementById(`option-${selectedIndex}`).classList.add('incorrect-option');
+                }
+                
+                // Cambiar botones
+                submitBtn.style.display = 'none';
+                nextBtn.style.display = 'inline-block';
+            });
+
+            nextBtn.addEventListener('click', () => {
                 currentQuestionIndex++;
                 displayQuestion();
             });
+
+            function showFeedback(selectedIndex) {
+                const question = questions[currentQuestionIndex];
+                const isCorrect = selectedIndex === question.respuestaCorrecta;
+                
+                feedbackContainer.style.display = 'block';
+                
+                if (isCorrect) {
+                    feedbackMessage.className = 'feedback-message correct-answer';
+                    feedbackMessage.textContent = '¡Respuesta correcta! ¡Bien hecho!';
+                } else {
+                    feedbackMessage.className = 'feedback-message incorrect-answer';
+                    feedbackMessage.textContent = 'Respuesta incorrecta. La respuesta correcta está marcada en verde.';
+                }
+                
+                explanationText.textContent = question.explicacion;
+                tipText.textContent = question.truco;
+            }
 
             function finishQuiz() {
                 const correct = userAnswers.filter((a, i) => a === questions[i].respuestaCorrecta).length;
@@ -398,21 +533,6 @@
                     total: questions.length
                 };
                 localStorage.setItem('resultadoDiagnostico', JSON.stringify(result));
-
-                let resumen = `Cuestionario completado. Tuviste ${correct} respuestas correctas de ${questions.length}.\n\n`;
-                resumen += "--- Repaso de Preguntas Incorrectas ---\n";
-
-                questions.forEach((question, index) => {
-                    if (userAnswers[index] !== question.respuestaCorrecta) {
-                        resumen += `\nPregunta ID: ${question.id}\n`;
-                        resumen += `Tu respuesta: ${question.opciones[userAnswers[index]]}\n`;
-                        resumen += `Respuesta correcta: ${question.opciones[question.respuestaCorrecta]}\n`;
-                        resumen += `Explicación: ${question.explicacion}\n`;
-                        resumen += `💡 Truco: ${question.truco}\n`;
-                    }
-                });
-                
-                alert(resumen);
 
                 window.location.href = "resultados.html";
             }
