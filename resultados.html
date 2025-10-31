@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Resultados - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-oscuro: #272b00;
+            --color-oliva-medio: #5a6133;
+            --color-bien: #2ecc71;
+            --color-mal: #e74c3c;
+            --color-alerta: #f39c12;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--color-crema);
+            color: var(--color-oliva-oscuro);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .results-container {
+            display: flex;
+            width: 100%;
+            max-width: 1400px;
+            gap: 30px;
+        }
+
+        .help-sidebar {
+            flex: 0 0 250px;
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            align-self: stretch;
+            height: fit-content;
+        }
+
+        .help-sidebar h3 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.5rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .help-button {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: var(--color-oliva-claro);
+            color: var(--color-oliva-oscuro);
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .help-button:hover {
+            background-color: var(--color-oliva-medio);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .main-content {
+            flex-grow: 1;
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .result-header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid var(--color-oliva-claro);
+            padding-bottom: 20px;
+        }
+
+        .result-header h1 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 2.5rem;
+            color: var(--color-oliva-oscuro);
+            margin: 0 0 10px 0;
+        }
+
+        .result-header p {
+            color: var(--color-oliva-medio);
+            font-size: 1.1rem;
+            margin: 0;
+        }
+
+        .global-score-display {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .score-circle {
+            font-size: 4rem;
+            font-weight: 700;
+            color: var(--color-oliva-oscuro);
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+
+        .score-label {
+            font-size: 1.2rem;
+            color: var(--color-oliva-medio);
+        }
+
+        .score-message {
+            font-size: 1.1rem;
+            font-weight: bold;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .score-excelente { background-color: #d4edda; color: #155724; }
+        .score-bueno { background-color: #cce5ff; color: #004085; }
+        .score-regular { background-color: #fff3cd; color: #856404; }
+        .score-bajo { background-color: #f8d7da; color: #721c24; }
+
+        .charts-section h2 {
+            text-align: center;
+            font-size: 1.8rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 30px;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .chart-card {
+            background-color: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .chart-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .chart-card h3 {
+            font-size: 1.2rem;
+            color: var(--color-oliva-medio);
+            margin-bottom: 15px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 200px;
+            margin-bottom: 15px;
+        }
+
+        .weak-topics-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        .weak-topics-list li {
+            background-color: var(--color-crema);
+            border-left: 4px solid var(--color-alerta);
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            text-align: left;
+        }
+
+        .help-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .help-modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+        }
+
+        .help-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .close-modal-btn {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .close-modal-btn:hover {
+            color: var(--color-oliva-oscuro);
+        }
+
+        .back-button-container {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .back-button {
+            display: inline-block;
+            padding: 15px 30px;
+            background-color: var(--color-oliva-oscuro);
+            color: var(--color-crema);
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .back-button:hover {
+            background-color: var(--color-oliva-medio);
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 992px) {
+            .results-container { flex-direction: column; }
+            .help-sidebar { width: 100%; order: 2; }
+            .main-content { order: 1; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="results-container">
+        <aside class="help-sidebar">
+            <h3>Centro de ayuda</h3>
+            <button class="help-button" onclick="openModal('interpretacion')">¿Cómo interpretar mi resultado?</button>
+            <button class="help-button" onclick="openModal('analisis')">Análisis de mi resultado</button>
+            <button class="help-button" onclick="openModal('bueno')">¿Mi resultado es bueno?</button>
+        </aside>
+
+        <main class="main-content">
+            <div class="result-header">
+                <h1>Resultados del Diagnóstico</h1>
+                <p>Tu desempeño general en la prueba</p>
+            </div>
+
+            <div class="global-score-display">
+                <div class="score-circle" id="puntajeGlobal">0 / 300</div>
+                <div class="score-label">Puntaje Global</div>
+                <div class="score-message score-bajo" id="mensajeDesempeno">Aún no has realizado la prueba</div>
+            </div>
+
+            <section class="charts-section">
+                <h2>Desempeño por Módulo</h2>
+                <div class="charts-grid" id="modulosContainer"></div>
+            </section>
+
+            <div class="back-button-container">
+                <a href="../html/prueba inicial.html" class="back-button">Volver a la prueba</a>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL DE AYUDA -->
+    <div class="help-modal" id="helpModal">
+        <div class="help-modal-content">
+            <div class="help-modal-header">
+                <h3 id="modalTitle"></h3>
+                <button class="close-modal-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="help-modal-body" id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const resultado = JSON.parse(localStorage.getItem("resultadoDiagnostico")) || null;
+            const puntajeGlobalEl = document.getElementById("puntajeGlobal");
+            const mensajeDesempenoEl = document.getElementById("mensajeDesempeno");
+            const modulosContainer = document.getElementById("modulosContainer");
+
+            let puntajeGlobal = 0;
+
+            if (resultado && resultado.puntajeTotal) {
+                puntajeGlobal = resultado.puntajeTotal;
+                puntajeGlobalEl.textContent = `${puntajeGlobal} / 300`;
+            } else {
+                puntajeGlobalEl.textContent = `0 / 300`;
+                mensajeDesempenoEl.textContent = "Aún no has realizado la prueba";
+                return;
+            }
+
+            if (puntajeGlobal >= 250) {
+                mensajeDesempenoEl.textContent = "¡Excelente desempeño!";
+                mensajeDesempenoEl.className = "score-message score-excelente";
+            } else if (puntajeGlobal >= 200) {
+                mensajeDesempenoEl.textContent = "Buen desempeño, pero puedes mejorar.";
+                mensajeDesempenoEl.className = "score-message score-bueno";
+            } else if (puntajeGlobal >= 150) {
+                mensajeDesempenoEl.textContent = "Desempeño regular, repasa algunos temas.";
+                mensajeDesempenoEl.className = "score-message score-regular";
+            } else {
+                mensajeDesempenoEl.textContent = "Desempeño bajo, sigue practicando.";
+                mensajeDesempenoEl.className = "score-message score-bajo";
+            }
+
+            // Crear gráficos por módulo si existen
+            if (resultado.modulos) {
+                Object.keys(resultado.modulos).forEach(modulo => {
+                    const datos = resultado.modulos[modulo];
+                    const card = document.createElement("div");
+                    card.className = "chart-card";
+                    card.innerHTML = `
+                        <h3>${modulo}</h3>
+                        <div class="chart-container">
+                            <canvas id="chart-${modulo}"></canvas>
+                        </div>
+                        <ul class="weak-topics-list">
+                            ${datos.temasFallados.map(t => `<li>${t}</li>`).join("")}
+                        </ul>
+                    `;
+                    modulosContainer.appendChild(card);
+
+                    new Chart(document.getElementById(`chart-${modulo}`), {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Correctas', 'Incorrectas'],
+                            datasets: [{
+                                data: [datos.puntaje, 300 - datos.puntaje],
+                                backgroundColor: ['#bec092', '#fdfbf5'],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: { cutout: '70%', plugins: { legend: { display: false } } }
+                    });
+                });
+            }
+        });
+
+        // Funciones del modal de ayuda
+        function openModal(type) {
+            const modal = document.getElementById("helpModal");
+            const title = document.getElementById("modalTitle");
+            const body = document.getElementById("modalBody");
+            modal.style.display = "flex";
+
+            if (type === "interpretacion") {
+                title.textContent = "¿Cómo interpretar mi resultado?";
+                body.innerHTML = `
+                    <p>Tu puntaje total refleja tu desempeño global sobre 300 puntos. Los gráficos circulares te muestran tu rendimiento por módulo. Los temas debajo indican en qué áreas necesitas reforzarte.</p>
+                `;
+            } else if (type === "analisis") {
+                title.textContent = "Análisis de mi resultado";
+                body.innerHTML = `
+                    <p>El sistema identifica tus fortalezas y debilidades en función de los errores cometidos. Revisa los temas fallados y prioriza el estudio de esas áreas antes de continuar con los siguientes módulos.</p>
+                `;
+            } else if (type === "bueno") {
+                title.textContent = "¿Mi resultado es bueno?";
+                body.innerHTML = `
+                    <p>Un resultado superior a 200 indica un buen desempeño general. Si tu puntaje supera los 250, tu nivel es excelente. Si está por debajo de 150, conviene repasar los temas más fallados.</p>
+                `;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById("helpModal").style.display = "none";
+        }
+    </script>
+</body>
+</html>
