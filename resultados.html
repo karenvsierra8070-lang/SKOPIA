@@ -303,7 +303,8 @@
             </section>
 
             <div class="back-button-container">
-                <a href="../html/prueba inicial.html" class="back-button">Volver a la prueba</a>
+                <!-- CORRECCIÓN FINAL: Botón para continuar al siguiente paso de la ruta -->
+                <a href="../skopia.html" class="back-button">Continuar con mi Ruta</a>
             </div>
         </main>
     </div>
@@ -328,59 +329,62 @@
 
             let puntajeGlobal = 0;
 
-            if (resultado && resultado.puntajeTotal) {
-                puntajeGlobal = resultado.puntajeTotal;
+            if (resultado && resultado.score !== undefined) {
+                puntajeGlobal = resultado.score;
                 puntajeGlobalEl.textContent = `${puntajeGlobal} / 300`;
+                
+                // Actualizar mensaje de desempeño
+                if (puntajeGlobal >= 250) {
+                    mensajeDesempenoEl.textContent = "¡Excelente desempeño!";
+                    mensajeDesempenoEl.className = "score-message score-excelente";
+                } else if (puntajeGlobal >= 200) {
+                    mensajeDesempenoEl.textContent = "Buen desempeño, pero puedes mejorar.";
+                    mensajeDesempenoEl.className = "score-message score-bueno";
+                } else if (puntajeGlobal >= 150) {
+                    mensajeDesempenoEl.textContent = "Desempeño regular, repasa algunos temas.";
+                    mensajeDesempenoEl.className = "score-message score-regular";
+                } else {
+                    mensajeDesempenoEl.textContent = "Desempeño bajo, sigue practicando.";
+                    mensajeDesempenoEl.className = "score-message score-bajo";
+                }
+
+                // Mostrar estadísticas generales
+                const statsCard = document.createElement("div");
+                statsCard.className = "chart-card";
+                statsCard.innerHTML = `
+                    <h3>Estadísticas Generales</h3>
+                    <div class="chart-container">
+                        <canvas id="chart-general"></canvas>
+                    </div>
+                    <p>Respuestas correctas: ${resultado.correctAnswers} de ${resultado.total}</p>
+                `;
+                modulosContainer.appendChild(statsCard);
+
+                // Crear gráfico general
+                new Chart(document.getElementById("chart-general"), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Correctas', 'Incorrectas'],
+                        datasets: [{
+                            data: [resultado.correctAnswers, resultado.total - resultado.correctAnswers],
+                            backgroundColor: ['#bec092', '#fdfbf5'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: { 
+                        cutout: '70%', 
+                        plugins: { 
+                            legend: { 
+                                display: true,
+                                position: 'bottom'
+                            } 
+                        } 
+                    }
+                });
             } else {
                 puntajeGlobalEl.textContent = `0 / 300`;
                 mensajeDesempenoEl.textContent = "Aún no has realizado la prueba";
                 return;
-            }
-
-            if (puntajeGlobal >= 250) {
-                mensajeDesempenoEl.textContent = "¡Excelente desempeño!";
-                mensajeDesempenoEl.className = "score-message score-excelente";
-            } else if (puntajeGlobal >= 200) {
-                mensajeDesempenoEl.textContent = "Buen desempeño, pero puedes mejorar.";
-                mensajeDesempenoEl.className = "score-message score-bueno";
-            } else if (puntajeGlobal >= 150) {
-                mensajeDesempenoEl.textContent = "Desempeño regular, repasa algunos temas.";
-                mensajeDesempenoEl.className = "score-message score-regular";
-            } else {
-                mensajeDesempenoEl.textContent = "Desempeño bajo, sigue practicando.";
-                mensajeDesempenoEl.className = "score-message score-bajo";
-            }
-
-            // Crear gráficos por módulo si existen
-            if (resultado.modulos) {
-                Object.keys(resultado.modulos).forEach(modulo => {
-                    const datos = resultado.modulos[modulo];
-                    const card = document.createElement("div");
-                    card.className = "chart-card";
-                    card.innerHTML = `
-                        <h3>${modulo}</h3>
-                        <div class="chart-container">
-                            <canvas id="chart-${modulo}"></canvas>
-                        </div>
-                        <ul class="weak-topics-list">
-                            ${datos.temasFallados.map(t => `<li>${t}</li>`).join("")}
-                        </ul>
-                    `;
-                    modulosContainer.appendChild(card);
-
-                    new Chart(document.getElementById(`chart-${modulo}`), {
-                        type: 'doughnut',
-                        data: {
-                            labels: ['Correctas', 'Incorrectas'],
-                            datasets: [{
-                                data: [datos.puntaje, 300 - datos.puntaje],
-                                backgroundColor: ['#bec092', '#fdfbf5'],
-                                borderWidth: 1
-                            }]
-                        },
-                        options: { cutout: '70%', plugins: { legend: { display: false } } }
-                    });
-                });
             }
         });
 
@@ -394,12 +398,12 @@
             if (type === "interpretacion") {
                 title.textContent = "¿Cómo interpretar mi resultado?";
                 body.innerHTML = `
-                    <p>Tu puntaje total refleja tu desempeño global sobre 300 puntos. Los gráficos circulares te muestran tu rendimiento por módulo. Los temas debajo indican en qué áreas necesitas reforzarte.</p>
+                    <p>Tu puntaje total refleja tu desempeño global sobre 300 puntos. Los gráficos circulares te muestran tu rendimiento general. Cada respuesta correcta vale 30 puntos.</p>
                 `;
             } else if (type === "analisis") {
                 title.textContent = "Análisis de mi resultado";
                 body.innerHTML = `
-                    <p>El sistema identifica tus fortalezas y debilidades en función de los errores cometidos. Revisa los temas fallados y prioriza el estudio de esas áreas antes de continuar con los siguientes módulos.</p>
+                    <p>El sistema identifica tus fortalezas y debilidades en función de los errores cometidos. Revisa las estadísticas y prioriza el estudio de las áreas donde tuviste más dificultades.</p>
                 `;
             } else if (type === "bueno") {
                 title.textContent = "¿Mi resultado es bueno?";
