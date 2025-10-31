@@ -181,23 +181,12 @@
             margin-bottom: 15px;
         }
 
-        .weak-topics-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            text-align: left;
+        .chart-card p {
             font-size: 0.9rem;
+            color: var(--color-oliva-oscuro);
+            margin: 0;
         }
-
-        .weak-topics-list li {
-            background-color: var(--color-crema);
-            border-left: 4px solid var(--color-alerta);
-            padding: 8px 12px;
-            margin-bottom: 8px;
-            border-radius: 4px;
-            text-align: left;
-        }
-
+        
         .help-modal {
             display: none;
             position: fixed;
@@ -299,11 +288,12 @@
 
             <section class="charts-section">
                 <h2>Desempeño por Módulo</h2>
-                <div class="charts-grid" id="modulosContainer"></div>
+                <div class="charts-grid" id="modulosContainer">
+                    <!-- Las tarjetas de gráficos se insertarán aquí dinámicamente -->
+                </div>
             </section>
 
             <div class="back-button-container">
-                <!-- CORRECCIÓN FINAL: Botón para continuar al siguiente paso de la ruta -->
                 <a href="../skopia.html" class="back-button">Continuar con mi Ruta</a>
             </div>
         </main>
@@ -348,43 +338,58 @@
                     mensajeDesempenoEl.className = "score-message score-bajo";
                 }
 
-                // Mostrar estadísticas generales
-                const statsCard = document.createElement("div");
-                statsCard.className = "chart-card";
-                statsCard.innerHTML = `
-                    <h3>Estadísticas Generales</h3>
-                    <div class="chart-container">
-                        <canvas id="chart-general"></canvas>
-                    </div>
-                    <p>Respuestas correctas: ${resultado.correctAnswers} de ${resultado.total}</p>
-                `;
-                modulosContainer.appendChild(statsCard);
+                // --- NUEVA LÓGICA PARA MOSTRAR GRÁFICOS POR MÓDULO ---
+                if (resultado.modulos && resultado.modulos.length > 0) {
+                    const tagNameMap = {
+                        'LC': 'Lectura Crítica',
+                        'RC': 'Razonamiento Cuantitativo',
+                        'CC': 'Competencias Ciudadanas',
+                        'I': 'Inglés'
+                    };
 
-                // Crear gráfico general
-                new Chart(document.getElementById("chart-general"), {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Correctas', 'Incorrectas'],
-                        datasets: [{
-                            data: [resultado.correctAnswers, resultado.total - resultado.correctAnswers],
-                            backgroundColor: ['#bec092', '#fdfbf5'],
-                            borderWidth: 1
-                        }]
-                    },
-                    options: { 
-                        cutout: '70%', 
-                        plugins: { 
-                            legend: { 
-                                display: true,
-                                position: 'bottom'
-                            } 
-                        } 
-                    }
-                });
+                    resultado.modulos.forEach(modulo => {
+                        const card = document.createElement("div");
+                        card.className = "chart-card";
+                        const chartId = `chart-${modulo.tag}`;
+                        card.innerHTML = `
+                            <h3>${tagNameMap[modulo.tag] || modulo.tag}</h3>
+                            <div class="chart-container">
+                                <canvas id="${chartId}"></canvas>
+                            </div>
+                            <p>Puntaje: <strong>${modulo.score}</strong> / 300</p>
+                            <p>Respuestas correctas: ${modulo.correct} de ${modulo.totalInQuiz}</p>
+                        `;
+                        modulosContainer.appendChild(card);
+
+                        // Crear gráfico para este módulo
+                        new Chart(document.getElementById(chartId), {
+                            type: 'doughnut',
+                            data: {
+                                labels: ['Correctas', 'Incorrectas'],
+                                datasets: [{
+                                    data: [modulo.correct, modulo.totalInQuiz - modulo.correct],
+                                    backgroundColor: ['#bec092', '#fdfbf5'],
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: { 
+                                cutout: '70%', 
+                                plugins: { 
+                                    legend: { 
+                                        display: true,
+                                        position: 'bottom'
+                                    } 
+                                } 
+                            }
+                        });
+                    });
+                } else {
+                    modulosContainer.innerHTML = '<p>No se encontraron resultados detallados por módulo.</p>';
+                }
+
             } else {
                 puntajeGlobalEl.textContent = `0 / 300`;
                 mensajeDesempenoEl.textContent = "Aún no has realizado la prueba";
-                return;
             }
         });
 
@@ -398,17 +403,17 @@
             if (type === "interpretacion") {
                 title.textContent = "¿Cómo interpretar mi resultado?";
                 body.innerHTML = `
-                    <p>Tu puntaje total refleja tu desempeño global sobre 300 puntos. Los gráficos circulares te muestran tu rendimiento general. Cada respuesta correcta vale 30 puntos.</p>
+                    <p>Tu puntaje global es un promedio de tu desempeño. Los gráficos por módulo te muestran tu rendimiento específico en cada área, sobre una base de 300 puntos. Esto te ayuda a identificar tus fortalezas y debilidades.</p>
                 `;
             } else if (type === "analisis") {
                 title.textContent = "Análisis de mi resultado";
                 body.innerHTML = `
-                    <p>El sistema identifica tus fortalezas y debilidades en función de los errores cometidos. Revisa las estadísticas y prioriza el estudio de las áreas donde tuviste más dificultades.</p>
+                    <p>El sistema identifica tus fortalezas y debilidades en función de los errores cometidos. Revisa los módulos con menor puntaje y prioriza el estudio de esas áreas.</p>
                 `;
             } else if (type === "bueno") {
                 title.textContent = "¿Mi resultado es bueno?";
                 body.innerHTML = `
-                    <p>Un resultado superior a 200 indica un buen desempeño general. Si tu puntaje supera los 250, tu nivel es excelente. Si está por debajo de 150, conviene repasar los temas más fallados.</p>
+                    <p>Un puntaje superior a 200 en un módulo indica un buen desempeño. Si superas los 250, tu nivel es excelente. Si está por debajo de 150, conviene repasar ese tema.</p>
                 `;
             }
         }
