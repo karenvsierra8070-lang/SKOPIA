@@ -331,6 +331,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <div id="welcome-overlay" class="welcome-overlay">
@@ -388,9 +389,9 @@
             const tipText = document.getElementById('tip-text');
 
             let questions = [];
+            let allDiagnosticQuestions = []; // Para calcular el total por tag
             let currentQuestionIndex = 0;
             let userAnswers = [];
-            let answeredQuestions = [];
 
             welcomeOverlay.classList.remove('hidden');
 
@@ -402,7 +403,6 @@
 
             async function loadQuestions() {
                 try {
-                    // Esta ruta funciona perfectamente en GitHub Pages
                     const response = await fetch('preguntas.json');
                     if (!response.ok) {
                         throw new Error(`Error HTTP: ${response.status}. No se pudo cargar el archivo de preguntas.`);
@@ -413,13 +413,13 @@
                         throw new Error("El archivo JSON no tiene el formato de array esperado.");
                     }
                     
-                    questions = data.filter(q => q.tags && q.tags.includes('diagnostico'));
+                    allDiagnosticQuestions = data.filter(q => q.tags && q.tags.includes('diagnostico'));
+                    questions = shuffleArray([...allDiagnosticQuestions]).slice(0, 10);
                     
                     if (questions.length === 0) {
                         throw new Error("No se encontraron preguntas con el tag 'diagnostico'.");
                     }
 
-                    questions = shuffleArray(questions).slice(0, 10);
                     displayQuestion();
                 } catch (error) {
                     console.error("Error al cargar las preguntas:", error);
@@ -479,16 +479,11 @@
                 const selectedIndex = parseInt(selected.value);
                 userAnswers[currentQuestionIndex] = selectedIndex;
                 
-                // Mostrar retroalimentación
                 showFeedback(selectedIndex);
                 
-                // Deshabilitar opciones
                 const options = document.querySelectorAll('.option-label');
-                options.forEach(option => {
-                    option.classList.add('disabled-option');
-                });
+                options.forEach(option => option.classList.add('disabled-option'));
                 
-                // Marcar respuesta correcta e incorrecta
                 const correctIndex = questions[currentQuestionIndex].respuestaCorrecta;
                 document.getElementById(`option-${correctIndex}`).classList.add('correct-option');
                 
@@ -496,7 +491,6 @@
                     document.getElementById(`option-${selectedIndex}`).classList.add('incorrect-option');
                 }
                 
-                // Cambiar botones
                 submitBtn.style.display = 'none';
                 nextBtn.style.display = 'inline-block';
             });
@@ -525,12 +519,54 @@
             }
 
             function finishQuiz() {
-                const correct = userAnswers.filter((a, i) => a === questions[i].respuestaCorrecta).length;
+                const overallCorrect = userAnswers.filter((a, i) => a === questions[i].respuestaCorrecta).length;
+                const overallScore = overallCorrect * 30;
+
+                // --- NUEVA LÓGICA PARA CALCULAR POR MÓDULO ---
+                const detailedResults = {};
+                questions.forEach(q => {
+                    const moduleTag = q.tags[1]; 
+                    if (!detailedResults[moduleTag]) {
+                        detailedResults[moduleTag] = { correct: 0, total: 0 };
+                    }
+                    detailedResults[moduleTag].total++;
+                });
+
+                userAnswers.forEach((answer, index) => {
+                    const question = questions[index];
+                    const moduleTag = question.tags[1];
+                    if (answer === question.respuestaCorrecta) {
+                        detailedResults[moduleTag].correct++;
+                    }
+                });
+
+                // Calcular el total de preguntas por tag en el banco de preguntas completo
+                const totalQuestionsByTag = {};
+                allDiagnosticQuestions.forEach(q => {
+                    const moduleTag = q.tags[1];
+                    totalQuestionsByTag[moduleTag] = (totalQuestionsByTag[moduleTag] || 0) + 1;
+                });
+
+                // Formatear los datos para guardarlos
+                const modulosData = Object.keys(detailedResults).map(tag => {
+                    const stats = detailedResults[tag];
+                    const totalInPool = totalQuestionsByTag[tag];
+                    // Aplicar la fórmula: correctas * (300 / total_preguntas_del_tag)
+                    const score = Math.round(stats.correct * (300 / totalInPool));
+                    return {
+                        tag: tag,
+                        correct: stats.correct,
+                        totalInQuiz: stats.total,
+                        score: score
+                    };
+                });
+
                 const result = {
                     type: 'diagnostico',
-                    score: correct * 30,
-                    correctAnswers: correct,
-                    total: questions.length
+                    score: overallScore,
+                    correctAnswers: overallCorrect,
+                    total: questions.length,
+                    modulos: modulosData // <-- Guardar el desglose
                 };
                 localStorage.setItem('resultadoDiagnostico', JSON.stringify(result));
 
@@ -557,3 +593,4 @@
 </body>
 
 </html>
+
