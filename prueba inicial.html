@@ -3,13 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Análisis de Resultados - Skópia</title>
+    <title>Diagnóstico Inicial - Skópia</title>
     
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Patrick+Hand&display=swap" rel="stylesheet">
-    
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 
     <style>
         :root {
@@ -17,412 +14,583 @@
             --color-oliva-claro: #bec092;
             --color-oliva-oscuro: #272b00;
             --color-oliva-medio: #5a6133;
-            --color-bien: #2ecc71;
-            --color-mal: #e74c3c;
-            --color-alerta: #f39c12;
+            --color-verde: #4CAF50;
+            --color-rojo: #f44336;
         }
 
         body {
             font-family: 'Roboto', sans-serif;
             background-color: var(--color-crema);
             color: var(--color-oliva-oscuro);
-            margin: 0;
-            padding: 20px;
             display: flex;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
             min-height: 100vh;
+            margin: 0;
+            padding: 20px;
             box-sizing: border-box;
+            overflow: hidden;
         }
 
-        .results-container {
-            display: flex;
+        .welcome-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            max-width: 1400px;
-            gap: 30px;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
         }
 
-        .help-sidebar {
-            flex: 0 0 250px;
+        .welcome-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .welcome-modal {
             background-color: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            align-self: stretch;
-            height: fit-content;
+            padding: 40px;
+            border-radius: 15px;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border-top: 5px solid var(--color-oliva-oscuro);
         }
 
-        .help-sidebar h3 {
+        .welcome-modal h2 {
             font-family: 'Patrick Hand', cursive;
-            font-size: 1.5rem;
+            font-size: 2rem;
             color: var(--color-oliva-oscuro);
             margin-bottom: 20px;
-            text-align: center;
         }
 
-        .help-button {
-            width: 100%;
-            padding: 15px;
-            margin-bottom: 15px;
-            background-color: var(--color-oliva-claro);
-            color: var(--color-oliva-oscuro);
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: left;
-        }
-
-        .help-button:hover {
-            background-color: var(--color-oliva-medio);
-            color: white;
-            transform: translateX(5px);
-        }
-
-        .main-content {
-            flex-grow: 1;
-            background-color: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        }
-
-        .result-header {
-            text-align: center;
-            margin-bottom: 40px;
-            border-bottom: 2px solid var(--color-oliva-claro);
-            padding-bottom: 20px;
-        }
-
-        .result-header h1 {
-            font-family: 'Patrick Hand', cursive;
-            font-size: 2.5rem;
-            color: var(--color-oliva-oscuro);
-            margin: 0 0 10px 0;
-        }
-
-        .result-header p {
-            color: var(--color-oliva-medio);
+        .welcome-modal p {
             font-size: 1.1rem;
-            margin: 0;
-        }
-
-        .global-score-display {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .score-circle {
-            font-size: 4rem;
-            font-weight: 700;
-            color: var(--color-oliva-oscuro);
-            line-height: 1;
-            margin-bottom: 10px;
-        }
-
-        .score-label {
-            font-size: 1.2rem;
-            color: var(--color-oliva-medio);
-        }
-
-        .score-message {
-            font-size: 1.1rem;
-            font-weight: bold;
-            padding: 8px 16px;
-            border-radius: 20px;
-            display: inline-block;
-            margin-top: 10px;
-        }
-
-        .score-excelente { background-color: #d4edda; color: #155724; }
-        .score-bueno { background-color: #cce5ff; color: #004085; }
-        .score-regular { background-color: #fff3cd; color: #856404; }
-        .score-bajo { background-color: #f8d7da; color: #721c24; }
-
-        .charts-section h2 {
-            text-align: center;
-            font-size: 1.8rem;
-            color: var(--color-oliva-oscuro);
+            line-height: 1.6;
             margin-bottom: 30px;
         }
 
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 30px;
-        }
-
-        .chart-card {
-            background-color: #fafafa;
-            border: 1px solid #eee;
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .chart-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .chart-card h3 {
+        .start-button {
+            background-color: var(--color-oliva-oscuro);
+            color: var(--color-crema);
+            border: none;
+            padding: 15px 30px;
             font-size: 1.2rem;
-            color: var(--color-oliva-medio);
-            margin-bottom: 15px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
         }
 
-        .chart-container {
+        .start-button:hover {
+            background-color: var(--color-oliva-medio);
+            transform: scale(1.05);
+        }
+
+        .quiz-container {
+            width: 90%;
+            max-width: 800px;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            padding: 0;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background-color: #e0e0e0;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background-color: var(--color-oliva-oscuro);
+            transition: width 0.5s ease;
+        }
+
+        .question-area {
+            display: flex;
+            padding: 40px;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .panda-container {
+            flex-shrink: 0;
+        }
+
+        .panda-avatar {
+            font-size: 6rem;
+            animation: panda-greet 4s ease-in-out infinite;
+        }
+
+        @keyframes panda-greet {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(-10deg) scale(1.05); }
+            50% { transform: rotate(0deg) scale(1); }
+            75% { transform: rotate(10deg) scale(1.05); }
+        }
+
+        .speech-bubble {
             position: relative;
-            height: 200px;
-            margin-bottom: 15px;
+            background: #ffffff;
+            border: 2px solid var(--color-oliva-claro);
+            border-radius: 15px;
+            padding: 20px 25px;
+            flex-grow: 1;
         }
 
-        .chart-card p {
-            font-size: 0.9rem;
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            left: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-width: 15px 15px 15px 0;
+            border-style: solid;
+            border-color: transparent var(--color-oliva-claro) transparent transparent;
+        }
+
+        .question-text {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.4rem;
             color: var(--color-oliva-oscuro);
             margin: 0;
         }
         
-        .help-modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.6);
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
+        .question-text img {
+            max-width: 100%;
+            margin-top: 15px;
+            border-radius: 10px;
         }
 
-        .help-modal-content {
-            background-color: white;
-            padding: 30px;
-            border-radius: 12px;
-            max-width: 600px;
-            width: 100%;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+        .options-container {
+            padding: 0 40px 40px 40px;
         }
 
-        .help-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 15px;
-        }
-
-        .close-modal-btn {
-            background: none;
-            border: none;
-            font-size: 2rem;
-            color: #999;
+        .option-label {
+            display: block;
+            background-color: #f9f9f9;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin-bottom: 15px;
             cursor: pointer;
-            transition: color 0.2s;
+            transition: all 0.2s ease;
+            position: relative;
+            padding-left: 50px;
         }
 
-        .close-modal-btn:hover {
+        .option-label:hover {
+            background-color: var(--color-oliva-claro);
+            border-color: var(--color-oliva-medio);
+            transform: translateX(5px);
+        }
+
+        .option-label input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .checkmark {
+            position: absolute;
+            top: 50%;
+            left: 15px;
+            transform: translateY(-50%);
+            height: 20px;
+            width: 20px;
+            background-color: #eee;
+            border: 2px solid #ccc;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+        }
+
+        .option-label:hover input ~ .checkmark {
+            background-color: #ccc;
+        }
+
+        .option-label input:checked ~ .checkmark {
+            background-color: var(--color-oliva-oscuro);
+            border-color: var(--color-oliva-oscuro);
+        }
+
+        .checkmark:after {
+            content: "";
+            position: absolute;
+            display: none;
+            left: 6px;
+            top: 2px;
+            width: 5px;
+            height: 10px;
+            border: solid white;
+            border-width: 0 3px 3px 0;
+            transform: rotate(45deg);
+        }
+
+        .option-label input:checked ~ .checkmark:after {
+            display: block;
+        }
+
+        .submit-container {
+            text-align: center;
+            padding: 20px;
+            background-color: #f7f7f7;
+        }
+
+        .submit-button, .next-button {
+            background-color: var(--color-oliva-oscuro);
+            color: var(--color-crema);
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 10px;
+        }
+
+        .submit-button:hover, .next-button:hover {
+            background-color: var(--color-oliva-medio);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .feedback-container {
+            padding: 0 40px 20px 40px;
+            display: none;
+        }
+
+        .feedback-message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .correct-answer {
+            background-color: rgba(76, 175, 80, 0.1);
+            border-left: 5px solid var(--color-verde);
+            color: var(--color-verde);
+        }
+
+        .incorrect-answer {
+            background-color: rgba(244, 67, 54, 0.1);
+            border-left: 5px solid var(--color-rojo);
+            color: var(--color-rojo);
+        }
+
+        .explanation-container {
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .explanation-title {
+            font-weight: bold;
+            margin-bottom: 5px;
             color: var(--color-oliva-oscuro);
         }
 
-        .back-button-container {
-            text-align: center;
-            margin-top: 40px;
+        .tip-container {
+            background-color: #f0f7ff;
+            border-radius: 10px;
+            padding: 15px;
         }
 
-        .back-button {
-            display: inline-block;
-            padding: 15px 30px;
-            background-color: var(--color-oliva-oscuro);
-            color: var(--color-crema);
-            text-decoration: none;
-            border-radius: 50px;
-            font-size: 1.1rem;
+        .tip-title {
             font-weight: bold;
-            transition: all 0.3s ease;
+            margin-bottom: 5px;
+            color: var(--color-oliva-oscuro);
         }
 
-        .back-button:hover {
-            background-color: var(--color-oliva-medio);
-            transform: translateY(-2px);
+        .disabled-option {
+            pointer-events: none;
+            opacity: 0.7;
         }
 
-        @media (max-width: 992px) {
-            .results-container { flex-direction: column; }
-            .help-sidebar { width: 100%; order: 2; }
-            .main-content { order: 1; }
+        .correct-option {
+            background-color: rgba(76, 175, 80, 0.2);
+            border-color: var(--color-verde);
+        }
+
+        .incorrect-option {
+            background-color: rgba(244, 67, 54, 0.2);
+            border-color: var(--color-rojo);
         }
     </style>
 </head>
 
 <body>
-    <div class="results-container">
-        <aside class="help-sidebar">
-            <h3>Centro de ayuda</h3>
-            <button class="help-button" onclick="openModal('interpretacion')">¿Cómo interpretar mi resultado?</button>
-            <button class="help-button" onclick="openModal('analisis')">Análisis de mi resultado</button>
-            <button class="help-button" onclick="openModal('bueno')">¿Mi resultado es bueno?</button>
-        </aside>
 
-        <main class="main-content">
-            <div class="result-header">
-                <h1>Resultados del Diagnóstico</h1>
-                <p>Tu desempeño general en la prueba</p>
-            </div>
-
-            <div class="global-score-display">
-                <div class="score-circle" id="puntajeGlobal">0 / 300</div>
-                <div class="score-label">Puntaje Global</div>
-                <div class="score-message score-bajo" id="mensajeDesempeno">Aún no has realizado la prueba</div>
-            </div>
-
-            <section class="charts-section">
-                <h2>Desempeño por Módulo</h2>
-                <div class="charts-grid" id="modulosContainer">
-                    <!-- Las tarjetas de gráficos se insertarán aquí dinámicamente -->
-                </div>
-            </section>
-
-            <div class="back-button-container">
-                <a href="../skopia.html" class="back-button">Continuar con mi Ruta</a>
-            </div>
-        </main>
-    </div>
-
-    <!-- MODAL DE AYUDA -->
-    <div class="help-modal" id="helpModal">
-        <div class="help-modal-content">
-            <div class="help-modal-header">
-                <h3 id="modalTitle"></h3>
-                <button class="close-modal-btn" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="help-modal-body" id="modalBody"></div>
+    <div id="welcome-overlay" class="welcome-overlay">
+        <div class="welcome-modal">
+            <h2>¡No tan rápido!</h2>
+            <p>Como es tu primera vez en esta página, te invitamos a realizar un cuestionario de prueba para saber tus competencias en el Saber Pro. Pero no te preocupes, tu resultado no interferirá en las notas ni en tus objetivos, solo es para saber tu nivel inicial.</p>
+            <button id="start-quiz-btn" class="start-button">Comenzar Cuestionario</button>
         </div>
     </div>
 
+    <main id="quiz-container" class="quiz-container">
+        <div class="progress-bar-container">
+            <div id="progress-fill" class="progress-bar-fill"></div>
+        </div>
+
+        <div class="question-area">
+            <div class="panda-container">
+                <div class="panda-avatar">🐼</div>
+            </div>
+            <div class="speech-bubble">
+                <p id="question-text" class="question-text">Cargando pregunta...</p>
+            </div>
+        </div>
+
+        <div id="options-container" class="options-container"></div>
+
+        <div id="feedback-container" class="feedback-container">
+            <div id="feedback-message" class="feedback-message"></div>
+            <div id="explanation-container" class="explanation-container">
+                <div class="explanation-title">Explicación:</div>
+                <div id="explanation-text"></div>
+            </div>
+            <div id="tip-container" class="tip-container">
+                <div class="tip-title">💡 Truco:</div>
+                <div id="tip-text"></div>
+            </div>
+        </div>
+
+        <div class="submit-container">
+            <button id="submit-btn" class="submit-button">Enviar Respuesta</button>
+            <button id="next-btn" class="next-button" style="display: none;">Siguiente Pregunta</button>
+        </div>
+    </main>
+
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const resultado = JSON.parse(localStorage.getItem("resultadoDiagnostico")) || null;
-            const puntajeGlobalEl = document.getElementById("puntajeGlobal");
-            const mensajeDesempenoEl = document.getElementById("mensajeDesempeno");
-            const modulosContainer = document.getElementById("modulosContainer");
+        document.addEventListener('DOMContentLoaded', async () => {
+            const welcomeOverlay = document.getElementById('welcome-overlay');
+            const quizContainer = document.getElementById('quiz-container');
+            const startQuizBtn = document.getElementById('start-quiz-btn');
+            const submitBtn = document.getElementById('submit-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const feedbackContainer = document.getElementById('feedback-container');
+            const feedbackMessage = document.getElementById('feedback-message');
+            const explanationText = document.getElementById('explanation-text');
+            const tipText = document.getElementById('tip-text');
 
-            let puntajeGlobal = 0;
+            let questions = [];
+            let allDiagnosticQuestions = []; // Para calcular el total por tag
+            let currentQuestionIndex = 0;
+            let userAnswers = [];
 
-            if (resultado && resultado.score !== undefined) {
-                puntajeGlobal = resultado.score;
-                puntajeGlobalEl.textContent = `${puntajeGlobal} / 300`;
+            welcomeOverlay.classList.remove('hidden');
+
+            startQuizBtn.addEventListener('click', () => {
+                welcomeOverlay.classList.add('hidden');
+                quizContainer.style.display = 'flex';
+                loadQuestions();
+            });
+
+            async function loadQuestions() {
+                try {
+                    const response = await fetch('preguntas.json');
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}. No se pudo cargar el archivo de preguntas.`);
+                    }
+                    const data = await response.json();
+
+                    if (!Array.isArray(data)) {
+                        throw new Error("El archivo JSON no tiene el formato de array esperado.");
+                    }
+                    
+                    allDiagnosticQuestions = data.filter(q => q.tags && q.tags.includes('diagnostico'));
+                    questions = shuffleArray([...allDiagnosticQuestions]).slice(0, 10);
+                    
+                    if (questions.length === 0) {
+                        throw new Error("No se encontraron preguntas con el tag 'diagnostico'.");
+                    }
+
+                    displayQuestion();
+                } catch (error) {
+                    console.error("Error al cargar las preguntas:", error);
+                    alert("Error al cargar las preguntas: " + error.message);
+                }
+            }
+
+            function displayQuestion() {
+                if (currentQuestionIndex >= questions.length) {
+                    finishQuiz();
+                    return;
+                }
+
+                const question = questions[currentQuestionIndex];
+                const questionTextEl = document.getElementById('question-text');
+                const optionsContainer = document.getElementById('options-container');
+
+                questionTextEl.innerHTML = '';
+                optionsContainer.innerHTML = '';
+                feedbackContainer.style.display = 'none';
+                submitBtn.style.display = 'inline-block';
+                nextBtn.style.display = 'none';
+
+                const questionTextSpan = document.createElement('span');
+                questionTextSpan.innerText = question.pregunta;
+                questionTextEl.appendChild(questionTextSpan);
+
+                if (question.imagen) {
+                    const img = document.createElement('img');
+                    img.src = question.imagen;
+                    img.alt = "Imagen de la pregunta";
+                    questionTextEl.appendChild(img);
+                }
                 
-                // Actualizar mensaje de desempeño
-                if (puntajeGlobal >= 250) {
-                    mensajeDesempenoEl.textContent = "¡Excelente desempeño!";
-                    mensajeDesempenoEl.className = "score-message score-excelente";
-                } else if (puntajeGlobal >= 200) {
-                    mensajeDesempenoEl.textContent = "Buen desempeño, pero puedes mejorar.";
-                    mensajeDesempenoEl.className = "score-message score-bueno";
-                } else if (puntajeGlobal >= 150) {
-                    mensajeDesempenoEl.textContent = "Desempeño regular, repasa algunos temas.";
-                    mensajeDesempenoEl.className = "score-message score-regular";
-                } else {
-                    mensajeDesempenoEl.textContent = "Desempeño bajo, sigue practicando.";
-                    mensajeDesempenoEl.className = "score-message score-bajo";
-                }
+                question.opciones.forEach((option, index) => {
+                    const label = document.createElement('label');
+                    label.className = 'option-label';
+                    label.id = `option-${index}`;
+                    const input = document.createElement('input');
+                    input.type = 'radio';
+                    input.name = 'answer';
+                    input.value = index;
+                    const checkmark = document.createElement('span');
+                    checkmark.className = 'checkmark';
+                    label.appendChild(input);
+                    label.appendChild(checkmark);
+                    label.appendChild(document.createTextNode(option));
+                    optionsContainer.appendChild(label);
+                });
+                updateProgress();
+            }
 
-                // --- NUEVA LÓGICA PARA MOSTRAR GRÁFICOS POR MÓDULO ---
-                if (resultado.modulos && resultado.modulos.length > 0) {
-                    const tagNameMap = {
-                        'LC': 'Lectura Crítica',
-                        'RC': 'Razonamiento Cuantitativo',
-                        'CC': 'Competencias Ciudadanas',
-                        'I': 'Inglés'
+            submitBtn.addEventListener('click', () => {
+                const selected = document.querySelector('input[name="answer"]:checked');
+                if (!selected) return alert("Por favor, selecciona una respuesta.");
+                
+                const selectedIndex = parseInt(selected.value);
+                userAnswers[currentQuestionIndex] = selectedIndex;
+                
+                showFeedback(selectedIndex);
+                
+                const options = document.querySelectorAll('.option-label');
+                options.forEach(option => option.classList.add('disabled-option'));
+                
+                const correctIndex = questions[currentQuestionIndex].respuestaCorrecta;
+                document.getElementById(`option-${correctIndex}`).classList.add('correct-option');
+                
+                if (selectedIndex !== correctIndex) {
+                    document.getElementById(`option-${selectedIndex}`).classList.add('incorrect-option');
+                }
+                
+                submitBtn.style.display = 'none';
+                nextBtn.style.display = 'inline-block';
+            });
+
+            nextBtn.addEventListener('click', () => {
+                currentQuestionIndex++;
+                displayQuestion();
+            });
+
+            function showFeedback(selectedIndex) {
+                const question = questions[currentQuestionIndex];
+                const isCorrect = selectedIndex === question.respuestaCorrecta;
+                
+                feedbackContainer.style.display = 'block';
+                
+                if (isCorrect) {
+                    feedbackMessage.className = 'feedback-message correct-answer';
+                    feedbackMessage.textContent = '¡Respuesta correcta! ¡Bien hecho!';
+                } else {
+                    feedbackMessage.className = 'feedback-message incorrect-answer';
+                    feedbackMessage.textContent = 'Respuesta incorrecta. La respuesta correcta está marcada en verde.';
+                }
+                
+                explanationText.textContent = question.explicacion;
+                tipText.textContent = question.truco;
+            }
+
+            function finishQuiz() {
+                const overallCorrect = userAnswers.filter((a, i) => a === questions[i].respuestaCorrecta).length;
+                const overallScore = overallCorrect * 30;
+
+                // --- NUEVA LÓGICA PARA CALCULAR POR MÓDULO ---
+                const detailedResults = {};
+                questions.forEach(q => {
+                    const moduleTag = q.tags[1]; 
+                    if (!detailedResults[moduleTag]) {
+                        detailedResults[moduleTag] = { correct: 0, total: 0 };
+                    }
+                    detailedResults[moduleTag].total++;
+                });
+
+                userAnswers.forEach((answer, index) => {
+                    const question = questions[index];
+                    const moduleTag = question.tags[1];
+                    if (answer === question.respuestaCorrecta) {
+                        detailedResults[moduleTag].correct++;
+                    }
+                });
+
+                // Calcular el total de preguntas por tag en el banco de preguntas completo
+                const totalQuestionsByTag = {};
+                allDiagnosticQuestions.forEach(q => {
+                    const moduleTag = q.tags[1];
+                    totalQuestionsByTag[moduleTag] = (totalQuestionsByTag[moduleTag] || 0) + 1;
+                });
+
+                // Formatear los datos para guardarlos
+                const modulosData = Object.keys(detailedResults).map(tag => {
+                    const stats = detailedResults[tag];
+                    const totalInPool = totalQuestionsByTag[tag];
+                    // Aplicar la fórmula: correctas * (300 / total_preguntas_del_tag)
+                    const score = Math.round(stats.correct * (300 / totalInPool));
+                    return {
+                        tag: tag,
+                        correct: stats.correct,
+                        totalInQuiz: stats.total,
+                        score: score
                     };
+                });
 
-                    resultado.modulos.forEach(modulo => {
-                        const card = document.createElement("div");
-                        card.className = "chart-card";
-                        const chartId = `chart-${modulo.tag}`;
-                        card.innerHTML = `
-                            <h3>${tagNameMap[modulo.tag] || modulo.tag}</h3>
-                            <div class="chart-container">
-                                <canvas id="${chartId}"></canvas>
-                            </div>
-                            <p>Puntaje: <strong>${modulo.score}</strong> / 300</p>
-                            <p>Respuestas correctas: ${modulo.correct} de ${modulo.totalInQuiz}</p>
-                        `;
-                        modulosContainer.appendChild(card);
+                const result = {
+                    type: 'diagnostico',
+                    score: overallScore,
+                    correctAnswers: overallCorrect,
+                    total: questions.length,
+                    modulos: modulosData // <-- ¡IMPORTANTE! Esta línea ahora guarda el desglose por módulo.
+                };
+                localStorage.setItem('resultadoDiagnostico', JSON.stringify(result));
 
-                        // Crear gráfico para este módulo
-                        new Chart(document.getElementById(chartId), {
-                            type: 'doughnut',
-                            data: {
-                                labels: ['Correctas', 'Incorrectas'],
-                                datasets: [{
-                                    data: [modulo.correct, modulo.totalInQuiz - modulo.correct],
-                                    backgroundColor: ['#bec092', '#fdfbf5'],
-                                    borderWidth: 1
-                                }]
-                            },
-                            options: { 
-                                cutout: '70%', 
-                                plugins: { 
-                                    legend: { 
-                                        display: true,
-                                        position: 'bottom'
-                                    } 
-                                } 
-                            }
-                        });
-                    });
-                } else {
-                    modulosContainer.innerHTML = '<p>No se encontraron resultados detallados por módulo.</p>';
+                window.location.href = "resultados.html";
+            }
+
+            function updateProgress() {
+                const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+                document.getElementById('progress-fill').style.width = progress + '%';
+            }
+
+            function shuffleArray(array) {
+                let i = array.length, j, temp;
+                while (i--) {
+                    j = Math.floor(Math.random() * (i + 1));
+                    temp = array[i];
+                    array[i] = array[j];
+                    array[j] = temp;
                 }
-
-            } else {
-                puntajeGlobalEl.textContent = `0 / 300`;
-                mensajeDesempenoEl.textContent = "Aún no has realizado la prueba";
+                return array;
             }
         });
-
-        // Funciones del modal de ayuda
-        function openModal(type) {
-            const modal = document.getElementById("helpModal");
-            const title = document.getElementById("modalTitle");
-            const body = document.getElementById("modalBody");
-            modal.style.display = "flex";
-
-            if (type === "interpretacion") {
-                title.textContent = "¿Cómo interpretar mi resultado?";
-                body.innerHTML = `
-                    <p>Tu puntaje global es un promedio de tu desempeño. Los gráficos por módulo te muestran tu rendimiento específico en cada área, sobre una base de 300 puntos. Esto te ayuda a identificar tus fortalezas y debilidades.</p>
-                `;
-            } else if (type === "analisis") {
-                title.textContent = "Análisis de mi resultado";
-                body.innerHTML = `
-                    <p>El sistema identifica tus fortalezas y debilidades en función de los errores cometidos. Revisa los módulos con menor puntaje y prioriza el estudio de esas áreas.</p>
-                `;
-            } else if (type === "bueno") {
-                title.textContent = "¿Mi resultado es bueno?";
-                body.innerHTML = `
-                    <p>Un puntaje superior a 200 en un módulo indica un buen desempeño. Si superas los 250, tu nivel es excelente. Si está por debajo de 150, conviene repasar ese tema.</p>
-                `;
-            }
-        }
-
-        function closeModal() {
-            document.getElementById("helpModal").style.display = "none";
-        }
     </script>
 </body>
-</html>
 
+</html>
 
