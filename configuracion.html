@@ -33,29 +33,39 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
+        // Proteger la página: si no hay usuario, redirigir al login
         onAuthStateChanged(auth, (user) => {
-            if (!user) { window.location.href = 'index.html'; return; }
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            // Una vez confirmado el usuario, inicializamos la página
             initializePage();
         });
 
         function initializePage() {
-            // Cargar configuración guardada
+            // Cargar configuración guardada desde localStorage
             const settings = JSON.parse(localStorage.getItem('skopia_settings')) || {};
             document.getElementById('theme-select').value = settings.theme || 'original';
             document.getElementById('font-size-select').value = settings.fontSize || 'normal';
             document.getElementById('animation-speed-select').value = settings.animationSpeed || 'normal';
             document.getElementById('sound-toggle').checked = settings.soundEnabled || false;
             document.getElementById('focus-mode-toggle').checked = settings.focusMode || false;
+
+            // Mostrar el selector de color personalizado si estaba seleccionado
             if(settings.theme === 'custom') {
                 document.getElementById('custom-color-group').style.display = 'block';
                 document.getElementById('accent-color-picker').value = settings.accentColor || '#5a6133';
             }
 
-            // Event Listeners
+            // --- EVENT LISTENERS ---
+
+            // Mostrar/ocultar el selector de color personalizado
             document.getElementById('theme-select').addEventListener('change', (e) => {
                 document.getElementById('custom-color-group').style.display = e.target.value === 'custom' ? 'block' : 'none';
             });
 
+            // Listener para el botón de guardar cambios
             document.getElementById('save-settings-btn').addEventListener('click', () => {
                 const newSettings = {
                     theme: document.getElementById('theme-select').value,
@@ -64,14 +74,27 @@
                     soundEnabled: document.getElementById('sound-toggle').checked,
                     focusMode: document.getElementById('focus-mode-toggle').checked,
                 };
+
+                // Si el tema es personalizado, guardamos también el color
                 if (newSettings.theme === 'custom') {
                     newSettings.accentColor = document.getElementById('accent-color-picker').value;
                 }
+
+                // Guardar la configuración en localStorage
                 localStorage.setItem('skopia_settings', JSON.stringify(newSettings));
-                loadAndApplySettings(); // Aplicar inmediatamente
-                alert('¡Configuración guardada!');
+                
+                // Aplicar los cambios inmediatamente en la página actual
+                // Importamos y llamamos a la función desde global-settings.js
+                import('./global-settings.js').then(module => {
+                    module.loadAndApplySettings();
+                    alert('¡Configuración guardada y aplicada!');
+                }).catch(error => {
+                    console.error("Error al cargar el módulo de configuración:", error);
+                    alert('Hubo un error al aplicar la configuración, pero se ha guardado correctamente. Recarga la página para ver los cambios.');
+                });
             });
 
+            // Botón de "Cerrar Sesión"
             document.getElementById('logout-btn').addEventListener('click', () => {
                 signOut(auth).then(() => window.location.href = 'index.html');
             });
@@ -86,23 +109,115 @@
             --color-oliva-oscuro: #272b00;
             --color-sombra: rgba(39, 43, 0, 0.1);
         }
-        body { font-family: 'Roboto', sans-serif; background: var(--color-crema); color: var(--color-oliva-oscuro); min-height: 100vh; padding: 20px; }
-        .container { max-width: 700px; margin: 40px auto; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 8px 25px var(--color-sombra); }
-        h1 { font-family: 'Patrick Hand', cursive; font-size: 2.5rem; text-align: center; margin-bottom: 30px; }
-        .form-group { margin-bottom: 25px; }
-        .form-group label { display: block; font-weight: bold; margin-bottom: 10px; }
-        .form-group select, .form-group input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
-        .btn { display: block; width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-bottom: 10px; }
-        .btn-primary { background-color: var(--color-oliva-oscuro); color: white; }
-        .btn-primary:hover { background-color: var(--color-oliva-medio); transform: scale(1.02); }
-        .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--color-oliva-medio); }
-        input:checked + .slider:before { transform: translateX(26px); }
-        .focus-mode { background: #333; color: #eee; }
-        .focus-mode .floating-icons, .focus-mode .navbar { display: none; }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--color-crema);
+            color: var(--color-oliva-oscuro);
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            max-width: 700px;
+            margin: 40px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px var(--color-sombra);
+        }
+        h1 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--color-oliva-oscuro);
+        }
+        .form-group {
+            margin-bottom: 25px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--color-oliva-oscuro);
+        }
+        .form-group select, .form-group input[type="color"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+            text-decoration: none;
+            text-align: center;
+        }
+        .btn-primary {
+            background-color: var(--color-oliva-oscuro);
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: var(--color-oliva-medio);
+            transform: scale(1.02);
+        }
+        .btn-danger {
+            background-color: #d32f2f;
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #b71c1c;
+        }
+        /* Estilos para los switches (interruptores) */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: var(--color-oliva-medio);
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
     </style>
 </head>
 <body>
@@ -168,12 +283,12 @@
             <i class="fas fa-save"></i> Guardar Cambios
         </button>
         
-        <!-- BOTÓN DE VOLVER AQUÍ -->
+        <!-- Botón para volver a la página anterior -->
         <button class="btn btn-primary" onclick="window.history.back()">
             <i class="fas fa-arrow-left"></i> Volver
         </button>
 
-        <button id="logout-btn" class="btn btn-primary" style="background-color: #d32f2f;">
+        <button id="logout-btn" class="btn btn-danger">
             <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
         </button>
     </div>
