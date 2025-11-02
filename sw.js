@@ -1,37 +1,22 @@
-// sw.js - Service Worker de Skópia
-
-const CACHE_NAME = 'skopia-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/skopia.html',
-  '/errores.html',
-  '/notificaciones.html',
-  '/logo.jpeg',
-  '/panda.jpeg',
-  '/global-settings.js'
-];
+// sw.js - Service Worker de Skópia (Versión Final y Corregida)
 
 // 1. Instalación del Service Worker
 self.addEventListener('install', event => {
   console.log('Service Worker: Instalado...');
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
-  );
+  // No hacemos nada con la caché para evitar errores
+  self.skipWaiting(); // Forzamos la activación del nuevo SW
 });
 
-// 2. Activación y limpieza de cachés antiguos
+// 2. Activación
 self.addEventListener('activate', event => {
   console.log('Service Worker: Activado...');
+  // Limpiamos cachés antiguas si existieran
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cache => {
-          if (cache !== CACHE_NAME) {
-            console.log('Service Worker: Limpiando caché antiguo...');
+            console.log('Service Worker: Limpiando caché antiguo...', cache);
             return caches.delete(cache);
-          }
         })
       );
     })
@@ -66,7 +51,6 @@ self.addEventListener('notificationclick', event => {
   event.notification.close();
 
   if (event.action === 'explore') {
-    // Abre la página principal de Skópia cuando se hace clic en "Ir a Skópia"
     event.waitUntil(clients.openWindow('/skopia.html'));
   }
 });
