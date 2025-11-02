@@ -365,145 +365,155 @@
 
             // --- SI LA SESIÓN ES VÁLIDA, EJECUTAR EL CÓDIGO ORIGINAL DE LA PÁGINA ---
             
-            // --- CONTENIDO COMPLETO DE localStorage.js ---
-            const StorageManager = (function() {
-                const PROGRESS_KEY = 'saberProProgress';
-                const QUIZ_HISTORY_KEY = 'saberProQuizHistory';
-                const LAST_LOGIN_KEY = 'saberProLastLogin';
-                const DEFAULT_PROGRESS = {
-                    streak: 0,
-                    totalPoints: 0,
-                    modules: {}
-                };
-
-                function save(key, data) {
-                    try {
-                        localStorage.setItem(key, JSON.stringify(data));
-                    } catch (error) {
-                        console.error(`Error al guardar en localStorage con la clave "${key}":`, error);
-                    }
-                }
-
-                function load(key, defaultValue = null) {
-                    try {
-                        const item = localStorage.getItem(key);
-                        return item ? JSON.parse(item) : defaultValue;
-                    } catch (error) {
-                        console.error(`Error al cargar desde localStorage con la clave "${key}":`, error);
-                        return defaultValue;
-                    }
-                }
-
-                function getProgress() {
-                    return load(PROGRESS_KEY, DEFAULT_PROGRESS);
-                }
-
-                function saveProgress(progressData) {
-                    save(PROGRESS_KEY, progressData);
-                }
-
-                function getQuizHistory() {
-                    return load(QUIZ_HISTORY_KEY, []);
-                }
-
-                function saveQuizResult(result) {
-                    const history = getQuizHistory();
-                    history.push(result);
-                    save(QUIZ_HISTORY_KEY, history);
-                }
-
-                function updateStreak() {
-                    const progress = getProgress();
-                    const now = new Date();
-                    const today = now.toDateString();
-                    const lastLogin = load(LAST_LOGIN_KEY);
-                    if (lastLogin) {
-                        const lastLoginDate = new Date(lastLogin).toDateString();
-                        const yesterday = new Date(now);
-                        yesterday.setDate(yesterday.getDate() - 1);
-                        const yesterdayString = yesterday.toDateString();
-                        if (today === lastLoginDate) return;
-                        else if (lastLoginDate === yesterdayString) progress.streak += 1;
-                        else progress.streak = 1;
-                    } else {
-                        progress.streak = 1;
-                    }
-                    saveProgress(progress);
-                    save(LAST_LOGIN_KEY, now.toISOString());
-                }
-
-                function calculateWeakTopics() {
-                    const history = getQuizHistory();
-                    const errorCounts = {};
-                    history.forEach(quiz => {
-                        if (quiz.incorrectAnswers && quiz.incorrectAnswers.length > 0) {
-                            quiz.incorrectAnswers.forEach(questionId => {
-                                const topic = questionId.split('_')[2];
-                                errorCounts[topic] = (errorCounts[topic] || 0) + 1;
-                            });
-                        }
-                    });
-                    const sortedTopics = Object.entries(errorCounts)
-                        .sort(([, a], [, b]) => b - a)
-                        .slice(0, 3)
-                        .map(([topic]) => topic);
-                    return sortedTopics;
-                }
-
-                return {
-                    getProgress,
-                    saveProgress,
-                    getQuizHistory,
-                    saveQuizResult,
-                    updateStreak,
-                    calculateWeakTopics
-                };
-            })();
-
-
-            // --- LÓGICA DE LA PÁGINA (ahora protegida) ---
-            const aceptarMisionBtn = document.getElementById('aceptar-mision-btn');
-            const infoBtn = document.getElementById('info-btn');
-            const infoModal = document.getElementById('info-modal');
-            const cerrarModal = document.querySelector('.cerrar-modal');
-
-            infoBtn.addEventListener('click', () => {
-                infoModal.style.display = 'block';
-            });
-
-            cerrarModal.addEventListener('click', () => {
-                infoModal.style.display = 'none';
-            });
-
-            window.addEventListener('click', (event) => {
-                if (event.target === infoModal) {
-                    infoModal.style.display = 'none';
-                }
-            });
-
-            const agenteTitulo = document.querySelector('.agente-titulo');
-            const nombreAgenteSpan = document.getElementById('nombre-agente');
-            
-            // --- CORRECCIÓN CLAVE AQUÍ ---
-            // Obtenemos el nombre de visualización. Si no existe, usamos el correo como fallback.
-            const TU_NOMBRE = user.displayName || user.email || "Agente";
-            
-            if (agenteTitulo && nombreAgenteSpan) {
-                nombreAgenteSpan.textContent = TU_NOMBRE;
-            }
-
-            aceptarMisionBtn.addEventListener('click', () => {
-                // --- MODIFICACIÓN CLAVE: Comprobar si el diagnóstico ya existe ---
-                const diagnosticResult = JSON.parse(localStorage.getItem("resultadoDiagnostico"));
+            // --- SOLUCIÓN CLAVE: Recargar el perfil del usuario para obtener los datos más recientes ---
+            // Esto evita problemas de caché donde el nombre antiguo (o el email) todavía está presente.
+            user.reload().then(() => {
+                // Después de recargar, el objeto `user` está actualizado desde el servidor de Firebase.
+                // Ahora podemos obtener el nombre de visualización con confianza.
+                const TU_NOMBRE = user.displayName || user.email || "Agente";
                 
-                if (!diagnosticResult) {
-                    // ES LA PRIMERA VEZ: Enviar al diagnóstico inicial
-                    alert(`¡Misión aceptada, ${TU_NOMBRE}! Empezamos con la Observación Crítica.`);
-                    window.location.href = 'prueba inicial.html';
-                } else {
-                    // YA HA HECHO EL DIAGNÓSTICO: Enviar a la página de errores
-                    alert(`¡Bienvenida de nuevo, ${TU_NOMBRE}! Vamos a revisar tus áreas de oportunidad.`);
-                    window.location.href = 'errores.html';
+                console.log("Perfil recargado. Nombre de visualización:", user.displayName); // Para depuración
+
+                // --- CONTENIDO COMPLETO DE localStorage.js ---
+                const StorageManager = (function() {
+                    const PROGRESS_KEY = 'saberProProgress';
+                    const QUIZ_HISTORY_KEY = 'saberProQuizHistory';
+                    const LAST_LOGIN_KEY = 'saberProLastLogin';
+                    const DEFAULT_PROGRESS = {
+                        streak: 0,
+                        totalPoints: 0,
+                        modules: {}
+                    };
+
+                    function save(key, data) {
+                        try {
+                            localStorage.setItem(key, JSON.stringify(data));
+                        } catch (error) {
+                            console.error(`Error al guardar en localStorage con la clave "${key}":`, error);
+                        }
+                    }
+
+                    function load(key, defaultValue = null) {
+                        try {
+                            const item = localStorage.getItem(key);
+                            return item ? JSON.parse(item) : defaultValue;
+                        } catch (error) {
+                            console.error(`Error al cargar desde localStorage con la clave "${key}":`, error);
+                            return defaultValue;
+                        }
+                    }
+
+                    function getProgress() {
+                        return load(PROGRESS_KEY, DEFAULT_PROGRESS);
+                    }
+
+                    function saveProgress(progressData) {
+                        save(PROGRESS_KEY, progressData);
+                    }
+
+                    function getQuizHistory() {
+                        return load(QUIZ_HISTORY_KEY, []);
+                    }
+
+                    function saveQuizResult(result) {
+                        const history = getQuizHistory();
+                        history.push(result);
+                        save(QUIZ_HISTORY_KEY, history);
+                    }
+
+                    function updateStreak() {
+                        const progress = getProgress();
+                        const now = new Date();
+                        const today = now.toDateString();
+                        const lastLogin = load(LAST_LOGIN_KEY);
+                        if (lastLogin) {
+                            const lastLoginDate = new Date(lastLogin).toDateString();
+                            const yesterday = new Date(now);
+                            yesterday.setDate(yesterday.getDate() - 1);
+                            const yesterdayString = yesterday.toDateString();
+                            if (today === lastLoginDate) return;
+                            else if (lastLoginDate === yesterdayString) progress.streak += 1;
+                            else progress.streak = 1;
+                        } else {
+                            progress.streak = 1;
+                        }
+                        saveProgress(progress);
+                        save(LAST_LOGIN_KEY, now.toISOString());
+                    }
+
+                    function calculateWeakTopics() {
+                        const history = getQuizHistory();
+                        const errorCounts = {};
+                        history.forEach(quiz => {
+                            if (quiz.incorrectAnswers && quiz.incorrectAnswers.length > 0) {
+                                quiz.incorrectAnswers.forEach(questionId => {
+                                    const topic = questionId.split('_')[2];
+                                    errorCounts[topic] = (errorCounts[topic] || 0) + 1;
+                                });
+                            }
+                        });
+                        const sortedTopics = Object.entries(errorCounts)
+                            .sort(([, a], [, b]) => b - a)
+                            .slice(0, 3)
+                            .map(([topic]) => topic);
+                        return sortedTopics;
+                    }
+
+                    return {
+                        getProgress,
+                        saveProgress,
+                        getQuizHistory,
+                        saveQuizResult,
+                        updateStreak,
+                        calculateWeakTopics
+                    };
+                })();
+
+
+                // --- LÓGICA DE LA PÁGINA (ahora protegida y con datos actualizados) ---
+                const aceptarMisionBtn = document.getElementById('aceptar-mision-btn');
+                const infoBtn = document.getElementById('info-btn');
+                const infoModal = document.getElementById('info-modal');
+                const cerrarModal = document.querySelector('.cerrar-modal');
+
+                infoBtn.addEventListener('click', () => {
+                    infoModal.style.display = 'block';
+                });
+
+                cerrarModal.addEventListener('click', () => {
+                    infoModal.style.display = 'none';
+                });
+
+                window.addEventListener('click', (event) => {
+                    if (event.target === infoModal) {
+                        infoModal.style.display = 'none';
+                    }
+                });
+
+                const nombreAgenteSpan = document.getElementById('nombre-agente');
+                if (nombreAgenteSpan) {
+                    nombreAgenteSpan.textContent = TU_NOMBRE;
+                }
+
+                aceptarMisionBtn.addEventListener('click', () => {
+                    const diagnosticResult = JSON.parse(localStorage.getItem("resultadoDiagnostico"));
+                    
+                    if (!diagnosticResult) {
+                        alert(`¡Misión aceptada, ${TU_NOMBRE}! Empezamos con la Observación Crítica.`);
+                        window.location.href = 'prueba inicial.html';
+                    } else {
+                        alert(`¡Bienvenida de nuevo, ${TU_NOMBRE}! Vamos a revisar tus áreas de oportunidad.`);
+                        window.location.href = 'errores.html';
+                    }
+                });
+
+            }).catch((error) => {
+                console.error("Error al recargar el perfil del usuario:", error);
+                // Si la recarga falla, usamos los datos cacheados como último recurso
+                const TU_NOMBRE_FALLBACK = user.displayName || user.email || "Agente";
+                const nombreAgenteSpan = document.getElementById('nombre-agente');
+                if (nombreAgenteSpan) {
+                    nombreAgenteSpan.textContent = TU_NOMBRE_FALLBACK;
                 }
             });
         });
