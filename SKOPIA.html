@@ -152,16 +152,14 @@
             padding-bottom: 5px;
         }
 
-        /* --- CORRECCIÓN CLAVE AQUÍ --- */
         .agente-titulo {
             font-weight: bold;
             text-align: center;
             margin-bottom: 20px;
             font-size: 1.1em;
-            /* Añadimos estas propiedades para evitar que el nombre se corte */
-            white-space: nowrap; /* Evita que el texto se parta en líneas */
-            overflow: visible; /* Asegura que el texto sea visible */
-            width: 100%; /* Permite que el contenedor se adapte al contenido */
+            white-space: nowrap;
+            overflow: visible;
+            width: 100%;
         }
 
         .carta-texto p {
@@ -272,8 +270,11 @@
             }
         }
     </style>
-</head>
 
+    <!-- LLAMADA AL SISTEMA DE AJUSTES -->
+    <!-- Este script carga y aplica la configuración guardada en todas las páginas -->
+    <script type="module" src="./global-settings.js"></script>
+</head>
 <body>
 
     <div class="contenedor-principal">
@@ -353,55 +354,117 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                window.location.href = 'index.html';
+        // Función para inicializar los event listeners
+        function inicializarEventListeners(nombreUsuario) {
+            const aceptarMisionBtn = document.getElementById('aceptar-mision-btn');
+            const infoBtn = document.getElementById('info-btn');
+            const infoModal = document.getElementById('info-modal');
+            const cerrarModal = document.querySelector('.cerrar-modal');
+
+            // Verificar que los elementos existen antes de añadir event listeners
+            if (!aceptarMisionBtn) {
+                console.error("No se encontró el botón 'aceptar-mision-btn'");
                 return;
             }
 
-            // --- SOLUCIÓN DEFINITIVA: Recargar el perfil del usuario para obtener los datos más recientes ---
-            user.reload().then(() => {
-                // Después de recargar, el objeto `user` está actualizado desde el servidor de Firebase.
-                const TU_NOMBRE = user.displayName || user.email || "Agente";
+            if (!infoBtn || !infoModal || !cerrarModal) {
+                console.error("No se encontraron elementos del modal");
+            }
+
+            // Event listener para el botón de información
+            if (infoBtn) {
+                infoBtn.addEventListener('click', () => { 
+                    infoModal.style.display = 'block'; 
+                });
+            }
+
+            // Event listener para cerrar el modal
+            if (cerrarModal) {
+                cerrarModal.addEventListener('click', () => { 
+                    infoModal.style.display = 'none'; 
+                });
+            }
+
+            // Event listener para cerrar el modal al hacer clic fuera
+            window.addEventListener('click', (event) => { 
+                if (event.target === infoModal) { 
+                    infoModal.style.display = 'none'; 
+                } 
+            });
+
+            // Event listener para el botón de aceptar misión
+            aceptarMisionBtn.addEventListener('click', () => {
+                console.log("Botón 'Aceptar misión' presionado");
                 
-                console.log("Perfil recargado. Nombre de visualización:", user.displayName);
-
-                // --- LÓGICA DE LA PÁGINA ---
-                const aceptarMisionBtn = document.getElementById('aceptar-mision-btn');
-                const infoBtn = document.getElementById('info-btn');
-                const infoModal = document.getElementById('info-modal');
-                const cerrarModal = document.querySelector('.cerrar-modal');
-
-                infoBtn.addEventListener('click', () => { infoModal.style.display = 'block'; });
-                cerrarModal.addEventListener('click', () => { infoModal.style.display = 'none'; });
-                window.addEventListener('click', (event) => { if (event.target === infoModal) { infoModal.style.display = 'none'; } });
-
-                const nombreAgenteSpan = document.getElementById('nombre-agente');
-                if (nombreAgenteSpan) {
-                    nombreAgenteSpan.textContent = TU_NOMBRE;
-                }
-
-                aceptarMisionBtn.addEventListener('click', () => {
+                try {
                     const diagnosticResult = JSON.parse(localStorage.getItem("resultadoDiagnostico"));
+                    console.log("Resultado de diagnóstico:", diagnosticResult);
+                    
                     if (!diagnosticResult) {
-                        alert(`¡Misión aceptada, ${TU_NOMBRE}! Empezamos con la Observación Crítica.`);
+                        console.log("Redirigiendo a prueba inicial.html");
+                        alert(`¡Misión aceptada, ${nombreUsuario}! Empezamos con la Observación Crítica.`);
                         window.location.href = 'prueba inicial.html';
                     } else {
-                        alert(`¡Bienvenida de nuevo, ${TU_NOMBRE}! Vamos a revisar tus áreas de oportunidad.`);
+                        console.log("Redirigiendo a errores.html");
+                        alert(`¡Bienvenida de nuevo, ${nombreUsuario}! Vamos a revisar tus áreas de oportunidad.`);
                         window.location.href = 'errores.html';
                     }
-                });
-
-            }).catch((error) => {
-                console.error("Error al recargar el perfil del usuario:", error);
-                const TU_NOMBRE_FALLBACK = user.displayName || user.email || "Agente";
-                const nombreAgenteSpan = document.getElementById('nombre-agente');
-                if (nombreAgenteSpan) {
-                    nombreAgenteSpan.textContent = TU_NOMBRE_FALLBACK;
+                } catch (error) {
+                    console.error("Error al procesar el resultado del diagnóstico:", error);
+                    alert(`¡Misión aceptada, ${nombreUsuario}! Empezamos con la Observación Crítica.`);
+                    window.location.href = 'prueba inicial.html';
                 }
+            });
+        }
+
+        // Esperar a que el DOM esté completamente cargado
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM completamente cargado");
+            
+            onAuthStateChanged(auth, (user) => {
+                if (!user) {
+                    console.log("Usuario no autenticado, redirigiendo a index.html");
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                console.log("Usuario autenticado:", user);
+
+                // --- SOLUCIÓN DEFINITIVA: Recargar el perfil del usuario para obtener los datos más recientes ---
+                user.reload().then(() => {
+                    // Después de recargar, el objeto `user` está actualizado desde el servidor de Firebase.
+                    const TU_NOMBRE = user.displayName || user.email || "Agente";
+                    
+                    console.log("Perfil recargado. Nombre de visualización:", user.displayName);
+
+                    // --- NUEVO: Llamamos a la función de ajustes para asegurar que todo esté sincronizado ---
+                    if (typeof loadAndApplySettings === 'function') {
+                        loadAndApplySettings();
+                    }
+
+                    // --- LÓGICA DE LA PÁGINA ---
+                    const nombreAgenteSpan = document.getElementById('nombre-agente');
+                    if (nombreAgenteSpan) {
+                        nombreAgenteSpan.textContent = TU_NOMBRE;
+                    }
+
+                    // Inicializar los event listeners con el nombre del usuario
+                    inicializarEventListeners(TU_NOMBRE);
+
+                }).catch((error) => {
+                    console.error("Error al recargar el perfil del usuario:", error);
+                    const TU_NOMBRE_FALLBACK = user.displayName || user.email || "Agente";
+                    
+                    const nombreAgenteSpan = document.getElementById('nombre-agente');
+                    if (nombreAgenteSpan) {
+                        nombreAgenteSpan.textContent = TU_NOMBRE_FALLBACK;
+                    }
+                    
+                    // Inicializar los event listeners con el nombre de respaldo
+                    inicializarEventListeners(TU_NOMBRE_FALLBACK);
+                });
             });
         });
     </script>
 </body>
 </html>
-
