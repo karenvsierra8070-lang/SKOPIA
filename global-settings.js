@@ -1,5 +1,4 @@
 // global-settings.js
-
 // --- TEMAS ---
 function applyTheme(themeName) {
     const root = document.documentElement;
