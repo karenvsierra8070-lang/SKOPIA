@@ -131,7 +131,7 @@
             margin-bottom: 15px;
         }
         
-        /* --- NUEVO: Estilo para el botón de volver --- */
+        /* --- Estilo para el botón de volver --- */
         .boton-volver {
             display: inline-flex;
             align-items: center;
@@ -264,7 +264,6 @@
                 <div class="carta-texto">
                     <h2>CENTRO DE NOTIFICACIONES</h2>
                     
-                    <!-- NUEVO: Botón para volver a la página anterior -->
                     <button id="volver-btn" class="boton-volver">
                         <span>←</span> Volver
                     </button>
@@ -296,6 +295,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+        // NUEVO: Importamos las funciones de Firestore
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
@@ -313,6 +314,61 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        // NUEVO: Inicializamos Firestore
+        const db = getFirestore(app);
+
+        // --- INICIO: CÓDIGO DE SUSCRIPCIÓN A PUSH ---
+
+        // ¡TU CLAVE PÚBLICA YA ESTÁ AQUÍ!
+        const VAPID_PUBLIC_KEY = 'BEkTPT3o3L0JeTL8CIRjYxO7wgWMQZhOKorpxmybAARONOg1VFp-LiaWsh1uu1aDVxj2pKnw2TgCErhUdEMMB08';
+
+        function urlB64ToUint8Array(base64String) {
+          const padding = '='.repeat((4 - base64String.length % 4) % 4);
+          const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+          const rawData = window.atob(base64);
+          const outputArray = new Uint8Array(rawData.length);
+          for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+          }
+          return outputArray;
+        }
+
+        async function suscribirUsuarioAPush() {
+          console.log("Intentando suscribir al usuario a Push...");
+          if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.error('Tu navegador no soporta Push Notifications.');
+            return;
+          }
+
+          try {
+            const registration = await navigator.serviceWorker.ready;
+            const subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC_KEY)
+            });
+
+            console.log('Usuario suscrito:', subscription);
+            alert('¡Felicidades! Ahora estás suscrito a las notificaciones de Skópia.');
+            guardarSuscripcionEnFirestore(subscription);
+
+          } catch (error) {
+            console.error('Error al suscribir al usuario:', error);
+            alert('Hubo un error al intentar suscribirte. Revisa la consola para más detalles.');
+          }
+        }
+
+        async function guardarSuscripcionEnFirestore(subscription) {
+          if (!auth.currentUser) {
+            console.error("No hay un usuario autenticado para guardar la suscripción.");
+            return;
+          }
+          
+          const uid = auth.currentUser.uid;
+          await setDoc(doc(db, "users", uid, "pushSubscriptions", "token"), subscription);
+          console.log("¡Suscripción guardada exitosamente en Firestore!");
+        }
+
+        // --- FIN: CÓDIGO DE SUSCRIPCIÓN A PUSH ---
 
         onAuthStateChanged(auth, (user) => {
             if (!user) {
@@ -361,10 +417,16 @@
                         updateStatus('✅ ¡Gracias! Permiso concedido.', 'success');
                         testButtons.forEach(btn => btn.disabled = false);
                         permisoBtn.textContent = 'Permiso Ya Concedido';
+                        
+                        // NUEVO: Si el permiso se acaba de dar, lo suscribimos
+                        await suscribirUsuarioAPush();
                     } else {
                         updateStatus('❌ Permiso denegado. No podrás recibir alertas.', 'error');
                     }
                     permisoBtn.disabled = true;
+                } else if (Notification.permission === 'granted') {
+                    // NUEVO: Si el permiso ya estaba concedido, lo suscribimos directamente
+                    await suscribirUsuarioAPush();
                 }
             }
 
@@ -378,7 +440,7 @@
             function mostrarNotificacionConIcono() {
                 const notification = new Notification('¡Nuevo Logro!', {
                     body: 'Has completado tu primera lección.',
-                    icon: 'logo.jpeg' // Asegúrate que esta imagen exista
+                    icon: 'logo.jpeg'
                 });
                 updateStatus('📤 Notificación con ícono enviada.', 'info');
             }
@@ -398,7 +460,7 @@
                 });
 
                 notification.onclick = (event) => {
-                    event.preventDefault(); // Previene que la notificación cierre la pestaña
+                    event.preventDefault();
                     if (event.action === 'yes') {
                         alert('Redirigiendo al mapa de estudio...');
                         // window.location.href = 'modulos.html';
@@ -414,13 +476,12 @@
                 const notification = new Notification('Revisa tu progreso', {
                     body: 'Tu mapa del tesoro se ha actualizado.',
                     icon: 'logo.jpeg',
-                    image: 'panda.jpeg' // Asegúrate que esta imagen exista
+                    image: 'panda.jpeg'
                 });
                 updateStatus('📤 Notificación con imagen enviada.', 'info');
             }
 
             // --- EVENT LISTENERS ---
-            // NUEVO: Event listener para el botón de volver
             document.getElementById('volver-btn').addEventListener('click', () => {
                 window.history.back();
             });
@@ -435,19 +496,20 @@
             checkPermissionStatus();
         });
     </script>
+
+    <!-- Script para registrar el Service Worker -->
     <script>
-  // Esto registra el Service Worker
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js')
-        .then(registration => {
-          console.log('Service Worker registrado con éxito:', registration);
-        })
-        .catch(error => {
-          console.log('Error al registrar el Service Worker:', error);
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js')
+            .then(registration => {
+              console.log('Service Worker registrado con éxito:', registration);
+            })
+            .catch(error => {
+              console.log('Error al registrar el Service Worker:', error);
+            });
         });
-    });
-  }
-</script>
+      }
+    </script>
 </body>
 </html>
