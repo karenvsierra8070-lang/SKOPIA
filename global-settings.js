@@ -8,7 +8,7 @@ function applyTheme(themeName) {
         cafe: { '--color-crema': '#f5e6d3', '--color-oliva-claro': '#a0826d', '--color-oliva-medio': '#6f4e37', '--color-oliva-oscuro': '#3e2723', },
         azul_cielo: { '--color-crema': '#ebf6f7', '--color-oliva-claro': '#abccdb', '--color-oliva-medio': '#2f82a8', '--color-oliva-oscuro': '#0a3c57', },
         lila: { '--color-crema': '#f3e5f5', '--color-oliva-claro': '#f8cfff', '--color-oliva-medio': '#d879e8', '--color-oliva-oscuro': '#7b1fa2', },
-        rosa: { '--color-crema': '#fce4ec', '--color-oliva-claro': '#f48fb1', '--color-oliva-medio': '#ec407a', '--color-oliva-oscuro': '#d81b60', },
+        rosa: { '--color-crema': '#fce4ec', '--color-oliva-claro': '#f48fb1', '--color-oliva-medio': '#ec407a', '--color-oliva-oscuro': '#6e3449', },
         amarillo: { '--color-crema': '#fffde7', '--color-oliva-claro': '#f7ee9c', '--color-oliva-medio': '#ffee58', '--color-oliva-oscuro': '#fbc02d', },
         oscuro: { '--color-crema': '#121212', '--color-oliva-claro': '#424242', '--color-oliva-medio': '#e0e0e0', '--color-oliva-oscuro': '#ffffff', },
         custom: {} // Para el color personalizado
