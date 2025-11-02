@@ -39,7 +39,19 @@ function applyAnimationSpeed(speed) {
     }
 }
 
+// --- SONIDOS ---
+const sounds = {
+    click: new Audio('click.mp3'), // Necesitarás tener estos archivos de sonido
+    levelUp: new Audio('levelup.mp3'),
+    missionComplete: new Audio('mission.mp3')
+};
 
+function playSound(soundName) {
+    const settings = JSON.parse(localStorage.getItem('skopia_settings')) || {};
+    if (settings.soundEnabled && sounds[soundName]) {
+        sounds[soundName].play().catch(e => console.error("Error al reproducir sonido:", e));
+    }
+}
 // --- FUNCIÓN PRINCIPAL (AHORA EXPORTADA) ---
 export function loadAndApplySettings() {
     const settings = JSON.parse(localStorage.getItem('skopia_settings')) || {};
