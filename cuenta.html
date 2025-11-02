@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Cuenta - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut, updateProfile, deleteUser } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Proteger la página: si no hay usuario, redirigir al login
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            // Una vez confirmado el usuario, inicializamos la página
+            initializeAccountPage(user);
+        });
+
+        function initializeAccountPage(user) {
+            const userDataKey = `skopia_userData_${user.uid}`;
+            let userData = JSON.parse(localStorage.getItem(userDataKey)) || {};
+
+            // Cargar datos en la página
+            document.getElementById('profile-picture').src = userData.photoURL || 'https://i.pravatar.cc/150?u=a042581f4e29026704d';
+            document.getElementById('display-name-input').value = userData.displayName || user.email;
+            document.getElementById('gender-select').value = userData.gender || 'no-especificado';
+            document.getElementById('user-email').textContent = user.email;
+
+            // --- EVENT LISTENERS ---
+
+            // Cambiar foto de perfil
+            document.getElementById('photo-upload').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const photoURL = event.target.result;
+                        document.getElementById('profile-picture').src = photoURL;
+                        userData.photoURL = photoURL;
+                        localStorage.setItem(userDataKey, JSON.stringify(userData));
+                        // Opcional: Actualizar también en Firebase Auth
+                        updateProfile(auth.currentUser, { photoURL: photoURL });
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Cambiar nombre de visualización
+            document.getElementById('display-name-input').addEventListener('input', function(e) {
+                const newName = e.target.value;
+                userData.displayName = newName;
+                localStorage.setItem(userDataKey, JSON.stringify(userData));
+                // Opcional: Actualizar también en Firebase Auth
+                updateProfile(auth.currentUser, { displayName: newName });
+            });
+
+            // Cambiar género
+            document.getElementById('gender-select').addEventListener('change', function(e) {
+                userData.gender = e.target.value;
+                localStorage.setItem(userDataKey, JSON.stringify(userData));
+            });
+
+            // Botón de "Cambiar de cuenta" (Cerrar sesión)
+            document.getElementById('switch-account-btn').addEventListener('click', () => {
+                signOut(auth).then(() => window.location.href = 'index.html');
+            });
+
+            // Botón de "Eliminar cuenta"
+            document.getElementById('delete-account-btn').addEventListener('click', () => {
+                // Mostrar el modal de confirmación
+                document.getElementById('delete-modal').style.display = 'flex';
+            });
+
+            // Confirmar eliminación de cuenta
+            document.getElementById('confirm-delete-btn').addEventListener('click', () => {
+                const user = auth.currentUser;
+                
+                deleteUser(user).then(() => {
+                    // Cuenta eliminada exitosamente
+                    console.log("Cuenta de usuario eliminada.");
+                    // Limpiar todo el localStorage
+                    localStorage.clear();
+                    // Redirigir a la página de inicio
+                    window.location.href = 'index.html';
+                }).catch((error) => {
+                    console.error("Error al eliminar la cuenta:", error);
+                    alert("No se pudo eliminar la cuenta. Es posible que necesites volver a iniciar sesión recientemente. Error: " + error.message);
+                    // Ocultar el modal incluso si hay error
+                    document.getElementById('delete-modal').style.display = 'none';
+                });
+            });
+
+            // Cancelar eliminación de cuenta
+            document.getElementById('cancel-delete-btn').addEventListener('click', () => {
+                document.getElementById('delete-modal').style.display = 'none';
+            });
+        }
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+            --color-rojo: #d32f2f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--color-crema) 0%, #f5efe5 100%);
+            color: var(--color-oliva-oscuro);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px var(--color-sombra);
+            padding: 30px;
+            margin-top: 40px;
+        }
+
+        h1 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 2.5rem;
+            color: var(--color-oliva-oscuro);
+            text-align: center;
+            margin-bottom: 20px; /* Reducido el margen inferior */
+        }
+
+        /* Estilo para el botón de volver */
+        .back-button-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .profile-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .profile-picture-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 5px solid var(--color-oliva-claro);
+            margin-bottom: 15px;
+        }
+
+        #profile-picture {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-upload-label {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background-color: var(--color-oliva-medio);
+            color: white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .photo-upload-label:hover {
+            background-color: var(--color-oliva-oscuro);
+        }
+
+        #photo-upload {
+            display: none;
+        }
+
+        .details-section .form-group {
+            margin-bottom: 20px;
+        }
+
+        .details-section label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: var(--color-oliva-oscuro);
+        }
+
+        .details-section input[type="text"],
+        .details-section select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .details-section input[type="text"]:focus,
+        .details-section select:focus {
+            outline: none;
+            border-color: var(--color-oliva-medio);
+        }
+
+        .details-section #user-email {
+            padding: 12px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            color: #555;
+        }
+
+        .actions-section {
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background-color: var(--color-oliva-oscuro);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--color-oliva-medio);
+            transform: scale(1.02);
+        }
+
+        .btn-danger {
+            background-color: var(--color-rojo);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #b71c1c;
+            transform: scale(1.02);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: auto;
+            padding: 30px;
+            border: none;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .modal-content h3 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.8rem;
+            color: var(--color-rojo);
+            margin-bottom: 15px;
+        }
+
+        .modal-content p {
+            margin-bottom: 25px;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: space-around;
+        }
+
+        .modal-buttons .btn {
+            width: 45%;
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Mi Cuenta</h1>
+
+        <!-- MODIFICADO: Botón para volver atrás dinámicamente -->
+        <div class="back-button-container">
+            <button class="btn btn-primary" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i> Volver
+            </button>
+        </div>
+
+        <section class="profile-section">
+            <div class="profile-picture-container">
+                <img id="profile-picture" src="https://i.pravatar.cc/150?u=a042581f4e29026704d" alt="Foto de perfil">
+                <label for="photo-upload" class="photo-upload-label">
+                    <i class="fas fa-camera"></i>
+                </label>
+                <input type="file" id="photo-upload" accept="image/*">
+            </div>
+        </section>
+
+        <section class="details-section">
+            <div class="form-group">
+                <label for="display-name-input">Nombre de Visualización</label>
+                <input type="text" id="display-name-input" placeholder="¿Cómo quieres que te llamemos?">
+            </div>
+            <div class="form-group">
+                <label for="gender-select">Género</label>
+                <select id="gender-select">
+                    <option value="no-especificado">No especificado</option>
+                    <option value="masculino">Masculino</option>
+                    <option value="femenino">Femenino</option>
+                    <option value="otro">Otro</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="user-email">Correo Electrónico</label>
+                <div id="user-email"></div>
+            </div>
+        </section>
+
+        <section class="actions-section">
+            <button id="switch-account-btn" class="btn btn-primary">
+                <i class="fas fa-exchange-alt"></i> Cambiar de Cuenta
+            </button>
+            <button id="delete-account-btn" class="btn btn-danger">
+                <i class="fas fa-trash-alt"></i> Eliminar Cuenta
+            </button>
+        </section>
+    </div>
+
+    <!-- Modal de Confirmación para Eliminar Cuenta -->
+    <div id="delete-modal" class="modal">
+        <div class="modal-content">
+            <h3>¡Cuidado!</h3>
+            <p>¿Estás seguro de que quieres eliminar tu cuenta? Esta acción es permanente y se perderán todos tus datos, misiones y progreso.</p>
+            <div class="modal-buttons">
+                <button id="cancel-delete-btn" class="btn btn-primary">Cancelar</button>
+                <button id="confirm-delete-btn" class="btn btn-danger">Sí, Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+  </html>
