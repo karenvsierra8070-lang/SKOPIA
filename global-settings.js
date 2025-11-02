@@ -1,4 +1,5 @@
 // global-settings.js
+
 // --- TEMAS ---
 function applyTheme(themeName) {
     const root = document.documentElement;
@@ -52,8 +53,8 @@ function playSound(soundName) {
     }
 }
 
-// --- CARGAR Y APLICAR TODO ---
-function loadAndApplySettings() {
+// --- FUNCIÓN PRINCIPAL (AHORA EXPORTADA) ---
+export function loadAndApplySettings() {
     const settings = JSON.parse(localStorage.getItem('skopia_settings')) || {};
     
     applyTheme(settings.theme || 'original');
@@ -73,5 +74,5 @@ function loadAndApplySettings() {
     }
 }
 
-// Ejecutar al cargar la página
+// Ejecutar la función cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', loadAndApplySettings);
