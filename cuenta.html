@@ -53,24 +53,25 @@
 
             // --- EVENT LISTENERS ---
 
-            // NUEVO: Listener para el botón de guardar cambios
+            // Listener para el botón de guardar cambios
             document.getElementById('save-changes-btn').addEventListener('click', () => {
                 const newName = document.getElementById('display-name-input').value;
                 const newGender = document.getElementById('gender-select').value;
                 const newPhotoURL = document.getElementById('profile-picture').src;
 
-                // Actualizar localStorage
+                // 1. Actualizar localStorage SIEMPRE (es nuestro respaldo principal)
                 userData.displayName = newName;
                 userData.gender = newGender;
                 userData.photoURL = newPhotoURL;
                 localStorage.setItem(userDataKey, JSON.stringify(userData));
 
-                // Actualizar el perfil en Firebase Auth para que el cambio se vea en todas las páginas
+                // 2. Intentar actualizar el perfil en Firebase Auth SOLO con el nombre
+                // para evitar el error de URL muy larga de la foto.
                 updateProfile(auth.currentUser, {
-                    displayName: newName,
-                    photoURL: newPhotoURL
+                    displayName: newName
+                    // NO ENVIAMOS photoURL a Firebase para evitar el error
                 }).then(() => {
-                    // Mostrar mensaje de éxito
+                    // Éxito
                     const saveBtn = document.getElementById('save-changes-btn');
                     const originalText = saveBtn.innerHTML;
                     saveBtn.innerHTML = '<i class="fas fa-check"></i> ¡Guardado!';
@@ -80,12 +81,13 @@
                         saveBtn.disabled = false;
                     }, 2000);
                 }).catch((error) => {
+                    // ERROR: Mostramos el error exacto al usuario
                     console.error("Error al actualizar el perfil:", error);
-                    alert("No se pudieron guardar los cambios en el perfil. Error: " + error.message);
+                    alert(`No se pudo guardar el nombre. Error: ${error.message}`);
                 });
             });
 
-            // MODIFICADO: Los cambios de foto ya no se guardan al instante, solo al hacer clic en "Guardar"
+            // Los cambios de foto ya no se guardan al instante, solo al hacer clic en "Guardar"
             document.getElementById('photo-upload').addEventListener('change', function(e) {
                 const file = e.target.files[0];
                 if (file) {
@@ -396,7 +398,6 @@
         </section>
 
         <section class="actions-section">
-            <!-- NUEVO: Botón para guardar los cambios -->
             <button id="save-changes-btn" class="btn btn-primary">
                 <i class="fas fa-save"></i> Guardar Cambios
             </button>
