@@ -152,11 +152,16 @@
             padding-bottom: 5px;
         }
 
+        /* --- CORRECCIÓN CLAVE AQUÍ --- */
         .agente-titulo {
             font-weight: bold;
             text-align: center;
             margin-bottom: 20px;
             font-size: 1.1em;
+            /* Añadimos estas propiedades para evitar que el nombre se corte */
+            white-space: nowrap; /* Evita que el texto se parta en líneas */
+            overflow: visible; /* Asegura que el texto sea visible */
+            width: 100%; /* Permite que el contenedor se adapte al contenido */
         }
 
         .carta-texto p {
@@ -278,13 +283,10 @@
             
             <div class="pagina-izquierda">
                 <div class="logo-area">
-                    <!-- CORRECCIÓN: Ruta corregida para la web -->
                     <img src="logo.jpeg" alt="Logo Skópia" class="logo-libro"> 
                     <h1 class="titulo-skopia">Skópia</h1> 
-                    
                 </div>
                 <div class="mascota-area">
-                    <!-- CORRECCIÓN: Ruta corregida para la web -->
                     <img src="panda.jpeg" alt="Mascota Panda" class="mascota-panda">
                     <p class="mascota-texto">¡Listo para la misión!</p>
                 </div>
@@ -331,11 +333,9 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
-        // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
 
-        // --- CONFIGURACIÓN DINÁMICA DE FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
             projectId: "skopia-aa786",
@@ -344,151 +344,37 @@
             appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
         };
 
-        // Detectar si estamos en local o en producción y asignar el authDomain correcto
         if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
             firebaseConfig.authDomain = "localhost";
         } else {
             firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
         }
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // --- GUARDIÁN DE SESIÓN CON FIREBASE ---
         onAuthStateChanged(auth, (user) => {
             if (!user) {
-                // Si no hay un usuario logueado, redirigir a la página de login
                 window.location.href = 'index.html';
-                return; // Detener la ejecución del resto del script
+                return;
             }
 
-            // --- SI LA SESIÓN ES VÁLIDA, EJECUTAR EL CÓDIGO ORIGINAL DE LA PÁGINA ---
-            
-            // --- SOLUCIÓN CLAVE: Recargar el perfil del usuario para obtener los datos más recientes ---
-            // Esto evita problemas de caché donde el nombre antiguo (o el email) todavía está presente.
+            // --- SOLUCIÓN DEFINITIVA: Recargar el perfil del usuario para obtener los datos más recientes ---
             user.reload().then(() => {
                 // Después de recargar, el objeto `user` está actualizado desde el servidor de Firebase.
-                // Ahora podemos obtener el nombre de visualización con confianza.
                 const TU_NOMBRE = user.displayName || user.email || "Agente";
                 
-                console.log("Perfil recargado. Nombre de visualización:", user.displayName); // Para depuración
+                console.log("Perfil recargado. Nombre de visualización:", user.displayName);
 
-                // --- CONTENIDO COMPLETO DE localStorage.js ---
-                const StorageManager = (function() {
-                    const PROGRESS_KEY = 'saberProProgress';
-                    const QUIZ_HISTORY_KEY = 'saberProQuizHistory';
-                    const LAST_LOGIN_KEY = 'saberProLastLogin';
-                    const DEFAULT_PROGRESS = {
-                        streak: 0,
-                        totalPoints: 0,
-                        modules: {}
-                    };
-
-                    function save(key, data) {
-                        try {
-                            localStorage.setItem(key, JSON.stringify(data));
-                        } catch (error) {
-                            console.error(`Error al guardar en localStorage con la clave "${key}":`, error);
-                        }
-                    }
-
-                    function load(key, defaultValue = null) {
-                        try {
-                            const item = localStorage.getItem(key);
-                            return item ? JSON.parse(item) : defaultValue;
-                        } catch (error) {
-                            console.error(`Error al cargar desde localStorage con la clave "${key}":`, error);
-                            return defaultValue;
-                        }
-                    }
-
-                    function getProgress() {
-                        return load(PROGRESS_KEY, DEFAULT_PROGRESS);
-                    }
-
-                    function saveProgress(progressData) {
-                        save(PROGRESS_KEY, progressData);
-                    }
-
-                    function getQuizHistory() {
-                        return load(QUIZ_HISTORY_KEY, []);
-                    }
-
-                    function saveQuizResult(result) {
-                        const history = getQuizHistory();
-                        history.push(result);
-                        save(QUIZ_HISTORY_KEY, history);
-                    }
-
-                    function updateStreak() {
-                        const progress = getProgress();
-                        const now = new Date();
-                        const today = now.toDateString();
-                        const lastLogin = load(LAST_LOGIN_KEY);
-                        if (lastLogin) {
-                            const lastLoginDate = new Date(lastLogin).toDateString();
-                            const yesterday = new Date(now);
-                            yesterday.setDate(yesterday.getDate() - 1);
-                            const yesterdayString = yesterday.toDateString();
-                            if (today === lastLoginDate) return;
-                            else if (lastLoginDate === yesterdayString) progress.streak += 1;
-                            else progress.streak = 1;
-                        } else {
-                            progress.streak = 1;
-                        }
-                        saveProgress(progress);
-                        save(LAST_LOGIN_KEY, now.toISOString());
-                    }
-
-                    function calculateWeakTopics() {
-                        const history = getQuizHistory();
-                        const errorCounts = {};
-                        history.forEach(quiz => {
-                            if (quiz.incorrectAnswers && quiz.incorrectAnswers.length > 0) {
-                                quiz.incorrectAnswers.forEach(questionId => {
-                                    const topic = questionId.split('_')[2];
-                                    errorCounts[topic] = (errorCounts[topic] || 0) + 1;
-                                });
-                            }
-                        });
-                        const sortedTopics = Object.entries(errorCounts)
-                            .sort(([, a], [, b]) => b - a)
-                            .slice(0, 3)
-                            .map(([topic]) => topic);
-                        return sortedTopics;
-                    }
-
-                    return {
-                        getProgress,
-                        saveProgress,
-                        getQuizHistory,
-                        saveQuizResult,
-                        updateStreak,
-                        calculateWeakTopics
-                    };
-                })();
-
-
-                // --- LÓGICA DE LA PÁGINA (ahora protegida y con datos actualizados) ---
+                // --- LÓGICA DE LA PÁGINA ---
                 const aceptarMisionBtn = document.getElementById('aceptar-mision-btn');
                 const infoBtn = document.getElementById('info-btn');
                 const infoModal = document.getElementById('info-modal');
                 const cerrarModal = document.querySelector('.cerrar-modal');
 
-                infoBtn.addEventListener('click', () => {
-                    infoModal.style.display = 'block';
-                });
-
-                cerrarModal.addEventListener('click', () => {
-                    infoModal.style.display = 'none';
-                });
-
-                window.addEventListener('click', (event) => {
-                    if (event.target === infoModal) {
-                        infoModal.style.display = 'none';
-                    }
-                });
+                infoBtn.addEventListener('click', () => { infoModal.style.display = 'block'; });
+                cerrarModal.addEventListener('click', () => { infoModal.style.display = 'none'; });
+                window.addEventListener('click', (event) => { if (event.target === infoModal) { infoModal.style.display = 'none'; } });
 
                 const nombreAgenteSpan = document.getElementById('nombre-agente');
                 if (nombreAgenteSpan) {
@@ -497,7 +383,6 @@
 
                 aceptarMisionBtn.addEventListener('click', () => {
                     const diagnosticResult = JSON.parse(localStorage.getItem("resultadoDiagnostico"));
-                    
                     if (!diagnosticResult) {
                         alert(`¡Misión aceptada, ${TU_NOMBRE}! Empezamos con la Observación Crítica.`);
                         window.location.href = 'prueba inicial.html';
@@ -509,7 +394,6 @@
 
             }).catch((error) => {
                 console.error("Error al recargar el perfil del usuario:", error);
-                // Si la recarga falla, usamos los datos cacheados como último recurso
                 const TU_NOMBRE_FALLBACK = user.displayName || user.email || "Agente";
                 const nombreAgenteSpan = document.getElementById('nombre-agente');
                 if (nombreAgenteSpan) {
