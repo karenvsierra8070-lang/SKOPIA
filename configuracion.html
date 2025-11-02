@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) { window.location.href = 'index.html'; return; }
+            initializePage();
+        });
+
+        function initializePage() {
+            // Cargar configuración guardada
+            const settings = JSON.parse(localStorage.getItem('skopia_settings')) || {};
+            document.getElementById('theme-select').value = settings.theme || 'original';
+            document.getElementById('font-size-select').value = settings.fontSize || 'normal';
+            document.getElementById('animation-speed-select').value = settings.animationSpeed || 'normal';
+            document.getElementById('sound-toggle').checked = settings.soundEnabled || false;
+            document.getElementById('focus-mode-toggle').checked = settings.focusMode || false;
+            if(settings.theme === 'custom') {
+                document.getElementById('custom-color-group').style.display = 'block';
+                document.getElementById('accent-color-picker').value = settings.accentColor || '#5a6133';
+            }
+
+            // Event Listeners
+            document.getElementById('theme-select').addEventListener('change', (e) => {
+                document.getElementById('custom-color-group').style.display = e.target.value === 'custom' ? 'block' : 'none';
+            });
+
+            document.getElementById('save-settings-btn').addEventListener('click', () => {
+                const newSettings = {
+                    theme: document.getElementById('theme-select').value,
+                    fontSize: document.getElementById('font-size-select').value,
+                    animationSpeed: document.getElementById('animation-speed-select').value,
+                    soundEnabled: document.getElementById('sound-toggle').checked,
+                    focusMode: document.getElementById('focus-mode-toggle').checked,
+                };
+                if (newSettings.theme === 'custom') {
+                    newSettings.accentColor = document.getElementById('accent-color-picker').value;
+                }
+                localStorage.setItem('skopia_settings', JSON.stringify(newSettings));
+                loadAndApplySettings(); // Aplicar inmediatamente
+                alert('¡Configuración guardada!');
+            });
+
+            document.getElementById('logout-btn').addEventListener('click', () => {
+                signOut(auth).then(() => window.location.href = 'index.html');
+            });
+        }
+    </script>
+    
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+        }
+        body { font-family: 'Roboto', sans-serif; background: var(--color-crema); color: var(--color-oliva-oscuro); min-height: 100vh; padding: 20px; }
+        .container { max-width: 700px; margin: 40px auto; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 8px 25px var(--color-sombra); }
+        h1 { font-family: 'Patrick Hand', cursive; font-size: 2.5rem; text-align: center; margin-bottom: 30px; }
+        .form-group { margin-bottom: 25px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 10px; }
+        .form-group select, .form-group input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; box-sizing: border-box; }
+        .btn { display: block; width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-bottom: 10px; }
+        .btn-primary { background-color: var(--color-oliva-oscuro); color: white; }
+        .btn-primary:hover { background-color: var(--color-oliva-medio); transform: scale(1.02); }
+        .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--color-oliva-medio); }
+        input:checked + .slider:before { transform: translateX(26px); }
+        .focus-mode { background: #333; color: #eee; }
+        .focus-mode .floating-icons, .focus-mode .navbar { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Panel de Personalización</h1>
+        
+        <div class="form-group">
+            <label for="theme-select">Tema de Color</label>
+            <select id="theme-select">
+                <option value="original">Original (Oliva)</option>
+                <option value="cafe">Café Tostado</option>
+                <option value="azul_cielo">Azul Cielo</option>
+                <option value="lila">Lila Elegante</option>
+                <option value="rosa">Rosa Suave</option>
+                <option value="amarillo">Amarillo Pollito</option>
+                <option value="oscuro">Modo Oscuro</option>
+                <option value="custom">Color Personalizado</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="custom-color-group" style="display:none;">
+            <label for="accent-color-picker">Elige tu Color de Acento</label>
+            <input type="color" id="accent-color-picker" value="#5a6133">
+        </div>
+
+        <div class="form-group">
+            <label for="font-size-select">Tamaño de Letra</label>
+            <select id="font-size-select">
+                <option value="pequeno">Pequeño</option>
+                <option value="normal">Normal</option>
+                <option value="grande">Grande</option>
+                <option value="extra_grande">Extra Grande</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="animation-speed-select">Velocidad de Animación</label>
+            <select id="animation-speed-select">
+                <option value="lenta">Lenta</option>
+                <option value="normal">Normal</option>
+                <option value="rapida">Rápida</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="sound-toggle">Efectos de Sonido</label>
+            <label class="switch">
+                <input type="checkbox" id="sound-toggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+        
+        <div class="form-group">
+            <label for="focus-mode-toggle">Modo de Enfoque (Sin Distracciones)</label>
+            <label class="switch">
+                <input type="checkbox" id="focus-mode-toggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <button id="save-settings-btn" class="btn btn-primary">
+            <i class="fas fa-save"></i> Guardar Cambios
+        </button>
+        
+        <!-- BOTÓN DE VOLVER AQUÍ -->
+        <button class="btn btn-primary" onclick="window.history.back()">
+            <i class="fas fa-arrow-left"></i> Volver
+        </button>
+
+        <button id="logout-btn" class="btn btn-primary" style="background-color: #d32f2f;">
+            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+        </button>
+    </div>
+
+</body>
+</html>
