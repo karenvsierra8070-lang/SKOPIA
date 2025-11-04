@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Diagnóstico Inicial - Skópia</title>
@@ -416,15 +415,12 @@
                     
                     // Filtrar preguntas con el tag 'diagnostico'
                     allDiagnosticQuestions = data.filter(q => {
-                        // Verificar que la pregunta tenga la propiedad tags y que sea un array
                         if (!q.tags || !Array.isArray(q.tags)) {
                             return false;
                         }
-                        // Verificar que el tag 'diagnostico' esté presente
                         return q.tags.includes('diagnostico');
                     });
                     
-                    // Verificar si hay suficientes preguntas con el tag 'diagnostico'
                     if (allDiagnosticQuestions.length === 0) {
                         throw new Error("No se encontraron preguntas con el tag 'diagnostico'.");
                     }
@@ -432,7 +428,6 @@
                     // Mezclar las preguntas y tomar las primeras 10
                     questions = shuffleArray([...allDiagnosticQuestions]).slice(0, 10);
                     
-                    // Verificar si se obtuvieron las 10 preguntas
                     if (questions.length < 10) {
                         console.warn(`Solo se encontraron ${questions.length} preguntas con el tag 'diagnostico'. Se usarán todas las disponibles.`);
                     }
@@ -544,9 +539,9 @@
                 questions.forEach(q => {
                     const moduleTag = q.tags[1]; 
                     if (!detailedResults[moduleTag]) {
-                        detailedResults[moduleTag] = { correct: 0, total: 0 };
+                        detailedResults[moduleTag] = { correct: 0, totalInQuiz: 0 };
                     }
-                    detailedResults[moduleTag].total++;
+                    detailedResults[moduleTag].totalInQuiz++;
                 });
 
                 userAnswers.forEach((answer, index) => {
@@ -568,17 +563,18 @@
                 const modulosData = Object.keys(detailedResults).map(tag => {
                     const stats = detailedResults[tag];
                     const totalInPool = totalQuestionsByTag[tag];
-                    // Aplicar la fórmula: correctas * (300 / total_preguntas_del_tag)
+                    // Aplicar la fórmula correcta
                     const score = Math.round(stats.correct * (300 / totalInPool));
                     return {
                         tag: tag,
                         correct: stats.correct,
-                        totalInQuiz: stats.total,
+                        totalInQuiz: stats.totalInQuiz,
+                        totalInPool: totalInPool, // <-- CAMBIO CLAVE: Ahora guardamos este dato.
                         score: score
                     };
                 });
 
-                // --- NUEVO: GUARDAR PREGUNTAS INCORRECTAS ---
+                // --- GUARDAR PREGUNTAS INCORRECTAS ---
                 const incorrectQuestions = [];
                 questions.forEach((question, index) => {
                     if (userAnswers[index] !== question.respuestaCorrecta) {
@@ -586,7 +582,6 @@
                     }
                 });
                 localStorage.setItem('preguntasIncorrectasDiagnostico', JSON.stringify(incorrectQuestions));
-                // --- FIN DE LA NUEVA SECCIÓN ---
 
                 const result = {
                     type: 'diagnostico',
@@ -620,7 +615,5 @@
 </body>
 
 </html>
-
-
 
 
