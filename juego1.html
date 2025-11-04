@@ -557,6 +557,9 @@
             const GAME_STATS_KEY = 'skopia_game_stats_v1';
             let toastTimer = null;
             let gameStartTime = null;
+            
+            // BANDERA PARA EVITAR CASCADAS EN LA VERIFICACIÓN DE MISIONES
+            let isCheckingSpecialMissions = false;
 
             const missionsTemplate = [
                 { id: 1, title: "Completa tu primer examen", points: 50 },
@@ -638,8 +641,14 @@
                     showMissionToast(`¡Misión completada: ${mission.title} (+${mission.points}⭐)!`, 5000);
                     updateAllDisplays();
                     
-                    // Verificar misiones especiales
-                    checkSpecialMissions();
+                    // CORRECCIÓN: Evitar cascadas en la verificación de misiones especiales
+                    if (!isCheckingSpecialMissions) {
+                        console.log("Iniciando verificación de misiones especiales...");
+                        isCheckingSpecialMissions = true;
+                        checkSpecialMissions();
+                        isCheckingSpecialMissions = false;
+                        console.log("Verificación de misiones especiales finalizada.");
+                    }
                 } else {
                     console.log(`>>> Misión ${id} ya estaba completada o no existe.`);
                 }
@@ -648,27 +657,50 @@
             function checkSpecialMissions() {
                 const totalPoints = getTotalPoints();
                 const completedCount = getCompletedCount();
+                const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}");
+                
+                console.log(`Verificando misiones especiales. Puntos: ${totalPoints}, Misiones: ${completedCount}`);
                 
                 // Misión 9: Acumula tus primeras 200 estrellas
                 if (totalPoints >= 200) {
-                    completeMission(9);
+                    const mission9 = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").find(m => m.id === 9);
+                    if (mission9 && !mission9.completed) {
+                        console.log("Condición cumplida para Misión 9 (200 estrellas).");
+                        completeMission(9);
+                    }
                 }
                 
                 // Misión 10: Completa 3 misiones seguidas
                 if (completedCount >= 3) {
-                    completeMission(10);
+                    const mission10 = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").find(m => m.id === 10);
+                    if (mission10 && !mission10.completed) {
+                        console.log("Condición cumplida para Misión 10 (3 misiones).");
+                        completeMission(10);
+                    }
                 }
                 
                 // Misión 13: Gana 3 juegos distintos
-                const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}");
                 if (gameStats.gamesWon >= 3) {
-                    completeMission(13);
+                    const mission13 = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").find(m => m.id === 13);
+                    if (mission13 && !mission13.completed) {
+                        console.log("Condición cumplida para Misión 13 (3 juegos).");
+                        completeMission(13);
+                    }
                 }
                 
                 // Otras misiones según puntos
-                if (totalPoints >= 500) completeMission(17);
-                if (totalPoints >= 1000) completeMission(26);
-                if (totalPoints >= 3000) completeMission(43);
+                if (totalPoints >= 500) {
+                    const mission17 = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").find(m => m.id === 17);
+                    if (mission17 && !mission17.completed) completeMission(17);
+                }
+                if (totalPoints >= 1000) {
+                    const mission26 = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").find(m => m.id === 26);
+                    if (mission26 && !mission26.completed) completeMission(26);
+                }
+                if (totalPoints >= 3000) {
+                    const mission43 = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").find(m => m.id === 43);
+                    if (mission43 && !mission43.completed) completeMission(43);
+                }
             }
 
             function showMissionToast(text, ms = 60000) {
@@ -771,7 +803,6 @@
                 console.log("Evento 'userReady' recibido para:", user.email);
                 const userProfile = JSON.parse(localStorage.getItem(USER_PROFILE_KEY) || "{}");
 
-                // Inicializar perfil si es la primera vez que se loguea
                 if (!userProfile.originalEmail) {
                     userProfile.originalEmail = user.email;
                     userProfile.nameChangeMissionCompleted = false;
@@ -779,7 +810,6 @@
                     console.log("Perfil de usuario inicializado por primera vez. Email original guardado:", userProfile.originalEmail);
                 }
 
-                // Comprobar la misión de cambiar nombre SOLO si no se ha completado
                 if (!userProfile.nameChangeMissionCompleted) {
                     console.log("Comprobando misión 8 (cambiar nombre)...");
                     const hasChangedName = user.displayName && user.displayName !== userProfile.originalEmail;
@@ -817,7 +847,6 @@
                 }
             });
 
-            // Botón para comenzar el juego
             document.getElementById('start-game-btn').addEventListener('click', () => {
                 gameStartTime = Date.now();
                 window.location.href = 'juego1fase1.html';
@@ -829,7 +858,6 @@
                 document.getElementById('panel-misiones').classList.add('active');
                 renderMissions();
                 
-                // Completar misión 38 si se revisa el progreso
                 completeMission(38);
             });
             
@@ -863,7 +891,6 @@
             initGameStats();
             updateAllDisplays();
             
-            // Mostrar notificación de la próxima misión
             const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
             const nextMission = data.find(m => !m.completed);
             if (nextMission) {
