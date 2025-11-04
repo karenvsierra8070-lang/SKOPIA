@@ -557,9 +557,9 @@
             const GAME_STATS_KEY = 'skopia_game_stats_v1';
             let toastTimer = null;
             let gameStartTime = null;
-            
-            // BANDERA PARA EVITAR CASCADAS EN LA VERIFICACIÓN DE MISIONES
-            let isCheckingSpecialMissions = false;
+
+            // Lista de IDs de misiones "meta" que no cuentan para la racha
+            const META_MISSION_IDS = [38]; // Misión 38: Revisa tu historial de progreso
 
             const missionsTemplate = [
                 { id: 1, title: "Completa tu primer examen", points: 50 },
@@ -615,13 +615,8 @@
             function initGameStats() {
                 if (!localStorage.getItem(GAME_STATS_KEY)) {
                     const initial = {
-                        gamesPlayed: 0,
-                        gamesWon: 0,
-                        hintsUsed: 0,
-                        totalTime: 0,
-                        bestTime: null,
-                        lastPlayDate: null,
-                        streakDays: 0
+                        gamesPlayed: 0, gamesWon: 0, hintsUsed: 0, totalTime: 0,
+                        bestTime: null, lastPlayDate: null, streakDays: 0
                     };
                     localStorage.setItem(GAME_STATS_KEY, JSON.stringify(initial));
                     console.log("Estadísticas de juego inicializadas.");
@@ -641,65 +636,71 @@
                     showMissionToast(`¡Misión completada: ${mission.title} (+${mission.points}⭐)!`, 5000);
                     updateAllDisplays();
                     
-                    // CORRECCIÓN: Evitar cascadas en la verificación de misiones especiales
-                    if (!isCheckingSpecialMissions) {
-                        console.log("Iniciando verificación de misiones especiales...");
-                        isCheckingSpecialMissions = true;
-                        checkSpecialMissions();
-                        isCheckingSpecialMissions = false;
-                        console.log("Verificación de misiones especiales finalizada.");
-                    }
+                    setTimeout(() => {
+                        console.log("Iniciando verificación de misiones especiales de forma diferida...");
+                        checkAndCompleteSpecialMissions();
+                    }, 200);
                 } else {
                     console.log(`>>> Misión ${id} ya estaba completada o no existe.`);
                 }
             }
 
-            function checkSpecialMissions() {
+            function checkAndCompleteSpecialMissions() {
+                const missionsData = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
                 const totalPoints = getTotalPoints();
                 const completedCount = getCompletedCount();
                 const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}");
-                
-                console.log(`Verificando misiones especiales. Puntos: ${totalPoints}, Misiones: ${completedCount}`);
-                
+                let changed = false;
+                const newlyCompletedMissions = [];
+
                 // Misión 9: Acumula tus primeras 200 estrellas
                 if (totalPoints >= 200) {
-                    const mission9 = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").find(m => m.id === 9);
+                    const mission9 = missionsData.find(m => m.id === 9);
                     if (mission9 && !mission9.completed) {
-                        console.log("Condición cumplida para Misión 9 (200 estrellas).");
-                        completeMission(9);
+                        mission9.completed = true;
+                        changed = true;
+                        newlyCompletedMissions.push(mission9);
                     }
                 }
                 
-                // Misión 10: Completa 3 misiones seguidas
-                if (completedCount >= 3) {
-                    const mission10 = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").find(m => m.id === 10);
+                // Misión 10: Completa 3 misiones seguidas (EXCLUYENDO MISIONES META)
+                const metaCompletedCount = missionsData.filter(m => m.completed && META_MISSION_IDS.includes(m.id)).length;
+                const realCompletedCount = completedCount - metaCompletedCount;
+                console.log(`Verificando Misión 10: Total completadas=${completedCount}, Meta completadas=${metaCompletedCount}, Reales=${realCompletedCount}`);
+                if (realCompletedCount >= 3) {
+                    const mission10 = missionsData.find(m => m.id === 10);
                     if (mission10 && !mission10.completed) {
-                        console.log("Condición cumplida para Misión 10 (3 misiones).");
-                        completeMission(10);
+                        mission10.completed = true;
+                        changed = true;
+                        newlyCompletedMissions.push(mission10);
                     }
                 }
                 
                 // Misión 13: Gana 3 juegos distintos
                 if (gameStats.gamesWon >= 3) {
-                    const mission13 = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").find(m => m.id === 13);
+                    const mission13 = missionsData.find(m => m.id === 13);
                     if (mission13 && !mission13.completed) {
-                        console.log("Condición cumplida para Misión 13 (3 juegos).");
-                        completeMission(13);
+                        mission13.completed = true;
+                        changed = true;
+                        newlyCompletedMissions.push(mission13);
                     }
                 }
-                
+
                 // Otras misiones según puntos
-                if (totalPoints >= 500) {
-                    const mission17 = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").find(m => m.id === 17);
-                    if (mission17 && !mission17.completed) completeMission(17);
-                }
-                if (totalPoints >= 1000) {
-                    const mission26 = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").find(m => m.id === 26);
-                    if (mission26 && !mission26.completed) completeMission(26);
-                }
-                if (totalPoints >= 3000) {
-                    const mission43 = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").find(m => m.id === 43);
-                    if (mission43 && !mission43.completed) completeMission(43);
+                if (totalPoints >= 500) { const m = missionsData.find(m => m.id === 17); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} }
+                if (totalPoints >= 1000) { const m = missionsData.find(m => m.id === 26); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} }
+                if (totalPoints >= 3000) { const m = missionsData.find(m => m.id === 43); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} }
+
+                if (changed) {
+                    localStorage.setItem(MISSIONS_KEY, JSON.stringify(missionsData));
+                    document.getElementById('mission-sound').play().catch(e => console.log("Error al reproducir sonido:", e));
+                    newlyCompletedMissions.forEach(m => {
+                        console.log(`!!! MISIÓN ESPECIAL COMPLETADA: ID=${m.id}, Titulo="${m.title}", Puntos=${m.points} !!!`);
+                        showMissionToast(`¡Misión completada: ${m.title} (+${m.points}⭐)!`, 5000);
+                    });
+                    updateAllDisplays();
+                } else {
+                    console.log("No hay nuevas misiones especiales para completar.");
                 }
             }
 
@@ -787,10 +788,7 @@
             }
 
             function updateAllDisplays() {
-                renderMissions(); 
-                renderLevel(); 
-                renderProgress(); 
-                renderAnalysis();
+                renderMissions(); renderLevel(); renderProgress(); renderAnalysis();
             }
 
             function closeAllPanels() {
@@ -800,29 +798,19 @@
             // --- EVENT LISTENERS ---
             window.addEventListener('userReady', (e) => {
                 const user = e.detail.user;
-                console.log("Evento 'userReady' recibido para:", user.email);
                 const userProfile = JSON.parse(localStorage.getItem(USER_PROFILE_KEY) || "{}");
-
                 if (!userProfile.originalEmail) {
                     userProfile.originalEmail = user.email;
                     userProfile.nameChangeMissionCompleted = false;
                     localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
-                    console.log("Perfil de usuario inicializado por primera vez. Email original guardado:", userProfile.originalEmail);
                 }
-
                 if (!userProfile.nameChangeMissionCompleted) {
-                    console.log("Comprobando misión 8 (cambiar nombre)...");
                     const hasChangedName = user.displayName && user.displayName !== userProfile.originalEmail;
                     if (hasChangedName) {
-                        console.log(`¡Cambio de nombre detectado! Original: "${userProfile.originalEmail}", Nuevo: "${user.displayName}". Completando misión 8.`);
                         completeMission(8);
                         userProfile.nameChangeMissionCompleted = true;
                         localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
-                    } else {
-                        console.log("No se detectó cambio de nombre. DisplayName actual:", user.displayName);
                     }
-                } else {
-                    console.log("Misión 8 ya fue completada anteriormente.");
                 }
             });
 
@@ -837,14 +825,10 @@
             });
 
             window.addEventListener('click', (event) => {
-                if (!event.target.closest('.navbar')) {
-                    document.getElementById('user-dropdown').classList.remove('active');
-                }
+                if (!event.target.closest('.navbar')) document.getElementById('user-dropdown').classList.remove('active');
                 const isIcon = event.target.closest('.floating-icons');
                 const isPanel = event.target.closest('.panel-box');
-                if (!isIcon && !isPanel) {
-                    closeAllPanels();
-                }
+                if (!isIcon && !isPanel) closeAllPanels();
             });
 
             document.getElementById('start-game-btn').addEventListener('click', () => {
@@ -852,13 +836,11 @@
                 window.location.href = 'juego1fase1.html';
             });
 
-            // **EVENT LISTENERS DE ICONOS (FUNCIONANDO)**
+            // **EVENT LISTENERS DE ICONOS (CORREGIDO)**
             document.getElementById('btn-misiones').addEventListener('click', () => {
                 closeAllPanels();
                 document.getElementById('panel-misiones').classList.add('active');
                 renderMissions();
-                
-                completeMission(38);
             });
             
             document.getElementById('btn-nivel').addEventListener('click', () => {
@@ -871,6 +853,8 @@
                 closeAllPanels();
                 document.getElementById('panel-progreso').classList.add('active');
                 renderProgress();
+                // Completar misión 38 aquí
+                completeMission(38);
             });
             
             document.getElementById('btn-analisis').addEventListener('click', () => {
@@ -886,10 +870,7 @@
             });
 
             // --- INICIALIZACIÓN ---
-            initMissions();
-            initUserProfile();
-            initGameStats();
-            updateAllDisplays();
+            initMissions(); initUserProfile(); initGameStats(); updateAllDisplays();
             
             const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
             const nextMission = data.find(m => !m.completed);
