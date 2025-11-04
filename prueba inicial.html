@@ -389,7 +389,7 @@
             const tipText = document.getElementById('tip-text');
 
             let questions = [];
-            let allDiagnosticQuestions = []; // Para calcular el total por tag
+            let allDiagnosticQuestions = [];
             let currentQuestionIndex = 0;
             let userAnswers = [];
 
@@ -413,7 +413,6 @@
                         throw new Error("El archivo JSON no tiene el formato de array esperado.");
                     }
                     
-                    // Filtrar preguntas con el tag 'diagnostico'
                     allDiagnosticQuestions = data.filter(q => {
                         if (!q.tags || !Array.isArray(q.tags)) {
                             return false;
@@ -425,7 +424,6 @@
                         throw new Error("No se encontraron preguntas con el tag 'diagnostico'.");
                     }
                     
-                    // Mezclar las preguntas y tomar las primeras 10
                     questions = shuffleArray([...allDiagnosticQuestions]).slice(0, 10);
                     
                     if (questions.length < 10) {
@@ -532,9 +530,8 @@
 
             function finishQuiz() {
                 const overallCorrect = userAnswers.filter((a, i) => a === questions[i].respuestaCorrecta).length;
-                const overallScore = overallCorrect * 30;
+                const overallScore = Math.round((overallCorrect / questions.length) * 300);
 
-                // --- LÓGICA PARA CALCULAR POR MÓDULO ---
                 const detailedResults = {};
                 questions.forEach(q => {
                     const moduleTag = q.tags[1]; 
@@ -552,29 +549,17 @@
                     }
                 });
 
-                // Calcular el total de preguntas por tag en el banco de preguntas completo
-                const totalQuestionsByTag = {};
-                allDiagnosticQuestions.forEach(q => {
-                    const moduleTag = q.tags[1];
-                    totalQuestionsByTag[moduleTag] = (totalQuestionsByTag[moduleTag] || 0) + 1;
-                });
-
-                // Formatear los datos para guardarlos
                 const modulosData = Object.keys(detailedResults).map(tag => {
                     const stats = detailedResults[tag];
-                    const totalInPool = totalQuestionsByTag[tag];
-                    // Aplicar la fórmula correcta
-                    const score = Math.round(stats.correct * (300 / totalInPool));
+                    const score = Math.round((stats.correct / stats.totalInQuiz) * 300);
                     return {
                         tag: tag,
                         correct: stats.correct,
                         totalInQuiz: stats.totalInQuiz,
-                        totalInPool: totalInPool, // <-- CAMBIO CLAVE: Ahora guardamos este dato.
                         score: score
                     };
                 });
 
-                // --- GUARDAR PREGUNTAS INCORRECTAS ---
                 const incorrectQuestions = [];
                 questions.forEach((question, index) => {
                     if (userAnswers[index] !== question.respuestaCorrecta) {
@@ -615,5 +600,4 @@
 </body>
 
 </html>
-
 
