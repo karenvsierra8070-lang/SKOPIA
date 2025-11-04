@@ -150,7 +150,7 @@
 
         .charts-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 30px;
         }
 
@@ -180,11 +180,11 @@
             height: 200px;
             margin-bottom: 15px;
         }
-
+        
         .chart-card p {
             font-size: 0.9rem;
             color: var(--color-oliva-oscuro);
-            margin: 0;
+            margin: 5px 0;
         }
         
         .help-modal {
@@ -295,7 +295,6 @@
             </section>
 
             <div class="back-button-container">
-                <!-- CAMBIO CLAVE: El botón ahora dirige a modulos.html -->
                 <a href="modulos.html" class="back-button">Ir a mi Mapa de Rutas</a>
             </div>
         </main>
@@ -321,17 +320,18 @@
 
             let puntajeGlobal = 0;
 
-            if (resultado && resultado.score !== undefined) {
-                puntajeGlobal = resultado.score;
-                puntajeGlobalEl.textContent = `${puntajeGlobal} / 300`;
+            if (resultado && resultado.modulos && resultado.modulos.length > 0) {
+                // Calcular el puntaje global sumando los puntajes de los módulos
+                puntajeGlobal = resultado.modulos.reduce((total, modulo) => total + modulo.score, 0);
+                puntajeGlobalEl.textContent = `${puntajeGlobal} / ${resultado.modulos.length * 300}`;
                 
-                if (puntajeGlobal >= 250) {
+                if (puntajeGlobal >= (resultado.modulos.length * 300 * 0.8)) { // 80% del máximo posible
                     mensajeDesempenoEl.textContent = "¡Excelente desempeño!";
                     mensajeDesempenoEl.className = "score-message score-excelente";
-                } else if (puntajeGlobal >= 200) {
+                } else if (puntajeGlobal >= (resultado.modulos.length * 300 * 0.6)) { // 60%
                     mensajeDesempenoEl.textContent = "Buen desempeño, pero puedes mejorar.";
                     mensajeDesempenoEl.className = "score-message score-bueno";
-                } else if (puntajeGlobal >= 150) {
+                } else if (puntajeGlobal >= (resultado.modulos.length * 300 * 0.4)) { // 40%
                     mensajeDesempenoEl.textContent = "Desempeño regular, repasa algunos temas.";
                     mensajeDesempenoEl.className = "score-message score-regular";
                 } else {
@@ -339,56 +339,69 @@
                     mensajeDesempenoEl.className = "score-message score-bajo";
                 }
 
-                if (resultado.modulos && resultado.modulos.length > 0) {
-                    const tagNameMap = {
-                        'LC': 'Lectura Crítica',
-                        'RC': 'Razonamiento Cuantitativo',
-                        'CC': 'Competencias Ciudadanas',
-                        'I': 'Inglés'
-                    };
+                const tagNameMap = {
+                    'LC': 'Lectura Crítica',
+                    'RC': 'Razonamiento Cuantitativo',
+                    'CC': 'Competencias Ciudadanas',
+                    'I': 'Inglés'
+                };
 
-                    resultado.modulos.forEach(modulo => {
-                        const card = document.createElement("div");
-                        card.className = "chart-card";
-                        const chartId = `chart-${modulo.tag}`;
-                        card.innerHTML = `
-                            <h3>${tagNameMap[modulo.tag] || modulo.tag}</h3>
-                            <div class="chart-container">
-                                <canvas id="${chartId}"></canvas>
-                            </div>
-                            <p>Puntaje: <strong>${modulo.score}</strong> / 300</p>
-                            <p>Respuestas correctas: ${modulo.correct} de ${modulo.totalInQuiz}</p>
-                        `;
-                        modulosContainer.appendChild(card);
+                resultado.modulos.forEach(modulo => {
+                    const card = document.createElement("div");
+                    card.className = "chart-card";
+                    const chartId = `chart-${modulo.tag}`;
+                    
+                    // NUEVA VISUALIZACIÓN: Más clara y detallada
+                    card.innerHTML = `
+                        <h3>${tagNameMap[modulo.tag] || modulo.tag}</h3>
+                        <div class="chart-container">
+                            <canvas id="${chartId}"></canvas>
+                        </div>
+                        <p><strong>Puntaje:</strong> ${modulo.score} / 300</p>
+                        <p><strong>Respondiste correctamente:</strong> ${modulo.correct} de ${modulo.totalInQuiz} preguntas en el quiz.</p>
+                        <p><strong>Total de preguntas de este módulo en el banco:</strong> ${modulo.totalInPool}</p>
+                    `;
+                    modulosContainer.appendChild(card);
 
-                        new Chart(document.getElementById(chartId), {
-                            type: 'doughnut',
-                            data: {
-                                labels: ['Correctas', 'Incorrectas'],
-                                datasets: [{
-                                    data: [modulo.correct, modulo.totalInQuiz - modulo.correct],
-                                    backgroundColor: ['#bec092', '#fdfbf5'],
-                                    borderWidth: 1
-                                }]
-                            },
-                            options: { 
-                                cutout: '70%', 
-                                plugins: { 
-                                    legend: { 
-                                        display: true,
-                                        position: 'bottom'
-                                    } 
-                                } 
-                            }
-                        });
+                    new Chart(document.getElementById(chartId), {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Correctas', 'Incorrectas'],
+                            datasets: [{
+                                data: [modulo.correct, modulo.totalInQuiz - modulo.correct],
+                                backgroundColor: ['#2ecc71', '#e74c3c'], // Colores más intuitivos
+                                borderWidth: 1
+                            }]
+                        },
+                        options: { 
+                            cutout: '70%', 
+                            plugins: { 
+                                legend: { 
+                                    display: true,
+                                    position: 'bottom'
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            let label = context.label || '';
+                                            if (label) {
+                                                label += ': ';
+                                            }
+                                            if (context.parsed !== null) {
+                                                label += `${context.parsed} de ${modulo.totalInQuiz}`;
+                                            }
+                                            return label;
+                                        }
+                                    }
+                                }
+                            } 
+                        }
                     });
-                } else {
-                     modulosContainer.innerHTML = '<p>No se encontraron resultados detallados por módulo. Asegúrate de haber completado el diagnóstico.</p>';
-                }
-
+                });
             } else {
                 puntajeGlobalEl.textContent = `0 / 300`;
                 mensajeDesempenoEl.textContent = "Aún no has realizado la prueba";
+                modulosContainer.innerHTML = '<p>No se encontraron resultados detallados por módulo. Asegúrate de haber completado el diagnóstico.</p>';
             }
         });
 
@@ -401,17 +414,17 @@
             if (type === "interpretacion") {
                 title.textContent = "¿Cómo interpretar mi resultado?";
                 body.innerHTML = `
-                    <p>Tu puntaje global es un promedio de tu desempeño. Los gráficos por módulo te muestran tu rendimiento específico en cada área, sobre una base de 300 puntos. Esto te ayuda a identificar tus fortalezas y debilidades.</p>
+                    <p>Tu puntaje global es la suma de tus puntajes por módulo. Cada módulo se califica sobre 300 puntos. El puntaje de un módulo se calcula basándose en tus respuestas correctas en relación con el número total de preguntas disponibles para ese módulo en nuestro banco de preguntas.</p>
                 `;
             } else if (type === "analisis") {
                 title.textContent = "Análisis de mi resultado";
                 body.innerHTML = `
-                    <p>El sistema identifica tus fortalezas y debilidades en función de los errores cometidos. Revisa los módulos con menor puntaje y prioriza el estudio de esas áreas.</p>
+                    <p>El sistema identifica tus fortalezas y debilidades en función de los errores cometidos. Revisa los módulos con menor puntaje y prioriza el estudio de esas áreas. Puedes ver las preguntas que respondiste incorrectamente en la sección de "Repaso".</p>
                 `;
             } else if (type === "bueno") {
                 title.textContent = "¿Mi resultado es bueno?";
                 body.innerHTML = `
-                    <p>Un puntaje superior a 200 en un módulo indica un buen desempeño. Si superas los 250, tu nivel es excelente. Si está por debajo de 150, conviene repasar ese tema.</p>
+                    <p>Un puntaje superior a 240 en un módulo (80% de 300) indica un excelente desempeño. Si está entre 180 y 239 (60%-80%), tu nivel es bueno. Si está por debajo de 180, conviene repasar ese tema.</p>
                 `;
             }
         }
@@ -423,8 +436,5 @@
 </body>
 
 </html>
-
-
-
 
 
