@@ -14,7 +14,7 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
@@ -179,11 +179,6 @@
                 </div>
             </div>
             <button class="play-btn" id="play-btn">Jugar</button>
-            
-            <!-- BOTÓN DE PRUEBA PARA LA MISIÓN 8 -->
-            <button id="test-mission-8-btn" style="margin-top: 20px; background-color: #d9534f; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
-                (PRUEBA) Completar Misión 8: Cambiar Nombre
-            </button>
         </div>
 
         <aside class="mascota-container">
@@ -268,26 +263,26 @@
             }
             function initUserProfile() {
                 if (!localStorage.getItem(USER_PROFILE_KEY)) {
-                    const initial = { hasChangedName: false, originalEmail: "", currentDisplayName: "" };
+                    const initial = { originalEmail: "", nameChangeMissionCompleted: false };
                     localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(initial));
                 }
             }
 
             function completeMission(id) {
-                console.log(`Intentando completar misión ${id}...`);
+                console.log(`>>> Llamada a completeMission con ID: ${id}`);
                 const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
                 const mission = data.find(m => m.id === id);
                 if (mission && !mission.completed) {
                     mission.completed = true;
                     localStorage.setItem(MISSIONS_KEY, JSON.stringify(data));
-                    console.log(`¡Misión ${id} (${mission.title}) completada!`);
+                    console.log(`!!! MISIÓN COMPLETADA: ID=${id}, Titulo="${mission.title}", Puntos=${mission.points} !!!`);
                     
                     document.getElementById('mission-sound').play().catch(e => console.log("Error al reproducir sonido:", e));
                     showMissionToast(`¡Misión completada: ${mission.title} (+${mission.points}⭐)!`, 5000);
                     updateAllDisplays();
                     showNextMissionNotification();
                 } else {
-                    console.log(`Misión ${id} ya estaba completada o no existe.`);
+                    console.log(`>>> Misión ${id} ya estaba completada o no existe.`);
                 }
             }
 
@@ -297,7 +292,7 @@
                 if (nextMission) {
                     setTimeout(() => {
                         showMissionToast(`Nueva misión disponible: ${nextMission.title} (+${nextMission.points}⭐)`, 8000);
-                    }, 5500); // Muestra la siguiente después de que la anterior desaparezca
+                    }, 5500);
                 }
             }
 
@@ -363,7 +358,7 @@
                 `;
             }
             function renderAnalysis() {
-                document.getElementById('analisis-stats').innerHTML = '<div class="info">Análisis de exámenes (pendiente de implementación).</div>';
+                document.getElementById('analisis-stats').innerHTML = '<div class="info">Análisis de exámenes (pendiente de implementar).</div>';
             }
             function updateAllDisplays() {
                 renderMissions(); renderLevel(); renderProgress(); renderAnalysis();
@@ -380,27 +375,46 @@
 
                 missionTimerInterval = setInterval(() => {
                     if (!document.hidden) {
-                        totalActiveTime += 1000; // Suma 1 segundo cada vez
+                        totalActiveTime += 1000;
                         console.log(`Tiempo activo en lección: ${totalActiveTime / 1000}s / ${MISSION_3_DURATION / 1000}s`);
                         if (totalActiveTime >= MISSION_3_DURATION) {
                             completeMission(3);
-                            clearInterval(missionTimerInterval); // Detener el temporizador
+                            clearInterval(missionTimerInterval);
                             missionTimerInterval = null;
                         }
                     }
-                }, 1000); // Comprueba cada segundo
+                }, 1000);
             }
 
             // --- EVENT LISTENERS ---
             window.addEventListener('userReady', (e) => {
                 const user = e.detail.user;
+                console.log("Evento 'userReady' recibido para:", user.email);
                 const userProfile = JSON.parse(localStorage.getItem(USER_PROFILE_KEY) || "{}");
+
+                // Inicializar perfil si es la primera vez que se loguea
                 if (!userProfile.originalEmail) {
                     userProfile.originalEmail = user.email;
-                    userProfile.currentDisplayName = user.displayName || user.email;
+                    userProfile.nameChangeMissionCompleted = false;
                     localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
+                    console.log("Perfil de usuario inicializado por primera vez. Email original guardado:", userProfile.originalEmail);
                 }
-                // La lógica de la misión 8 ahora se dispara con el botón de prueba
+
+                // Comprobar la misión de cambiar nombre SOLO si no se ha completado
+                if (!userProfile.nameChangeMissionCompleted) {
+                    console.log("Comprobando misión 8 (cambiar nombre)...");
+                    const hasChangedName = user.displayName && user.displayName !== userProfile.originalEmail;
+                    if (hasChangedName) {
+                        console.log(`¡Cambio de nombre detectado! Original: "${userProfile.originalEmail}", Nuevo: "${user.displayName}". Completando misión 8.`);
+                        completeMission(8);
+                        userProfile.nameChangeMissionCompleted = true;
+                        localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
+                    } else {
+                        console.log("No se detectó cambio de nombre. DisplayName actual:", user.displayName);
+                    }
+                } else {
+                    console.log("Misión 8 ya fue completada anteriormente.");
+                }
             });
 
             document.getElementById('hamburger-menu').addEventListener('click', () => {
@@ -421,7 +435,7 @@
             document.getElementById('skip-video-btn').addEventListener('click', () => {
                 document.getElementById('video-container').style.display = 'none';
                 document.getElementById('lesson-container').classList.add('active');
-                startMissionTimer(); // Inicia el temporizador aquí
+                startMissionTimer();
             });
             document.getElementById('play-btn').addEventListener('click', () => window.location.href = 'juego1.html');
 
@@ -436,12 +450,6 @@
                 });
             });
 
-            // **EVENT LISTENER PARA EL BOTÓN DE PRUEBA DE LA MISIÓN 8**
-            document.getElementById('test-mission-8-btn').addEventListener('click', () => {
-                console.log("Botón de prueba para la misión 8 presionado.");
-                completeMission(8);
-            });
-
             // Lógica de reloj y frases (sin cambios)
             const clockElement = document.getElementById('digital-clock'); let lastHour = -1;
             function updateClock() { const now = new Date(); const h = String(now.getHours()).padStart(2, '0'); const m = String(now.getMinutes()).padStart(2, '0'); const s = String(now.getSeconds()).padStart(2, '0'); if (now.getHours() !== lastHour) { clockElement.classList.add('hour-change'); setTimeout(() => { clockElement.textContent = `${h}:${m}:${s}`; clockElement.classList.remove('hour-change'); }, 300); lastHour = now.getHours(); } else { clockElement.textContent = `${h}:${m}:${s}`; } }
@@ -453,7 +461,7 @@
 
             // --- INICIALIZACIÓN ---
             initMissions(); initUserProfile(); updateAllDisplays();
-            initMissionNotifications(); // Muestra la primera notificación
+            initMissionNotifications();
             console.log("Skópia inicializado.");
 
             function initMissionNotifications() {
