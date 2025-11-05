@@ -485,6 +485,8 @@
             <div class="connector" draggable="true" data-connector="aunque">aunque</div>
             <div class="connector" draggable="true" data-connector="por eso">por eso</div>
             <div class="connector" draggable="true" data-connector="pero">pero</div>
+            <div class="connector" draggable="true" data-connector="ya que">ya que</div>
+            <div class="connector" draggable="true" data-connector="pues">pues</div>
         </div>
 
         <div class="game-controls">
@@ -668,26 +670,76 @@
                     feedbackMessage.textContent = "¡Mensaje descifrado con éxito!";
                     feedbackMessage.className = 'feedback-message success';
                     nextPhaseButton.classList.add('show');
+                    
+                    // Actualizar estadísticas del juego
+                    const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}");
+                    gameStats.gamesWon = (gameStats.gamesWon || 0) + 1;
+                    const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+                    gameStats.totalTime = (gameStats.totalTime || 0) + elapsed;
+                    if (!gameStats.bestTime || elapsed < gameStats.bestTime) {
+                        gameStats.bestTime = elapsed;
+                    }
+                    localStorage.setItem(GAME_STATS_KEY, JSON.stringify(gameStats));
+                    
+                    // Completar misiones relevantes
+                    completeMission(5); // Gana tu primer juego
+                    if (!hintUsed) {
+                        completeMission(37); // Gana un juego sin usar pistas
+                    }
+                    if (elapsed < 120) {
+                        completeMission(18); // Gana un juego en menos de 2 minutos
+                    }
                 }
             }
 
             function useHint() {
-                const state = getGameState();
-                if (state.hintsUsed) return;
+                if (hintUsed) return;
                 
-                state.hintsUsed = true;
-                saveGameState(state);
+                hintUsed = true;
                 completeMission(6); // Completar misión de usar pista
-
-                const blanks = telegramContent.querySelectorAll('.word-blank:not(.filled)');
-                if (blanks.length > 0) {
-                    const randomBlank = blanks[Math.floor(Math.random() * blanks.length)];
-                    const correctConnector = correctAnswers[randomBlank.id];
-                    randomBlank.style.backgroundColor = 'rgba(255, 235, 59, 0.5)';
+                
+                // Encontrar conectores incorrectos que no se usan en ninguna respuesta correcta
+                const allConnectors = Array.from(connectorTray.querySelectorAll('.connector:not(.used)'));
+                const incorrectConnectors = allConnectors.filter(connector => {
+                    const connectorText = connector.dataset.connector;
+                    return !Object.values(correctAnswers).includes(connectorText);
+                });
+                
+                if (incorrectConnectors.length > 0) {
+                    // Seleccionar un conector incorrecto al azar y eliminarlo
+                    const randomIndex = Math.floor(Math.random() * incorrectConnectors.length);
+                    const connectorToRemove = incorrectConnectors[randomIndex];
+                    
+                    // Animación de eliminación
+                    connectorToRemove.style.transition = 'all 0.5s ease';
+                    connectorToRemove.style.transform = 'scale(0)';
+                    connectorToRemove.style.opacity = '0';
+                    
                     setTimeout(() => {
-                        randomBlank.style.backgroundColor = '';
-                    }, 2000);
+                        connectorToRemove.remove();
+                        feedbackMessage.textContent = `Pista: "${connectorToRemove.textContent}" no se usa en ninguna respuesta.`;
+                        feedbackMessage.className = 'feedback-message success';
+                        
+                        setTimeout(() => {
+                            feedbackMessage.textContent = '';
+                        }, 3000);
+                    }, 500);
+                } else {
+                    // Si no hay conectores incorrectos, mostrar una pista sobre una respuesta correcta
+                    const blanks = telegramContent.querySelectorAll('.word-blank:not(.filled)');
+                    if (blanks.length > 0) {
+                        const randomBlank = blanks[Math.floor(Math.random() * blanks.length)];
+                        const correctConnector = correctAnswers[randomBlank.id];
+                        
+                        feedbackMessage.textContent = `Pista: En el espacio ${randomBlank.id.replace('blank', '')} va "${correctConnector}"`;
+                        feedbackMessage.className = 'feedback-message success';
+                        
+                        setTimeout(() => {
+                            feedbackMessage.textContent = '';
+                        }, 3000);
+                    }
                 }
+                
                 hintButton.disabled = true;
             }
 
@@ -730,7 +782,8 @@
                 if (e.target.classList.contains('connector')) {
                     draggedConnector = e.target;
                     e.target.classList.add('dragging');
-                    e.data.effectAllowed = 'move';
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', e.target.innerHTML);
                 }
             });
 
@@ -771,7 +824,7 @@
             musicControlBtn.addEventListener('click', () => {
                 if (backgroundMusic.paused) {
                     backgroundMusic.play();
-                    musicControlBtn.innerHTML = '<i class="fa-volume-up"></i>';
+                    musicControlBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
                 } else {
                     backgroundMusic.pause();
                     musicControlBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
@@ -781,7 +834,7 @@
             // --- INICIALIZACIÓN ---
             initMissions(); initUserProfile(); initGameStats(); updateAllDisplays();
             startGame();
-            console.log("Feta 2 del juego inicializada.");
+            console.log("Fase 2 del juego inicializada.");
         });
     </script>
 </body>
