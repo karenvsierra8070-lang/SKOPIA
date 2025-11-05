@@ -76,7 +76,7 @@
             overflow-x: hidden;
         }
 
-        /* --- NAVBAR --- */
+        /* --- NAVBAR (Same as juego1.html) --- */
         .navbar {
             display: flex;
             justify-content: flex-end;
@@ -270,10 +270,9 @@
             border-radius: 20px;
             font-family: 'Patrick Hand', cursive;
             font-size: 1.1rem;
-            cursor: grab; /* Cambiado a 'grab' */
-            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+            cursor: move;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
             user-select: none;
-            touch-action: none; /* Importante para móviles */
         }
         .connector:hover {
             transform: translateY(-3px);
@@ -282,15 +281,11 @@
         .connector.dragging {
             opacity: 0.5;
             transform: scale(1.05);
-            cursor: grabbing; /* Cambiado a 'grabbing' */
-            position: relative; /* Para el z-index */
-            z-index: 1000;
         }
         .connector.used {
             opacity: 0.4;
             cursor: not-allowed;
             background-color: #777;
-            pointer-events: none; /* Evita que se pueda arrastrar de nuevo */
         }
 
         /* --- GAME CONTROLS --- */
@@ -370,7 +365,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* --- FLOATING ICONS & PANELS --- */
+        /* --- FLOATING ICONS & PANELS (Same as juego1.html) --- */
         .floating-icons {
             position: fixed;
             right: 20px;
@@ -479,9 +474,9 @@
 
         <div class="telegram-container">
             <div class="telegram-content" id="telegram-content">
-                El objetivo se escapó por la ventana; <span class="word-blank" id="blank1" data-connector="sin embargo"></span> el detective no lo persiguió.
-                Tenía que encontrar otra forma de resolver el caso, <span class="word-blank" id="blank2" data-connector="ya que"></span> la evidencia era escasa.
-                Decidió volver a la escena del crimen, <span class="word-blank" id="blank3" data-connector="pues"></span> esperaba encontrar una pista que todos habían pasado por alto.
+                El objetivo se escapó por la ventana, <span class="word-blank" id="blank1" data-connector="sin embargo"></span> el detective no persiguió.
+                Tenía que encontrar otra forma de resolver el caso, <span class="word-blank" id="blank2" data-connector="por eso"></span> la evidencia era escasa.
+                Decidió volver a la escena del crimen, <span class="word-blank" id="blank3" data-connector="aunque"></span> esperaba encontrar una pista que todos habían pasado por alto.
             </div>
         </div>
 
@@ -490,8 +485,6 @@
             <div class="connector" draggable="true" data-connector="aunque">aunque</div>
             <div class="connector" draggable="true" data-connector="por eso">por eso</div>
             <div class="connector" draggable="true" data-connector="pero">pero</div>
-            <div class="connector" draggable="true" data-connector="ya que">ya que</div>
-            <div class="connector" draggable="true" data-connector="pues">pues</div>
         </div>
 
         <div class="game-controls">
@@ -506,7 +499,7 @@
         <button class="next-phase-button" id="next-phase-button">Siguiente Archivo Secreto</button>
     </main>
 
-    <!-- Floating vertical icons -->
+    <!-- Floating vertical icons (Same as juego1.html) -->
     <div class="floating-icons" aria-hidden="false">
         <button id="btn-misiones" title="Misiones">🎯</button>
         <button id="btn-nivel" title="Nivel actual">⭐</button>
@@ -514,7 +507,7 @@
         <button id="btn-analisis" title="Análisis">📈</button>
     </div>
 
-    <!-- Panels -->
+    <!-- Panels (Same as juego1.html) -->
     <div class="panel-box" id="panel-misiones" aria-hidden="true">
         <div class="panel-header"><h3>Misiones</h3><button class="close-panel" data-close="misiones">&times;</button></div>
         <div id="misiones-content"></div>
@@ -548,21 +541,16 @@
             const TOTAL_PHASES = 5;
 
             let toastTimer = null;
-            // CORRECCIÓN: Inicializar el tiempo de inicio aquí mismo
-            let gameStartTime = Date.now(); 
+            let gameStartTime = null;
             let timerInterval = null;
             let hintUsed = false;
             let puzzleSolved = false;
 
-            // *** NUEVAS RESPUESTAS ***
             const correctAnswers = {
                 blank1: 'sin embargo',
-                blank2: 'ya que',
-                blank3: 'pues'
+                blank2: 'por eso',
+                blank3: 'aunque'
             };
-            
-            // Lista de conectores incorrectos para la pista
-            const incorrectConnectorsList = ['aunque', 'por eso', 'pero'];
 
             // --- FUNCIONES DE GESTIÓN DEL ESTADO DEL JUEGO ---
             function getGameState() {
@@ -573,7 +561,7 @@
                 localStorage.setItem(GAME1_STATE_KEY, JSON.stringify(state));
             }
 
-            // --- COPIAR TODO EL SISTEMA DE MISIONES ---
+            // --- COPIAR TODO EL SISTEMA DE MISIONES DE JUEGO1.HTML ---
             const META_MISSION_IDS = [38];
             const missionsTemplate = [
                 { id: 1, title: "Completa tu primer examen", points: 50 }, { id: 2, title: "Logra al menos 180/300 en un examen", points: 80 },
@@ -598,7 +586,7 @@
             function initUserProfile() { if (!localStorage.getItem(USER_PROFILE_KEY)) { const initial = { originalEmail: "", nameChangeMissionCompleted: false }; localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(initial)); } }
             function initGameStats() { if (!localStorage.getItem(GAME_STATS_KEY)) { const initial = { gamesPlayed: 0, gamesWon: 0, hintsUsed: 0, totalTime: 0, bestTime: null, lastPlayDate: null, streakDays: 0 }; localStorage.setItem(GAME_STATS_KEY, JSON.stringify(initial)); } }
             function completeMission(id) { const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]"); const mission = data.find(m => m.id === id); if (mission && !mission.completed) { mission.completed = true; localStorage.setItem(MISSIONS_KEY, JSON.stringify(data)); document.getElementById('mission-sound').play().catch(e => console.log("Error al reproducir sonido:", e)); showMissionToast(`¡Misión completada: ${mission.title} (+${mission.points}⭐)!`, 5000); updateAllDisplays(); setTimeout(() => checkAndCompleteSpecialMissions(), 200); } }
-            function checkAndCompleteSpecialMissions() { const missionsData = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]"); const totalPoints = getTotalPoints(); const completedCount = getCompletedCount(); const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}"); let changed = false; const newlyCompletedMissions = []; if (totalPoints >= 200) { const m = missionsData.find(m => m.id === 9); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m); } } const mission10 = missionsData.find(m => m.id === 10); const metaCompletedCount = missionsData.filter(m => m.completed && META_MISSION_IDS.includes(m.id)).length; const realCompletedCount = completedCount - metaCompletedCount; if (realCompletedCount >= 3 && mission10 && !mission10.completed) { mission10.completed = true; changed = true; newlyCompletedMissions.push(mission10); } if (gameStats.gamesWon >= 3) { const m = missionsData.find(m => m.id === 13); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m); } if (totalPoints >= 500) { const m = missionsData.find(m => m.id === 17); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} } if (totalPoints >= 1000) { const m = missionsData.find(m => m.id === 26); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} } if (totalPoints >= 3000) { const m = missionsData.find(m => m.id === 43); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} } if (changed) { localStorage.setItem(MISSIONS_KEY, JSON.stringify(missionsData)); document.getElementById('mission-sound').play().catch(e => console.log("Error al reproducir sonido:", e)); newlyCompletedMissions.forEach(m => { showMissionToast(`¡Misión completada: ${m.title} (+${m.points}⭐)!`, 5000); }); updateAllDisplays(); } }
+            function checkAndCompleteSpecialMissions() { const missionsData = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]"); const totalPoints = getTotalPoints(); const completedCount = getCompletedCount(); const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}"); let changed = false; const newlyCompletedMissions = []; if (totalPoints >= 200) { const m = missionsData.find(m => m.id === 9); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m); } } const mission10 = missionsData.find(m => m.id === 10); const metaCompletedCount = missionsData.filter(m => m.completed && META_MISSION_IDS.includes(m.id)).length; const realCompletedCount = completedCount - metaCompletedCount; if (realCompletedCount >= 3 && mission10 && !mission10.completed) { mission10.completed = true; changed = true; newlyCompletedMissions.push(mission10); } if (gameStats.gamesWon >= 3) { const m = missionsData.find(m => m.id === 13); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m); } } if (totalPoints >= 500) { const m = missionsData.find(m => m.id === 17); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} } if (totalPoints >= 1000) { const m = missionsData.find(m => m.id === 26); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} } if (totalPoints >= 3000) { const m = missionsData.find(m => m.id === 43); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} } if (changed) { localStorage.setItem(MISSIONS_KEY, JSON.stringify(missionsData)); document.getElementById('mission-sound').play().catch(e => console.log("Error al reproducir sonido:", e)); newlyCompletedMissions.forEach(m => { showMissionToast(`¡Misión completada: ${m.title} (+${m.points}⭐)!`, 5000); }); updateAllDisplays(); } }
             function showMissionToast(text, ms = 60000) { const toast = document.getElementById('mission-toast'); toast.innerHTML = `<strong>${text}</strong>`; toast.classList.add('show'); if (toastTimer) clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), ms); }
             function getTotalPoints() { const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]"); return data.reduce((sum, m) => sum + (m.completed ? m.points : 0), 0); }
             function getLevelFromPoints(total) { for (let i = LEVELS.length - 1; i >= 0; i--) if (total >= LEVELS[i].min) return LEVELS[i]; return LEVELS[0]; }
@@ -610,7 +598,7 @@
             function updateAllDisplays() { renderMissions(); renderLevel(); renderProgress(); renderAnalysis(); }
             function closeAllPanels() { document.querySelectorAll('.panel-box').forEach(p => p.classList.remove('active')); }
 
-            // --- EVENT LISTENERS FOR MISSION SYSTEM ---
+            // --- EVENT LISTENERS FOR MISSION SYSTEM (Same as juego1.html) ---
             window.addEventListener('userReady', (e) => { const user = e.detail.user; const userProfile = JSON.parse(localStorage.getItem(USER_PROFILE_KEY) || "{}"); if (!userProfile.originalEmail) { userProfile.originalEmail = user.email; userProfile.nameChangeMissionCompleted = false; localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile)); } if (!userProfile.nameChangeMissionCompleted) { const hasChangedName = user.displayName && user.displayName !== userProfile.originalEmail; if (hasChangedName) { completeMission(8); userProfile.nameChangeMissionCompleted = true; localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile)); } } });
             document.getElementById('hamburger-menu').addEventListener('click', () => { document.getElementById('user-dropdown').classList.toggle('active'); });
             document.getElementById('logout-btn').addEventListener('click', () => { import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => { signOut(window.auth).then(() => window.location.href = 'index.html'); }); });
@@ -633,12 +621,12 @@
 
             let draggedConnector = null;
             let activeDropZone = null;
-            let touchOffset = { x: 0, y: 0 }; // Para el arrastre táctil
 
             function startGame() {
-                // CORRECCIÓN: Iniciar el cronómetro de forma simple y directa
+                const state = getGameState();
+                gameStartTime = Date.now();
                 startTimer();
-                
+                // Intentar reproducir música
                 backgroundMusic.play().then(() => {
                     musicControlBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
                 }).catch(error => {
@@ -647,9 +635,7 @@
                 });
             }
 
-            // CORRECCIÓN: Función del temporizador simplificada
             function startTimer() {
-                if (timerInterval) clearInterval(timerInterval);
                 timerInterval = setInterval(() => {
                     const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
                     const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
@@ -682,100 +668,44 @@
                     feedbackMessage.textContent = "¡Mensaje descifrado con éxito!";
                     feedbackMessage.className = 'feedback-message success';
                     nextPhaseButton.classList.add('show');
-                    
-                    const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}");
-                    gameStats.gamesWon = (gameStats.gamesWon || 0) + 1;
-                    const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
-                    gameStats.totalTime = (gameStats.totalTime || 0) + elapsed;
-                    if (!gameStats.bestTime || elapsed < gameStats.bestTime) {
-                        gameStats.bestTime = elapsed;
-                    }
-                    localStorage.setItem(GAME_STATS_KEY, JSON.stringify(gameStats));
-                    
-                    completeMission(5);
-                    if (!hintUsed) completeMission(37);
-                    if (elapsed < 120) completeMission(18);
                 }
             }
 
-            // CORRECCIÓN: Función de pistas simplificada y directa
             function useHint() {
-                if (hintUsed) return;
+                const state = getGameState();
+                if (state.hintsUsed) return;
                 
-                hintUsed = true;
-                completeMission(6);
-                
-                // Buscar un conector incorrecto que aún esté en la bandeja
-                let connectorToRemove = null;
-                const availableConnectors = Array.from(connectorTray.querySelectorAll('.connector:not(.used)'));
-                
-                for (const connector of availableConnectors) {
-                    if (incorrectConnectorsList.includes(connector.dataset.connector)) {
-                        connectorToRemove = connector;
-                        break;
-                    }
-                }
-                
-                if (connectorToRemove) {
-                    // Eliminar el conector incorrecto
-                    connectorToRemove.style.transition = 'all 0.5s ease';
-                    connectorToRemove.style.transform = 'scale(0)';
-                    connectorToRemove.style.opacity = '0';
-                    
+                state.hintsUsed = true;
+                saveGameState(state);
+                completeMission(6); // Completar misión de usar pista
+
+                const blanks = telegramContent.querySelectorAll('.word-blank:not(.filled)');
+                if (blanks.length > 0) {
+                    const randomBlank = blanks[Math.floor(Math.random() * blanks.length)];
+                    const correctConnector = correctAnswers[randomBlank.id];
+                    randomBlank.style.backgroundColor = 'rgba(255, 235, 59, 0.5)';
                     setTimeout(() => {
-                        connectorToRemove.remove();
-                        feedbackMessage.textContent = `Pista: "${connectorToRemove.textContent}" no se usa en ninguna respuesta.`;
-                        feedbackMessage.className = 'feedback-message success';
-                        setTimeout(() => feedbackMessage.textContent = '', 4000);
-                    }, 500);
-                } else {
-                    // Si no hay incorrectos, dar una pista de texto
-                    const blanks = telegramContent.querySelectorAll('.word-blank:not(.filled)');
-                    if (blanks.length > 0) {
-                        const randomBlank = blanks[Math.floor(Math.random() * blanks.length)];
-                        const correctConnector = correctAnswers[randomBlank.id];
-                        feedbackMessage.textContent = `Pista: En el espacio ${randomBlank.id.replace('blank', '')} va "${correctConnector}"`;
-                        feedbackMessage.className = 'feedback-message success';
-                        setTimeout(() => feedbackMessage.textContent = '', 4000);
-                    }
+                        randomBlank.style.backgroundColor = '';
+                    }, 2000);
                 }
-                
                 hintButton.disabled = true;
             }
 
-            // CORRECCIÓN: Lógica de arrastre/soltar unificada para móvil y escritorio
-            function handleDragStart(e) {
-                draggedConnector = e.target.closest('.connector');
-                if (!draggedConnector || draggedConnector.classList.contains('used')) return;
-
-                draggedConnector.classList.add('dragging');
-                
-                // Para eventos táctiles, calculamos el offset
-                if (e.type === 'touchstart') {
-                    const touch = e.touches[0];
-                    const rect = draggedConnector.getBoundingClientRect();
-                    touchOffset.x = touch.clientX - rect.left;
-                    touchOffset.y = touch.clientY - rect.top;
-                }
-            }
-
-            function handleDragMove(e) {
+            // --- LÓGICA DEL EFECTO IMÁN ---
+            function handleDragOver(e) {
+                e.preventDefault();
                 if (!draggedConnector) return;
-                e.preventDefault(); // Prevenir el scroll en móvil
 
-                const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
-                const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
-
-                // Encontrar el espacio en blanco más cercano
                 const blanks = telegramContent.querySelectorAll('.word-blank:not(.filled)');
                 let closestBlank = null;
                 let minDistance = Infinity;
 
                 blanks.forEach(blank => {
                     const rect = blank.getBoundingClientRect();
+                    const connectorRect = draggedConnector.getBoundingClientRect();
                     const distance = Math.sqrt(
-                        Math.pow(rect.left + rect.width / 2 - clientX, 2) +
-                        Math.pow(rect.top + rect.height / 2 - clientY, 2)
+                        Math.pow(rect.left + rect.width / 2 - (connectorRect.left + connectorRect.width / 2), 2) +
+                        Math.pow(rect.top + rect.height / 2 - (connectorRect.top + connectorRect.height / 2), 2)
                     );
                     if (distance < minDistance) {
                         minDistance = distance;
@@ -783,13 +713,12 @@
                     }
                 });
 
-                // Limpiar efectos anteriores
+                // Desactivar el efecto imán en todas las casillas
                 document.querySelectorAll('.word-blank').forEach(blank => {
                     blank.classList.remove('magnet-active');
                 });
 
-                // Aplicar efecto imán si está cerca
-                if (closestBlank && minDistance < 80) {
+                if (closestBlank && minDistance < 100) { // Radio de 100px para el efecto imán
                     closestBlank.classList.add('magnet-active');
                     activeDropZone = closestBlank;
                 } else {
@@ -797,40 +726,43 @@
                 }
             }
 
-            function handleDragEnd(e) {
-                if (!draggedConnector) return;
-                
-                draggedConnector.classList.remove('dragging');
-                
-                // Si hay una zona de activa, intentar soltar ahí
-                if (activeDropZone && !activeDropZone.classList.contains('filled')) {
-                    if (activeDropZone.dataset.connector === draggedConnector.dataset.connector) {
-                        activeDropZone.textContent = draggedConnector.textContent;
-                        activeDropZone.classList.add('filled');
-                        draggedConnector.classList.add('used');
-                        checkPuzzleCompletion();
-                    } else {
-                        activeDropZone.style.backgroundColor = 'rgba(244, 67, 54, 0.3)';
-                        setTimeout(() => activeDropZone.style.backgroundColor = '', 500);
-                    }
+            // --- EVENT LISTENERS DEL JUEGO ---
+            document.addEventListener('dragstart', (e) => {
+                if (e.target.classList.contains('connector')) {
+                    draggedConnector = e.target;
+                    e.target.classList.add('dragging');
+                    e.data.effectAllowed = 'move';
                 }
-                
-                // Limpiar
+            });
+
+            document.addEventListener('dragend', (e) => {
+                if (e.target.classList.contains('connector')) {
+                    e.target.classList.remove('dragging');
+                }
                 document.querySelectorAll('.word-blank').forEach(blank => blank.classList.remove('magnet-active'));
-                draggedConnector = null;
                 activeDropZone = null;
-            }
+            });
 
-            // --- EVENT LISTENERS ---
-            // Eventos para ratón (escritorio)
-            connectorTray.addEventListener('mousedown', handleDragStart);
-            document.addEventListener('mousemove', handleDragMove);
-            document.addEventListener('mouseup', handleDragEnd);
+            telegramContent.addEventListener('dragover', handleDragOver);
 
-            // Eventos para tacto (móvil)
-            connectorTray.addEventListener('touchstart', handleDragStart, { passive: false });
-            document.addEventListener('touchmove', handleDragMove, { passive: false });
-            document.addEventListener('touchend', handleDragEnd);
+            telegramContent.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const dropTarget = e.target.closest('.word-blank');
+                if (!dropTarget || dropTarget.classList.contains('filled')) return;
+
+                if (draggedConnector && dropTarget.dataset.connector === draggedConnector.dataset.connector) {
+                    dropTarget.textContent = draggedConnector.textContent;
+                    dropTarget.classList.add('filled');
+                    draggedConnector.classList.add('used');
+                    checkPuzzleCompletion();
+                } else {
+                    // Incorrect drop feedback
+                    dropTarget.style.backgroundColor = 'rgba(244, 67, 54, 0.3)';
+                    setTimeout(() => {
+                        dropTarget.style.backgroundColor = '';
+                    }, 500);
+                }
+            });
 
             hintButton.addEventListener('click', useHint);
             nextPhaseButton.addEventListener('click', () => {
@@ -851,7 +783,7 @@
             // --- INICIALIZACIÓN ---
             initMissions(); initUserProfile(); initGameStats(); updateAllDisplays();
             startGame();
-            console.log("Fase 2 del juego inicializada con correcciones.");
+            console.log("Fase 2 del juego inicializada.");
         });
     </script>
 </body>
