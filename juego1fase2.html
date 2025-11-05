@@ -638,12 +638,21 @@
             }
 
             function startTimer() {
+                // Asegurarse de que no haya un intervalo activo
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                }
+                
+                // Iniciar un nuevo intervalo
                 timerInterval = setInterval(() => {
                     const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
                     const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
                     const seconds = String(elapsed % 60).padStart(2, '0');
                     timerDisplay.textContent = `Tiempo: ${minutes}:${seconds}`;
+                    console.log(`Timer actualizado: ${minutes}:${seconds}`);
                 }, 1000);
+                
+                console.log("Timer iniciado");
             }
 
             function stopTimer() {
@@ -653,6 +662,7 @@
                     const state = getGameState();
                     state.totalTime += elapsed;
                     saveGameState(state);
+                    console.log(`Timer detenido. Tiempo transcurrido: ${elapsed} segundos`);
                 }
             }
 
@@ -784,6 +794,7 @@
                     e.target.classList.add('dragging');
                     e.dataTransfer.effectAllowed = 'move';
                     e.dataTransfer.setData('text/html', e.target.innerHTML);
+                    console.log("Iniciando arrastre de:", e.target.textContent);
                 }
             });
 
@@ -799,15 +810,880 @@
 
             telegramContent.addEventListener('drop', (e) => {
                 e.preventDefault();
+                console.log("Evento drop activado");
+                
                 const dropTarget = e.target.closest('.word-blank');
-                if (!dropTarget || dropTarget.classList.contains('filled')) return;
+                if (!dropTarget || dropTarget.classList.contains('filled')) {
+                    console.log("No se puede soltar aquí");
+                    return;
+                }
 
                 if (draggedConnector && dropTarget.dataset.connector === draggedConnector.dataset.connector) {
+                    console.log("Conector correcto colocado");
                     dropTarget.textContent = draggedConnector.textContent;
                     dropTarget.classList.add('filled');
                     draggedConnector.classList.add('used');
                     checkPuzzleCompletion();
                 } else {
+                    console.log("Conector incorrecto");
+                    dropTarget.style.backgroundColor = 'rgba(244, 67, 54, 0.3)';
+                    setTimeout(() => {
+                        dropTarget.style.backgroundColor = '';
+                    }, 500);
+                }
+            });
+
+            hintButton.addEventListener('click', useHint);
+            nextPhaseButton.addEventListener('click', () => {
+                stopTimer();
+                window.location.href = 'juego1fase3.html';
+            });
+
+            musicControlBtn.addEventListener('click', () => {
+                if (backgroundMusic.paused) {
+                    backgroundMusic.play();
+                    musicControlBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                } else {
+                    backgroundMusic.pause();
+                    musicControlBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                }
+            });
+
+            // --- INICIALIZACIÓN ---
+            initMissions(); initUserProfile(); initGameStats(); updateAllDisplays();
+            startGame();
+            console.log("Fase 2 del juego inicializada.");
+        });
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fase 2: El Mensaje Cortado - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700&family=Orbitron:wght@700&family=Cinzel:wght@700&family=Special+Elite&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        window.auth = auth;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+            --float-color: var(--color-oliva-oscuro);
+            --float-color-hover: var(--color-oliva-medio);
+            --detective-bg: #0a0e1a;
+            --detective-accent: #c9a961;
+            --detective-text: #e0e0e0;
+            --paper-bg: #f5f1e8;
+            --paper-text: #333;
+            --highlight-bg: #ffeb3b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--detective-bg);
+            color: var(--detective-text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* --- NAVBAR (Same as juego1.html) --- */
+        .navbar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 15px 40px;
+            background-color: rgba(10, 14, 26, 0.8);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 1000;
+        }
+        .hamburger {
+            width: 30px;
+            height: 25px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .hamburger span {
+            display: block;
+            height: 4px;
+            width: 100%;
+            background-color: var(--detective-text);
+            border-radius: 2px;
+            transition: all 0.3s ease-in-out;
+        }
+        .user-dropdown {
+            position: absolute;
+            top: 70px;
+            right: 40px;
+            background-color: rgba(10, 14, 26, 0.9);
+            border: 1px solid var(--detective-accent);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+            z-index: 1000;
+        }
+        .user-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .user-dropdown a {
+            display: block;
+            padding: 15px 25px;
+            text-decoration: none;
+            color: var(--detective-text);
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .user-dropdown a:hover {
+            background-color: rgba(201, 169, 97, 0.2);
+        }
+        .user-dropdown hr {
+            border: none;
+            border-top: 1px solid rgba(201, 169, 97, 0.3);
+            margin: 0;
+        }
+
+        /* --- MUSIC PLAYER --- */
+        .music-player {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 5000;
+        }
+        .music-control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--detective-accent);
+            color: var(--detective-bg);
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+        .music-control-btn:hover {
+            transform: scale(1.1);
+            background-color: #e6c277;
+        }
+
+        /* --- MAIN GAME CONTAINER --- */
+        .game-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--detective-bg) 0%, #1a2332 100%);
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .game-title {
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            color: var(--detective-accent);
+            text-shadow: 0 0 10px rgba(201, 169, 97, 0.3);
+        }
+
+        /* --- TELEGRAM MESSAGE STYLING --- */
+        .telegram-container {
+            width: 100%;
+            max-width: 800px;
+            background-color: var(--paper-bg);
+            border-radius: 5px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+            padding: 30px;
+            font-family: 'Special Elite', cursive;
+            color: var(--paper-text);
+            position: relative;
+            margin-bottom: 30px;
+            border-top: 15px solid #c0392b;
+        }
+        .telegram-container::before {
+            content: 'TELEGRAMA INTERCEPTADO';
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            font-size: 1.5rem;
+            color: #c0392b;
+            font-weight: bold;
+            transform: rotate(-5deg);
+            opacity: 0.7;
+        }
+        .telegram-content {
+            font-size: 1.3rem;
+            line-height: 2;
+            min-height: 150px;
+        }
+        .word-blank {
+            display: inline-block;
+            min-width: 100px;
+            height: 28px;
+            margin: 0 5px;
+            padding: 0 8px;
+            border-bottom: 2px dashed #555;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 4px;
+            vertical-align: middle;
+            transition: all 0.3s ease;
+        }
+        .word-blank.filled {
+            border-bottom: 2px solid var(--detective-accent);
+            background-color: rgba(201, 169, 97, 0.2);
+            color: var(--paper-text);
+            animation: deciphered 0.5s forwards;
+        }
+        @keyframes deciphered {
+            from { background-color: rgba(255, 255, 255, 0.5); }
+            to { background-color: rgba(201, 169, 97, 0.1); }
+        }
+        /* --- ESTILOS PARA EL EFECTO IMÁN --- */
+        .word-blank.magnet-active {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px var(--detective-accent);
+            border-bottom: 2px solid var(--detective-accent);
+            background-color: rgba(201, 169, 97, 0.3);
+        }
+
+        /* --- CONNECTOR TRAY --- */
+        .connector-tray {
+            width: 100%;
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--detective-accent);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+        }
+        .connector {
+            background-color: var(--detective-accent);
+            color: var(--detective-bg);
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.1rem;
+            cursor: move;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            user-select: none;
+        }
+        .connector:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .connector.dragging {
+            opacity: 0.5;
+            transform: scale(1.05);
+        }
+        .connector.used {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background-color: #777;
+        }
+
+        /* --- GAME CONTROLS --- */
+        .game-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 20px;
+        }
+        .hint-button {
+            background: var(--detective-accent);
+            color: var(--detective-bg);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .hint-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        .hint-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .timer {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            color: var(--detective-accent);
+        }
+
+        /* --- FEEDBACK AND NEXT BUTTON --- */
+        .feedback-message {
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.3rem;
+            min-height: 40px;
+            font-weight: bold;
+        }
+        .feedback-message.success { color: #4CAF50; }
+        .feedback-message.error { color: #f44336; }
+
+        .next-phase-button {
+            background: linear-gradient(135deg, var(--detective-accent) 0%, #e6c277 100%);
+            color: var(--detective-bg);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(201, 169, 97, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: none;
+        }
+        .next-phase-button.show {
+            display: inline-block;
+            animation: fadeIn 1s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- FLOATING ICONS & PANELS (Same as juego1.html) --- */
+        .floating-icons {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 2000;
+        }
+        .floating-icons button {
+            background: var(--float-color);
+            color: white;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            border: none;
+            font-size: 20px;
+            display: grid;
+            place-items: center;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            cursor: pointer;
+            transition: transform .15s ease, background .15s ease;
+        }
+        .floating-icons button:hover { transform: scale(1.08); background: var(--float-color-hover); }
+
+        .panel-box {
+            position: fixed;
+            right: 90px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 420px;
+            max-height: 75vh;
+            background: rgba(10, 14, 26, 0.9);
+            border: 1px solid var(--detective-accent);
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+            overflow: auto;
+            padding: 24px;
+            z-index: 2100;
+            display: none;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.2rem;
+            color: var(--detective-text);
+        }
+        .panel-box.active { display: block; }
+        .panel-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+        .panel-header h3 { margin:0; font-size:1.6rem; color:var(--detective-accent); }
+        .close-panel { background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--detective-accent); }
+        .mission-row { padding:12px; border-radius:8px; margin-bottom:10px; background:rgba(201, 169, 97, 0.1); box-shadow: 0 2px 6px rgba(0,0,0,0.2); display:flex; justify-content:space-between; align-items:center; }
+        .mission-row.completed { opacity:0.6; text-decoration:line-through; background:rgba(76, 175, 80, 0.1); }
+        .toast {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            background: rgba(10, 14, 26, 0.9);
+            border-left: 6px solid var(--detective-accent);
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+            z-index: 3000;
+            display: none;
+            font-size: 1.1rem;
+            max-width: 400px;
+            color: var(--detective-text);
+        }
+        .toast.show { display: block; }
+        .info { font-family: 'Roboto', sans-serif; color:var(--detective-text); font-size:1.1rem; margin-bottom:12px; }
+
+        @media (max-width: 768px) {
+            .game-controls { flex-direction: column; gap: 15px; }
+            .panel-box { right: 10px; width: 92%; top: 55%; transform: translateY(-55%); }
+            .floating-icons { right: 10px; }
+        }
+    </style>
+     <script type="module" src="./global-settings.js"></script>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="hamburger" id="hamburger-menu"><span></span><span></span><span></span></div>
+        <div class="user-dropdown" id="user-dropdown">
+            <a href="cuenta.html">Mi Cuenta</a>
+            <a href="configuracion.html">Configuración</a>
+            <a href="notificaciones.html">Notificaciones</a>
+            <hr>
+            <a href="index.html" id="logout-btn">Cerrar Sesión</a>
+        </div>
+    </nav>
+
+    <!-- Music Player -->
+    <div class="music-player">
+        <button id="music-control-btn" class="music-control-btn" title="Pausar/Reproducir Música">
+            <i class="fas fa-volume-up"></i>
+        </button>
+    </div>
+    <audio id="background-music" loop>
+        <source src="https://www.bensound.com/bensound-music/bensound-mystery.mp3" type="audio/mpeg">
+        Tu navegador no soporta el elemento de audio.
+    </audio>
+
+    <main class="game-container">
+        <header class="game-header">
+            <h1 class="game-title">Fase 2: El Mensaje Cortado</h1>
+        </header>
+
+        <div class="telegram-container">
+            <div class="telegram-content" id="telegram-content">
+                El objetivo se escapó por la ventana; <span class="word-blank" id="blank1" data-connector="sin embargo"></span> el detective no lo persiguió.
+                Tenía que encontrar otra forma de resolver el caso, <span class="word-blank" id="blank2" data-connector="ya que"></span> la evidencia era escasa.
+                Decidió volver a la escena del crimen, <span class="word-blank" id="blank3" data-connector="pues"></span> esperaba encontrar una pista que todos habían pasado por alto.
+            </div>
+        </div>
+
+        <div class="connector-tray" id="connector-tray">
+            <div class="connector" draggable="true" data-connector="sin embargo">sin embargo</div>
+            <div class="connector" draggable="true" data-connector="aunque">aunque</div>
+            <div class="connector" draggable="true" data-connector="por eso">por eso</div>
+            <div class="connector" draggable="true" data-connector="pero">pero</div>
+            <div class="connector" draggable="true" data-connector="ya que">ya que</div>
+            <div class="connector" draggable="true" data-connector="pues">pues</div>
+        </div>
+
+        <div class="game-controls">
+            <button class="hint-button" id="hint-button">
+                <i class="fas fa-lightbulb"></i>
+                <span>Pista</span>
+            </button>
+            <div class="timer" id="timer">Tiempo: 00:00</div>
+        </div>
+
+        <div class="feedback-message" id="feedback-message"></div>
+        <button class="next-phase-button" id="next-phase-button">Siguiente Archivo Secreto</button>
+    </main>
+
+    <!-- Floating vertical icons (Same as juego1.html) -->
+    <div class="floating-icons" aria-hidden="false">
+        <button id="btn-misiones" title="Misiones">🎯</button>
+        <button id="btn-nivel" title="Nivel actual">⭐</button>
+        <button id="btn-progreso" title="Progreso">📊</button>
+        <button id="btn-analisis" title="Análisis">📈</button>
+    </div>
+
+    <!-- Panels (Same as juego1.html) -->
+    <div class="panel-box" id="panel-misiones" aria-hidden="true">
+        <div class="panel-header"><h3>Misiones</h3><button class="close-panel" data-close="misiones">&times;</button></div>
+        <div id="misiones-content"></div>
+    </div>
+    <div class="panel-box" id="panel-nivel" aria-hidden="true">
+        <div class="panel-header"><h3>Tu nivel</h3><button class="close-panel" data-close="nivel">&times;</button></div>
+        <div id="nivel-content"></div>
+    </div>
+    <div class="panel-box" id="panel-progreso" aria-hidden="true">
+        <div class="panel-header"><h3>Progreso</h3><button class="close-panel" data-close="progreso">&times;</button></div>
+        <div id="progreso-content"></div>
+    </div>
+    <div class="panel-box" id="panel-analisis" aria-hidden="true">
+        <div class="panel-header"><h3>Análisis (promedio 0–300)</h3><button class="close-panel" data-close="analisis">&times;</button></div>
+        <div id="analisis-content"><div id="analisis-stats" style="margin-top:12px;"></div></div>
+    </div>
+
+    <div class="toast" id="mission-toast" role="status" aria-live="polite"></div>
+    <audio id="mission-sound" src="mission.mp3" preload="auto"></audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM Cargado. Inicializando Fase 2 del juego...");
+
+            // --- CONSTANTES Y VARIABLES GLOBALES DEL JUEGO ---
+            const GAME1_STATE_KEY = 'skopia_game1_state_v1';
+            const MISSIONS_KEY = 'skopia_missions_v1';
+            const USER_PROFILE_KEY = 'skopia_user_profile_v1';
+            const GAME_STATS_KEY = 'skopia_game_stats_v1';
+            const CURRENT_PHASE = 2;
+            const TOTAL_PHASES = 5;
+
+            let toastTimer = null;
+            let gameStartTime = null;
+            let timerInterval = null;
+            let hintUsed = false;
+            let puzzleSolved = false;
+
+            // *** NUEVAS RESPUESTAS ***
+            const correctAnswers = {
+                blank1: 'sin embargo',
+                blank2: 'ya que',
+                blank3: 'pues'
+            };
+
+            // --- FUNCIONES DE GESTIÓN DEL ESTADO DEL JUEGO ---
+            function getGameState() {
+                const state = localStorage.getItem(GAME1_STATE_KEY);
+                return state ? JSON.parse(state) : { totalTime: 0, hintsUsed: false, currentPhase: 1 };
+            }
+            function saveGameState(state) {
+                localStorage.setItem(GAME1_STATE_KEY, JSON.stringify(state));
+            }
+
+            // --- COPIAR TODO EL SISTEMA DE MISIONES DE JUEGO1.HTML ---
+            const META_MISSION_IDS = [38];
+            const missionsTemplate = [
+                { id: 1, title: "Completa tu primer examen", points: 50 }, { id: 2, title: "Logra al menos 180/300 en un examen", points: 80 },
+                { id: 3, title: "Lee toda la teoría de una lección", points: 40 }, { id: 4, title: "Termina una sesión de estudio sin salir", points: 50 },
+                { id: 5, title: "Gana tu primer juego", points: 50 }, { id: 6, title: "Usa una pista o ayuda en un juego", points: 30 },
+                { id: 7, title: "Repite un examen para mejorar tu nota", points: 50 }, { id: 8, title: "Cambia tu nombre de usuario", points: 40 },
+                { id: 9, title: "Acumula tus primeras 200 estrellas", points: 30 }, { id: 10, title: "Completa 3 misiones seguidas", points: 50 },
+                { id: 11, title: "Logra 240/300 en un examen", points: 150 }, { id: 12, title: "Completa un examen sin errores (300/300)", points: 200 },
+                { id: 13, title: "Gana 3 juegos distintos", points: 60 }, { id: 18, title: "Gana un juego en menos de 2 minutos", points: 50 },
+                { id: 19, title: "Repite un juego hasta mejorar tu resultado", points: 30 }, { id: 37, title: "Gana un juego sin usar pistas", points: 50 },
+                { id: 38, title: "Revisa tu historial de progreso", points: 30 }, { id: 100, title: "🏆 Maestro del Saber Pro: completa todo el sistema", points: 200 }
+            ];
+            const LEVELS = [
+                { idx: 1, name: "Novato/a", min: 0, max: 299 }, { idx: 2, name: "Aprendiz/a", min: 300, max: 799 },
+                { idx: 3, name: "Explorador/a", min: 800, max: 1499 }, { idx: 4, name: "Analista", min: 1500, max: 2499 },
+                { idx: 5, name: "Estratega", min: 2500, max: 3699 }, { idx: 6, name: "Sabio/a", min: 3700, max: 4999 },
+                { idx: 7, name: "Maestro/a", min: 5000, max: 6499 }, { idx: 8, name: "Élite", min: 6500, max: 7999 },
+                { idx: 9, name: "Leyenda", min: 8000, max: 9499 }, { idx: 10, name: "Rey/Reina Skópia", min: 9500, max: Infinity }
+            ];
+
+            function initMissions() { if (!localStorage.getItem(MISSIONS_KEY)) { const initial = missionsTemplate.map(m => ({ ...m, completed: false })); localStorage.setItem(MISSIONS_KEY, JSON.stringify(initial)); } }
+            function initUserProfile() { if (!localStorage.getItem(USER_PROFILE_KEY)) { const initial = { originalEmail: "", nameChangeMissionCompleted: false }; localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(initial)); } }
+            function initGameStats() { if (!localStorage.getItem(GAME_STATS_KEY)) { const initial = { gamesPlayed: 0, gamesWon: 0, hintsUsed: 0, totalTime: 0, bestTime: null, lastPlayDate: null, streakDays: 0 }; localStorage.setItem(GAME_STATS_KEY, JSON.stringify(initial)); } }
+            function completeMission(id) { const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]"); const mission = data.find(m => m.id === id); if (mission && !mission.completed) { mission.completed = true; localStorage.setItem(MISSIONS_KEY, JSON.stringify(data)); document.getElementById('mission-sound').play().catch(e => console.log("Error al reproducir sonido:", e)); showMissionToast(`¡Misión completada: ${mission.title} (+${mission.points}⭐)!`, 5000); updateAllDisplays(); setTimeout(() => checkAndCompleteSpecialMissions(), 200); } }
+            function checkAndCompleteSpecialMissions() { const missionsData = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]"); const totalPoints = getTotalPoints(); const completedCount = getCompletedCount(); const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}"); let changed = false; const newlyCompletedMissions = []; if (totalPoints >= 200) { const m = missionsData.find(m => m.id === 9); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m); } } const mission10 = missionsData.find(m => m.id === 10); const metaCompletedCount = missionsData.filter(m => m.completed && META_MISSION_IDS.includes(m.id)).length; const realCompletedCount = completedCount - metaCompletedCount; if (realCompletedCount >= 3 && mission10 && !mission10.completed) { mission10.completed = true; changed = true; newlyCompletedMissions.push(mission10); } if (gameStats.gamesWon >= 3) { const m = missionsData.find(m => m.id === 13); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m); } if (totalPoints >= 500) { const m = missionsData.find(m => m.id === 17); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} } if (totalPoints >= 1000) { const m = missionsData.find(m => m.id === 26); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} } if (totalPoints >= 3000) { const m = missionsData.find(m => m.id === 43); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} } if (changed) { localStorage.setItem(MISSIONS_KEY, JSON.stringify(missionsData)); document.getElementById('mission-sound').play().catch(e => console.log("Error al reproducir sonido:", e)); newlyCompletedMissions.forEach(m => { showMissionToast(`¡Misión completada: ${m.title} (+${m.points}⭐)!`, 5000); }); updateAllDisplays(); } }
+            function showMissionToast(text, ms = 60000) { const toast = document.getElementById('mission-toast'); toast.innerHTML = `<strong>${text}</strong>`; toast.classList.add('show'); if (toastTimer) clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), ms); }
+            function getTotalPoints() { const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]"); return data.reduce((sum, m) => sum + (m.completed ? m.points : 0), 0); }
+            function getLevelFromPoints(total) { for (let i = LEVELS.length - 1; i >= 0; i--) if (total >= LEVELS[i].min) return LEVELS[i]; return LEVELS[0]; }
+            function getCompletedCount() { return JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").filter(m => m.completed).length; }
+            function renderMissions() { const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]"); const container = document.getElementById('misiones-content'); container.innerHTML = ''; const incompleteMissions = data.filter(m => !m.completed).slice(0, 3); if (incompleteMissions.length === 0) { container.innerHTML = '<div class="info">¡Felicidades! Has completado todas las misiones.</div>'; return; } incompleteMissions.forEach(m => { const div = document.createElement('div'); div.className = 'mission-row'; div.innerHTML = `<div style="flex:1"><div style="font-weight:700; color:var(--detective-text)">${m.id}. ${m.title}</div><div style="font-size:1rem; color:var(--detective-accent)">${m.points} ⭐</div></div>`; container.appendChild(div); }); }
+            function renderLevel() { const total = getTotalPoints(); const level = getLevelFromPoints(total); const neededForNext = (level.max === Infinity) ? 0 : (level.max - total + 1); const progressPct = (level.max === Infinity) ? 100 : Math.min(100, Math.round(((total - level.min) / (level.max - level.min)) * 100)); document.getElementById('nivel-content').innerHTML = `<div class="info"><strong>Nivel:</strong> ${level.name} (${level.idx})</div><div class="info"><strong>Puntos:</strong> ${total} ⭐</div><div class="info"><strong>Progreso:</strong> ${progressPct}%</div><div style="background:rgba(201, 169, 97, 0.2);border-radius:10px;padding:8px;margin-top:10px"><div style="height:12px;background:linear-gradient(90deg,var(--detective-accent),#e6c277);width:${progressPct}%;border-radius:8px"></div></div>${level.max === Infinity ? '<div class="info" style="margin-top:8px">¡Nivel máximo!</div>' : `<div class="info" style="margin-top:8px">Para subir: ${neededForNext} ⭐</div>`}`; }
+            function renderProgress() { const total = getTotalPoints(); const topTarget = 9500; const pct = Math.min(100, Math.round((total / topTarget) * 100)); document.getElementById('progreso-content').innerHTML = `<div class="info"><strong>Puntos:</strong> ${total} ⭐</div><div class="info"><strong>Progreso Global:</strong> ${pct}%</div><div style="background:rgba(201, 169, 97, 0.2);border-radius:10px;padding:8px;margin-top:10px"><div style="height:12px;background:linear-gradient(90deg,var(--detective-accent),#e6c277);width:${pct}%;border-radius:8px"></div></div><div class="info" style="margin-top:10px"><strong>Misiones:</strong> ${getCompletedCount()}/100</div>`; }
+            function renderAnalysis() { const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}"); document.getElementById('analisis-stats').innerHTML = `<div class="info"><strong>Juegos jugados:</strong> ${gameStats.gamesPlayed || 0}</div><div class="info"><strong>Juegos ganados:</strong> ${gameStats.gamesWon || 0}</div><div class="info"><strong>Pistas usadas:</strong> ${gameStats.hintsUsed || 0}</div><div class="info"><strong>Mejor tiempo:</strong> ${gameStats.bestTime ? `${gameStats.bestTime}s` : 'N/A'}</div><div class="info"><strong>Racha actual:</strong> ${gameStats.streakDays || 0} días</div>`; }
+            function updateAllDisplays() { renderMissions(); renderLevel(); renderProgress(); renderAnalysis(); }
+            function closeAllPanels() { document.querySelectorAll('.panel-box').forEach(p => p.classList.remove('active')); }
+
+            // --- EVENT LISTENERS FOR MISSION SYSTEM (Same as juego1.html) ---
+            window.addEventListener('userReady', (e) => { const user = e.detail.user; const userProfile = JSON.parse(localStorage.getItem(USER_PROFILE_KEY) || "{}"); if (!userProfile.originalEmail) { userProfile.originalEmail = user.email; userProfile.nameChangeMissionCompleted = false; localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile)); } if (!userProfile.nameChangeMissionCompleted) { const hasChangedName = user.displayName && user.displayName !== userProfile.originalEmail; if (hasChangedName) { completeMission(8); userProfile.nameChangeMissionCompleted = true; localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile)); } } });
+            document.getElementById('hamburger-menu').addEventListener('click', () => { document.getElementById('user-dropdown').classList.toggle('active'); });
+            document.getElementById('logout-btn').addEventListener('click', () => { import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => { signOut(window.auth).then(() => window.location.href = 'index.html'); }); });
+            window.addEventListener('click', (event) => { if (!event.target.closest('.navbar')) document.getElementById('user-dropdown').classList.remove('active'); const isIcon = event.target.closest('.floating-icons'); const isPanel = event.target.closest('.panel-box'); if (!isIcon && !isPanel) closeAllPanels(); });
+            document.getElementById('btn-misiones').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-misiones').classList.add('active'); renderMissions(); });
+            document.getElementById('btn-nivel').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-nivel').classList.add('active'); renderLevel(); });
+            document.getElementById('btn-progreso').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-progreso').classList.add('active'); renderProgress(); completeMission(38); });
+            document.getElementById('btn-analisis').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-analisis').classList.add('active'); renderAnalysis(); });
+            document.querySelectorAll('.close-panel').forEach(btn => { btn.addEventListener('click', (e) => { document.getElementById('panel-' + e.target.getAttribute('data-close')).classList.remove('active'); }); });
+
+            // --- LÓGICA ESPECÍFICA DE ESTA FASE DEL JUEGO ---
+            const telegramContent = document.getElementById('telegram-content');
+            const connectorTray = document.getElementById('connector-tray');
+            const feedbackMessage = document.getElementById('feedback-message');
+            const nextPhaseButton = document.getElementById('next-phase-button');
+            const hintButton = document.getElementById('hint-button');
+            const timerDisplay = document.getElementById('timer');
+            const musicControlBtn = document.getElementById('music-control-btn');
+            const backgroundMusic = document.getElementById('background-music');
+
+            let draggedConnector = null;
+            let activeDropZone = null;
+
+            function startGame() {
+                const state = getGameState();
+                gameStartTime = Date.now();
+                startTimer();
+                backgroundMusic.play().then(() => {
+                    musicControlBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                }).catch(error => {
+                    console.log("La reproducción automática de música fue bloqueada por el navegador.");
+                    musicControlBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                });
+            }
+
+            function startTimer() {
+                // Asegurarse de que no haya un intervalo activo
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                }
+                
+                // Iniciar un nuevo intervalo
+                timerInterval = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+                    const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
+                    const seconds = String(elapsed % 60).padStart(2, '0');
+                    timerDisplay.textContent = `Tiempo: ${minutes}:${seconds}`;
+                    console.log(`Timer actualizado: ${minutes}:${seconds}`);
+                }, 1000);
+                
+                console.log("Timer iniciado");
+            }
+
+            function stopTimer() {
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+                    const state = getGameState();
+                    state.totalTime += elapsed;
+                    saveGameState(state);
+                    console.log(`Timer detenido. Tiempo transcurrido: ${elapsed} segundos`);
+                }
+            }
+
+            function checkPuzzleCompletion() {
+                const blanks = telegramContent.querySelectorAll('.word-blank');
+                let allCorrect = true;
+                blanks.forEach(blank => {
+                    if (blank.dataset.connector !== blank.textContent.trim()) {
+                        allCorrect = false;
+                    }
+                });
+
+                if (allCorrect && !puzzleSolved) {
+                    puzzleSolved = true;
+                    feedbackMessage.textContent = "¡Mensaje descifrado con éxito!";
+                    feedbackMessage.className = 'feedback-message success';
+                    nextPhaseButton.classList.add('show');
+                    
+                    // Actualizar estadísticas del juego
+                    const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}");
+                    gameStats.gamesWon = (gameStats.gamesWon || 0) + 1;
+                    const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+                    gameStats.totalTime = (gameStats.totalTime || 0) + elapsed;
+                    if (!gameStats.bestTime || elapsed < gameStats.bestTime) {
+                        gameStats.bestTime = elapsed;
+                    }
+                    localStorage.setItem(GAME_STATS_KEY, JSON.stringify(gameStats));
+                    
+                    // Completar misiones relevantes
+                    completeMission(5); // Gana tu primer juego
+                    if (!hintUsed) {
+                        completeMission(37); // Gana un juego sin usar pistas
+                    }
+                    if (elapsed < 120) {
+                        completeMission(18); // Gana un juego en menos de 2 minutos
+                    }
+                }
+            }
+
+            function useHint() {
+                if (hintUsed) return;
+                
+                hintUsed = true;
+                completeMission(6); // Completar misión de usar pista
+                
+                // Encontrar conectores incorrectos que no se usan en ninguna respuesta correcta
+                const allConnectors = Array.from(connectorTray.querySelectorAll('.connector:not(.used)'));
+                const incorrectConnectors = allConnectors.filter(connector => {
+                    const connectorText = connector.dataset.connector;
+                    return !Object.values(correctAnswers).includes(connectorText);
+                });
+                
+                if (incorrectConnectors.length > 0) {
+                    // Seleccionar un conector incorrecto al azar y eliminarlo
+                    const randomIndex = Math.floor(Math.random() * incorrectConnectors.length);
+                    const connectorToRemove = incorrectConnectors[randomIndex];
+                    
+                    // Animación de eliminación
+                    connectorToRemove.style.transition = 'all 0.5s ease';
+                    connectorToRemove.style.transform = 'scale(0)';
+                    connectorToRemove.style.opacity = '0';
+                    
+                    setTimeout(() => {
+                        connectorToRemove.remove();
+                        feedbackMessage.textContent = `Pista: "${connectorToRemove.textContent}" no se usa en ninguna respuesta.`;
+                        feedbackMessage.className = 'feedback-message success';
+                        
+                        setTimeout(() => {
+                            feedbackMessage.textContent = '';
+                        }, 3000);
+                    }, 500);
+                } else {
+                    // Si no hay conectores incorrectos, mostrar una pista sobre una respuesta correcta
+                    const blanks = telegramContent.querySelectorAll('.word-blank:not(.filled)');
+                    if (blanks.length > 0) {
+                        const randomBlank = blanks[Math.floor(Math.random() * blanks.length)];
+                        const correctConnector = correctAnswers[randomBlank.id];
+                        
+                        feedbackMessage.textContent = `Pista: En el espacio ${randomBlank.id.replace('blank', '')} va "${correctConnector}"`;
+                        feedbackMessage.className = 'feedback-message success';
+                        
+                        setTimeout(() => {
+                            feedbackMessage.textContent = '';
+                        }, 3000);
+                    }
+                }
+                
+                hintButton.disabled = true;
+            }
+
+            // --- LÓGICA DEL EFECTO IMÁN ---
+            function handleDragOver(e) {
+                e.preventDefault();
+                if (!draggedConnector) return;
+
+                const blanks = telegramContent.querySelectorAll('.word-blank:not(.filled)');
+                let closestBlank = null;
+                let minDistance = Infinity;
+
+                blanks.forEach(blank => {
+                    const rect = blank.getBoundingClientRect();
+                    const connectorRect = draggedConnector.getBoundingClientRect();
+                    const distance = Math.sqrt(
+                        Math.pow(rect.left + rect.width / 2 - (connectorRect.left + connectorRect.width / 2), 2) +
+                        Math.pow(rect.top + rect.height / 2 - (connectorRect.top + connectorRect.height / 2), 2)
+                    );
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestBlank = blank;
+                    }
+                });
+
+                document.querySelectorAll('.word-blank').forEach(blank => {
+                    blank.classList.remove('magnet-active');
+                });
+
+                if (closestBlank && minDistance < 100) {
+                    closestBlank.classList.add('magnet-active');
+                    activeDropZone = closestBlank;
+                } else {
+                    activeDropZone = null;
+                }
+            }
+
+            // --- EVENT LISTENERS DEL JUEGO ---
+            document.addEventListener('dragstart', (e) => {
+                if (e.target.classList.contains('connector')) {
+                    draggedConnector = e.target;
+                    e.target.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/html', e.target.innerHTML);
+                    console.log("Iniciando arrastre de:", e.target.textContent);
+                }
+            });
+
+            document.addEventListener('dragend', (e) => {
+                if (e.target.classList.contains('connector')) {
+                    e.target.classList.remove('dragging');
+                }
+                document.querySelectorAll('.word-blank').forEach(blank => blank.classList.remove('magnet-active'));
+                activeDropZone = null;
+            });
+
+            telegramContent.addEventListener('dragover', handleDragOver);
+
+            telegramContent.addEventListener('drop', (e) => {
+                e.preventDefault();
+                console.log("Evento drop activado");
+                
+                const dropTarget = e.target.closest('.word-blank');
+                if (!dropTarget || dropTarget.classList.contains('filled')) {
+                    console.log("No se puede soltar aquí");
+                    return;
+                }
+
+                if (draggedConnector && dropTarget.dataset.connector === draggedConnector.dataset.connector) {
+                    console.log("Conector correcto colocado");
+                    dropTarget.textContent = draggedConnector.textContent;
+                    dropTarget.classList.add('filled');
+                    draggedConnector.classList.add('used');
+                    checkPuzzleCompletion();
+                } else {
+                    console.log("Conector incorrecto");
                     dropTarget.style.backgroundColor = 'rgba(244, 67, 54, 0.3)';
                     setTimeout(() => {
                         dropTarget.style.backgroundColor = '';
