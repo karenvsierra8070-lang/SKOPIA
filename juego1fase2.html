@@ -270,9 +270,10 @@
             border-radius: 20px;
             font-family: 'Patrick Hand', cursive;
             font-size: 1.1rem;
-            cursor: move;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: grab; /* Cambiado a 'grab' */
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
             user-select: none;
+            touch-action: none; /* Importante para móviles */
         }
         .connector:hover {
             transform: translateY(-3px);
@@ -281,11 +282,15 @@
         .connector.dragging {
             opacity: 0.5;
             transform: scale(1.05);
+            cursor: grabbing; /* Cambiado a 'grabbing' */
+            position: relative; /* Para el z-index */
+            z-index: 1000;
         }
         .connector.used {
             opacity: 0.4;
             cursor: not-allowed;
             background-color: #777;
+            pointer-events: none; /* Evita que se pueda arrastrar de nuevo */
         }
 
         /* --- GAME CONTROLS --- */
@@ -543,7 +548,8 @@
             const TOTAL_PHASES = 5;
 
             let toastTimer = null;
-            let gameStartTime = Date.now(); // Inicializar aquí para asegurar que el cronómetro funcione
+            // CORRECCIÓN: Inicializar el tiempo de inicio aquí mismo
+            let gameStartTime = Date.now(); 
             let timerInterval = null;
             let hintUsed = false;
             let puzzleSolved = false;
@@ -554,6 +560,9 @@
                 blank2: 'ya que',
                 blank3: 'pues'
             };
+            
+            // Lista de conectores incorrectos para la pista
+            const incorrectConnectorsList = ['aunque', 'por eso', 'pero'];
 
             // --- FUNCIONES DE GESTIÓN DEL ESTADO DEL JUEGO ---
             function getGameState() {
@@ -624,9 +633,10 @@
 
             let draggedConnector = null;
             let activeDropZone = null;
+            let touchOffset = { x: 0, y: 0 }; // Para el arrastre táctil
 
             function startGame() {
-                // Iniciar el cronómetro inmediatamente
+                // CORRECCIÓN: Iniciar el cronómetro de forma simple y directa
                 startTimer();
                 
                 backgroundMusic.play().then(() => {
@@ -637,13 +647,9 @@
                 });
             }
 
+            // CORRECCIÓN: Función del temporizador simplificada
             function startTimer() {
-                // Asegurarse de que no haya un intervalo activo
-                if (timerInterval) {
-                    clearInterval(timerInterval);
-                }
-                
-                // Iniciar un nuevo intervalo
+                if (timerInterval) clearInterval(timerInterval);
                 timerInterval = setInterval(() => {
                     const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
                     const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
@@ -677,7 +683,6 @@
                     feedbackMessage.className = 'feedback-message success';
                     nextPhaseButton.classList.add('show');
                     
-                    // Actualizar estadísticas del juego
                     const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}");
                     gameStats.gamesWon = (gameStats.gamesWon || 0) + 1;
                     const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
@@ -687,36 +692,32 @@
                     }
                     localStorage.setItem(GAME_STATS_KEY, JSON.stringify(gameStats));
                     
-                    // Completar misiones relevantes
-                    completeMission(5); // Gana tu primer juego
-                    if (!hintUsed) {
-                        completeMission(37); // Gana un juego sin usar pistas
-                    }
-                    if (elapsed < 120) {
-                        completeMission(18); // Gana un juego en menos de 2 minutos
-                    }
+                    completeMission(5);
+                    if (!hintUsed) completeMission(37);
+                    if (elapsed < 120) completeMission(18);
                 }
             }
 
+            // CORRECCIÓN: Función de pistas simplificada y directa
             function useHint() {
                 if (hintUsed) return;
                 
                 hintUsed = true;
-                completeMission(6); // Completar misión de usar pista
+                completeMission(6);
                 
-                // Encontrar conectores incorrectos que no se usan en ninguna respuesta correcta
-                const allConnectors = Array.from(connectorTray.querySelectorAll('.connector:not(.used)'));
-                const incorrectConnectors = allConnectors.filter(connector => {
-                    const connectorText = connector.dataset.connector;
-                    return !Object.values(correctAnswers).includes(connectorText);
-                });
+                // Buscar un conector incorrecto que aún esté en la bandeja
+                let connectorToRemove = null;
+                const availableConnectors = Array.from(connectorTray.querySelectorAll('.connector:not(.used)'));
                 
-                if (incorrectConnectors.length > 0) {
-                    // Seleccionar un conector incorrecto al azar y eliminarlo
-                    const randomIndex = Math.floor(Math.random() * incorrectConnectors.length);
-                    const connectorToRemove = incorrectConnectors[randomIndex];
-                    
-                    // Animación de eliminación
+                for (const connector of availableConnectors) {
+                    if (incorrectConnectorsList.includes(connector.dataset.connector)) {
+                        connectorToRemove = connector;
+                        break;
+                    }
+                }
+                
+                if (connectorToRemove) {
+                    // Eliminar el conector incorrecto
                     connectorToRemove.style.transition = 'all 0.5s ease';
                     connectorToRemove.style.transform = 'scale(0)';
                     connectorToRemove.style.opacity = '0';
@@ -725,45 +726,56 @@
                         connectorToRemove.remove();
                         feedbackMessage.textContent = `Pista: "${connectorToRemove.textContent}" no se usa en ninguna respuesta.`;
                         feedbackMessage.className = 'feedback-message success';
-                        
-                        setTimeout(() => {
-                            feedbackMessage.textContent = '';
-                        }, 3000);
+                        setTimeout(() => feedbackMessage.textContent = '', 4000);
                     }, 500);
                 } else {
-                    // Si no hay conectores incorrectos, mostrar una pista sobre una respuesta correcta
+                    // Si no hay incorrectos, dar una pista de texto
                     const blanks = telegramContent.querySelectorAll('.word-blank:not(.filled)');
                     if (blanks.length > 0) {
                         const randomBlank = blanks[Math.floor(Math.random() * blanks.length)];
                         const correctConnector = correctAnswers[randomBlank.id];
-                        
                         feedbackMessage.textContent = `Pista: En el espacio ${randomBlank.id.replace('blank', '')} va "${correctConnector}"`;
                         feedbackMessage.className = 'feedback-message success';
-                        
-                        setTimeout(() => {
-                            feedbackMessage.textContent = '';
-                        }, 3000);
+                        setTimeout(() => feedbackMessage.textContent = '', 4000);
                     }
                 }
                 
                 hintButton.disabled = true;
             }
 
-            // --- LÓGICA DEL EFECTO IMÁN ---
-            function handleDragOver(e) {
-                e.preventDefault();
-                if (!draggedConnector) return;
+            // CORRECCIÓN: Lógica de arrastre/soltar unificada para móvil y escritorio
+            function handleDragStart(e) {
+                draggedConnector = e.target.closest('.connector');
+                if (!draggedConnector || draggedConnector.classList.contains('used')) return;
 
+                draggedConnector.classList.add('dragging');
+                
+                // Para eventos táctiles, calculamos el offset
+                if (e.type === 'touchstart') {
+                    const touch = e.touches[0];
+                    const rect = draggedConnector.getBoundingClientRect();
+                    touchOffset.x = touch.clientX - rect.left;
+                    touchOffset.y = touch.clientY - rect.top;
+                }
+            }
+
+            function handleDragMove(e) {
+                if (!draggedConnector) return;
+                e.preventDefault(); // Prevenir el scroll en móvil
+
+                const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+                const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+
+                // Encontrar el espacio en blanco más cercano
                 const blanks = telegramContent.querySelectorAll('.word-blank:not(.filled)');
                 let closestBlank = null;
                 let minDistance = Infinity;
 
                 blanks.forEach(blank => {
                     const rect = blank.getBoundingClientRect();
-                    const connectorRect = draggedConnector.getBoundingClientRect();
                     const distance = Math.sqrt(
-                        Math.pow(rect.left + rect.width / 2 - (connectorRect.left + connectorRect.width / 2), 2) +
-                        Math.pow(rect.top + rect.height / 2 - (connectorRect.top + connectorRect.height / 2), 2)
+                        Math.pow(rect.left + rect.width / 2 - clientX, 2) +
+                        Math.pow(rect.top + rect.height / 2 - clientY, 2)
                     );
                     if (distance < minDistance) {
                         minDistance = distance;
@@ -771,11 +783,13 @@
                     }
                 });
 
+                // Limpiar efectos anteriores
                 document.querySelectorAll('.word-blank').forEach(blank => {
                     blank.classList.remove('magnet-active');
                 });
 
-                if (closestBlank && minDistance < 100) {
+                // Aplicar efecto imán si está cerca
+                if (closestBlank && minDistance < 80) {
                     closestBlank.classList.add('magnet-active');
                     activeDropZone = closestBlank;
                 } else {
@@ -783,43 +797,40 @@
                 }
             }
 
-            // --- EVENT LISTENERS DEL JUEGO ---
-            document.addEventListener('dragstart', (e) => {
-                if (e.target.classList.contains('connector')) {
-                    draggedConnector = e.target;
-                    e.target.classList.add('dragging');
-                    e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('text/html', e.target.innerHTML);
+            function handleDragEnd(e) {
+                if (!draggedConnector) return;
+                
+                draggedConnector.classList.remove('dragging');
+                
+                // Si hay una zona de activa, intentar soltar ahí
+                if (activeDropZone && !activeDropZone.classList.contains('filled')) {
+                    if (activeDropZone.dataset.connector === draggedConnector.dataset.connector) {
+                        activeDropZone.textContent = draggedConnector.textContent;
+                        activeDropZone.classList.add('filled');
+                        draggedConnector.classList.add('used');
+                        checkPuzzleCompletion();
+                    } else {
+                        activeDropZone.style.backgroundColor = 'rgba(244, 67, 54, 0.3)';
+                        setTimeout(() => activeDropZone.style.backgroundColor = '', 500);
+                    }
                 }
-            });
-
-            document.addEventListener('dragend', (e) => {
-                if (e.target.classList.contains('connector')) {
-                    e.target.classList.remove('dragging');
-                }
+                
+                // Limpiar
                 document.querySelectorAll('.word-blank').forEach(blank => blank.classList.remove('magnet-active'));
+                draggedConnector = null;
                 activeDropZone = null;
-            });
+            }
 
-            telegramContent.addEventListener('dragover', handleDragOver);
+            // --- EVENT LISTENERS ---
+            // Eventos para ratón (escritorio)
+            connectorTray.addEventListener('mousedown', handleDragStart);
+            document.addEventListener('mousemove', handleDragMove);
+            document.addEventListener('mouseup', handleDragEnd);
 
-            telegramContent.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const dropTarget = e.target.closest('.word-blank');
-                if (!dropTarget || dropTarget.classList.contains('filled')) return;
-
-                if (draggedConnector && dropTarget.dataset.connector === draggedConnector.dataset.connector) {
-                    dropTarget.textContent = draggedConnector.textContent;
-                    dropTarget.classList.add('filled');
-                    draggedConnector.classList.add('used');
-                    checkPuzzleCompletion();
-                } else {
-                    dropTarget.style.backgroundColor = 'rgba(244, 67, 54, 0.3)';
-                    setTimeout(() => {
-                        dropTarget.style.backgroundColor = '';
-                    }, 500);
-                }
-            });
+            // Eventos para tacto (móvil)
+            connectorTray.addEventListener('touchstart', handleDragStart, { passive: false });
+            document.addEventListener('touchmove', handleDragMove, { passive: false });
+            document.addEventListener('touchend', handleDragEnd);
 
             hintButton.addEventListener('click', useHint);
             nextPhaseButton.addEventListener('click', () => {
@@ -840,7 +851,7 @@
             // --- INICIALIZACIÓN ---
             initMissions(); initUserProfile(); initGameStats(); updateAllDisplays();
             startGame();
-            console.log("Fase 2 del juego inicializada.");
+            console.log("Fase 2 del juego inicializada con correcciones.");
         });
     </script>
 </body>
