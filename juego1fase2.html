@@ -241,6 +241,13 @@
             from { background-color: rgba(255, 255, 255, 0.5); }
             to { background-color: rgba(201, 169, 97, 0.1); }
         }
+        /* --- ESTILOS PARA EL EFECTO IMÁN --- */
+        .word-blank.magnet-active {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px var(--detective-accent);
+            border-bottom: 2px solid var(--detective-accent);
+            background-color: rgba(201, 169, 97, 0.3);
+        }
 
         /* --- CONNECTOR TRAY --- */
         .connector-tray {
@@ -265,7 +272,7 @@
             font-size: 1.1rem;
             cursor: move;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
-            user-select: none; /* Prevents text selection while dragging */
+            user-select: none;
         }
         .connector:hover {
             transform: translateY(-3px);
@@ -347,7 +354,7 @@
             box-shadow: 0 5px 15px rgba(201, 169, 97, 0.3);
             text-transform: uppercase;
             letter-spacing: 1px;
-            display: none; /* Initially hidden */
+            display: none;
         }
         .next-phase-button.show {
             display: inline-block;
@@ -467,9 +474,9 @@
 
         <div class="telegram-container">
             <div class="telegram-content" id="telegram-content">
-                El objetivo se escapó por la ventana, ______ el detective no persiguió.
-                Tenía que encontrar otra forma de resolver el caso, ______ la evidencia era escasa.
-                Decidió volver a la escena del crimen, ______ esperaba encontrar una pista que todos habían pasado por alto.
+                El objetivo se escapó por la ventana, <span class="word-blank" id="blank1" data-connector="sin embargo"></span> el detective no persiguió.
+                Tenía que encontrar otra forma de resolver el caso, <span class="word-blank" id="blank2" data-connector="por eso"></span> la evidencia era escasa.
+                Decidió volver a la escena del crimen, <span class="word-blank" id="blank3" data-connector="aunque"></span> esperaba encontrar una pista que todos habían pasado por alto.
             </div>
         </div>
 
@@ -613,6 +620,7 @@
             const backgroundMusic = document.getElementById('background-music');
 
             let draggedConnector = null;
+            let activeDropZone = null;
 
             function startGame() {
                 const state = getGameState();
@@ -683,6 +691,41 @@
                 hintButton.disabled = true;
             }
 
+            // --- LÓGICA DEL EFECTO IMÁN ---
+            function handleDragOver(e) {
+                e.preventDefault();
+                if (!draggedConnector) return;
+
+                const blanks = telegramContent.querySelectorAll('.word-blank:not(.filled)');
+                let closestBlank = null;
+                let minDistance = Infinity;
+
+                blanks.forEach(blank => {
+                    const rect = blank.getBoundingClientRect();
+                    const connectorRect = draggedConnector.getBoundingClientRect();
+                    const distance = Math.sqrt(
+                        Math.pow(rect.left + rect.width / 2 - (connectorRect.left + connectorRect.width / 2), 2) +
+                        Math.pow(rect.top + rect.height / 2 - (connectorRect.top + connectorRect.height / 2), 2)
+                    );
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestBlank = blank;
+                    }
+                });
+
+                // Desactivar el efecto imán en todas las casillas
+                document.querySelectorAll('.word-blank').forEach(blank => {
+                    blank.classList.remove('magnet-active');
+                });
+
+                if (closestBlank && minDistance < 100) { // Radio de 100px para el efecto imán
+                    closestBlank.classList.add('magnet-active');
+                    activeDropZone = closestBlank;
+                } else {
+                    activeDropZone = null;
+                }
+            }
+
             // --- EVENT LISTENERS DEL JUEGO ---
             document.addEventListener('dragstart', (e) => {
                 if (e.target.classList.contains('connector')) {
@@ -696,27 +739,28 @@
                 if (e.target.classList.contains('connector')) {
                     e.target.classList.remove('dragging');
                 }
+                document.querySelectorAll('.word-blank').forEach(blank => blank.classList.remove('magnet-active'));
+                activeDropZone = null;
             });
 
-            telegramContent.addEventListener('dragover', (e) => {
-                e.preventDefault();
-            });
+            telegramContent.addEventListener('dragover', handleDragOver);
 
             telegramContent.addEventListener('drop', (e) => {
                 e.preventDefault();
-                if (e.target.classList.contains('word-blank') && !e.target.classList.contains('filled')) {
-                    if (draggedConnector && e.target.dataset.connector === draggedConnector.dataset.connector) {
-                        e.target.textContent = draggedConnector.textContent;
-                        e.target.classList.add('filled');
-                        draggedConnector.classList.add('used');
-                        checkPuzzleCompletion();
-                    } else {
-                        // Incorrect drop feedback
-                        e.target.style.backgroundColor = 'rgba(244, 67, 54, 0.3)';
-                        setTimeout(() => {
-                            e.target.style.backgroundColor = '';
-                        }, 500);
-                    }
+                const dropTarget = e.target.closest('.word-blank');
+                if (!dropTarget || dropTarget.classList.contains('filled')) return;
+
+                if (draggedConnector && dropTarget.dataset.connector === draggedConnector.dataset.connector) {
+                    dropTarget.textContent = draggedConnector.textContent;
+                    dropTarget.classList.add('filled');
+                    draggedConnector.classList.add('used');
+                    checkPuzzleCompletion();
+                } else {
+                    // Incorrect drop feedback
+                    dropTarget.style.backgroundColor = 'rgba(244, 67, 54, 0.3)';
+                    setTimeout(() => {
+                        dropTarget.style.backgroundColor = '';
+                    }, 500);
                 }
             });
 
