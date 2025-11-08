@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Felicitaciones - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700&family=Orbitron:wght@700&family=Cinzel:wght@700&family=Special+Elite&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        window.auth = auth;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+            --float-color: var(--color-oliva-oscuro);
+            --float-color-hover: var(--color-oliva-medio);
+            --detective-bg: #0a0e1a;
+            --detective-accent: #c9a961;
+            --detective-text: #e0e0e0;
+            --paper-bg: #f5f1e8;
+            --paper-text: #333;
+            --highlight-bg: #ffeb3b;
+            --game-bg: #0a1929;
+            --game-accent: #0084d6;
+            --game-text: #ffffff;
+            --game-card-bg: rgba(0, 40, 80, 0.7);
+            --game-card-border: #0052a3;
+            --game-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            --neon-blue: #00ffff;
+            --neon-purple: #8a2be2;
+            --neon-pink: #ff00ff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--game-bg);
+            color: var(--game-text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            perspective: 1000px;
+        }
+
+        /* --- NAVBAR --- */
+        .navbar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 15px 40px;
+            background-color: rgba(10, 25, 47, 0.8);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 1000;
+        }
+        .hamburger {
+            width: 30px;
+            height: 25px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .hamburger span {
+            display: block;
+            height: 4px;
+            width: 100%;
+            background-color: var(--game-text);
+            border-radius: 2px;
+            transition: all 0.3s ease-in-out;
+        }
+        .user-dropdown {
+            position: absolute;
+            top: 70px;
+            right: 40px;
+            background-color: rgba(10, 25, 47, 0.9);
+            border: 1px solid var(--game-accent);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+            z-index: 1000;
+        }
+        .user-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .user-dropdown a {
+            display: block;
+            padding: 15px 25px;
+            text-decoration: none;
+            color: var(--game-text);
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .user-dropdown a:hover {
+            background-color: rgba(0, 132, 214, 0.2);
+        }
+        .user-dropdown hr {
+            border: none;
+            border-top: 1px solid rgba(0, 132, 214, 0.3);
+            margin: 0;
+        }
+
+        /* --- MUSIC PLAYER --- */
+        .music-player {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 5000;
+        }
+        .music-control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--game-accent);
+            color: var(--game-bg);
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+        .music-control-btn:hover {
+            transform: scale(1.1);
+            background-color: #0066cc;
+        }
+
+        /* --- MAIN CONTAINER --- */
+        .main-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #0a1929 0%, #001e3c 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* --- GAME STAGE --- */
+        .game-stage {
+            width: 100%;
+            max-width: 800px;
+            height: 500px;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: rotateX(10deg) rotateY(-10deg);
+            margin-bottom: 30px;
+        }
+
+        /* --- SUCCESS CARD --- */
+        .success-card {
+            background-color: var(--game-card-bg);
+            border: 2px solid var(--game-card-border);
+            border-radius: 15px;
+            box-shadow: var(--game-shadow);
+            padding: 40px;
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+            z-index: 10;
+            position: relative;
+            animation: fadeIn 0.8s ease-out, floatIn 1.5s ease-out;
+            transform-style: preserve-3d;
+            transform: rotateX(0) rotateY(0);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px) rotateX(10deg) rotateY(-10deg); }
+            to { opacity: 1; transform: translateY(0) rotateX(0) rotateY(0); }
+        }
+
+        @keyframes floatIn {
+            0% { transform: translateY(0) rotateX(0) rotateY(0); }
+            50% { transform: translateY(-10px) rotateX(0) rotateY(0); }
+            100% { transform: translateY(0) rotateX(0) rotateY(0); }
+        }
+
+        .success-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            color: var(--game-accent);
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(0, 132, 214, 0.3);
+            background: linear-gradient(45deg, #0084d6, #0052a3);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+            padding: 5px 0;
+            margin: 0 auto;
+            width: fit-content;
+        }
+
+        .success-message {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.5rem;
+            color: var(--game-text);
+            margin-bottom: 30px;
+            line-height: 1.4;
+        }
+
+        /* --- MEDAL --- */
+        .medal-container {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: medalFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes medalFloat {
+            0%, 100% { transform: translateY(0) rotateX(0) rotateY(0); }
+            50% { transform: translateY(-10px) rotateX(0) rotateY(0); }
+        }
+
+        .medal {
+            width: 180px;
+            height: 180px;
+            background: linear-gradient(135deg, #0052a3 0%, #0084d6 100%);
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            transform-style: preserve-3d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .medal-ribbon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(45deg);
+            width: 200px;
+            height: 200px;
+            background: linear-gradient(45deg, #0052a3 25%, #0084d6 25%, #0084d6 50%, #0052a3 50%, #0052a3 75%, #0084d6 75%);
+            border-radius: 50%;
+            z-index: -1;
+        }
+
+        .medal-star {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 3rem;
+            color: white;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .medal-text {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            color: white;
+            text-align: center;
+            font-size: 0.9rem;
+            position: absolute;
+            bottom: 40px;
+            width: 100%;
+        }
+
+        /* --- CONTINUE BUTTON --- */
+        .continue-button {
+            background: linear-gradient(135deg, var(--game-accent) 0%, #0066cc 100%);
+            color: var(--game-bg);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 132, 214, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 20px;
+            animation: pulse 2s infinite;
+            transform-style: preserve-3d;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 132, 214, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 132, 214, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 132, 214, 0); }
+        }
+
+        .continue-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 132, 214, 0.4);
+        }
+
+        /* --- NEON EFFECTS --- */
+        .neon-glow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.6;
+            background: radial-gradient(circle at center, rgba(0, 132, 214, 0.2) 0%, rgba(0, 132, 214, 0) 70%);
+            animation: neonPulse 3s infinite alternate;
+        }
+
+        @keyframes neonPulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 0.8; }
+        }
+
+        .neon-text {
+            color: var(--neon-blue);
+            text-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-purple);
+            animation: neonFlicker 2s infinite alternate;
+        }
+
+        @keyframes neonFlicker {
+            0%, 100% { text-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-purple); }
+            50% { text-shadow: 0 0 5px var(--neon-purple), 0 0 10px var(--neon-blue); }
+        }
+
+        /* --- MISSION COMPLETE --- */
+        .mission-complete {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 132, 214, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            font-size: 1.1rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            z-index: 20;
+            animation: fadeIn 0.5s ease-out 0.5s forwards;
+            opacity: 0;
+        }
+
+        /* --- CELEBRATION PARTICLES --- */
+        .celebration-particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: var(--neon-blue);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--neon-blue);
+            animation: fall linear forwards;
+            z-index: 5;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(100vh);
+                opacity: 0;
+            }
+        }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 768px) {
+            .success-card {
+                width: 95%;
+                padding: 30px 20px;
+            }
+            .success-title {
+                font-size: 2rem;
+            }
+            .success-message {
+                font-size: 1.2rem;
+            }
+            .medal {
+                width: 150px;
+                height: 150px;
+            }
+            .medal-star {
+                font-size: 2.5rem;
+            }
+            .medal-text {
+                font-size: 0.8rem;
+                bottom: 30px;
+            }
+            .continue-button {
+                padding: 12px 30px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="hamburger" id="hamburger-menu"><span></span><span></span><span></span></div>
+        <div class="user-dropdown" id="user-dropdown">
+            <a href="cuenta.html">Mi Cuenta</a>
+            <a href="configuracion.html">Configuración</a>
+            <a href="notificaciones.html">Notificaciones</a>
+            <hr>
+            <a href="index.html" id="logout-btn">Cerrar Sesión</a>
+        </div>
+    </nav>
+
+    <!-- Music Player -->
+    <div class="music-player">
+        <button id="music-control-btn" class="music-control-btn" title="Pausar/Reproducir Música">
+            <i class="fas fa-volume-up"></i>
+        </button>
+    </div>
+    <audio id="background-music" loop>
+        <source src="https://www.bensound.com/bensound-music/bensound-happyrock.mp3" type="audio/mpeg">
+        Tu navegador no soporta el elemento de audio.
+    </audio>
+
+    <main class="main-container">
+        <!-- Neon Glow Effect -->
+        <div class="neon-glow"></div>
+
+        <!-- Game Stage -->
+        <div class="game-stage">
+            <!-- Success Card -->
+            <div class="success-card">
+                <h1 class="success-title neon-text">¡FELICIDADES!</h1>
+                <p class="success-message">Has completado con éxito todas las fases del juego 1. Tu habilidad para resolver acertijos y conectar ideas es impresionante.</p>
+                
+                <!-- Medal -->
+                <div class="medal-container">
+                    <div class="medal">
+                        <div class="medal-ribbon"></div>
+                        <div class="medal-star">★</div>
+                        <div class="medal-text">AGENTE</div>
+                    </div>
+                </div>
+                
+                <!-- Stats -->
+                <div class="stats-container">
+                    <div class="stat-item">
+                        <div class="stat-value" id="time-stat">00:00</div>
+                        <div class="stat-label">Tiempo</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="hints-stat">0</div>
+                        <div class="stat-label">Pistas</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="score-stat">100</div>
+                        <div class="stat-label">Puntuación</div>
+                    </div>
+                </div>
+                
+                <!-- Continue Button -->
+                <button class="continue-button" id="continue-button">Continuar</button>
+            </div>
+        </div>
+
+        <!-- Mission Complete Message -->
+        <div class="mission-complete">¡MISIÓN COMPLETA!</div>
+
+        <!-- Celebration Particles -->
+        <div id="celebration-container"></div>
+
+        <script type="module">
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+            import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+            const firebaseConfig = {
+                apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+                projectId: "skopia-aa786",
+                storageBucket: "skopia-aa786.firebasestorage.app",
+                messagingSenderId: "719823055099",
+                appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+            };
+
+            if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+                firebaseConfig.authDomain = "localhost";
+            } else {
+                firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+            }
+
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+
+            onAuthStateChanged(auth, (user) => {
+                if (!user) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+            });
+        </script>
+    <script type="module" src="./global-settings.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM Cargado. Inicializando pantalla de felicitaciones...");
+            
+            // --- CONSTANTES Y VARIABLES GLOBALES ---
+            const GAME1_STATE_KEY = 'skopia_game1_state_v1';
+            const MISSIONS_KEY = 'skopia_missions_v1';
+            const GAME_STATS_KEY = 'skopia_game_stats_v1';
+            const GAME1_COMPLETED_KEY = 'skopia_game1_completed_v1';
+            
+            let gameStats = {};
+            let celebrationInterval = null;
+            
+            // --- FUNCIONES DE GESTIÓN DEL ESTADO DEL JUEGO ---
+            function getGameState() {
+                const state = localStorage.getItem(GAME1_STATE_KEY);
+                return state ? JSON.parse(state) : { totalTime: 0, hintsUsed: false, currentPhase: 1 };
+            }
+            
+            function getGameStats() {
+                const stats = localStorage.getItem(GAME_STATS_KEY);
+                return stats ? JSON.parse(stats) : { gamesPlayed: 0, gamesWon: 0, hintsUsed: 0, totalTime: 0, bestTime: null, lastPlayDate: null, streakDays: 0 };
+            }
+            
+            function saveGameStats(stats) {
+                localStorage.setItem(GAME_STATS_KEY, JSON.stringify(stats));
+            }
+            
+            function getMissions() {
+                const missions = localStorage.getItem(MISSIONS_KEY);
+                return missions ? JSON.parse(missions) : [];
+            }
+            
+            function saveMissions(missions) {
+                localStorage.setItem(MISSIONS_KEY, JSON.stringify(missions));
+            }
+            
+            function completeMission(id) {
+                const missions = getMissions();
+                const mission = missions.find(m => m.id === id);
+                if (mission && !mission.completed) {
+                    mission.completed = true;
+                    saveMissions(missions);
+                    
+                    // Reproducirir sonido de misión completada
+                    const missionSound = document.getElementById('mission-sound');
+                    if (missionSound) {
+                        missionSound.play().catch(e => console.log("Error al reproducir sonido:", e));
+                    }
+                    
+                    return true;
+                }
+                return false;
+            }
+            
+            function markGameAsCompleted() {
+                localStorage.setItem(GAME1_COMPLETED_KEY, 'true');
+            }
+            
+            function isGameCompleted() {
+                return localStorage.getItem(GAME1_COMPLETED_KEY) === 'true';
+            }
+            
+            // --- CREAR PARTÍCULAS DE CELEBRACIÓN ---
+            function createCelebrationParticles() {
+                const container = document.getElementById('celebration-container');
+                const colors = ['#00ffff', '#00a2ff', '#ff00ff', '#00ff00', '#ff00ff', '#00ffff'];
+                
+                for (let i = 0; i < 50; i++) {
+                    setTimeout(() => {
+                        const particle = document.createElement('div');
+                        particle.className = 'celebration-particle';
+                        particle.style.left = Math.random() * 100 + '%';
+                        particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                        particle.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                        particle.style.animationDelay = Math.random() * 0.5 + 's';
+                        container.appendChild(particle);
+                        
+                        // Eliminar partícula después de la animación
+                        setTimeout(() => {
+                            container.removeChild(particle);
+                        }, parseFloat(particle.style.animationDuration) * 1000 + parseFloat(particle.style.animationDelay) * 1000 + 500);
+                    }, i * 50);
+                }
+            }
+            
+            // --- MOSTRAR ESTADÍSTICAS DEL JUEGO ---
+            function displayGameStats() {
+                const stats = getGameState();
+                const gameStats = getGameStats();
+                
+                // Mostrar tiempo
+                const minutes = Math.floor(stats.totalTime / 60);
+                const seconds = stats.totalTime % 60;
+                document.getElementById('time-stat').textContent = 
+                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                
+                // Mostrar pistas usadas
+                document.getElementById('hints-stat').textContent = stats.hintsUsed ? 'Sí' : 'No';
+                
+                // Calcular puntuación (base 100 menos 10 por cada pista)
+                const score = Math.max(0, 100 - (stats.hintsUsed * 10));
+                document.getElementById('score-stat').text = score;
+            }
+            
+            // --- INICIALIZACIÓN ---
+            function init() {
+                // Marcar juego como completado
+                markGameAsCompleted();
+                
+                // Completar misión de ganar primer juego si no está completada
+                const missionCompleted = completeMission(5);
+                if (missionCompleted) {
+                    console.log("Misión 'Gana tu primer juego' completada");
+                }
+                
+                // Crear partículas de celebración
+                createCelebrationParticles();
+                
+                // Mostrar estadísticas del juego
+                displayGameStats();
+                
+                // Reproducir música de celebración
+                const backgroundMusic = document.getElementById('background-music');
+                if (backgroundMusic) {
+                    backgroundMusic.play().catch(error => {
+                        console.log("La reproducción automática de música fue bloqueada por el navegador.");
+                        document.getElementById('music-control-btn').innerHTML = '<i class="fas fa-volume-mute"></i>';
+                        musicControlBtn.addEventListener('click', () => {
+                            if (backgroundMusic.paused) {
+                                backgroundMusic.play();
+                                musicControlBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                            } else {
+                                backgroundMusic.pause();
+                                musicControlBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                            }
+                        });
+                }
+                
+                // Configurar botón de continuar
+                document.getElementById('continue-button').addEventListener('click', () => {
+                    window.location.href = 'LC.html';
+                });
+            }
+            
+            // --- INICIAR APLICACIÓN ---
+            init();
+        });
+    </script>
+</body>
+</html>
