@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fase 5: Red de Ideas - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700&family=Orbitron:wght@700&family=Cinzel:wght@700&family=Special+Elite&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        window.auth = auth;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+            --float-color: var(--color-oliva-oscuro);
+            --float-color-hover: var(--color-oliva-medio);
+            --detective-bg: #0a0e1a;
+            --detective-accent: #c9a961;
+            --detective-text: #e0e0e0;
+            --paper-bg: #f5f1e8;
+            --paper-text: #333;
+            --highlight-bg: #ffeb3b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--detective-bg);
+            color: var(--detective-text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* --- NAVBAR (Same as juego1.html) --- */
+        .navbar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 15px 40px;
+            background-color: rgba(10, 14, 26, 0.8);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 1000;
+        }
+        .hamburger {
+            width: 30px;
+            height: 25px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .hamburger span {
+            display: block;
+            height: 4px;
+            width: 100%;
+            background-color: var(--detective-text);
+            border-radius: 2px;
+            transition: all 0.3s ease-in-out;
+        }
+        .user-dropdown {
+            position: absolute;
+            top: 70px;
+            right: 40px;
+            background-color: rgba(10, 14, 26, 0.9);
+            border: 1px solid var(--detective-accent);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+            z-index: 1000;
+        }
+        .user-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .user-dropdown a {
+            display: block;
+            padding: 15px 25px;
+            text-decoration: none;
+            color: var(--detective-text);
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .user-dropdown a:hover {
+            background-color: rgba(201, 169, 97, 0.2);
+        }
+        .user-dropdown hr {
+            border: none;
+            border-top: 1px solid rgba(201, 169, 97, 0.3);
+            margin: 0;
+        }
+
+        /* --- MUSIC PLAYER --- */
+        .music-player {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 5000;
+        }
+        .music-control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--detective-accent);
+            color: var(--detective-bg);
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+        .music-control-btn:hover {
+            transform: scale(1.1);
+            background-color: #e6c277;
+        }
+
+        /* --- MAIN GAME CONTAINER --- */
+        .game-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--detective-bg) 0%, #1a2332 100%);
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .game-title {
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            color: var(--detective-accent);
+            text-shadow: 0 0 10px rgba(201, 169, 97, 0.3);
+        }
+
+        /* --- IDEA BOARD STYLING --- */
+        .idea-board {
+            width: 100%;
+            max-width: 1200px;
+            height: 600px;
+            background-color: var(--paper-bg);
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            position: relative;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        
+        .board-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(circle, rgba(201, 169, 97, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            opacity: 0.5;
+        }
+        
+        .board-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .idea-bubble {
+            position: absolute;
+            padding: 15px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: move;
+            transition: all 0.3s ease;
+            z-index: 2;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            user-select: none;
+        }
+        
+        .main-idea {
+            width: 180px;
+            height: 180px;
+            background-color: rgba(142, 68, 173, 0.8);
+            color: white;
+            font-size: 1.3rem;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 3;
+            border: 3px solid #8e44ad;
+        }
+        
+        .main-idea.hidden {
+            background-color: rgba(52, 73, 94, 0.8);
+            border: 3px solid #34495e;
+            color: #bdc3c7;
+        }
+        
+        .main-idea.hidden::after {
+            content: '?';
+            position: absolute;
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .secondary-idea {
+            width: 140px;
+            height: 140px;
+            background-color: rgba(52, 152, 219, 0.8);
+            color: white;
+            border: 2px solid #3498db;
+        }
+        
+        .secondary-idea.correct {
+            background-color: rgba(46, 204, 113, 0.8);
+            border: 2px solid #2ecc71;
+        }
+        
+        .secondary-idea.incorrect {
+            background-color: rgba(231, 76, 60, 0.8);
+            border: 2px solid #e74c3c;
+        }
+        
+        .distractor {
+            width: 120px;
+            height: 120px;
+            background-color: rgba(241, 196, 15, 0.8);
+            color: #333;
+            border: 2px solid #f1c40f;
+        }
+        
+        .idea-bubble:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .idea-bubble.dragging {
+            opacity: 0.7;
+            transform: scale(1.1);
+            z-index: 10;
+        }
+        
+        .connection-line {
+            stroke: #3498db;
+            stroke-width: 3;
+            fill: none;
+            stroke-dasharray: 5, 5;
+            animation: dash 20s linear infinite;
+        }
+        
+        .connection-line.correct {
+            stroke: #2ecc71;
+            stroke-width: 4;
+        }
+        
+        .connection-line.incorrect {
+            stroke: #e74c3c;
+            stroke-width: 3;
+            stroke-dasharray: none;
+        }
+        
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -100;
+            }
+        }
+        
+        .glow-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(46, 204, 113, 0.3) 0%, rgba(46, 204, 113, 0) 70%);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .glow-effect.active {
+            animation: glow 2s ease-in-out forwards;
+        }
+        
+        @keyframes glow {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0.8; }
+        }
+        
+        .completion-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(46, 204, 113, 0.9);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 20;
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .completion-message.show {
+            animation: fadeInOut 3s ease-in-out forwards;
+        }
+        
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+        }
+        
+        /* --- GAME CONTROLS --- */
+        .game-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 20px;
+        }
+        .hint-button {
+            background: var(--detective-accent);
+            color: var(--detective-bg);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .hint-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        .hint-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .timer {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            color: var(--detective-accent);
+        }
+
+        /* --- FEEDBACK MESSAGE --- */
+        .feedback-message {
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.3rem;
+            min-height: 40px;
+            font-weight: bold;
+        }
+        .feedback-message.success { color: #4CAF50; }
+        .feedback-message.error { color: #f44336; }
+
+        /* --- FLOATING ICONS & PANELS (Same as juego1.html) --- */
+        .floating-icons {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 2000;
+        }
+        .floating-icons button {
+            background: var(--float-color);
+            color: white;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            border: none;
+            font-size: 20px;
+            display: grid;
+            place-items: center;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            cursor: pointer;
+            transition: transform .15s ease, background .15s ease;
+        }
+        .floating-icons button:hover { transform: scale(1.08); background: var(--float-color-hover); }
+
+        .panel-box {
+            position: fixed;
+            right: 90px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 420px;
+            max-height: 75vh;
+            background: rgba(10, 14, 26, 0.9);
+            border: 1px solid var(--detective-accent);
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+            overflow: auto;
+            padding: 24px;
+            z-index: 2100;
+            display: none;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.2rem;
+            color: var(--detective-text);
+        }
+        .panel-box.active { display: block; }
+        .panel-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+        .panel-header h3 { margin:0; font-size:1.6rem; color:var(--detective-accent); }
+        .close-panel { background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--detective-accent); }
+        .mission-row { padding:12px; border-radius:8px; margin-bottom:10px; background:rgba(201, 169, 97, 0.1); box-shadow: 0 2px 6px rgba(0,0,0,0.2); display:flex; justify-content:space-between; align-items:center; }
+        .mission-row.completed { opacity:0.6; text-decoration:line-through; background:rgba(76, 175, 80, 0.1); }
+        .toast {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            background: rgba(10, 14, 26, 0.9);
+            border-left: 6px solid var(--detective-accent);
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+            z-index: 3000;
+            display: none;
+            font-size: 1.1rem;
+            max-width: 400px;
+            color: var(--detective-text);
+        }
+        .toast.show { display: block; }
+        .info { font-family: 'Roboto', sans-serif; color:var(--detective-text); font-size:1.1rem; margin-bottom:12px; }
+
+        @media (max-width: 768px) {
+            .idea-board {
+                height: 500px;
+            }
+            .main-idea {
+                width: 150px;
+                height: 150px;
+                font-size: 1.1rem;
+            }
+            .secondary-idea {
+                width: 120px;
+                height: 120px;
+                font-size: 1rem;
+            }
+            .distractor {
+                width: 100px;
+                height: 100px;
+                font-size: 0.9rem;
+            }
+            .game-controls { flex-direction: column; gap: 15px; }
+            .panel-box { right: 10px; width: 92%; top: 55%; transform: translateY(-55%); }
+            .floating-icons { right: 10px; }
+        }
+    </style>
+     <script type="module" src="./global-settings.js"></script>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="hamburger" id="hamburger-menu"><span></span><span></span><span></span></div>
+        <div class="user-dropdown" id="user-dropdown">
+            <a href="cuenta.html">Mi Cuenta</a>
+            <a href="configuracion.html">Configuración</a>
+            <a href="notificaciones.html">Notificaciones</a>
+            <hr>
+            <a href="index.html" id="logout-btn">Cerrar Sesión</a>
+        </div>
+    </nav>
+
+    <!-- Music Player -->
+    <div class="music-player">
+        <button id="music-control-btn" class="music-control-btn" title="Pausar/Reproducir Música">
+            <i class="fas fa-volume-up"></i>
+        </button>
+    </div>
+    <audio id="background-music" loop>
+        <source src="https://www.bensound.com/bensound-music/bensound-mystery.mp3" type="audio/mpeg">
+        Tu navegador no soporta el elemento de audio.
+    </audio>
+
+    <main class="game-container">
+        <header class="game-header">
+            <h1 class="game-title">Fase 5: Red de Ideas</h1>
+        </header>
+
+        <div class="idea-board" id="idea-board">
+            <div class="board-background"></div>
+            <svg class="board-svg" id="board-svg"></svg>
+            <div class="glow-effect" id="glow-effect"></div>
+            
+            <!-- Main Idea (Hidden) -->
+            <div class="idea-bubble main-idea hidden" id="main-idea" data-revealed="false">
+                <span>El impacto de la tecnología en la sociedad contemporánea</span>
+            </div>
+            
+            <!-- Secondary Ideas -->
+            <div class="idea-bubble secondary-idea" id="idea-1" data-correct="true" style="top: 100px; left: 200px;">
+                <span>Transformación de la comunicación</span>
+            </div>
+            
+            <div class="idea-bubble secondary-idea" id="idea-2" data-correct="true" style="top: 350px; left: 150px;">
+                <span>Cambios en el mercado laboral</span>
+            </div>
+            
+            <div class="idea-bubble secondary-idea" id="idea-3" data-correct="true" style="top: 200px; left: 800px;">
+                <span>Evolución de la educación</span>
+            </div>
+            
+            <div class="idea-bubble secondary-idea" id="idea-4" data-correct="true" style="top: 400px; left: 750px;">
+                <span>Privacidad y seguridad digital</span>
+            </div>
+            
+            <!-- Distractors -->
+            <div class="idea-bubble distractor" id="distractor-1" data-correct="false" style="top: 50px; left: 500px;">
+                <span>Historia de la computación</span>
+            </div>
+            
+            <div class="idea-bubble distractor" id="distractor-2" data-correct="false" style="top: 450px; left: 400px;">
+                <span>Biografías de inventores</span>
+            </div>
+            
+            <div class="idea-bubble distractor" id="distractor-3" data-correct="false" style="top: 250px; left: 350px;">
+                <span>Componentes electrónicos</span>
+            </div>
+            
+            <!-- Completion Message -->
+            <div class="completion-message" id="completion-message">
+                ¡Red completada con éxito!<br>
+                Redirigiendo...
+            </div>
+        </div>
+
+        <div class="game-controls">
+            <button class="hint-button" id="hint-button">
+                <i class="fas fa-lightbulb"></i>
+                <span>Pista</span>
+            </button>
+            <div class="timer" id="timer">Tiempo: 00:00</div>
+        </div>
+
+        <div class="feedback-message" id="feedback-message"></div>
+    </main>
+
+    <!-- Floating vertical icons (Same as juego1.html) -->
+    <div class="floating-icons" aria-hidden="false">
+        <button id="btn-misiones" title="Misiones">🎯</button>
+        <button id="btn-nivel" title="Nivel actual">⭐</button>
+        <button id="btn-progreso" title="Progreso">📊</button>
+        <button id="btn-analisis" title="Análisis">📈</button>
+    </div>
+
+    <!-- Panels (Same as juego1.html) -->
+    <div class="panel-box" id="panel-misiones" aria-hidden="true">
+        <div class="panel-header"><h3>Misiones</h3><button class="close-panel" data-close="misiones">&times;</button></div>
+        <div id="misiones-content"></div>
+    </div>
+    <div class="panel-box" id="panel-nivel" aria-hidden="true">
+        <div class="panel-header"><h3>Tu nivel</h3><button class="close-panel" data-close="nivel">&times;</button></div>
+        <div id="nivel-content"></div>
+    </div>
+    <div class="panel-box" id="panel-progreso" aria-hidden="true">
+        <div class="panel-header"><h3>Progreso</h3><button class="close-panel" data-close="progreso">&times;</button></div>
+        <div id="progreso-content"></div>
+    </div>
+    <div class="panel-box" id="panel-analisis" aria-hidden="true">
+        <div class="panel-header"><h3>Análisis (promedio 0–300)</h3><button class="close-panel" data-close="analisis">&times;</button></div>
+        <div id="analisis-content"><div id="analisis-stats" style="margin-top:12px;"></div></div>
+    </div>
+
+    <div class="toast" id="mission-toast" role="status" aria-live="polite"></div>
+    <audio id="mission-sound" src="mission.mp3" preload="auto"></audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM Cargado. Inicializando Fase 5 del juego...");
+
+            // --- CONSTANTES Y VARIABLES GLOBALES DEL JUEGO ---
+            const GAME1_STATE_KEY = 'skopia_game1_state_v1';
+            const MISSIONS_KEY = 'skopia_missions_v1';
+            const USER_PROFILE_KEY = 'skopia_user_profile_v1';
+            const GAME_STATS_KEY = 'skopia_game_stats_v1';
+            const CURRENT_PHASE = 5;
+            const TOTAL_PHASES = 5;
+
+            let toastTimer = null;
+            let gameStartTime = null;
+            let timerInterval = null;
+            let hintUsed = false;
+            let puzzleSolved = false;
+            let connections = {};
+            let draggedBubble = null;
+            let isDragging = false;
+            let correctConnections = 0;
+            let totalCorrectConnections = 4;
+
+            // --- FUNCIONES DE GESTIÓN DEL ESTADO DEL JUEGO ---
+            function getGameState() {
+                const state = localStorage.getItem(GAME1_STATE_KEY);
+                return state ? JSON.parse(state) : { totalTime: 0, hintsUsed: false, currentPhase: 1 };
+            }
+            function saveGameState(state) {
+                localStorage.setItem(GAME1_STATE_KEY, JSON.stringify(state));
+            }
+
+            // --- COPIAR TODO EL SISTEMA DE MISIONES DE JUEGO1.HTML ---
+            const META_MISSION_IDS = [38];
+            const missionsTemplate = [
+                { id: 1, title: "Completa tu primer examen", points: 50 }, { id: 2, title: "Logra al menos 180/300 en un examen", points: 80 },
+                { id: 3, title: "Lee toda la teoría de una lección", points: 40 }, { id: 4, title: "Termina una sesión de estudio sin salir", points: 50 },
+                { id: 5, title: "Gana tu primer juego", points: 50 }, { id: 6, title: "Usa una pista o ayuda en un juego", points: 30 },
+                { id: 7, title: "Repite un examen para mejorar tu nota", points: 50 }, { id: 8, title: "Cambia tu nombre de usuario", points: 40 },
+                { id: 9, title: "Acumula tus primeras 200 estrellas", points: 30 }, { id: 10, title: "Completa 3 misiones seguidas", points: 50 },
+                { id: 11, title: "Logra 240/300 en un examen", points: 150 }, { id: 12, title: "Completa un examen sin errores (300/300)", points: 200 },
+                { id: 13, title: "Gana 3 juegos distintos", points: 60 }, { id: 18, title: "Gana un juego en menos de 2 minutos", points: 50 },
+                { id: 19, title: "Repite un juego hasta mejorar tu resultado", points: 30 }, { id: 37, title: "Gana un juego sin usar pistas", points: 50 },
+                { id: 38, title: "Revisa tu historial de progreso", points: 30 }, { id: 100, title: "🏆 Maestro del Saber Pro: completa todo el sistema", points: 200 }
+            ];
+            const LEVELS = [
+                { idx: 1, name: "Novato/a", min: 0, max: 299 }, { idx: 2, name: "Aprendiz/a", min: 300, max: 799 },
+                { idx: 3, name: "Explorador/a", min: 800, max: 1499 }, { idx: 4, name: "Analista", min: 1500, max: 2499 },
+                { idx: 5, name: "Estratega", min: 2500, max: 3699 }, { idx: 6, name: "Sabio/a", min: 3700, max: 4999 },
+                { idx: 7, name: "Maestro/a", min: 5000, max: 6499 }, { idx: 8, name: "Élite", min: 6500, max: 7999 },
+                { idx: 9, name: "Leyenda", min: 8000, max: 9499 }, { idx: 10, name: "Rey/Reina Skópia", min: 9500, max: Infinity }
+            ];
+
+            function initMissions() { if (!localStorage.getItem(MISSIONS_KEY)) { const initial = missionsTemplate.map(m => ({ ...m, completed: false })); localStorage.setItem(MISSIONS_KEY, JSON.stringify(initial)); } }
+            function initUserProfile() { if (!localStorage.getItem(USER_PROFILE_KEY)) { const initial = { originalEmail: "", nameChangeMissionCompleted: false }; localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(initial)); } }
+            function initGameStats() { if (!localStorage.getItem(GAME_STATS_KEY)) { const initial = { gamesPlayed: 0, gamesWon: 0, hintsUsed: 0, totalTime: 0, bestTime: null, lastPlayDate: null, streakDays: 0 }; localStorage.setItem(GAME_STATS_KEY, JSON.stringify(initial)); } }
+            function completeMission(id) { const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]"); const mission = data.find(m => m.id === id); if (mission && !mission.completed) { mission.completed = true; localStorage.setItem(MISSIONS_KEY, JSON.stringify(data)); document.getElementById('mission-sound').play().catch(e => console.log("Error al reproducir sonido:", e)); showMissionToast(`¡Misión completada: ${mission.title} (+${mission.points}⭐)!`, 5000); updateAllDisplays(); setTimeout(() => checkAndCompleteSpecialMissions(), 200); } }
+            function checkAndCompleteSpecialMissions() { const missionsData = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]"); const totalPoints = getTotalPoints(); const completedCount = getCompletedCount(); const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}"); let changed = false; const newlyCompletedMissions = []; if (totalPoints >= 200) { const m = missionsData.find(m => m.id === 9); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m); } } const mission10 = missionsData.find(m => m.id === 10); const metaCompletedCount = missionsData.filter(m => m.completed && META_MISSION_IDS.includes(m.id)).length; const realCompletedCount = completedCount - metaCompletedCount; if (realCompletedCount >= 3 && mission10 && !mission10.completed) { mission10.completed = true; changed = true; newlyCompletedMissions.push(mission10); } if (gameStats.gamesWon >= 3) { const m = missionsData.find(m => m.id === 13); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m); } } if (totalPoints >= 500) { const m = missionsData.find(m => m.id === 17); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} } if (totalPoints >= 1000) { const m = missionsData.find(m => m.id === 26); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} } if (totalPoints >= 3000) { const m = missionsData.find(m => m.id === 43); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} } if (changed) { localStorage.setItem(MISSIONS_KEY, JSON.stringify(missionsData)); document.getElementById('mission-sound').play().catch(e => console.log("Error al reproducir sonido:", e)); newlyCompletedMissions.forEach(m => { showMissionToast(`¡Misión completada: ${m.title} (+${mission.points}⭐)!`, 5000); }); updateAllDisplays(); } }
+            function showMissionToast(text, ms = 60000) { const toast = document.getElementById('mission-toast'); toast.innerHTML = `<strong>${text}</strong>`; toast.classList.add('show'); if (toastTimer) clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), ms); }
+            function getTotalPoints() { const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]"); return data.reduce((sum, m) => sum + (m.completed ? m.points : 0), 0); }
+            function getLevelFromPoints(total) { for (let i = LEVELS.length - 1; i >= 0; i--) if (total >= LEVELS[i].min) return LEVELS[i]; return LEVELS[0]; }
+            function getCompletedCount() { return JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").filter(m => m.completed).length; }
+            function renderMissions() { const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]"); const container = document.getElementById('misiones-content'); container.innerHTML = ''; const incompleteMissions = data.filter(m => !m.completed).slice(0, 3); if (incompleteMissions.length === 0) { container.innerHTML = '<div class="info">¡Felicidades! Has completado todas las misiones.</div>'; return; } incompleteMissions.forEach(m => { const div = document.createElement('div'); div.className = 'mission-row'; div.innerHTML = `<div style="flex:1"><div style="font-weight:700; color:var(--detective-text)">${m.id}. ${m.title}</div><div style="font-size:1rem; color:var(--detective-accent)">${m.points} ⭐</div></div>`; container.appendChild(div); }); }
+            function renderLevel() { const total = getTotalPoints(); const level = getLevelFromPoints(total); const neededForNext = (level.max === Infinity) ? 0 : (level.max - total + 1); const progressPct = (level.max === Infinity) ? 100 : Math.min(100, Math.round(((total - level.min) / (level.max - level.min)) * 100)); document.getElementById('nivel-content').innerHTML = `<div class="info"><strong>Nivel:</strong> ${level.name} (${level.idx})</div><div class="info"><strong>Puntos:</strong> ${total} ⭐</div><div class="info"><strong>Progreso:</strong> ${progressPct}%</div><div style="background:rgba(201, 169, 97, 0.2);border-radius:10px;padding:8px;margin-top:10px"><div style="height:12px;background:linear-gradient(90deg,var(--detective-accent),#e6c277);width:${progressPct}%;border-radius:8px"></div></div>${level.max === Infinity ? '<div class="info" style="margin-top:8px">¡Nivel máximo!</div>' : `<div class="info" style="margin-top:8px">Para subir: ${neededForNext} ⭐</div>`}`; }
+            function renderProgress() { const total = getTotalPoints(); const topTarget = 9500; const pct = Math.min(100, Math.round((total / topTarget) * 100)); document.getElementById('progreso-content').innerHTML = `<div class="info"><strong>Puntos:</strong> ${total} ⭐</div><div class="info"><strong>Progreso Global:</strong> ${pct}%</div><div style="background:rgba(201, 169, 97, 0.2);border-radius:10px;padding:8px;margin-top:10px"><div style="height:12px;background:linear-gradient(90deg,var(--detective-accent),#e6c277);width:${pct}%;border-radius:8px"></div></div><div class="info" style="margin-top:10px"><strong>Misiones:</strong> ${getCompletedCount()}/100</div>`; }
+            function renderAnalysis() { const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}"); document.getElementById('analisis-stats').innerHTML = `<div class="info"><strong>Juegos jugados:</strong> ${gameStats.gamesPlayed || 0}</div><div class="info"><strong>Juegos ganados:</strong> ${gameStats.gamesWon || 0}</div><div class="info"><strong>Pistas usadas:</strong> ${gameStats.hintsUsed || 0}</div><div class="info"><strong>Mejor tiempo:</strong> ${gameStats.bestTime ? `${gameStats.bestTime}s` : 'N/A'}</div><div class="info"><strong>Racha actual:</strong> ${gameStats.streakDays || 0} días</div>`; }
+            function updateAllDisplays() { renderMissions(); renderLevel(); renderProgress(); renderAnalysis(); }
+            function closeAllPanels() { document.querySelectorAll('.panel-box').forEach(p => p.classList.remove('active')); }
+
+            // --- EVENT LISTENERS FOR MISSION SYSTEM (Same as juego1.html) ---
+            window.addEventListener('userReady', (e) => { const user = e.detail.user; const userProfile = JSON.parse(localStorage.getItem(USER_PROFILE_KEY) || "{}"); if (!userProfile.originalEmail) { userProfile.originalEmail = user.email; userProfile.nameChangeMissionCompleted = false; localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile)); } if (!userProfile.nameChangeMissionCompleted) { const hasChangedName = user.displayName && user.displayName !== userProfile.originalEmail; if (hasChangedName) { completeMission(8); userProfile.nameChangeMissionCompleted = true; localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile)); } } });
+            document.getElementById('hamburger-menu').addEventListener('click', () => { document.getElementById('user-dropdown').classList.toggle('active'); });
+            document.getElementById('logout-btn').addEventListener('click', () => { import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => { signOut(window.auth).then(() => window.location.href = 'index.html'); }); });
+            window.addEventListener('click', (event) => { if (!event.target.closest('.navbar')) document.getElementById('user-dropdown').classList.remove('active'); const isIcon = event.target.closest('.floating-icons'); const isPanel = event.target.closest('.panel-box'); if (!isIcon && !isPanel) closeAllPanels(); });
+            document.getElementById('btn-misiones').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-misiones').classList.add('active'); renderMissions(); });
+            document.getElementById('btn-nivel').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-nivel').classList.add('active'); renderLevel(); });
+            document.getElementById('btn-progreso').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-progreso').classList.add('active'); renderProgress(); completeMission(38); });
+            document.getElementById('btn-analisis').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-analisis').classList.add('active'); renderAnalysis(); });
+            document.querySelectorAll('.close-panel').forEach(btn => { btn.addEventListener('click', (e) => { document.getElementById('panel-' + e.target.getAttribute('data-close')).classList.remove('active'); }); });
+
+            // --- LÓGICA ESPECÍFICA DE ESTA FASE DEL JUEGO ---
+            const ideaBoard = document.getElementById('idea-board');
+            const boardSvg = document.getElementById('board-svg');
+            const mainIdea = document.getElementById('main-idea');
+            const feedbackMessage = document.getElementById('feedback-message');
+            const hintButton = document.getElementById('hint-button');
+            const timerDisplay = document.getElementById('timer');
+            const musicControlBtn = document.getElementById('music-control-btn');
+            const backgroundMusic = document.getElementById('background-music');
+            const glowEffect = document.getElementById('glow-effect');
+            const completionMessage = document.getElementById('completion-message');
+
+            function startGame() {
+                const state = getGameState();
+                gameStartTime = Date.now();
+                startTimer();
+                // Intentar reproducir música
+                backgroundMusic.play().then(() => {
+                    musicControlBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                }).catch(error => {
+                    console.log("La reproducción automática de música fue bloqueada por el navegador.");
+                    musicControlBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                });
+                
+                // Inicializar eventos de arrastre
+                initDragEvents();
+            }
+
+            function startTimer() {
+                timerInterval = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+                    const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
+                    const seconds = String(elapsed % 60).padStart(2, '0');
+                    timerDisplay.textContent = `Tiempo: ${minutes}:${seconds}`;
+                }, 1000);
+            }
+
+            function stopTimer() {
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+                    const state = getGameState();
+                    state.totalTime += elapsed;
+                    saveGameState(state);
+                }
+            }
+
+            function initDragEvents() {
+                // Eventos para las burbujas de ideas
+                document.querySelectorAll('.idea-bubble:not(.main-idea)').forEach(bubble => {
+                    bubble.addEventListener('mousedown', startDragging);
+                    bubble.addEventListener('touchstart', startDragging);
+                });
+                
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('touchmove', drag);
+                
+                document.addEventListener('mouseup', endDragging);
+                document.addEventListener('touchend', endDragging);
+            }
+
+            function startDragging(e) {
+                e.preventDefault();
+                if (puzzleSolved) return;
+                
+                draggedBubble = e.target.closest('.idea-bubble');
+                if (!draggedBubble) return;
+                
+                isDragging = true;
+                draggedBubble.classList.add('dragging');
+                
+                // Guardar posición inicial
+                draggedBubble.dataset.initialLeft = draggedBubble.style.left;
+                draggedBubble.dataset.initialTop = draggedBubble.style.top;
+                
+                // Calcular offset
+                const rect = draggedBubble.getBoundingClientRect();
+                const boardRect = ideaBoard.getBoundingClientRect();
+                
+                draggedBubble.dataset.offsetX = (e.type.includes('touch') ? e.touches[0].clientX : e.clientX) - rect.left;
+                draggedBubble.dataset.offsetY = (e.type.includes('touch') ? e.touches[0].clientY : e.clientY) - rect.top;
+            }
+
+            function drag(e) {
+                if (!isDragging || !draggedBubble) return;
+                
+                const boardRect = ideaBoard.getBoundingClientRect();
+                let clientX, clientY;
+                
+                if (e.type.includes('touch')) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                } else {
+                    clientX = e.clientX;
+                    clientY = e.clientY;
+                }
+                
+                // Calcular nueva posición
+                const newX = clientX - boardRect.left - parseFloat(draggedBubble.dataset.offsetX);
+                const newY = clientY - boardRect.top - parseFloat(draggedBubble.dataset.offsetY);
+                
+                // Limitar dentro del tablero
+                const bubbleWidth = draggedBubble.offsetWidth;
+                const bubbleHeight = draggedBubble.offsetHeight;
+                
+                const boundedX = Math.max(0, Math.min(newX, boardRect.width - bubbleWidth));
+                const boundedY = Math.max(0, Math.min(newY, boardRect.height - bubbleHeight));
+                
+                // Aplicar nueva posición
+                draggedBubble.style.left = `${boundedX}px`;
+                draggedBubble.style.top = `${boundedY}px`;
+                
+                // Actualizar líneas de conexión si existen
+                updateConnections(draggedBubble.id);
+            }
+
+            function endDragging(e) {
+                if (!isDragging || !draggedBubble) return;
+                
+                isDragging = false;
+                draggedBubble.classList.remove('dragging');
+                
+                // Verificar si está cerca de la idea principal
+                checkProximity(draggedBubble);
+                
+                draggedBubble = null;
+            }
+
+            function checkProximity(bubble) {
+                const bubbleRect = bubble.getBoundingClientRect();
+                const mainRect = mainIdea.getBoundingClientRect();
+                
+                // Calcular distancia entre centros
+                const bubbleCenterX = bubbleRect.left + bubbleRect.width / 2;
+                const bubbleCenterY = bubbleRect.top + bubbleRect.height / 2;
+                const mainCenterX = mainRect.left + mainRect.width / 2;
+                const mainCenterY = mainRect.top + mainRect.height / 2;
+                
+                const distance = Math.sqrt(
+                    Math.pow(bubbleCenterX - mainCenterX, 2) + 
+                    Math.pow(bubbleCenterY - mainCenterY, 2)
+                );
+                
+                // Si está lo suficientemente cerca, conectar
+                if (distance < 200) {
+                    connectBubble(bubble);
+                } else {
+                    // Si ya estaba conectada, desconectar
+                    if (connections[bubble.id]) {
+                        disconnectBubble(bubble);
+                    }
+                }
+            }
+
+            function connectBubble(bubble) {
+                // Si ya está conectada, no hacer nada
+                if (connections[bubble.id]) return;
+                
+                // Crear conexión
+                const isCorrect = bubble.dataset.correct === 'true';
+                
+                connections[bubble.id] = {
+                    bubble: bubble,
+                    correct: isCorrect,
+                    line: null
+                };
+                
+                // Actualizar clase de la burbuja
+                if (isCorrect) {
+                    bubble.classList.add('correct');
+                    correctConnections++;
+                    feedbackMessage.textContent = "¡Conexión correcta!";
+                    feedbackMessage.className = 'feedback-message success';
+                } else {
+                    bubble.classList.add('incorrect');
+                    feedbackMessage.textContent = "Esta idea no pertenece a la red principal.";
+                    feedbackMessage.className = 'feedback-message error';
+                }
+                
+                // Dibujar línea de conexión
+                drawConnection(bubble, isCorrect);
+                
+                // Revelar idea principal si es la primera conexión correcta
+                if (isCorrect && mainIdea.dataset.revealed === 'false') {
+                    revealMainIdea();
+                }
+                
+                // Verificar si se han completado todas las conexiones correctas
+                if (correctConnections === totalCorrectConnections) {
+                    completePuzzle();
+                }
+            }
+
+            function disconnectBubble(bubble) {
+                // Si no está conectada, no hacer nada
+                if (!connections[bubble.id]) return;
+                
+                // Eliminar línea de conexión
+                if (connections[bubble.id].line) {
+                    boardSvg.removeChild(connections[bubble.id].line);
+                }
+                
+                // Actualizar clase de la burbuja
+                if (connections[bubble.id].correct) {
+                    bubble.classList.remove('correct');
+                    correctConnections--;
+                } else {
+                    bubble.classList.remove('incorrect');
+                }
+                
+                // Eliminar conexión
+                delete connections[bubble.id];
+            }
+
+            function drawConnection(bubble, isCorrect) {
+                const bubbleRect = bubble.getBoundingClientRect();
+                const mainRect = mainIdea.getBoundingClientRect();
+                const boardRect = ideaBoard.getBoundingClientRect();
+                
+                // Calcular puntos de conexión
+                const bubbleCenterX = bubbleRect.left + bubbleRect.width / 2 - boardRect.left;
+                const bubbleCenterY = bubbleRect.top + bubbleRect.height / 2 - boardRect.top;
+                const mainCenterX = mainRect.left + mainRect.width / 2 - boardRect.left;
+                const mainCenterY = mainRect.top + mainRect.height / 2 - boardRect.top;
+                
+                // Crear línea SVG
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', bubbleCenterX);
+                line.setAttribute('y1', bubbleCenterY);
+                line.setAttribute('x2', mainCenterX);
+                line.setAttribute('y2', mainCenterY);
+                line.setAttribute('class', `connection-line ${isCorrect ? 'correct' : 'incorrect'}`);
+                
+                // Agregar al SVG
+                boardSvg.appendChild(line);
+                
+                // Guardar referencia
+                connections[bubble.id].line = line;
+            }
+
+            function updateConnections(bubbleId) {
+                // Si la burbuja está conectada, actualizar la línea
+                if (connections[bubbleId]) {
+                    const bubble = document.getElementById(bubbleId);
+                    
+                    // Eliminar línea actual
+                    if (connections[bubbleId].line) {
+                        boardSvg.removeChild(connections[bubbleId].line);
+                    }
+                    
+                    // Dibujar nueva línea
+                    drawConnection(bubble, connections[bubbleId].correct);
+                }
+            }
+
+            function revealMainIdea() {
+                mainIdea.classList.remove('hidden');
+                mainIdea.dataset.revealed = 'true';
+                
+                // Animación de revelación
+                mainIdea.style.transform = 'translate(-50%, -50%) scale(0)';
+                setTimeout(() => {
+                    mainIdea.style.transition = 'transform 0.5s ease';
+                    mainIdea.style.transform = 'translate(-50%, -50%) scale(1)';
+                }, 100);
+            }
+
+            function completePuzzle() {
+                puzzleSolved = true;
+                
+                // Mostrar mensaje de completado
+                completionMessage.classList.add('show');
+                
+                // Activar efecto de brillo
+                glowEffect.classList.add('active');
+                
+                // Actualizar estadísticas del juego
+                const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}");
+                gameStats.gamesPlayed = (gameStats.gamesPlayed || 0) + 1;
+                gameStats.gamesWon = (gameStats.gamesWon || 0) + 1;
+                const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+                if (!gameStats.bestTime || elapsed < gameStats.bestTime) {
+                    gameStats.bestTime = elapsed;
+                }
+                localStorage.setItem(GAME_STATS_KEY, JSON.stringify(gameStats));
+                
+                // Completar misiones relevantes
+                completeMission(5); // Gana tu primer juego
+                if (!hintUsed) {
+                    completeMission(37); // Gana un juego sin usar pistas
+                }
+                if (elapsed < 120) {
+                    completeMission(18); // Gana un juego en menos de 2 minutos
+                }
+                
+                // Redirigir después de la animación
+                setTimeout(() => {
+                    stopTimer();
+                    window.location.href = 'felicidadesjuego1.html';
+                }, 3000);
+            }
+
+            function useHint() {
+                const state = getGameState();
+                if (state.hintsUsed || puzzleSolved) return;
+                
+                state.hintsUsed = true;
+                saveGameState(state);
+                completeMission(6); // Completar misión de usar pista
+                
+                // Encontrar una idea secundaria no conectada
+                const unconnectedCorrectIdeas = Array.from(document.querySelectorAll('.secondary-idea:not(.correct)'));
+                if (unconnectedCorrectIdeas.length === 0) return;
+                
+                const randomIdea = unconnectedCorrectIdeas[Math.floor(Math.random() * unconnectedCorrectIdeas.length)];
+                
+                // Resaltar la idea
+                randomIdea.style.boxShadow = '0 0 20px rgba(46, 204, 113, 0.8)';
+                
+                // Si la idea principal está oculta, mostrar una pista
+                if (mainIdea.dataset.revealed === 'false') {
+                    mainIdea.style.boxShadow = '0 0 20px rgba(142, 68, 173, 0.8)';
+                }
+                
+                setTimeout(() => {
+                    randomIdea.style.boxShadow = '';
+                    if (mainIdea.dataset.revealed === 'false') {
+                        mainIdea.style.boxShadow = '';
+                    }
+                }, 3000);
+                
+                hintButton.disabled = true;
+            }
+
+            // --- EVENT LISTENERS DEL JUEGO ---
+            hintButton.addEventListener('click', useHint);
+
+            musicControlBtn.addEventListener('click', () => {
+                if (backgroundMusic.paused) {
+                    backgroundMusic.play();
+                    musicControlBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                } else {
+                    backgroundMusic.pause();
+                    musicControlBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                }
+            });
+
+            // --- INICIALIZACIÓN ---
+            initMissions(); initUserProfile(); initGameStats(); updateAllDisplays();
+            startGame();
+            console.log("Fase 5 del juego inicializada.");
+        });
+    </script>
+</body>
+</html>
