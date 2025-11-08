@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fase 4: Conexiones Ocultas - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700&family=Orbitron:wght@700&family=Cinzel:wght@700&family=Special+Elite&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        window.auth = auth;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+            --float-color: var(--color-oliva-oscuro);
+            --float-color-hover: var(--color-oliva-medio);
+            --detective-bg: #0a0e1a;
+            --detective-accent: #c9a961;
+            --detective-text: #e0e0e0;
+            --paper-bg: #f5f1e8;
+            --paper-text: #333;
+            --highlight-bg: #ffeb3b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--detective-bg);
+            color: var(--detective-text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* --- NAVBAR (Same as juego1.html) --- */
+        .navbar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 15px 40px;
+            background-color: rgba(10, 14, 26, 0.8);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 1000;
+        }
+        .hamburger {
+            width: 30px;
+            height: 25px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .hamburger span {
+            display: block;
+            height: 4px;
+            width: 100%;
+            background-color: var(--detective-text);
+            border-radius: 2px;
+            transition: all 0.3s ease-in-out;
+        }
+        .user-dropdown {
+            position: absolute;
+            top: 70px;
+            right: 40px;
+            background-color: rgba(10, 14, 26, 0.9);
+            border: 1px solid var(--detective-accent);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+            z-index: 1000;
+        }
+        .user-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .user-dropdown a {
+            display: block;
+            padding: 15px 25px;
+            text-decoration: none;
+            color: var(--detective-text);
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .user-dropdown a:hover {
+            background-color: rgba(201, 169, 97, 0.2);
+        }
+        .user-dropdown hr {
+            border: none;
+            border-top: 1px solid rgba(201, 169, 97, 0.3);
+            margin: 0;
+        }
+
+        /* --- MUSIC PLAYER --- */
+        .music-player {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 5000;
+        }
+        .music-control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--detective-accent);
+            color: var(--detective-bg);
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+        .music-control-btn:hover {
+            transform: scale(1.1);
+            background-color: #e6c277;
+        }
+
+        /* --- MAIN GAME CONTAINER --- */
+        .game-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--detective-bg) 0%, #1a2332 100%);
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .game-title {
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            color: var(--detective-accent);
+            text-shadow: 0 0 10px rgba(201, 169, 97, 0.3);
+        }
+
+        /* --- CONNECTION GAME STYLING --- */
+        .connection-game {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .connection-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .text-column, .words-column {
+            flex: 1;
+            background-color: var(--paper-bg);
+            border-radius: 5px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+            padding: 25px;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .text-column {
+            border-top: 15px solid #8e44ad;
+        }
+        
+        .text-column::before {
+            content: 'TEXTO';
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            font-size: 1.5rem;
+            color: #8e44ad;
+            font-weight: bold;
+            transform: rotate(-5deg);
+            opacity: 0.7;
+        }
+        
+        .words-column {
+            border-top: 15px solid #3498db;
+        }
+        
+        .words-column::before {
+            content: 'PALABRAS';
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            font-size: 1.5rem;
+            color: #3498db;
+            font-weight: bold;
+            transform: rotate(-5deg);
+            opacity: 0.7;
+        }
+        
+        .paragraph {
+            font-family: 'Special Elite', cursive;
+            font-size: 1.2rem;
+            line-height: 1.8;
+            color: var(--paper-text);
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .blank-space {
+            display: inline-block;
+            min-width: 100px;
+            height: 28px;
+            margin: 0 5px;
+            padding: 0 8px;
+            border-bottom: 2px dashed #555;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 4px;
+            vertical-align: middle;
+            position: relative;
+        }
+        
+        .blank-space.connected {
+            border-bottom: 2px solid #27ae60;
+            background-color: rgba(39, 174, 96, 0.2);
+        }
+        
+        .blank-space:hover {
+            background-color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .word-item {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--paper-text);
+            background-color: rgba(52, 152, 219, 0.2);
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            cursor: move;
+            transition: all 0.2s ease;
+            position: relative;
+            text-align: center;
+        }
+        
+        .word-item:hover {
+            background-color: rgba(52, 152, 219, 0.4);
+            transform: translateY(-3px);
+        }
+        
+        .word-item.connected {
+            background-color: rgba(39, 174, 96, 0.3);
+            color: #27ae60;
+            cursor: default;
+        }
+        
+        .word-item.connected:hover {
+            transform: none;
+        }
+        
+        .connection-point {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #3498db;
+            cursor: pointer;
+            z-index: 3;
+        }
+        
+        .blank-space .connection-point {
+            right: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .word-item .connection-point {
+            left: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .connection-point.connected {
+            background-color: #27ae60;
+        }
+        
+        .connection-point:hover {
+            transform: translateY(-50%) scale(1.2);
+        }
+        
+        .connection-line {
+            stroke: #3498db;
+            stroke-width: 3;
+            fill: none;
+            stroke-dasharray: 5, 5;
+            animation: dash 20s linear infinite;
+        }
+        
+        .connection-line.connected {
+            stroke: #27ae60;
+        }
+        
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -100;
+            }
+        }
+        
+        /* --- GAME CONTROLS --- */
+        .game-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 20px;
+        }
+        .hint-button {
+            background: var(--detective-accent);
+            color: var(--detective-bg);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .hint-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        .hint-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .timer {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            color: var(--detective-accent);
+        }
+
+        /* --- FEEDBACK AND NEXT BUTTON --- */
+        .feedback-message {
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.3rem;
+            min-height: 40px;
+            font-weight: bold;
+        }
+        .feedback-message.success { color: #4CAF50; }
+        .feedback-message.error { color: #f44336; }
+
+        .next-phase-button {
+            background: linear-gradient(135deg, var(--detective-accent) 0%, #e6c277 100%);
+            color: var(--detective-bg);
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(201, 169, 97, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: none;
+        }
+        .next-phase-button.show {
+            display: inline-block;
+            animation: fadeIn 1s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- FLOATING ICONS & PANELS (Same as juego1.html) --- */
+        .floating-icons {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 2000;
+        }
+        .floating-icons button {
+            background: var(--float-color);
+            color: white;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            border: none;
+            font-size: 20px;
+            display: grid;
+            place-items: center;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            cursor: pointer;
+            transition: transform .15s ease, background .15s ease;
+        }
+        .floating-icons button:hover { transform: scale(1.08); background: var(--float-color-hover); }
+
+        .panel-box {
+            position: fixed;
+            right: 90px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 420px;
+            max-height: 75vh;
+            background: rgba(10, 14, 26, 0.9);
+            border: 1px solid var(--detective-accent);
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+            overflow: auto;
+            padding: 24px;
+            z-index: 2100;
+            display: none;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.2rem;
+            color: var(--detective-text);
+        }
+        .panel-box.active { display: block; }
+        .panel-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+        .panel-header h3 { margin:0; font-size:1.6rem; color:var(--detective-accent); }
+        .close-panel { background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--detective-accent); }
+        .mission-row { padding:12px; border-radius:8px; margin-bottom:10px; background:rgba(201, 169, 97, 0.1); box-shadow: 0 2px 6px rgba(0,0,0,0.2); display:flex; justify-content:space-between; align-items:center; }
+        .mission-row.completed { opacity:0.6; text-decoration:line-through; background:rgba(76, 175, 80, 0.1); }
+        .toast {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            background: rgba(10, 14, 26, 0.9);
+            border-left: 6px solid var(--detective-accent);
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+            z-index: 3000;
+            display: none;
+            font-size: 1.1rem;
+            max-width: 400px;
+            color: var(--detective-text);
+        }
+        .toast.show { display: block; }
+        .info { font-family: 'Roboto', sans-serif; color:var(--detective-text); font-size:1.1rem; margin-bottom:12px; }
+
+        @media (max-width: 768px) {
+            .connection-game {
+                flex-direction: column;
+            }
+            .game-controls { flex-direction: column; gap: 15px; }
+            .panel-box { right: 10px; width: 92%; top: 55%; transform: translateY(-55%); }
+            .floating-icons { right: 10px; }
+        }
+    </style>
+     <script type="module" src="./global-settings.js"></script>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="hamburger" id="hamburger-menu"><span></span><span></span><span></span></div>
+        <div class="user-dropdown" id="user-dropdown">
+            <a href="cuenta.html">Mi Cuenta</a>
+            <a href="configuracion.html">Configuración</a>
+            <a href="notificaciones.html">Notificaciones</a>
+            <hr>
+            <a href="index.html" id="logout-btn">Cerrar Sesión</a>
+        </div>
+    </nav>
+
+    <!-- Music Player -->
+    <div class="music-player">
+        <button id="music-control-btn" class="music-control-btn" title="Pausar/Reproducir Música">
+            <i class="fas fa-volume-up"></i>
+        </button>
+    </div>
+    <audio id="background-music" loop>
+        <source src="https://www.bensound.com/bensound-music/bensound-mystery.mp3" type="audio/mpeg">
+        Tu navegador no soporta el elemento de audio.
+    </audio>
+
+    <main class="game-container">
+        <header class="game-header">
+            <h1 class="game-title">Fase 4: Conexiones Ocultas</h1>
+        </header>
+
+        <div class="connection-game" id="connection-game">
+            <svg class="connection-svg" id="connection-svg"></svg>
+            
+            <div class="text-column">
+                <div class="paragraph">
+                    La señora regañó a su hijo, la señora lo regañó a <span class="blank-space" data-id="1" data-correct="1"><div class="connection-point"></div></span> porque no había hecho sus tareas.
+                </div>
+                <div class="paragraph">
+                    El detective encontró una pista importante, <span class="blank-space" data-id="2" data-correct="2"><div class="connection-point"></div></span> le permitiría resolver el caso.
+                </div>
+                <div class="paragraph">
+                    Los ladrones entraron por la ventana, pero <span class="blank-space" data-id="3" data-correct="3"><div class="connection-point"></div></span> no sabían que había cámaras de seguridad.
+                </div>
+                <div class="paragraph">
+                    María compró un vestido nuevo para la fiesta, aunque <span class="blank-space" data-id="4" data-correct="4"><div class="connection-point"></div></span> era un poco caro.
+                </div>
+                <div class="paragraph">
+                    El perro ladró toda la noche, <span class="blank-space" data-id="5" data-correct="5"><div class="connection-point"></div></span> impidió que los vecinos pudieran dormir.
+                </div>
+            </div>
+            
+            <div class="words-column">
+                <div class="word-item" data-id="1"><div class="connection-point"></div>ÉL</div>
+                <div class="word-item" data-id="2"><div class="connection-point"></div>ESTO</div>
+                <div class="word-item" data-id="3"><div class="connection-point"></div>ELLOS</div>
+                <div class="word-item" data-id="4"><div class="connection-point"></div>LO</div>
+                <div class="word-item" data-id="5"><div class="connection-point"></div>LO CUAL</div>
+            </div>
+        </div>
+
+        <div class="game-controls">
+            <button class="hint-button" id="hint-button">
+                <i class="fas fa-lightbulb"></i>
+                <span>Pista</span>
+            </button>
+            <div class="timer" id="timer">Tiempo: 00:00</div>
+        </div>
+
+        <div class="feedback-message" id="feedback-message"></div>
+        <button class="next-phase-button" id="next-phase-button">Siguiente Archivo Secreto</button>
+    </main>
+
+    <!-- Floating vertical icons (Same as juego1.html) -->
+    <div class="floating-icons" aria-hidden="false">
+        <button id="btn-misiones" title="Misiones">🎯</button>
+        <button id="btn-nivel" title="Nivel actual">⭐</button>
+        <button id="btn-progreso" title="Progreso">📊</button>
+        <button id="btn-analisis" title="Análisis">📈</button>
+    </div>
+
+    <!-- Panels (Same as juego1.html) -->
+    <div class="panel-box" id="panel-misiones" aria-hidden="true">
+        <div class="panel-header"><h3>Misiones</h3><button class="close-panel" data-close="misiones">&times;</button></div>
+        <div id="misiones-content"></div>
+    </div>
+    <div class="panel-box" id="panel-nivel" aria-hidden="true">
+        <div class="panel-header"><h3>Tu nivel</h3><button class="close-panel" data-close="nivel">&times;</button></div>
+        <div id="nivel-content"></div>
+    </div>
+    <div class="panel-box" id="panel-progreso" aria-hidden="true">
+        <div class="panel-header"><h3>Progreso</h3><button class="close-panel" data-close="progreso">&times;</button></div>
+        <div id="progreso-content"></div>
+    </div>
+    <div class="panel-box" id="panel-analisis" aria-hidden="true">
+        <div class="panel-header"><h3>Análisis (promedio 0–300)</h3><button class="close-panel" data-close="analisis">&times;</button></div>
+        <div id="analisis-content"><div id="analisis-stats" style="margin-top:12px;"></div></div>
+    </div>
+
+    <div class="toast" id="mission-toast" role="status" aria-live="polite"></div>
+    <audio id="mission-sound" src="mission.mp3" preload="auto"></audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM Cargado. Inicializando Fase 4 del juego...");
+
+            // --- CONSTANTES Y VARIABLES GLOBALES DEL JUEGO ---
+            const GAME1_STATE_KEY = 'skopia_game1_state_v1';
+            const MISSIONS_KEY = 'skopia_missions_v1';
+            const USER_PROFILE_KEY = 'skopia_user_profile_v1';
+            const GAME_STATS_KEY = 'skopia_game_stats_v1';
+            const CURRENT_PHASE = 4;
+            const TOTAL_PHASES = 5;
+
+            let toastTimer = null;
+            let gameStartTime = null;
+            let timerInterval = null;
+            let hintUsed = false;
+            let puzzleSolved = false;
+            let connections = {};
+            let isDrawingLine = false;
+            let startPoint = null;
+            let currentLine = null;
+
+            // --- FUNCIONES DE GESTIÓN DEL ESTADO DEL JUEGO ---
+            function getGameState() {
+                const state = localStorage.getItem(GAME1_STATE_KEY);
+                return state ? JSON.parse(state) : { totalTime: 0, hintsUsed: false, currentPhase: 1 };
+            }
+            function saveGameState(state) {
+                localStorage.setItem(GAME1_STATE_KEY, JSON.stringify(state));
+            }
+
+            // --- COPIAR TODO EL SISTEMA DE MISIONES DE JUEGO1.HTML ---
+            const META_MISSION_IDS = [38];
+            const missionsTemplate = [
+                { id: 1, title: "Completa tu primer examen", points: 50 }, { id: 2, title: "Logra al menos 180/300 en un examen", points: 80 },
+                { id: 3, title: "Lee toda la teoría de una lección", points: 40 }, { id: 4, title: "Termina una sesión de estudio sin salir", points: 50 },
+                { id: 5, title: "Gana tu primer juego", points: 50 }, { id: 6, title: "Usa una pista o ayuda en un juego", points: 30 },
+                { id: 7, title: "Repite un examen para mejorar tu nota", points: 50 }, { id: 8, title: "Cambia tu nombre de usuario", points: 40 },
+                { id: 9, title: "Acumula tus primeras 200 estrellas", points: 30 }, { id: 10, title: "Completa 3 misiones seguidas", points: 50 },
+                { id: 11, title: "Logra 240/300 en un examen", points: 150 }, { id: 12, title: "Completa un examen sin errores (300/300)", points: 200 },
+                { id: 13, title: "Gana 3 juegos distintos", points: 60 }, { id: 18, title: "Gana un juego en menos de 2 minutos", points: 50 },
+                { id: 19, title: "Repite un juego hasta mejorar tu resultado", points: 30 }, { id: 37, title: "Gana un juego sin usar pistas", points: 50 },
+                { id: 38, title: "Revisa tu historial de progreso", points: 30 }, { id: 100, title: "🏆 Maestro del Saber Pro: completa todo el sistema", points: 200 }
+            ];
+            const LEVELS = [
+                { idx: 1, name: "Novato/a", min: 0, max: 299 }, { idx: 2, name: "Aprendiz/a", min: 300, max: 799 },
+                { idx: 3, name: "Explorador/a", min: 800, max: 1499 }, { idx: 4, name: "Analista", min: 1500, max: 2499 },
+                { idx: 5, name: "Estratega", min: 2500, max: 3699 }, { idx: 6, name: "Sabio/a", min: 3700, max: 4999 },
+                { idx: 7, name: "Maestro/a", min: 5000, max: 6499 }, { idx: 8, name: "Élite", min: 6500, max: 7999 },
+                { idx: 9, name: "Leyenda", min: 8000, max: 9499 }, { idx: 10, name: "Rey/Reina Skópia", min: 9500, max: Infinity }
+            ];
+
+            function initMissions() { if (!localStorage.getItem(MISSIONS_KEY)) { const initial = missionsTemplate.map(m => ({ ...m, completed: false })); localStorage.setItem(MISSIONS_KEY, JSON.stringify(initial)); } }
+            function initUserProfile() { if (!localStorage.getItem(USER_PROFILE_KEY)) { const initial = { originalEmail: "", nameChangeMissionCompleted: false }; localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(initial)); } }
+            function initGameStats() { if (!localStorage.getItem(GAME_STATS_KEY)) { const initial = { gamesPlayed: 0, gamesWon: 0, hintsUsed: 0, totalTime: 0, bestTime: null, lastPlayDate: null, streakDays: 0 }; localStorage.setItem(GAME_STATS_KEY, JSON.stringify(initial)); } }
+            function completeMission(id) { const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]"); const mission = data.find(m => m.id === id); if (mission && !mission.completed) { mission.completed = true; localStorage.setItem(MISSIONS_KEY, JSON.stringify(data)); document.getElementById('mission-sound').play().catch(e => console.log("Error al reproducir sonido:", e)); showMissionToast(`¡Misión completada: ${mission.title} (+${mission.points}⭐)!`, 5000); updateAllDisplays(); setTimeout(() => checkAndCompleteSpecialMissions(), 200); } }
+            function checkAndCompleteSpecialMissions() { const missionsData = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]"); const totalPoints = getTotalPoints(); const completedCount = getCompletedCount(); const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}"); let changed = false; const newlyCompletedMissions = []; if (totalPoints >= 200) { const m = missionsData.find(m => m.id === 9); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m); } } const mission10 = missionsData.find(m => m.id === 10); const metaCompletedCount = missionsData.filter(m => m.completed && META_MISSION_IDS.includes(m.id)).length; const realCompletedCount = completedCount - metaCompletedCount; if (realCompletedCount >= 3 && mission10 && !mission10.completed) { mission10.completed = true; changed = true; newlyCompletedMissions.push(mission10); } if (gameStats.gamesWon >= 3) { const m = missionsData.find(m => m.id === 13); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m); } } if (totalPoints >= 500) { const m = missionsData.find(m => m.id === 17); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} } if (totalPoints >= 1000) { const m = missionsData.find(m => m.id === 26); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} } if (totalPoints >= 3000) { const m = missionsData.find(m => m.id === 43); if (m && !m.completed) { m.completed = true; changed = true; newlyCompletedMissions.push(m);} } if (changed) { localStorage.setItem(MISSIONS_KEY, JSON.stringify(missionsData)); document.getElementById('mission-sound').play().catch(e => console.log("Error al reproducir sonido:", e)); newlyCompletedMissions.forEach(m => { showMissionToast(`¡Misión completada: ${m.title} (+${m.points}⭐)!`, 5000); }); updateAllDisplays(); } }
+            function showMissionToast(text, ms = 60000) { const toast = document.getElementById('mission-toast'); toast.innerHTML = `<strong>${text}</strong>`; toast.classList.add('show'); if (toastTimer) clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), ms); }
+            function getTotalPoints() { const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]"); return data.reduce((sum, m) => sum + (m.completed ? m.points : 0), 0); }
+            function getLevelFromPoints(total) { for (let i = LEVELS.length - 1; i >= 0; i--) if (total >= LEVELS[i].min) return LEVELS[i]; return LEVELS[0]; }
+            function getCompletedCount() { return JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").filter(m => m.completed).length; }
+            function renderMissions() { const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]"); const container = document.getElementById('misiones-content'); container.innerHTML = ''; const incompleteMissions = data.filter(m => !m.completed).slice(0, 3); if (incompleteMissions.length === 0) { container.innerHTML = '<div class="info">¡Felicidades! Has completado todas las misiones.</div>'; return; } incompleteMissions.forEach(m => { const div = document.createElement('div'); div.className = 'mission-row'; div.innerHTML = `<div style="flex:1"><div style="font-weight:700; color:var(--detective-text)">${m.id}. ${m.title}</div><div style="font-size:1rem; color:var(--detective-accent)">${m.points} ⭐</div></div>`; container.appendChild(div); }); }
+            function renderLevel() { const total = getTotalPoints(); const level = getLevelFromPoints(total); const neededForNext = (level.max === Infinity) ? 0 : (level.max - total + 1); const progressPct = (level.max === Infinity) ? 100 : Math.min(100, Math.round(((total - level.min) / (level.max - level.min)) * 100)); document.getElementById('nivel-content').innerHTML = `<div class="info"><strong>Nivel:</strong> ${level.name} (${level.idx})</div><div class="info"><strong>Puntos:</strong> ${total} ⭐</div><div class="info"><strong>Progreso:</strong> ${progressPct}%</div><div style="background:rgba(201, 169, 97, 0.2);border-radius:10px;padding:8px;margin-top:10px"><div style="height:12px;background:linear-gradient(90deg,var(--detective-accent),#e6c277);width:${progressPct}%;border-radius:8px"></div></div>${level.max === Infinity ? '<div class="info" style="margin-top:8px">¡Nivel máximo!</div>' : `<div class="info" style="margin-top:8px">Para subir: ${neededForNext} ⭐</div>`}`; }
+            function renderProgress() { const total = getTotalPoints(); const topTarget = 9500; const pct = Math.min(100, Math.round((total / topTarget) * 100)); document.getElementById('progreso-content').innerHTML = `<div class="info"><strong>Puntos:</strong> ${total} ⭐</div><div class="info"><strong>Progreso Global:</strong> ${pct}%</div><div style="background:rgba(201, 169, 97, 0.2);border-radius:10px;padding:8px;margin-top:10px"><div style="height:12px;background:linear-gradient(90deg,var(--detective-accent),#e6c277);width:${pct}%;border-radius:8px"></div></div><div class="info" style="margin-top:10px"><strong>Misiones:</strong> ${getCompletedCount()}/100</div>`; }
+            function renderAnalysis() { const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}"); document.getElementById('analisis-stats').innerHTML = `<div class="info"><strong>Juegos jugados:</strong> ${gameStats.gamesPlayed || 0}</div><div class="info"><strong>Juegos ganados:</strong> ${gameStats.gamesWon || 0}</div><div class="info"><strong>Pistas usadas:</strong> ${gameStats.hintsUsed || 0}</div><div class="info"><strong>Mejor tiempo:</strong> ${gameStats.bestTime ? `${gameStats.bestTime}s` : 'N/A'}</div><div class="info"><strong>Racha actual:</strong> ${gameStats.streakDays || 0} días</div>`; }
+            function updateAllDisplays() { renderMissions(); renderLevel(); renderProgress(); renderAnalysis(); }
+            function closeAllPanels() { document.querySelectorAll('.panel-box').forEach(p => p.classList.remove('active')); }
+
+            // --- EVENT LISTENERS FOR MISSION SYSTEM (Same as juego1.html) ---
+            window.addEventListener('userReady', (e) => { const user = e.detail.user; const userProfile = JSON.parse(localStorage.getItem(USER_PROFILE_KEY) || "{}"); if (!userProfile.originalEmail) { userProfile.originalEmail = user.email; userProfile.nameChangeMissionCompleted = false; localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile)); } if (!userProfile.nameChangeMissionCompleted) { const hasChangedName = user.displayName && user.displayName !== userProfile.originalEmail; if (hasChangedName) { completeMission(8); userProfile.nameChangeMissionCompleted = true; localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile)); } } });
+            document.getElementById('hamburger-menu').addEventListener('click', () => { document.getElementById('user-dropdown').classList.toggle('active'); });
+            document.getElementById('logout-btn').addEventListener('click', () => { import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => { signOut(window.auth).then(() => window.location.href = 'index.html'); }); });
+            window.addEventListener('click', (event) => { if (!event.target.closest('.navbar')) document.getElementById('user-dropdown').classList.remove('active'); const isIcon = event.target.closest('.floating-icons'); const isPanel = event.target.closest('.panel-box'); if (!isIcon && !isPanel) closeAllPanels(); });
+            document.getElementById('btn-misiones').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-misiones').classList.add('active'); renderMissions(); });
+            document.getElementById('btn-nivel').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-nivel').classList.add('active'); renderLevel(); });
+            document.getElementById('btn-progreso').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-progreso').classList.add('active'); renderProgress(); completeMission(38); });
+            document.getElementById('btn-analisis').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-analisis').classList.add('active'); renderAnalysis(); });
+            document.querySelectorAll('.close-panel').forEach(btn => { btn.addEventListener('click', (e) => { document.getElementById('panel-' + e.target.getAttribute('data-close')).classList.remove('active'); }); });
+
+            // --- LÓGICA ESPECÍFICA DE ESTA FASE DEL JUEGO ---
+            const connectionGame = document.getElementById('connection-game');
+            const connectionSvg = document.getElementById('connection-svg');
+            const feedbackMessage = document.getElementById('feedback-message');
+            const nextPhaseButton = document.getElementById('next-phase-button');
+            const hintButton = document.getElementById('hint-button');
+            const timerDisplay = document.getElementById('timer');
+            const musicControlBtn = document.getElementById('music-control-btn');
+            const backgroundMusic = document.getElementById('background-music');
+
+            let totalConnections = 0;
+            let correctConnections = 0;
+
+            function startGame() {
+                const state = getGameState();
+                gameStartTime = Date.now();
+                startTimer();
+                // Intentar reproducir música
+                backgroundMusic.play().then(() => {
+                    musicControlBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                }).catch(error => {
+                    console.log("La reproducción automática de música fue bloqueada por el navegador.");
+                    musicControlBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                });
+                
+                // Contar el número total de conexiones
+                totalConnections = document.querySelectorAll('.blank-space').length;
+                
+                // Inicializar eventos de conexión
+                initConnectionEvents();
+            }
+
+            function startTimer() {
+                timerInterval = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+                    const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
+                    const seconds = String(elapsed % 60).padStart(2, '0');
+                    timerDisplay.textContent = `Tiempo: ${minutes}:${seconds}`;
+                }, 1000);
+            }
+
+            function stopTimer() {
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+                    const state = getGameState();
+                    state.totalTime += elapsed;
+                    saveGameState(state);
+                }
+            }
+
+            function initConnectionEvents() {
+                // Eventos para los puntos de conexión
+                document.querySelectorAll('.connection-point').forEach(point => {
+                    point.addEventListener('mousedown', startDrawingLine);
+                    point.addEventListener('touchstart', startDrawingLine);
+                });
+                
+                document.addEventListener('mousemove', drawLine);
+                document.addEventListener('touchmove', drawLine);
+                
+                document.addEventListener('mouseup', endDrawingLine);
+                document.addEventListener('touchend', endDrawingLine);
+            }
+
+            function startDrawingLine(e) {
+                e.preventDefault();
+                const point = e.target;
+                const parent = point.parentElement;
+                
+                // No permitir dibujar desde puntos ya conectados
+                if (point.classList.contains('connected')) return;
+                
+                isDrawingLine = true;
+                startPoint = {
+                    element: parent,
+                    point: point,
+                    id: parent.dataset.id,
+                    type: parent.classList.contains('blank-space') ? 'blank' : 'word'
+                };
+                
+                // Crear línea temporal
+                currentLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                currentLine.setAttribute('class', 'connection-line');
+                connectionSvg.appendChild(currentLine);
+                
+                updateLinePosition(e);
+            }
+
+            function drawLine(e) {
+                if (!isDrawingLine || !currentLine) return;
+                
+                updateLinePosition(e);
+            }
+
+            function updateLinePosition(e) {
+                const gameRect = connectionGame.getBoundingClientRect();
+                
+                let clientX, clientY;
+                if (e.type.includes('touch')) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                } else {
+                    clientX = e.clientX;
+                    clientY = e.clientY;
+                }
+                
+                const x = clientX - gameRect.left;
+                const y = clientY - gameRect.top;
+                
+                const startPointRect = startPoint.point.getBoundingClientRect();
+                const startX = startPointRect.left + startPointRect.width / 2 - gameRect.left;
+                const startY = startPointRect.top + startPointRect.height / 2 - gameRect.top;
+                
+                currentLine.setAttribute('x1', startX);
+                currentLine.setAttribute('y1', startY);
+                currentLine.setAttribute('x2', x);
+                currentLine.setAttribute('y2', y);
+            }
+
+            function endDrawingLine(e) {
+                if (!isDrawingLine) return;
+                
+                isDrawingLine = false;
+                
+                // Eliminar línea temporal
+                if (currentLine) {
+                    connectionSvg.removeChild(currentLine);
+                    currentLine = null;
+                }
+                
+                // Verificar si terminó en un punto de conexión válido
+                const targetElement = document.elementFromPoint(
+                    e.type.includes('touch') ? e.changedTouches[0].clientX : e.clientX,
+                    e.type.includes('touch') ? e.changedTouches[0].clientY : e.clientY
+                );
+                
+                if (targetElement && targetElement.classList.contains('connection-point')) {
+                    const targetParent = targetElement.parentElement;
+                    
+                    // No permitir conectar puntos ya conectados
+                    if (targetElement.classList.contains('connected')) return;
+                    
+                    // Verificar que sea una conexión válida (blank-word)
+                    const targetType = targetParent.classList.contains('blank-space') ? 'blank' : 'word';
+                    
+                    if (startPoint.type !== targetType) {
+                        // Determinar cuál es el espacio en blanco y cuál es la palabra
+                        const blankElement = startPoint.type === 'blank' ? startPoint.element : targetParent;
+                        const wordElement = startPoint.type === 'word' ? startPoint.element : targetParent;
+                        
+                        // Verificar si la conexión es correcta
+                        if (blankElement.dataset.correct === wordElement.dataset.id) {
+                            // Conexión correcta
+                            createConnection(blankElement, wordElement);
+                            correctConnections++;
+                            
+                            feedbackMessage.textContent = "¡Correcto! Has encontrado la conexión.";
+                            feedbackMessage.className = 'feedback-message success';
+                            
+                            // Comprobar si se han completado todas las conexiones
+                            if (correctConnections === totalConnections) {
+                                puzzleSolved = true;
+                                feedbackMessage.textContent = "¡Excelente! Has descifrado todas las conexiones.";
+                                nextPhaseButton.classList.add('show');
+                                
+                                // Actualizar estadísticas del juego
+                                const gameStats = JSON.parse(localStorage.getItem(GAME_STATS_KEY) || "{}");
+                                gameStats.gamesPlayed = (gameStats.gamesPlayed || 0) + 1;
+                                gameStats.gamesWon = (gameStats.gamesWon || 0) + 1;
+                                const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+                                if (!gameStats.bestTime || elapsed < gameStats.bestTime) {
+                                    gameStats.bestTime = elapsed;
+                                }
+                                localStorage.setItem(GAME_STATS_KEY, JSON.stringify(gameStats));
+                                
+                                // Completar misiones relevantes
+                                completeMission(5); // Gana tu primer juego
+                                if (!hintUsed) {
+                                    completeMission(37); // Gana un juego sin usar pistas
+                                }
+                                if (elapsed < 120) {
+                                    completeMission(18); // Gana un juego en menos de 2 minutos
+                                }
+                            }
+                        } else {
+                            // Conexión incorrecta
+                            feedbackMessage.textContent = "Incorrecto. Intenta de nuevo.";
+                            feedbackMessage.className = 'feedback-message error';
+                            
+                            // Animación de error
+                            blankElement.style.backgroundColor = 'rgba(244, 67, 54, 0.3)';
+                            wordElement.style.backgroundColor = 'rgba(244, 67, 54, 0.3)';
+                            
+                            setTimeout(() => {
+                                blankElement.style.backgroundColor = '';
+                                wordElement.style.backgroundColor = '';
+                            }, 1000);
+                        }
+                    }
+                }
+                
+                startPoint = null;
+            }
+
+            function createConnection(blankElement, wordElement) {
+                // Marcar elementos como conectados
+                blankElement.classList.add('connected');
+                wordElement.classList.add('connected');
+                blankElement.querySelector('.connection-point').classList.add('connected');
+                wordElement.querySelector('.connection-point').classList.add('connected');
+                
+                // Obtener posiciones
+                const gameRect = connectionGame.getBoundingClientRect();
+                const blankRect = blankElement.querySelector('.connection-point').getBoundingClientRect();
+                const wordRect = wordElement.querySelector('.connection-point').getBoundingClientRect();
+                
+                const x1 = blankRect.left + blankRect.width / 2 - gameRect.left;
+                const y1 = blankRect.top + blankRect.height / 2 - gameRect.top;
+                const x2 = wordRect.left + wordRect.width / 2 - gameRect.left;
+                const y2 = wordRect.top + wordRect.height / 2 - gameRect.top;
+                
+                // Crear línea SVG permanente
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+                line.setAttribute('class', 'connection-line connected');
+                
+                // Agregar círculos en los extremos
+                const circle1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle1.setAttribute('cx', x1);
+                circle1.setAttribute('cy', y1);
+                circle1.setAttribute('r', '5');
+                circle1.setAttribute('fill', '#27ae60');
+                
+                const circle2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle2.setAttribute('cx', x2);
+                circle2.setAttribute('cy', y2);
+                circle2.setAttribute('r', '5');
+                circle2.setAttribute('fill', '#27ae60');
+                
+                // Agregar elementos al SVG
+                connectionSvg.appendChild(line);
+                connectionSvg.appendChild(circle1);
+                connectionSvg.appendChild(circle2);
+                
+                // Guardar referencia a la conexión
+                connections[blankElement.dataset.id] = {
+                    line: line,
+                    circle1: circle1,
+                    circle2: circle2
+                };
+            }
+
+            function useHint() {
+                const state = getGameState();
+                if (state.hintsUsed) return;
+                
+                state.hintsUsed = true;
+                saveGameState(state);
+                completeMission(6); // Completar misión de usar pista
+                
+                // Encontrar una conexión no realizada
+                const unconnectedBlanks = Array.from(document.querySelectorAll('.blank-space:not(.connected)'));
+                if (unconnectedBlanks.length === 0) return;
+                
+                const randomBlank = unconnectedBlanks[Math.floor(Math.random() * unconnectedBlanks.length)];
+                const correctWordId = randomBlank.dataset.correct;
+                const correctWord = document.querySelector(`.word-item[data-id="${correctWordId}"]:not(.connected)`);
+                
+                if (correctWord) {
+                    // Resaltar la conexión correcta
+                    randomBlank.style.backgroundColor = 'rgba(39, 174, 96, 0.3)';
+                    correctWord.style.backgroundColor = 'rgba(39, 174, 96, 0.3)';
+                    
+                    setTimeout(() => {
+                        randomBlank.style.backgroundColor = '';
+                        correctWord.style.backgroundColor = '';
+                    }, 3000);
+                }
+                
+                hintButton.disabled = true;
+            }
+
+            // --- EVENT LISTENERS DEL JUEGO ---
+            hintButton.addEventListener('click', useHint);
+            nextPhaseButton.addEventListener('click', () => {
+                stopTimer();
+                window.location.href = 'juego1fase5.html';
+            });
+
+            musicControlBtn.addEventListener('click', () => {
+                if (backgroundMusic.paused) {
+                    backgroundMusic.play();
+                    musicControlBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                } else {
+                    backgroundMusic.pause();
+                    musicControlBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                }
+            });
+
+            // --- INICIALIZACIÓN ---
+            initMissions(); initUserProfile(); initGameStats(); updateAllDisplays();
+            startGame();
+            console.log("Fase 4 del juego inicializada.");
+        });
+    </script>
+</body>
+</html>
