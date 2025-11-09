@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa del Tesoro - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        window.auth = auth;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
+    <style>
+        /* Colores alineados con errores.html para que global-settings.js funcione correctamente */
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-verde: #4CAF50;
+            --color-rojo: #f44336;
+            
+            /* Variables adicionales para mantener compatibilidad con el diseño original */
+            --color-fondo: var(--color-oliva-oscuro);
+            --color-libro-fondo: var(--color-crema);
+            --color-texto-oscuro: var(--color-oliva-oscuro);
+            --color-destaque: var(--color-oliva-medio);
+            --color-btn-mision: var(--color-oliva-oscuro);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--color-fondo) 0%, #1a2332 100%);
+            color: var(--color-texto-oscuro);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* --- Fondo decorativo --- */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(190, 192, 146, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(190, 192, 146, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(190, 192, 146, 0.05) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* --- NAVBAR --- */
+        .navbar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 15px 40px;
+            background-color: rgba(10, 14, 26, 0.8);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 1000;
+        }
+        .hamburger {
+            width: 30px;
+            height: 25px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .hamburger span {
+            display: block;
+            height: 4px;
+            width: 100%;
+            background-color: var(--color-texto-oscuro);
+            border-radius: 2px;
+            transition: all 0.3s ease-in-out;
+        }
+        .user-dropdown {
+            position: absolute;
+            top: 70px;
+            right: 40px;
+            background-color: rgba(10, 14, 26, 0.9);
+            border: 1px solid var(--color-destaque);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+            z-index: 1000;
+        }
+        .user-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .user-dropdown a {
+            display: block;
+            padding: 15px 25px;
+            text-decoration: none;
+            color: var(--color-texto-oscuro);
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .user-dropdown a:hover {
+            background-color: rgba(201, 169, 97, 0.2);
+        }
+        .user-dropdown hr {
+            border: none;
+            border-top: 1px solid rgba(201, 169, 97, 0.3);
+            margin: 0;
+        }
+
+        /* --- MAIN CONTENT --- */
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 40px 40px;
+            position: relative;
+            z-index: 2;
+        }
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--color-destaque);
+            color: var(--color-libro-fondo);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            z-index: 100;
+        }
+        .close-btn:hover {
+            transform: scale(1.1);
+            background-color: var(--color-oliva-claro);
+        }
+
+        /* --- MAPA DEL TESORO MEJORADO --- */
+        .treasure-map {
+            width: 100%;
+            max-width: 1200px;
+            background: rgba(10, 14, 26, 0.8);
+            border: 2px solid var(--color-destaque);
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+            position: relative;
+            margin-bottom: 30px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        .treasure-map h2 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 3rem;
+            color: var(--color-destaque);
+            margin-bottom: 40px;
+            text-align: center;
+            text-shadow: 0 0 20px rgba(201, 169, 97, 0.5);
+        }
+
+        .map-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            margin: 40px 0;
+            overflow: hidden;
+        }
+
+        /* --- PANDA CENTRAL --- */
+        .panda-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%23fff"/><circle cx="35" cy="40" r="3" fill="%23000"/><circle cx="65" cy="40" r="3" fill="%23000"/><path d="M 30 50 Q 50 60 70 50" stroke="%23000" stroke-width="2" fill="none"/><circle cx="25" cy="45" r="8" fill="%23000"/><circle cx="75" cy="45" r="8" fill="%23000"/><circle cx="25" cy="45" r="4" fill="%23ff69b4"/><circle cx="75" cy="45" r="4" fill="%23ff69b4"/><ellipse cx="50" cy="70" rx="15" ry="10" fill="%23000"/><ellipse cx="35" cy="72" rx="8" ry="6" fill="%23000"/><ellipse cx="65" cy="72" rx="8" ry="6" fill="%23000"/></svg>') center/contain no-repeat;
+            z-index: 3;
+            animation: float 3s ease-in-out infinite;
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3));
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+        }
+
+        /* --- HUELLITAS DEL CAMINO --- */
+        .footprint {
+            position: absolute;
+            width: 25px;
+            height: 35px;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 35"><path d="M12 2 C8 2 5 5 5 9 C5 13 8 16 12 18 C16 16 19 13 19 9 C19 5 16 2 12 2 Z" fill="%23000" opacity="0.6"/><circle cx="7" cy="8" r="2" fill="%23000" opacity="0.6"/><circle cx="17" cy="8" r="2" fill="%23000" opacity="0.6"/><ellipse cx="12" cy="25" rx="6" ry="8" fill="%23000" opacity="0.6"/></svg>') center/contain no-repeat;
+            z-index: 2;
+            opacity: 0.7;
+        }
+
+        /* --- RUTA DEL MAPA CON HUELLITAS --- */
+        .footprint-1 { top: 35%; left: 15%; transform: rotate(-15deg); }
+        .footprint-2 { top: 38%; left: 22%; transform: rotate(-10deg); }
+        .footprint-3 { top: 42%; left: 28%; transform: rotate(-5deg); }
+        .footprint-4 { top: 45%; left: 35%; transform: rotate(0deg); }
+        .footprint-5 { top: 48%; left: 42%; transform: rotate(5deg); }
+        .footprint-6 { top: 50%; left: 48%; transform: rotate(10deg); }
+        .footprint-7 { top: 48%; left: 54%; transform: rotate(15deg); }
+        .footprint-8 { top: 45%; left: 60%; transform: rotate(20deg); }
+        .footprint-9 { top: 42%; left: 66%; transform: rotate(15deg); }
+        .footprint-10 { top: 38%; left: 72%; transform: rotate(10deg); }
+        .footprint-11 { top: 35%; left: 78%; transform: rotate(5deg); }
+        .footprint-12 { top: 32%; left: 84%; transform: rotate(0deg); }
+
+        /* --- BOLAS DEL MAPA MÁS GRANDES --- */
+        .map-node {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--color-destaque) 0%, var(--color-oliva-claro) 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 4;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            border: 3px solid rgba(201, 169, 97, 0.3);
+        }
+        .map-node:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
+            border-color: var(--color-destaque);
+        }
+        .map-node.locked {
+            background: linear-gradient(135deg, #666 0%, #888 100%);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .map-node.locked:hover {
+            transform: scale(1);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+        .map-node.completed {
+            background: linear-gradient(135deg, var(--color-verde) 0%, #66BB6A 100%);
+            border-color: var(--color-verde);
+        }
+        .node-icon {
+            font-size: 2.5rem;
+            color: white;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .node-label {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1rem;
+            color: white;
+            text-align: center;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .node-number {
+            position: absolute;
+            top: -15px;
+            right: -15px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--color-libro-fondo);
+            color: var(--color-destaque);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            border: 2px solid var(--color-destaque);
+        }
+        .lock-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.5rem;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        /* --- POSICIONES DE LAS BOLAS --- */
+        .node-1 {
+            top: 30%;
+            left: 5%;
+        }
+        .node-2 {
+            top: 65%;
+            left: 25%;
+        }
+        .node-3 {
+            top: 30%;
+            left: 45%;
+        }
+        .node-4 {
+            top: 65%;
+            left: 65%;
+        }
+        .node-5 {
+            top: 30%;
+            left: 85%;
+        }
+
+        /* --- LÍNEAS DE CONEXIÓN --- */
+        .connection-line {
+            position: absolute;
+            background: linear-gradient(90deg, transparent, var(--color-destaque), transparent);
+            height: 3px;
+            z-index: 1;
+            opacity: 0.6;
+        }
+        .line-1 {
+            width: 180px;
+            top: 50%;
+            left: 12%;
+            transform: rotate(25deg);
+        }
+        .line-2 {
+            width: 180px;
+            top: 50%;
+            left: 32%;
+            transform: rotate(-25deg);
+        }
+        .line-3 {
+            width: 180px;
+            top: 50%;
+            left: 52%;
+            transform: rotate(25deg);
+        }
+        .line-4 {
+            width: 180px;
+            top: 50%;
+            left: 72%;
+            transform: rotate(-25deg);
+        }
+
+        /* --- FLOATING ICONS & PANELS --- */
+        .floating-icons {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 2000;
+        }
+        .floating-icons button {
+            background: var(--color-btn-mision);
+            color: white;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            border: none;
+            font-size: 20px;
+            display: grid;
+            place-items: center;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            cursor: pointer;
+            transition: transform .15s ease, background .15s ease;
+        }
+        .floating-icons button:hover { transform: scale(1.08); background: var(--color-destaque); }
+
+        .panel-box {
+            position: fixed;
+            right: 90px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 420px;
+            max-height: 75vh;
+            background: rgba(10, 14, 26, 0.9);
+            border: 1px solid var(--color-destaque);
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+            overflow: auto;
+            padding: 24px;
+            z-index: 2100;
+            display: none;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.2rem;
+            color: var(--color-texto-oscuro);
+        }
+        .panel-box.active { display: block; }
+        .panel-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+        .panel-header h3 { margin:0; font-size:1.6rem; color:var(--color-destaque); }
+        .close-panel { background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--color-destaque); }
+
+        .mission-row { padding:12px; border-radius:8px; margin-bottom:10px; background:rgba(201, 169, 97, 0.1); box-shadow: 0 2px 6px rgba(0,0,0,0.2); display:flex; justify-content:space-between; align-items:center; }
+        .mission-row.completed { opacity:0.6; text-decoration:line-through; background:rgba(76, 175, 80, 0.1); }
+
+        .toast {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            background: rgba(10, 14, 26, 0.9);
+            border-left: 6px solid var(--color-destaque);
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+            z-index: 3000;
+            display: none;
+            font-size: 1.1rem;
+            max-width: 400px;
+            color: var(--color-texto-oscuro);
+        }
+        .toast.show { display: block; }
+        .info { font-family: 'Roboto', sans-serif; color:var(--color-texto-oscuro); font-size:1.1rem; margin-bottom:12px; }
+
+        @media (max-width: 1024px) {
+            .main-content { padding: 20px; }
+            .treasure-map { padding: 30px; }
+            .panel-box { right: 10px; width: 92%; top: 55%; transform: translateY(-55%); }
+            .floating-icons { right: 10px; }
+            .map-container { height: 400px; }
+            .map-node { width: 100px; height: 100px; }
+            .node-icon { font-size: 2rem; }
+            .node-label { font-size: 0.9rem; }
+            .panda-center { width: 150px; height: 150px; }
+        }
+
+        @media (max-width: 768px) {
+            .map-container { height: 350px; }
+            .map-node { width: 80px; height: 80px; }
+            .node-icon { font-size: 1.5rem; }
+            .node-label { font-size: 0.8rem; }
+            .node-number { width: 30px; height: 30px; font-size: 1rem; }
+            .panda-center { width: 120px; height: 120px; }
+            .treasure-map h2 { font-size: 2rem; }
+            .footprint { width: 20px; height: 28px; }
+        }
+    </style>
+     <script type="module" src="./global-settings.js"></script>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="hamburger" id="hamburger-menu"><span></span><span></span><span></span></div>
+        <div class="user-dropdown" id="user-dropdown">
+            <a href="cuenta.html">Mi Cuenta</a>
+            <a href="configuracion.html">Configuración</a>
+            <a href="notificaciones.html">Notificaciones</a>
+            <hr>
+            <a href="index.html" id="logout-btn">Cerrar Sesión</a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <button class="close-btn" id="close-btn" title="Volver a módulos">&times;</button>
+        
+        <div class="treasure-map">
+            <h2>🗺️ Mapa del Tesoro de la Comprensión Literal</h2>
+            
+            <div class="map-container">
+                <!-- Panda central -->
+                <div class="panda-center"></div>
+                
+                <!-- Huellitas del camino -->
+                <div class="footprint footprint-1"></div>
+                <div class="footprint footprint-2"></div>
+                <div class="footprint footprint-3"></div>
+                <div class="footprint footprint-4"></div>
+                <div class="footprint footprint-5"></div>
+                <div class="footprint footprint-6"></div>
+                <div class="footprint footprint-7"></div>
+                <div class="footprint footprint-8"></div>
+                <div class="footprint footprint-9"></div>
+                <div class="footprint footprint-10"></div>
+                <div class="footprint footprint-11"></div>
+                <div class="footprint footprint-12"></div>
+                
+                <!-- Líneas de conexión -->
+                <div class="connection-line line-1"></div>
+                <div class="connection-line line-2"></div>
+                <div class="connection-line line-3"></div>
+                <div class="connection-line line-4"></div>
+                
+                <!-- Nodos del mapa más grandes -->
+                <div class="map-node node-1" id="node-1" data-level="1" data-target="LCS1.html">
+                    <div class="node-number">1</div>
+                    <i class="fas fa-lightbulb node-icon"></i>
+                    <div class="node-label">Ideas principales</div>
+                </div>
+                
+                <div class="map-node node-2 locked" id="node-2" data-level="2" data-target="LCS2.html">
+                    <div class="node-number">2</div>
+                    <i class="fas fa-lightbulb node-icon"></i>
+                    <div class="node-label">Ideas secundarias</div>
+                    <i class="fas fa-lock lock-icon"></i>
+                </div>
+                
+                <div class="map-node node-3 locked" id="node-3" data-level="3" data-target="LCS3.html">
+                    <div class="node-number">3</div>
+                    <i class="fas fa-exchange-alt node-icon"></i>
+                    <div class="node-label">Parafraseo</div>
+                    <i class="fas fa-lock lock-icon"></i>
+                </div>
+                
+                <div class="map-node node-4 locked" id="node-4" data-level="4" data-target="LCS4.html">
+                    <div class="node-number">4</div>
+                    <i class="fas fa-quote-left node-icon"></i>
+                    <div class="node-label">Referencias textuales</div>
+                    <i class="fas fa-lock lock-icon"></i>
+                </div>
+                
+                <div class="map-node node-5 locked" id="node-5" data-level="5" data-target="LCS5.html">
+                    <div class="node-number">5</div>
+                    <i class="fas fa-trophy node-icon"></i>
+                    <div class="node-label">Evaluación final</div>
+                    <i class="fas fa-lock lock-icon"></i>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="floating-icons" aria-hidden="false">
+        <button id="btn-misiones" title="Misiones">🎯</button>
+        <button id="btn-nivel" title="Nivel actual">⭐</button>
+        <button id="btn-progreso" title="Progreso">📊</button>
+        <button id="btn-analisis" title="Análisis">📈</button>
+    </div>
+
+    <div class="panel-box" id="panel-misiones" aria-hidden="true">
+        <div class="panel-header"><h3>Misiones</h3><button class="close-panel" data-close="misiones">&times;</button></div>
+        <div id="misiones-content"></div>
+    </div>
+    <div class="panel-box" id="panel-nivel" aria-hidden="true">
+        <div class="panel-header"><h3>Tu nivel</h3><button class="close-panel" data-close="nivel">&times;</button></div>
+        <div id="nivel-content"></div>
+    </div>
+    <div class="panel-box" id="panel-progreso" aria-hidden="true">
+        <div class="panel-header"><h3>Progreso</h3><button class="close-panel" data-close="progreso">&times;</button></div>
+        <div id="progreso-content"></div>
+    </div>
+    <div class="panel-box" id="panel-analisis" aria-hidden="true">
+        <div class="panel-header"><h3>Análisis (promedio 0–300)</h3><button class="close-panel" data-close="analisis">&times;</button></div>
+        <div id="analisis-content"><div id="analisis-stats" style="margin-top:12px;"></div></div>
+    </div>
+
+    <div class="toast" id="mission-toast" role="status" aria-live="polite"></div>
+    <audio id="mission-sound" src="mission.mp3" preload="auto"></audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM Cargado. Inicializando Mapa del Tesoro...");
+
+            // --- CONSTANTES Y VARIABLES ---
+            const MISSIONS_KEY = 'skopia_missions_v1';
+            const USER_PROFILE_KEY = 'skopia_user_profile_v1';
+            const GAME_PROGRESS_KEY = 'skopia_game_progress_v1';
+            const LC_PROGRESS_KEY = 'skopia_lc_progress_v1';
+            let toastTimer = null;
+
+            const missionsTemplate = [
+                { id: 1, title: "Completa tu primer examen", points: 50 },
+                { id: 2, title: "Logra al menos 180/300 en un examen", points: 80 },
+                { id: 3, title: "Lee toda la teoría de una lección", points: 40 },
+                { id: 4, title: "Termina una sesión de estudio sin salir", points: 50 },
+                { id: 5, title: "Gana tu primer juego", points: 50 },
+                { id: 6, title: "Usa una pista o ayuda en un juego", points: 30 },
+                { id: 7, title: "Repite un examen para mejorar tu nota", points: 50 },
+                { id: 8, title: "Cambia tu nombre de usuario", points: 40 },
+                { id: 9, title: "Acumula tus primeras 200 estrellas", points: 30 },
+                { id: 10, title: "Completa 3 misiones seguidas", points: 50 },
+                { id: 11, title: "Logra 240/300 en un examen", points: 150 },
+                { id: 12, title: "Completa un examen sin errores (300/300)", points: 200 },
+                { id: 100, title: "🏆 Maestro del Saber Pro: completa todo el sistema", points: 200 }
+            ];
+
+            const LEVELS = [
+                { idx: 1, name: "Novato/a", min: 0, max: 299 }, { idx: 2, name: "Aprendiz/a", min: 300, max: 799 },
+                { idx: 3, name: "Explorador/a", min: 800, max: 1499 }, { idx: 4, name: "Analista", min: 1500, max: 2499 },
+                { idx: 5, name: "Estratega", min: 2500, max: 3699 }, { idx: 6, name: "Sabio/a", min: 3700, max: 4999 },
+                { idx: 7, name: "Maestro/a", min: 5000, max: 6499 }, { idx: 8, name: "Élite", min: 6500, max: 7999 },
+                { idx: 9, name: "Leyenda", min: 8000, max: 9499 }, { idx: 10, name: "Rey/Reina Skópia", min: 9500, max: Infinity }
+            ];
+
+            // --- FUNCIONES PRINCIPALES ---
+
+            function initMissions() {
+                if (!localStorage.getItem(MISSIONS_KEY)) {
+                    const initial = missionsTemplate.map(m => ({ ...m, completed: false }));
+                    localStorage.setItem(MISSIONS_KEY, JSON.stringify(initial));
+                    console.log("Misiones inicializadas.");
+                }
+            }
+            function initUserProfile() {
+                if (!localStorage.getItem(USER_PROFILE_KEY)) {
+                    const initial = { originalEmail: "", nameChangeMissionCompleted: false };
+                    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(initial));
+                }
+            }
+            function initLCProgress() {
+                if (!localStorage.getItem(LC_PROGRESS_KEY)) {
+                    const initial = {
+                        level1: { completed: false, completedAt: null },
+                        level2: { completed: false, completedAt: null },
+                        level3: { completed: false, completedAt: null },
+                        level4: { completed: false, completedAt: null },
+                        level5: { completed: false, completedAt: null }
+                    };
+                    localStorage.setItem(LC_PROGRESS_KEY, JSON.stringify(initial));
+                    console.log("Progreso de LC inicializado.");
+                }
+            }
+
+            function isLevelCompleted(level) {
+                const progress = JSON.parse(localStorage.getItem(LC_PROGRESS_KEY) || "{}");
+                return progress[`level${level}`] && progress[`level${level}`].completed === true;
+            }
+
+            function completeLevel(level) {
+                const progress = JSON.parse(localStorage.getItem(LC_PROGRESS_KEY) || "{}");
+                if (!progress[`level${level}`]) {
+                    progress[`level${level}`] = {};
+                }
+                progress[`level${level}`].completed = true;
+                progress[`level${level}`].completedAt = new Date().toISOString();
+                localStorage.setItem(LC_PROGRESS_KEY, JSON.stringify(progress));
+                console.log(`Nivel ${level} marcado como completado.`);
+                updateMapNodes();
+                
+                // Reproducir sonido de nivel completado
+                document.getElementById('mission-sound').play().catch(e => console.log("Error al reproducir sonido:", e));
+                showMissionToast(`¡Nivel ${level} completado! 🎉`, 3000);
+            }
+
+            function updateMapNodes() {
+                for (let i = 1; i <= 5; i++) {
+                    const node = document.getElementById(`node-${i}`);
+                    if (!node) continue;
+                    
+                    const isCompleted = isLevelCompleted(i);
+                    const isUnlocked = i === 1 || isLevelCompleted(i - 1);
+                    
+                    // Actualizar clases
+                    if (isCompleted) {
+                        node.classList.add('completed');
+                        node.classList.remove('locked');
+                    } else if (!isUnlocked) {
+                        node.classList.add('locked');
+                        node.classList.remove('completed');
+                    } else {
+                        node.classList.remove('locked', 'completed');
+                    }
+                }
+            }
+
+            function completeMission(id) {
+                console.log(`>>> Llamada a completeMission con ID: ${id}`);
+                const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
+                const mission = data.find(m => m.id === id);
+                if (mission && !mission.completed) {
+                    mission.completed = true;
+                    localStorage.setItem(MISSIONS_KEY, JSON.stringify(data));
+                    console.log(`!!! MISIÓN COMPLETADA: ID=${id}, Titulo="${mission.title}", Puntos=${mission.points} !!!`);
+                    
+                    document.getElementById('mission-sound').play().catch(e => console.log("Error al reproducir sonido:", e));
+                    showMissionToast(`¡Misión completada: ${mission.title} (+${mission.points}⭐)!`, 5000);
+                    updateAllDisplays();
+                } else {
+                    console.log(`>>> Misión ${id} ya estaba completada o no existe.`);
+                }
+            }
+
+            function showMissionToast(text, ms = 60000) {
+                const toast = document.getElementById('mission-toast');
+                toast.innerHTML = `<strong>${text}</strong>`;
+                toast.classList.add('show');
+                if (toastTimer) clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => toast.classList.remove('show'), ms);
+            }
+
+            function getTotalPoints() {
+                const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
+                return data.reduce((sum, m) => sum + (m.completed ? m.points : 0), 0);
+            }
+            function getLevelFromPoints(total) {
+                for (let i = LEVELS.length - 1; i >= 0; i--) if (total >= LEVELS[i].min) return LEVELS[i];
+                return LEVELS[0];
+            }
+            function getCompletedCount() {
+                return JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").filter(m => m.completed).length;
+            }
+
+            // --- RENDER FUNCTIONS ---
+            function renderMissions() {
+                const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
+                const container = document.getElementById('misiones-content');
+                container.innerHTML = '';
+                const incompleteMissions = data.filter(m => !m.completed).slice(0, 3);
+                if (incompleteMissions.length === 0) {
+                    container.innerHTML = '<div class="info">¡Felicidades! Has completado todas las misiones.</div>';
+                    return;
+                }
+                incompleteMissions.forEach(m => {
+                    const div = document.createElement('div');
+                    div.className = 'mission-row';
+                    div.innerHTML = `<div style="flex:1"><div style="font-weight:700; color:var(--color-texto-oscuro)">${m.id}. ${m.title}</div><div style="font-size:1rem; color:var(--color-destaque)">${m.points} ⭐</div></div>`;
+                    container.appendChild(div);
+                });
+            }
+            function renderLevel() {
+                const total = getTotalPoints();
+                const level = getLevelFromPoints(total);
+                const neededForNext = (level.max === Infinity) ? 0 : (level.max - total + 1);
+                const progressPct = (level.max === Infinity) ? 100 : Math.min(100, Math.round(((total - level.min) / (level.max - level.min)) * 100));
+                document.getElementById('nivel-content').innerHTML = `
+                    <div class="info"><strong>Nivel:</strong> ${level.name} (${level.idx})</div>
+                    <div class="info"><strong>Puntos:</strong> ${total} ⭐</div>
+                    <div class="info"><strong>Progreso:</strong> ${progressPct}%</div>
+                    <div style="background:rgba(201, 169, 97, 0.2);border-radius:10px;padding:8px;margin-top:10px"><div style="height:12px;background:linear-gradient(90deg,var(--color-destaque),var(--color-oliva-claro));width:${progressPct}%;border-radius:8px"></div></div>
+                    ${level.max === Infinity ? '<div class="info" style="margin-top:8px">¡Nivel máximo!</div>' : `<div class="info" style="margin-top:8px">Para subir: ${neededForNext} ⭐</div>`}
+                `;
+            }
+            function renderProgress() {
+                const total = getTotalPoints();
+                const topTarget = 9500;
+                const pct = Math.min(100, Math.round((total / topTarget) * 100));
+                document.getElementById('progreso-content').innerHTML = `
+                    <div class="info"><strong>Puntos:</strong> ${total} ⭐</div>
+                    <div class="info"><strong>Progreso Global:</strong> ${pct}%</div>
+                    <div style="background:rgba(201, 169, 97, 0.2);border-radius:10px;padding:8px;margin-top:10px"><div style="height:12px;background:linear-gradient(90deg,var(--color-destaque),var(--color-oliva-claro));width:${pct}%;border-radius:8px"></div></div>
+                    <div class="info" style="margin-top:10px"><strong>Misiones:</strong> ${getCompletedCount()}/100</div>
+                `;
+            }
+            function renderAnalysis() {
+                document.getElementById('analisis-stats').innerHTML = '<div class="info">Análisis de exámenes (pendiente de implementar).</div>';
+            }
+            function updateAllDisplays() {
+                renderMissions(); renderLevel(); renderProgress(); renderAnalysis();
+            }
+            function closeAllPanels() {
+                document.querySelectorAll('.panel-box').forEach(p => p.classList.remove('active'));
+            }
+
+            // --- EVENT LISTENERS ---
+            window.addEventListener('userReady', (e) => {
+                const user = e.detail.user;
+                console.log("Evento 'userReady' recibido para:", user.email);
+                const userProfile = JSON.parse(localStorage.getItem(USER_PROFILE_KEY) || "{}");
+
+                if (!userProfile.originalEmail) {
+                    userProfile.originalEmail = user.email;
+                    userProfile.nameChangeMissionCompleted = false;
+                    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
+                    console.log("Perfil de usuario inicializado por primera vez. Email original guardado:", userProfile.originalEmail);
+                }
+
+                if (!userProfile.nameChangeMissionCompleted) {
+                    console.log("Comprobando misión 8 (cambiar nombre)...");
+                    const hasChangedName = user.displayName && user.displayName !== userProfile.originalEmail;
+                    if (hasChangedName) {
+                        console.log(`¡Cambio de nombre detectado! Original: "${userProfile.originalEmail}", Nuevo: "${user.displayName}". Completando misión 8.`);
+                        completeMission(8);
+                        userProfile.nameChangeMissionCompleted = true;
+                        localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
+                    } else {
+                        console.log("No se detectó cambio de nombre. DisplayName actual:", user.displayName);
+                    }
+                } else {
+                    console.log("Misión 8 ya fue completada anteriormente.");
+                }
+            });
+
+            document.getElementById('hamburger-menu').addEventListener('click', () => {
+                document.getElementById('user-dropdown').classList.toggle('active');
+            });
+            document.getElementById('logout-btn').addEventListener('click', () => {
+                import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
+                    signOut(window.auth).then(() => window.location.href = 'index.html');
+                });
+            });
+            window.addEventListener('click', (event) => {
+                if (!event.target.closest('.navbar')) document.getElementById('user-dropdown').classList.remove('active');
+                const isIcon = event.target.closest('.floating-icons');
+                const isPanel = event.target.closest('.panel-box');
+                if (!isIcon && !isPanel) closeAllPanels();
+            });
+            document.getElementById('close-btn').addEventListener('click', () => window.location.href = 'modulos.html');
+
+            // Event listeners para los nodos del mapa
+            document.querySelectorAll('.map-node').forEach(node => {
+                node.addEventListener('click', function() {
+                    const level = parseInt(this.dataset.level);
+                    const target = this.dataset.target;
+                    
+                    // Verificar si el nivel está desbloqueado
+                    if (level === 1 || isLevelCompleted(level - 1)) {
+                        window.location.href = target;
+                    } else {
+                        showMissionToast("🔒 Debes completar el nivel anterior para desbloquear este.", 3000);
+                    }
+                });
+            });
+
+            // **EVENT LISTENERS DE ICONOS (FUNCIONANDO)**
+            document.getElementById('btn-misiones').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-misiones').classList.add('active'); renderMissions(); });
+            document.getElementById('btn-nivel').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-nivel').classList.add('active'); renderLevel(); });
+            document.getElementById('btn-progreso').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-progreso').classList.add('active'); renderProgress(); });
+            document.getElementById('btn-analisis').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-analisis').classList.add('active'); renderAnalysis(); });
+            document.querySelectorAll('.close-panel').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.getElementById('panel-' + e.target.getAttribute('data-close')).classList.remove('active');
+                });
+            });
+
+            // --- INICIALIZACIÓN ---
+            initMissions(); 
+            initUserProfile(); 
+            initLCProgress();
+            updateAllDisplays();
+            updateMapNodes();
+            
+            console.log("Mapa del Tesoro mejorado inicializado.");
+        });
+    </script>
+</body>
+</html>
