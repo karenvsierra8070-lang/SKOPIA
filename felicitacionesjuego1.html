@@ -473,20 +473,21 @@
             <h2 class="game-subtitle">¡Felicidades, Agente!</h2>
             
             <p class="game-description">
-                Has descifrado con éxito todos los mensajes cifrados y descubierto la información clave. 
-                Tus habilidades de comprensión literal te han permitido reconstruir textos con "errores" o "lagunas de sentido" 
-                y completar tu misión con éxito.
+               Has descifrado con éxito todos los mensajes cifrados y descubierto la información clave. Tus habilidades de comprensión literal te han permitido reconstruir textos con "errores" o "lagunas de sentido" y completar tu misión con éxito.
+
+
             </p>
             
             <div class="detective-quote">
-                El éxito no es la clave de la felicidad. La felicidad es la clave del éxito. Si amas lo que haces, tendrás éxito.
+              El éxito no es la clave de la felicidad. La felicidad es la clave del éxito. Si amas lo que haces, tendrás éxito.
+
             </div>
             
             <button class="start-game-btn" id="start-game-btn">Continuar</button>
         </div>
         
         <div class="detective-badge">
-            <i class="fas fa-medal"></i>
+            <i class="fas fa-user-secret"></i>
         </div>
     </div>
 
@@ -556,7 +557,6 @@
             const MISSIONS_KEY = 'skopia_missions_v1';
             const USER_PROFILE_KEY = 'skopia_user_profile_v1';
             const GAME_STATS_KEY = 'skopia_game_stats_v1';
-            const GAME_PROGRESS_KEY = 'skopia_game_progress_v1';
             let toastTimer = null;
             let gameStartTime = null;
 
@@ -593,7 +593,7 @@
             { id: 25, title: "Completa todos los subniveles de un tema (5/5)", points: 100 },
             { id: 26, title: "Suma 1000 estrellas totales", points: 50 },
             { id: 27, title: "Gana un examen con tiempo limitado", points: 80 },
-            { id: 28, title: "Juega y gana el modo "escape room"", points: 60 },
+            { id: 28, title: "Juega y gana el modo “escape room”", points: 60 },
             { id: 29, title: "Completa un juego de ahorcado correctamente", points: 50 },
             { id: 30, title: "Haz un examen de repaso general", points: 70 },
 
@@ -714,31 +714,6 @@
                     localStorage.setItem(GAME_STATS_KEY, JSON.stringify(initial));
                     console.log("Estadísticas de juego inicializadas.");
                 }
-            }
-
-            // Nueva función para guardar el progreso de la misión completada
-            function saveMissionProgress() {
-                const progress = JSON.parse(localStorage.getItem(GAME_PROGRESS_KEY) || "{}");
-                progress.missionCompleted = true;
-                progress.lastCompletedMission = {
-                    id: 1,
-                    title: "Misión: Comprensión Literal",
-                    completedAt: new Date().toISOString(),
-                    level: 1,
-                    sublevel: 1
-                };
-                
-                if (!progress.completedSublevels) {
-                    progress.completedSublevels = [];
-                }
-                if (!progress.completedSublevels.includes(`1-1`)) {
-                    progress.completedSublevels.push(`1-1`);
-                }
-                
-                localStorage.setItem(GAME_PROGRESS_KEY, JSON.stringify(progress));
-                console.log("Progreso de misión guardado:", progress);
-                
-                showMissionToast("¡Progreso guardado correctamente! Puedes continuar desde LC.html", 3000);
             }
 
             function completeMission(id) {
@@ -949,23 +924,12 @@
                 if (!isIcon && !isPanel) closeAllPanels();
             });
 
-            // Modificado: Guardar progreso y redirigir a LC.html
-            document.getElementById('start-game-btn').addEventListener('click', () => {
-                gameStartTime = Date.now();
-                
-                // Guardar progreso de la misión completada
-                saveMissionProgress();
-                
-                // Completar algunas misiones relevantes
-                completeMission(1); // Completa tu primer examen
-                completeMission(5); // Gana tu primer juego
-                
-                // Redirigir a LC.html después de un breve delay para mostrar el toast
-                setTimeout(() => {
-                    window.location.href = 'LC.html';
-                }, 1500);
-            });
-
+          document.getElementById('start-game-btn').addEventListener('click', () => {
+    saveMissionProgress();
+    setTimeout(() => {
+        window.location.href = 'LC.html';
+    }, 1000);
+});
             // **EVENT LISTENERS DE ICONOS (CORREGIDO)**
             document.getElementById('btn-misiones').addEventListener('click', () => {
                 closeAllPanels();
@@ -1010,6 +974,72 @@
             
             console.log("Pantalla de juego inicializada.");
         });
+
+        // Función para guardar el progreso de la misión completada
+function saveMissionProgress() {
+    const GAME_PROGRESS_KEY = 'skopia_game_progress_v1';
+    const progress = JSON.parse(localStorage.getItem(GAME_PROGRESS_KEY) || "{}");
+    
+    progress.missionCompleted = true;
+    progress.lastCompletedMission = {
+        id: 1,
+        title: "Misión: Comprensión Literal",
+        completedAt: new Date().toISOString(),
+        level: 1,
+        sublevel: 1
+    };
+    
+    if (!progress.completedSublevels) {
+        progress.completedSublevels = [];
+    }
+    if (!progress.completedSublevels.includes(`1-1`)) {
+        progress.completedSublevels.push(`1-1`);
+    }
+    
+    localStorage.setItem(GAME_PROGRESS_KEY, JSON.stringify(progress));
+    console.log("Progreso de misión guardado:", progress);
+    
+    // Mostrar notificación (opcional)
+    showNotification("¡Progreso guardado correctamente!");
+}
+
+// Función para verificar si la misión fue completada
+function isMissionCompleted() {
+    const GAME_PROGRESS_KEY = 'skopia_game_progress_v1';
+    const progress = JSON.parse(localStorage.getItem(GAME_PROGRESS_KEY) || "{}");
+    return progress.missionCompleted === true;
+}
+
+// Función para mostrar notificación (opcional)
+function showNotification(message) {
+    // Crear elemento de notificación si no existe
+    let notification = document.getElementById('progress-notification');
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'progress-notification';
+        notification.style.position = 'fixed';
+        notification.style.bottom = '20px';
+        notification.style.right = '20px';
+        notification.style.background = 'rgba(10, 14, 26, 0.9)';
+        notification.style.borderLeft = '6px solid #c9a961';
+        notification.style.padding = '16px 20px';
+        notification.style.borderRadius = '8px';
+        notification.style.boxShadow = '0 6px 18px rgba(0,0,0,0.5)';
+        notification.style.zIndex = '3000';
+        notification.style.fontSize = '1.1rem';
+        notification.style.maxWidth = '400px';
+        notification.style.color = '#e0e0e0';
+        notification.style.display = 'none';
+        document.body.appendChild(notification);
+    }
+    
+    notification.innerHTML = `<strong>${message}</strong>`;
+    notification.style.display = 'block';
+    
+    setTimeout(() => {
+        notification.style.display = 'none';
+    }, 3000);
+}
     </script>
 </body>
 </html>
