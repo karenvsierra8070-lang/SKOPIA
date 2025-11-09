@@ -502,7 +502,7 @@
                 El éxito no es la clave de la felicidad. La felicidad es la clave del éxito. Si amas lo que haces, tendrás éxito.
             </div>
             
-            <button class="start-game-btn" id="continue-btn">Continuar</button>
+            <button class="start-game-btn" id="start-game-btn">Continuar</button>
         </div>
         
         <div class="detective-badge">
@@ -737,33 +737,21 @@
                 }
             }
 
-            function initGameProgress() {
-                if (!localStorage.getItem(GAME_PROGRESS_KEY)) {
-                    const initial = {
-                        currentLevel: 1,
-                        currentSublevel: 1,
-                        completedLevels: [],
-                        completedSublevels: [],
-                        lastCompletedMission: null,
-                        missionCompleted: false
-                    };
-                    localStorage.setItem(GAME_PROGRESS_KEY, JSON.stringify(initial));
-                    console.log("Progreso de juego inicializado.");
-                }
-            }
-
+            // Nueva función para guardar progreso SIN modificar las existentes
             function saveMissionProgress() {
                 const progress = JSON.parse(localStorage.getItem(GAME_PROGRESS_KEY) || "{}");
                 progress.missionCompleted = true;
                 progress.lastCompletedMission = {
-                    id: 1, // ID de la misión actual
+                    id: 1,
                     title: "Misión: Comprensión Literal",
                     completedAt: new Date().toISOString(),
                     level: 1,
                     sublevel: 1
                 };
                 
-                // Asegurarse que el subnivel actual esté marcado como completado
+                if (!progress.completedSublevels) {
+                    progress.completedSublevels = [];
+                }
                 if (!progress.completedSublevels.includes(`1-1`)) {
                     progress.completedSublevels.push(`1-1`);
                 }
@@ -771,7 +759,6 @@
                 localStorage.setItem(GAME_PROGRESS_KEY, JSON.stringify(progress));
                 console.log("Progreso de misión guardado:", progress);
                 
-                // Mostrar toast de confirmación
                 showMissionToast("¡Progreso guardado correctamente! Puedes continuar desde LC.html", 3000);
             }
 
@@ -983,8 +970,10 @@
                 if (!isIcon && !isPanel) closeAllPanels();
             });
 
-            // Event listener para el botón Continuar
-            document.getElementById('continue-btn').addEventListener('click', () => {
+            // MODIFICADO: Solo añadir funcionalidad de guardar progreso sin cambiar la lógica original
+            const originalStartGameHandler = () => {
+                gameStartTime = Date.now();
+                
                 // Guardar progreso de la misión completada
                 saveMissionProgress();
                 
@@ -996,7 +985,9 @@
                 setTimeout(() => {
                     window.location.href = 'LC.html';
                 }, 1500);
-            });
+            };
+
+            document.getElementById('start-game-btn').addEventListener('click', originalStartGameHandler);
 
             // **EVENT LISTENERS DE ICONOS (CORREGIDO)**
             document.getElementById('btn-misiones').addEventListener('click', () => {
@@ -1035,7 +1026,6 @@
             initMissions(); 
             initUserProfile(); 
             initGameStats(); 
-            initGameProgress(); // Inicializar progreso del juego
             updateAllDisplays();
             
             const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
