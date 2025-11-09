@@ -101,6 +101,11 @@
         .play-btn { display: block; margin: 30px auto 0; background-color: var(--color-oliva-oscuro); color: var(--color-crema); border: none; padding: 15px 40px; border-radius: 30px; font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: background-color 0.3s, transform 0.2s; }
         .play-btn:hover { background-color: var(--color-oliva-medio); transform: scale(1.05); }
 
+        /* Estilos para el contenedor de botones */
+        .button-container { display: flex; justify-content: center; gap: 20px; margin: 30px auto 0; }
+        .continue-btn { display: block; background-color: var(--color-oliva-medio); color: var(--color-crema); border: none; padding: 15px 40px; border-radius: 30px; font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: background-color 0.3s, transform 0.2s; }
+        .continue-btn:hover { background-color: var(--color-oliva-oscuro); transform: scale(1.05); }
+
         .mascota-container { display: flex; align-items: center; justify-content: center; gap: 15px; position: relative; width: 300px; margin-top: 30px; }
         .mascota-img { width: 100%; max-width: 220px; height: auto; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.2)); }
         .speech-bubble { position: static; border: 2px solid var(--color-oliva-claro); border-radius: 20px; padding: 15px 20px; background: white; box-shadow: 0 5px 15px var(--color-sombra); }
@@ -178,7 +183,12 @@
                     </div>
                 </div>
             </div>
-            <button class="play-btn" id="play-btn">Jugar</button>
+            
+            <!-- Contenedor de botones modificado -->
+            <div class="button-container">
+                <button class="play-btn" id="play-btn">Jugar</button>
+                <button class="continue-btn" id="continue-btn" style="display: none;">Continuar Ruta</button>
+            </div>
         </div>
 
         <aside class="mascota-container">
@@ -220,6 +230,7 @@
             // --- CONSTANTES Y VARIABLES ---
             const MISSIONS_KEY = 'skopia_missions_v1';
             const USER_PROFILE_KEY = 'skopia_user_profile_v1';
+            const GAME_PROGRESS_KEY = 'skopia_game_progress_v1'; // Nueva constante para el progreso del juego
             let toastTimer = null;
             
             // Variables para el temporizador de la misión 3
@@ -265,6 +276,12 @@
                     const initial = { originalEmail: "", nameChangeMissionCompleted: false };
                     localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(initial));
                 }
+            }
+
+            // Nueva función para verificar si la misión fue completada
+            function isMissionCompleted() {
+                const progress = JSON.parse(localStorage.getItem(GAME_PROGRESS_KEY) || "{}");
+                return progress.missionCompleted === true;
             }
 
             function completeMission(id) {
@@ -435,8 +452,16 @@
                 document.getElementById('video-container').style.display = 'none';
                 document.getElementById('lesson-container').classList.add('active');
                 startMissionTimer();
+                
+                // Verificar si la misión fue completada para mostrar el botón de continuar
+                checkMissionProgress();
             });
             document.getElementById('play-btn').addEventListener('click', () => window.location.href = 'juego1.html');
+            
+            // Event listener para el botón de continuar ruta
+            document.getElementById('continue-btn').addEventListener('click', () => {
+                window.location.href = 'felicitacionesjuego.html';
+            });
 
             // **EVENT LISTENERS DE ICONOS (FUNCIONANDO)**
             document.getElementById('btn-misiones').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-misiones').classList.add('active'); renderMissions(); });
@@ -468,6 +493,17 @@
                 const nextMission = data.find(m => !m.completed);
                 if (nextMission) {
                     showMissionToast(`¡Nueva misión disponible: ${nextMission.title} (+${nextMission.points}⭐)!`, 8000);
+                }
+            }
+            
+            // Función para verificar el progreso de la misión y mostrar el botón de continuar
+            function checkMissionProgress() {
+                if (isMissionCompleted()) {
+                    document.getElementById('continue-btn').style.display = 'block';
+                    console.log("Misión completada detectada. Mostrando botón de continuar ruta.");
+                } else {
+                    document.getElementById('continue-btn').style.display = 'none';
+                    console.log("Misión no completada. Ocultando botón de continuar ruta.");
                 }
             }
         });
