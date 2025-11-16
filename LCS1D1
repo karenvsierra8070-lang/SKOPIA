@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banco 1: Fundamentos - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;500;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        window.auth = auth;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            console.log("Usuario autenticado:", user.email);
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+            --color-correcto: #4caf50;
+            --color-incorrecto: #f44336;
+            --color-advertencia: #ff9800;
+            --float-color: var(--color-oliva-oscuro);
+            --float-color-hover: var(--color-oliva-medio);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Roboto', sans-serif; background: linear-gradient(135deg, var(--color-crema) 0%, #f5efe5 100%); color: var(--color-oliva-oscuro); min-height: 100vh; display: flex; flex-direction: column; }
+        
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; background-color: white; box-shadow: 0 2px 10px var(--color-sombra); position: relative; z-index: 1000; }
+        .navbar-left { display: flex; align-items: center; gap: 15px; }
+        .back-btn { background: var(--color-oliva-oscuro); color: white; border: none; padding: 8px 15px; border-radius: 20px; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; }
+        .back-btn:hover { background-color: var(--color-oliva-medio); transform: scale(1.05); }
+        .quiz-title { font-family: 'Patrick Hand', cursive; font-size: 1.5rem; color: var(--color-oliva-oscuro); }
+        .hamburger { width: 30px; height: 25px; position: relative; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; }
+        .hamburger span { display: block; height: 4px; width: 100%; background-color: var(--color-oliva-oscuro); border-radius: 2px; transition: all 0.3s ease-in-out; }
+        .user-dropdown { position: absolute; top: 70px; right: 40px; background-color: white; border-radius: 8px; box-shadow: 0 4px 20px var(--color-sombra); overflow: hidden; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: opacity 0.3s, transform 0.3s, visibility 0.3s; z-index: 1000; }
+        .user-dropdown.active { opacity: 1; visibility: visible; transform: translateY(0); }
+        .user-dropdown a { display: block; padding: 15px 25px; text-decoration: none; color: var(--color-oliva-oscuro); font-weight: 500; transition: background-color 0.2s; }
+        .user-dropdown a:hover { background-color: var(--color-crema); }
+        .user-dropdown hr { border: none; border-top: 1px solid #eee; margin: 0; }
+
+        .progress-container { padding: 15px 40px; background-color: white; box-shadow: 0 2px 10px var(--color-sombra); }
+        .progress-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .progress-text { font-size: 0.9rem; color: var(--color-oliva-medio); }
+        .progress-bar { height: 8px; background: var(--color-oliva-claro); border-radius: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--color-oliva-medio), var(--color-oliva-oscuro)); border-radius: 10px; transition: width 0.5s ease; }
+        
+        .main-content { flex-grow: 1; display: flex; justify-content: center; align-items: center; padding: 30px 20px; }
+        
+        .quiz-container { width: 100%; max-width: 800px; background: white; border-radius: 16px; box-shadow: 0 8px 25px var(--color-sombra); overflow: hidden; }
+        
+        .question-screen, .explanation-screen, .results-screen { padding: 30px; }
+        
+        .question-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .question-number { font-family: 'Orbitron', sans-serif; font-size: 1.2rem; font-weight: 700; color: var(--color-oliva-medio); }
+        .hint-btn { background: var(--color-advertencia); color: white; border: none; padding: 8px 15px; border-radius: 20px; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; }
+        .hint-btn:hover { background-color: #e68900; transform: scale(1.05); }
+        .hint-btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+        
+        .text-passage { background-color: var(--color-crema); padding: 20px; border-radius: 12px; margin-bottom: 25px; font-size: 1.1rem; line-height: 1.6; border-left: 4px solid var(--color-oliva-claro); }
+        
+        .question-text { font-family: 'Patrick Hand', cursive; font-size: 1.4rem; color: var(--color-oliva-oscuro); margin-bottom: 25px; line-height: 1.5; }
+        
+        .options-container { display: grid; gap: 15px; margin-bottom: 25px; }
+        .option-btn { background: white; border: 2px solid var(--color-oliva-claro); padding: 15px 20px; border-radius: 12px; font-size: 1rem; text-align: left; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 15px; }
+        .option-btn:hover { border-color: var(--color-oliva-medio); transform: translateX(5px); }
+        .option-btn.selected { border-color: var(--color-oliva-medio); background-color: var(--color-crema); }
+        .option-btn.correct { border-color: var(--color-correcto); background-color: #e8f5e8; }
+        .option-btn.incorrect { border-color: var(--color-incorrecto); background-color: #ffeaea; }
+        .option-letter { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; background: var(--color-oliva-claro); font-weight: bold; color: white; flex-shrink: 0; }
+        .option-btn.correct .option-letter { background: var(--color-correcto); }
+        .option-btn.incorrect .option-letter { background: var(--color-incorrecto); }
+        
+        .hint-box { background-color: #fff8e1; border-left: 4px solid var(--color-advertencia); padding: 15px; border-radius: 8px; margin-bottom: 25px; display: none; }
+        .hint-box.show { display: block; }
+        .hint-title { font-weight: bold; margin-bottom: 8px; color: var(--color-advertencia); display: flex; align-items: center; gap: 8px; }
+        
+        .action-buttons { display: flex; justify-content: space-between; }
+        .btn-nav { background: var(--color-oliva-oscuro); color: white; border: none; padding: 12px 25px; border-radius: 25px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; }
+        .btn-nav:hover { background-color: var(--color-oliva-medio); transform: scale(1.05); }
+        .btn-nav:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-primary { background-color: var(--color-oliva-medio); }
+        .btn-primary:hover { background-color: var(--color-oliva-oscuro); }
+        
+        .explanation-screen { display: none; }
+        .explanation-header { text-align: center; margin-bottom: 25px; }
+        .result-icon { font-size: 4rem; margin-bottom: 15px; }
+        .result-icon.correct { color: var(--color-correcto); }
+        .result-icon.incorrect { color: var(--color-incorrecto); }
+        .result-title { font-family: 'Patrick Hand', cursive; font-size: 2rem; margin-bottom: 10px; }
+        .result-title.correct { color: var(--color-correcto); }
+        .result-title.incorrect { color: var(--color-incorrecto); }
+        
+        .explanation-content { background-color: var(--color-crema); padding: 20px; border-radius: 12px; margin-bottom: 25px; }
+        .explanation-title { font-weight: bold; margin-bottom: 10px; font-size: 1.2rem; color: var(--color-oliva-oscuro); }
+        .explanation-text { font-size: 1rem; line-height: 1.6; margin-bottom: 20px; }
+        
+        .tip-box { background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 8px; margin-bottom: 25px; }
+        .tip-title { font-weight: bold; margin-bottom: 8px; color: #1976d2; display: flex; align-items: center; gap: 8px; }
+        .tip-text { font-size: 1rem; line-height: 1.6; }
+        
+        .results-screen { display: none; text-align: center; }
+        .results-header { margin-bottom: 30px; }
+        .results-icon { font-size: 4rem; margin-bottom: 15px; }
+        .results-title { font-family: 'Patrick Hand', cursive; font-size: 2.5rem; margin-bottom: 10px; }
+        .results-score { font-size: 3rem; font-weight: bold; color: var(--color-oliva-medio); margin-bottom: 10px; }
+        .results-message { font-size: 1.2rem; margin-bottom: 30px; line-height: 1.5; }
+        
+        .stars-container { font-size: 2rem; margin-bottom: 30px; }
+        
+        .question-review { margin-bottom: 30px; text-align: left; }
+        .review-item { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+        .review-item.correct { background-color: #e8f5e8; }
+        .review-item.incorrect { background-color: #ffeaea; }
+        .review-icon { font-size: 1.5rem; }
+        .review-text { flex-grow: 1; }
+        
+        .final-buttons { display: flex; justify-content: center; gap: 20px; }
+        
+        .floating-icons { position: fixed; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; z-index: 2000; }
+        .floating-icons button { background: var(--float-color); color: white; width: 50px; height: 50px; border-radius: 50%; border: none; font-size: 18px; display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0,0,0,0.12); cursor: pointer; transition: transform .15s ease, background .15s ease; }
+        .floating-icons button:hover { transform: scale(1.08); background: var(--float-color-hover); }
+        
+        .toast { position: fixed; right: 20px; bottom: 20px; background: #fff7e6; border-left: 6px solid var(--color-oliva-medio); padding: 16px 20px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); z-index: 3000; display: none; font-size: 1rem; max-width: 350px; }
+        .toast.show { display: block; }
+        
+        @media (max-width: 768px) {
+            .navbar { padding: 15px 20px; }
+            .progress-container { padding: 15px 20px; }
+            .quiz-title { font-size: 1.2rem; }
+            .question-screen, .explanation-screen, .results-screen { padding: 20px; }
+            .final-buttons { flex-direction: column; }
+            .btn-nav { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="navbar-left">
+            <button class="back-btn" id="back-btn">
+                <i class="fas fa-arrow-left"></i> Volver
+            </button>
+            <h1 class="quiz-title">Banco 1: Fundamentos</h1>
+        </div>
+        <div class="hamburger" id="hamburger-menu"><span></span><span></span><span></span></div>
+        <div class="user-dropdown" id="user-dropdown">
+            <a href="cuenta.html">Mi Cuenta</a>
+            <a href="configuracion.html">Configuración</a>
+            <a href="notificaciones.html">Notificaciones</a>
+            <hr>
+            <a href="index.html" id="logout-btn">Cerrar Sesión</a>
+        </div>
+    </nav>
+
+    <div class="progress-container">
+        <div class="progress-info">
+            <div class="progress-text" id="progress-text">Pregunta 1 de 10</div>
+            <div class="progress-text" id="score-text">Puntuación: 0</div>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill" style="width: 10%"></div>
+        </div>
+    </div>
+
+    <main class="main-content">
+        <div class="quiz-container">
+            <!-- Pantalla de pregunta -->
+            <div class="question-screen" id="question-screen">
+                <div class="question-header">
+                    <div class="question-number" id="question-number">Pregunta 1</div>
+                    <button class="hint-btn" id="hint-btn">
+                        <i class="fas fa-lightbulb"></i> Pista
+                    </button>
+                </div>
+                
+                <div class="text-passage" id="text-passage"></div>
+                
+                <div class="question-text" id="question-text"></div>
+                
+                <div class="hint-box" id="hint-box">
+                    <div class="hint-title">
+                        <i class="fas fa-lightbulb"></i> Pista
+                    </div>
+                    <div class="hint-text" id="hint-text"></div>
+                </div>
+                
+                <div class="options-container" id="options-container"></div>
+                
+                <div class="action-buttons">
+                    <button class="btn-nav" id="prev-btn" disabled>
+                        <i class="fas fa-arrow-left"></i> Anterior
+                    </button>
+                    <button class="btn-nav btn-primary" id="check-btn" disabled>
+                        Verificar <i class="fas fa-check"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Pantalla de explicación -->
+            <div class="explanation-screen" id="explanation-screen">
+                <div class="explanation-header">
+                    <div class="result-icon" id="result-icon"></div>
+                    <div class="result-title" id="result-title"></div>
+                </div>
+                
+                <div class="explanation-content">
+                    <div class="explanation-title">Explicación:</div>
+                    <div class="explanation-text" id="explanation-text"></div>
+                </div>
+                
+                <div class="tip-box">
+                    <div class="tip-title">
+                        <i class="fas fa-magic"></i> Truco para identificar ideas principales:
+                    </div>
+                    <div class="tip-text" id="tip-text"></div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn-nav" id="back-to-question-btn" style="display: none;">
+                        <i class="fas fa-arrow-left"></i> Volver a la pregunta
+                    </button>
+                    <button class="btn-nav btn-primary" id="next-question-btn">
+                        Siguiente <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Pantalla de resultados -->
+            <div class="results-screen" id="results-screen">
+                <div class="results-header">
+                    <div class="results-icon" id="results-icon"></div>
+                    <div class="results-title" id="results-title"></div>
+                    <div class="results-score" id="results-score"></div>
+                    <div class="results-message" id="results-message"></div>
+                    <div class="stars-container" id="stars-container"></div>
+                </div>
+                
+                <div class="question-review" id="question-review"></div>
+                
+                <div class="final-buttons">
+                    <button class="btn-nav" id="retry-btn">
+                        <i class="fas fa-redo"></i> Intentar de nuevo
+                    </button>
+                    <button class="btn-nav btn-primary" id="continue-btn">
+                        Continuar <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="floating-icons" aria-hidden="false">
+        <button id="btn-misiones" title="Misiones">🎯</button>
+        <button id="btn-nivel" title="Nivel actual">⭐</button>
+        <button id="btn-progreso" title="Progreso">📊</button>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Estado de la aplicación
+            let currentQuestion = 0;
+            let score = 0;
+            let selectedOption = null;
+            let hintsUsed = 0;
+            let answers = [];
+            let questions = [];
+            
+            // Cargar preguntas desde JSON
+            fetch('preguntas.json')
+                .then(response => response.json())
+                .then(data => {
+                    questions = data;
+                    initializeQuiz();
+                })
+                .catch(error => {
+                    console.error('Error al cargar las preguntas:', error);
+                    // Si no se pueden cargar desde el archivo, usar las preguntas directamente
+                    questions = [
+                        {
+                            "id": "Q000001",
+                            "pregunta": "Los perros son mascotas muy populares. Son leales y amigables. Necesitan salir a pasear todos los días y alimentarse con comida especial para mantenerse sanos. También es importante darles mucho cariño.\n\nPregunta: ¿Cuál es la idea principal del texto?",
+                            "opciones": [
+                                "La comida especial que necesitan los perros.",
+                                "Los perros son mascotas populares que requieren cuidados esenciales y afecto para estar sanos.",
+                                "Los perros son muy leales y amigables.",
+                                "Hay que sacar a los perros a pasear todos los días."
+                            ],
+                            "respuestaCorrecta": 1,
+                            "tags": [
+                                "diagnostico",
+                                "LC",
+                                "comprensión literal",
+                                "ideas principales"
+                            ],
+                            "tipo": "imagen",
+                            "explicacion": "La opción B (índice 1) sintetiza el tema (perros), su popularidad y el requisito de cuidados y cariño, que son los puntos clave del autor. Las otras opciones son detalles o ideas secundarias.",
+                            "truco": "La idea principal es la que resume el tema central y su propósito o características principales, dejando fuera los ejemplos o detalles específicos."
+                        },
+                        {
+                            "id": "Q000002",
+                            "pregunta": "El sol es una estrella que se encuentra en el centro de nuestro sistema solar. Es fundamental para la vida en la Tierra, ya que nos proporciona luz y calor. Sin el sol, nuestro planeta sería un lugar oscuro y frío donde no podría existir ninguna forma de vida.\n\nPregunta: ¿Qué idea resume mejor el texto?",
+                            "opciones": [
+                                "El sol es solo una estrella que está en el centro del sistema solar.",
+                                "La Tierra sería un lugar muy frío sin la presencia del sol.",
+                                "El sol es la estrella central del sistema solar y es vital porque proporciona luz y calor, permitiendo la existencia de vida en la Tierra.",
+                                "El sol solo proporciona luz y calor a la Tierra."
+                            ],
+                            "respuestaCorrecta": 2,
+                            "tags": [
+                                "diagnostico",
+                                "LC",
+                                "comprensión literal",
+                                "ideas principales"
+                            ],
+                            "tipo": "imagen",
+                            "explicacion": "La opción C (índice 2) combina correctamente la definición del sol con su función esencial para la vida, que es el mensaje central del texto. Las demás son detalles o incompletas.",
+                            "truco": "La idea principal debe responder por qué el tema es importante o cuál es su función esencial, integrando la definición y el propósito."
+                        },
+                        {
+                            "id": "Q000003",
+                            "pregunta": "El agua cubre casi tres cuartas partes de la superficie terrestre. Es esencial para todos los seres vivos, desde las plantas más pequeñas hasta los animales más grandes. Además, se utiliza en muchas actividades humanas, como la agricultura y la industria. Por eso es vital cuidarla.\n\nPregunta: ¿Cuál es el punto más importante que se menciona sobre el agua?",
+                            "opciones": [
+                                "El agua se usa mucho en la agricultura y la industria.",
+                                "El agua es un recurso que cubre gran parte de la Tierra y es fundamental para la vida y las actividades humanas, lo que exige su conservación.",
+                                "El agua solo es esencial para las plantas y los animales más grandes.",
+                                "Cubre casi tres cuartas partes de la superficie terrestre."
+                            ],
+                            "respuestaCorrecta": 1,
+                            "tags": [
+                                "diagnostico",
+                                "LC",
+                                "comprensión literal",
+                                "ideas principales"
+                            ],
+                            "tipo": "imagen",
+                            "explicacion": "La opción B (índice 1) incluye dónde se encuentra, su esencialidad para la vida, su uso humano y la conclusión de su cuidado, cubriendo todos los puntos centrales del texto.",
+                            "truco": "Busca la afirmación que englobe la descripción, la función más importante y la conclusión principal del texto."
+                        },
+                        {
+                            "id": "Q000004",
+                            "pregunta": "Usar la bicicleta es una excelente forma de hacer ejercicio. Además de fortalecer los músculos de las piernas, es un medio de transporte ecológico que no produce contaminación. También ayuda a evitar el tráfico en las ciudades. Por estas razones, cada vez más personas eligen pedalear.\n\nPregunta: ¿Cuál es la idea central del párrafo?",
+                            "opciones": [
+                                "Fortalecer los músculos de las piernas es el objetivo principal de la bicicleta.",
+                                "La bicicleta es un transporte que ayuda a evitar el tráfico en las ciudades.",
+                                "La bicicleta es un medio de transporte muy elegido debido a sus múltiples beneficios como la salud, el cuidado del ambiente y la eficiencia en la ciudad.",
+                                "Es importante usar un medio de transporte que no produzca contaminación."
+                            ],
+                            "respuestaCorrecta": 2,
+                            "tags": [
+                                "diagnostico",
+                                "LC",
+                                "comprensión literal",
+                                "ideas principales"
+                            ],
+                            "tipo": "imagen",
+                            "explicacion": "La opción C (índice 2) resume de manera efectiva la razón principal por la que se promueve el uso de la bicicleta, englobando todos los beneficios detallados mencionados en el texto.",
+                            "truco": "Si el texto proporciona una lista de razones o beneficios, la idea principal es el resumen de todas ellas."
+                        },
+                        {
+                            "id": "Q000005",
+                            "pregunta": "Leer libros es una actividad muy enriquecedora. A través de la lectura, podemos viajar a mundos imaginarios, aprender sobre historia o descubrir nuevas ideas. Los libros son una fuente inagotable de conocimiento y una excelente manera de mejorar nuestro vocabulario.\n\nPregunta: ¿Cuál es el tema principal y la idea que se desarrolla?",
+                            "opciones": [
+                                "Solo podemos viajar a mundos imaginarios leyendo.",
+                                "Los libros son una fuente inagotable de conocimiento que enriquece a las personas de diversas maneras, incluyendo el entretenimiento y el aprendizaje.",
+                                "El vocabulario se mejora principalmente leyendo libros.",
+                                "La historia es el tema más importante que se puede encontrar en los libros."
+                            ],
+                            "respuestaCorrecta": 1,
+                            "tags": [
+                                "diagnostico",
+                                "LC",
+                                "comprensión literal",
+                                "ideas principales"
+                            ],
+                            "tipo": "imagen",
+                            "explicacion": "La opción B (índice 1) sintetiza el valor principal de los libros (fuente de conocimiento) y su efecto (enriquecer) a través de los diversos beneficios mencionados. Las otras son detalles o muy específicas.",
+                            "truco": "La idea principal debe ser la afirmación más general y relevante que se puede hacer sobre el tema del texto."
+                        },
+                        {
+                            "id": "Q000006",
+                            "pregunta": "El chocolate, originario de América, se obtiene de las semillas del árbol del cacao. Durante siglos fue utilizado como una bebida sagrada. Hoy en día, es un alimento muy popular en todo el mundo y se consume en diversas formas, desde tabletas hasta postres.\n\nPregunta: ¿De qué trata principalmente el texto?",
+                            "opciones": [
+                                "El chocolate fue una bebida sagrada antigua en América.",
+                                "El chocolate proviene del cacao y ha evolucionado desde su uso como bebida sagrada hasta un alimento popular consumido globalmente en diversas formas.",
+                                "Las semillas del cacao son muy valiosas y originarias de América.",
+                                "Hoy en día, el chocolate se consume solo en tabletas y postres."
+                            ],
+                            "respuestaCorrecta": 1,
+                            "tags": [
+                                "diagnostico",
+                                "LC",
+                                "comprensión literal",
+                                "ideas principales"
+                            ],
+                            "tipo": "imagen",
+                            "explicacion": "La opción B (índice 1) cubre el origen, la evolución histórica y su estado actual como producto popular, resumiendo el desarrollo completo del tema del párrafo.",
+                            "truco": "Si un texto describe una evolución (historia), la idea principal debe resumir esa trayectoria completa."
+                        },
+                        {
+                            "id": "Q000007",
+                            "pregunta": "Las plantas son seres vivos que producen su propio alimento usando la luz del sol, un proceso llamado fotosíntesis. Son cruciales para el medio ambiente porque liberan oxígeno, el aire que necesitamos para respirar, y absorben dióxido de carbono.\n\nPregunta: ¿Cuál es la idea esencial que el autor quiere comunicar sobre las plantas?",
+                            "opciones": [
+                                "La fotosíntesis es el proceso de las plantas para producir alimento.",
+                                "Las plantas usan solo la luz del sol para sobrevivir.",
+                                "Las plantas son seres vivos esenciales que, a través de la fotosíntesis, generan el oxígeno que respiramos y purifican el aire.",
+                                "Necesitamos más dióxido de carbono para que las plantas sobrevivan."
+                            ],
+                            "respuestaCorrecta": 2,
+                            "tags": [
+                                "diagnostico",
+                                "LC",
+                                "comprensión literal",
+                                "ideas principales"
+                            ],
+                            "tipo": "imagen",
+                            "explicacion": "La opción C (índice 2) resume la función de las plantas (fotosíntesis) y su impacto crítico en el medio ambiente (generar oxígeno y absorber CO2), integrando los dos puntos principales del texto.",
+                            "truco": "La idea principal debe enfocarse en la **función vital** del tema si el texto la subraya."
+                        },
+                        {
+                            "id": "Q000008",
+                            "pregunta": "La tecnología moderna ha cambiado la forma en que vivimos. Ahora podemos comunicarnos con personas al otro lado del mundo en segundos y acceder a una cantidad enorme de información desde un pequeño dispositivo. Sin embargo, es importante usarla con moderación para evitar la dependencia.\n\nPregunta: ¿Cuál es la idea principal que el texto busca establecer?",
+                            "opciones": [
+                                "La comunicación es más fácil ahora gracias a la tecnología.",
+                                "La tecnología moderna ha transformado la vida y la comunicación con grandes beneficios, por lo que es necesario usarla de forma responsable y con moderación.",
+                                "Podemos acceder a mucha información en un dispositivo pequeño.",
+                                "Debemos evitar el uso de la tecnología moderna para no ser dependientes."
+                            ],
+                            "respuestaCorrecta": 1,
+                            "tags": [
+                                "diagnostico",
+                                "LC",
+                                "comprensión literal",
+                                "ideas principales"
+                            ],
+                            "tipo": "imagen",
+                            "explicacion": "La opción B (índice 1) resume los dos puntos principales del texto: el gran cambio positivo que trajo y la conclusión o cautela sobre su uso responsable ('moderación').",
+                            "truco": "Si el texto ofrece un lado positivo y una advertencia, la idea principal debe incluir ambos aspectos."
+                        },
+                        {
+                            "id": "Q000009",
+                            "pregunta": "Los volcanes son aberturas en la corteza terrestre por donde puede salir magma, ceniza y gases. Aunque son potencialmente peligrosos, también han contribuido a formar la superficie de la Tierra a lo largo de millones de años. Muchos países usan su energía geotérmica para producir electricidad.\n\nPregunta: ¿Cuál es el punto central del texto sobre los volcanes?",
+                            "opciones": [
+                                "Los volcanes son muy peligrosos para las ciudades cercanas.",
+                                "El magma, la ceniza y los gases son los únicos elementos que salen de un volcán.",
+                                "Los volcanes son aberturas geológicas que, a pesar de su peligro, son importantes porque han ayudado a formar la Tierra y se usan como fuente de energía.",
+                                "Su energía geotérmica se usa en muchos países para generar electricidad."
+                            ],
+                            "respuestaCorrecta": 2,
+                            "tags": [
+                                "diagnostico",
+                                "LC",
+                                "comprensión literal",
+                                "ideas principales"
+                            ],
+                            "tipo": "imagen",
+                            "explicacion": "La opción C (índice 2) define el volcán e integra los tres puntos clave: el peligro, la contribución geológica (formar la Tierra) y su uso energético, resumiendo el texto completamente.",
+                            "truco": "Busca la opción que resuma el tema y los *dos* o *tres* roles principales que se le asignan en el texto."
+                        },
+                        {
+                            "id": "Q000010",
+                            "pregunta": "El ajedrez es un juego de mesa que exige mucha concentración y estrategia. Se ha demostrado que practicarlo con regularidad puede mejorar las habilidades de resolución de problemas y la memoria. Aunque es un juego antiguo, sigue siendo muy popular en todo el mundo.\n\nPregunta: ¿Cuál de las siguientes opciones expresa la idea fundamental del texto?",
+                            "opciones": [
+                                "El ajedrez es un juego antiguo que sigue siendo popular a nivel mundial.",
+                                "Es un juego que requiere mucha concentración para ganar.",
+                                "El ajedrez es un juego de estrategia popular que mejora significativamente habilidades cognitivas como la concentración y la memoria.",
+                                "Solo los que son buenos en estrategia deberían jugar ajedrez."
+                            ],
+                            "respuestaCorrecta": 2,
+                            "tags": [
+                                "diagnostico",
+                                "LC",
+                                "comprensión literal",
+                                "ideas principales"
+                            ],
+                            "tipo": "imagen",
+                            "explicacion": "La opción C (índice 2) sintetiza el tema (ajedrez), su naturaleza (estrategia/popular) y su beneficio principal para el jugador (mejora cognitiva), lo que constituye la idea principal del párrafo.",
+                            "truco": "La idea principal de un texto que enumera beneficios es el resumen de esos beneficios y por qué son importantes."
+                        }
+                    ];
+                    initializeQuiz();
+                });
+            
+            // Elementos del DOM
+            const questionScreen = document.getElementById('question-screen');
+            const explanationScreen = document.getElementById('explanation-screen');
+            const resultsScreen = document.getElementById('results-screen');
+            const progressText = document.getElementById('progress-text');
+            const scoreText = document.getElementById('score-text');
+            const progressFill = document.getElementById('progress-fill');
+            const questionNumber = document.getElementById('question-number');
+            const textPassage = document.getElementById('text-passage');
+            const questionText = document.getElementById('question-text');
+            const optionsContainer = document.getElementById('options-container');
+            const hintBtn = document.getElementById('hint-btn');
+            const hintBox = document.getElementById('hint-box');
+            const hintText = document.getElementById('hint-text');
+            const prevBtn = document.getElementById('prev-btn');
+            const checkBtn = document.getElementById('check-btn');
+            const backToQuestionBtn = document.getElementById('back-to-question-btn');
+            const nextQuestionBtn = document.getElementById('next-question-btn');
+            const retryBtn = document.getElementById('retry-btn');
+            const continueBtn = document.getElementById('continue-btn');
+            const backBtn = document.getElementById('back-btn');
+            const hamburgerMenu = document.getElementById('hamburger-menu');
+            const userDropdown = document.getElementById('user-dropdown');
+            const logoutBtn = document.getElementById('logout-btn');
+            const toast = document.getElementById('toast');
+            
+            // Inicializar cuestionario
+            function initializeQuiz() {
+                currentQuestion = 0;
+                score = 0;
+                selectedOption = null;
+                hintsUsed = 0;
+                answers = [];
+                
+                // Cargar progreso guardado si existe
+                const savedProgress = localStorage.getItem('quizProgress');
+                if (savedProgress) {
+                    const progress = JSON.parse(savedProgress);
+                    if (progress.quizId === 'LCS1D1') {
+                        currentQuestion = progress.currentQuestion || 0;
+                        score = progress.score || 0;
+                        hintsUsed = progress.hintsUsed || 0;
+                        answers = progress.answers || [];
+                    }
+                }
+                
+                loadQuestion();
+                updateProgress();
+            }
+            
+            // Cargar pregunta actual
+            function loadQuestion() {
+                if (currentQuestion >= questions.length) {
+                    showResults();
+                    return;
+                }
+                
+                const question = questions[currentQuestion];
+                selectedOption = answers[currentQuestion] !== undefined ? answers[currentQuestion] : null;
+                
+                // Actualizar UI
+                questionNumber.textContent = `Pregunta ${currentQuestion + 1}`;
+                progressText.textContent = `Pregunta ${currentQuestion + 1} de ${questions.length}`;
+                scoreText.textContent = `Puntuación: ${score}`;
+                
+                // Separar el texto del pasaje y la pregunta
+                const parts = question.pregunta.split('\n\nPregunta: ');
+                textPassage.textContent = parts[0];
+                questionText.textContent = parts[1] || question.pregunta;
+                
+                // Cargar opciones
+                optionsContainer.innerHTML = '';
+                question.opciones.forEach((option, index) => {
+                    const optionBtn = document.createElement('button');
+                    optionBtn.className = 'option-btn';
+                    if (selectedOption !== null && selectedOption === index) {
+                        optionBtn.classList.add('selected');
+                    }
+                    optionBtn.innerHTML = `
+                        <span class="option-letter">${String.fromCharCode(65 + index)}</span>
+                        <span>${option}</span>
+                    `;
+                    optionBtn.onclick = () => selectOption(index);
+                    optionsContainer.appendChild(optionBtn);
+                });
+                
+                // Ocultar pista
+                hintBox.classList.remove('show');
+                
+                // Actualizar botones
+                prevBtn.disabled = currentQuestion === 0;
+                checkBtn.disabled = selectedOption === null;
+                
+                // Mostrar pantalla de pregunta
+                questionScreen.style.display = 'block';
+                explanationScreen.style.display = 'none';
+                resultsScreen.style.display = 'none';
+            }
+            
+            // Seleccionar opción
+            function selectOption(index) {
+                selectedOption = index;
+                const options = document.querySelectorAll('.option-btn');
+                options.forEach((opt, i) => {
+                    opt.classList.toggle('selected', i === index);
+                });
+                checkBtn.disabled = false;
+            }
+            
+            // Mostrar pista
+            hintBtn.addEventListener('click', () => {
+                if (hintBox.classList.contains('show')) {
+                    hintBox.classList.remove('show');
+                } else {
+                    // Generar pista basada en la pregunta
+                    const question = questions[currentQuestion];
+                    const correctOption = question.opciones[question.respuestaCorrecta];
+                    
+                    // Extraer palabras clave de la respuesta correcta
+                    const keywords = correctOption.split(' ').filter(word => word.length > 4).slice(0, 3);
+                    hintText.textContent = `Fíjate en las palabras clave: ${keywords.join(', ')}. La idea principal suele ser la opción más completa que resume varios aspectos del texto.`;
+                    
+                    hintBox.classList.add('show');
+                    hintsUsed++;
+                }
+            });
+            
+            // Verificar respuesta
+            checkBtn.addEventListener('click', () => {
+                if (selectedOption === null) return;
+                
+                const question = questions[currentQuestion];
+                const isCorrect = selectedOption === question.respuestaCorrecta;
+                
+                // Guardar respuesta
+                answers[currentQuestion] = selectedOption;
+                if (isCorrect) {
+                    score += 10 - hintsUsed; // Menos puntos si se usaron pistas
+                }
+                
+                // Mostrar resultados en las opciones
+                const options = document.querySelectorAll('.option-btn');
+                options.forEach((opt, i) => {
+                    if (i === question.respuestaCorrecta) {
+                        opt.classList.add('correct');
+                    } else if (i === selectedOption && i !== question.respuestaCorrecta) {
+                        opt.classList.add('incorrect');
+                    }
+                    opt.onclick = null; // Deshabilitar clics
+                });
+                
+                // Guardar progreso
+                saveProgress();
+                
+                // Mostrar pantalla de explicación
+                setTimeout(() => {
+                    showExplanation(isCorrect);
+                }, 1000);
+            });
+            
+            // Mostrar explicación
+            function showExplanation(isCorrect) {
+                const question = questions[currentQuestion];
+                
+                // Actualizar UI de explicación
+                const resultIcon = document.getElementById('result-icon');
+                const resultTitle = document.getElementById('result-title');
+                const explanationText = document.getElementById('explanation-text');
+                const tipText = document.getElementById('tip-text');
+                
+                if (isCorrect) {
+                    resultIcon.innerHTML = '✅';
+                    resultIcon.className = 'result-icon correct';
+                    resultTitle.textContent = '¡Correcto!';
+                    resultTitle.className = 'result-title correct';
+                } else {
+                    resultIcon.innerHTML = '❌';
+                    resultIcon.className = 'result-icon incorrect';
+                    resultTitle.textContent = 'Incorrecto';
+                    resultTitle.className = 'result-title incorrect';
+                }
+                
+                explanationText.textContent = question.explicacion;
+                tipText.textContent = question.truco;
+                
+                // Actualizar botones
+                if (currentQuestion > 0) {
+                    backToQuestionBtn.style.display = 'block';
+                } else {
+                    backToQuestionBtn.style.display = 'none';
+                }
+                
+                if (currentQuestion < questions.length - 1) {
+                    nextQuestionBtn.innerHTML = 'Siguiente <i class="fas fa-arrow-right"></i>';
+                } else {
+                    nextQuestionBtn.innerHTML = 'Ver resultados <i class="fas fa-trophy"></i>';
+                }
+                
+                // Mostrar pantalla de explicación
+                questionScreen.style.display = 'none';
+                explanationScreen.style.display = 'block';
+                resultsScreen.style.display = 'none';
+            }
+            
+            // Navegación
+            prevBtn.addEventListener('click', () => {
+                if (currentQuestion > 0) {
+                    currentQuestion--;
+                    loadQuestion();
+                }
+            });
+            
+            backToQuestionBtn.addEventListener('click', () => {
+                loadQuestion();
+            });
+            
+            nextQuestionBtn.addEventListener('click', () => {
+                currentQuestion++;
+                hintsUsed = 0; // Reiniciar contador de pistas para la siguiente pregunta
+                loadQuestion();
+            });
+            
+            // Mostrar resultados finales
+            function showResults() {
+                const percentage = Math.round((score / (questions.length * 10)) * 100);
+                const correctAnswers = answers.filter((answer, index) => answer === questions[index].respuestaCorrecta).length;
+                
+                // Actualizar UI de resultados
+                const resultsIcon = document.getElementById('results-icon');
+                const resultsTitle = document.getElementById('results-title');
+                const resultsScore = document.getElementById('results-score');
+                const resultsMessage = document.getElementById('results-message');
+                const starsContainer = document.getElementById('stars-container');
+                const questionReview = document.getElementById('question-review');
+                
+                resultsScore.textContent = `${score}/${questions.length * 10}`;
+                
+                if (percentage >= 80) {
+                    resultsIcon.innerHTML = '🏆';
+                    resultsTitle.textContent = '¡Excelente trabajo!';
+                    resultsMessage.textContent = 'Has dominado la identificación de ideas principales. ¡Sigue así!';
+                    starsContainer.innerHTML = '⭐⭐⭐';
+                } else if (percentage >= 60) {
+                    resultsIcon.innerHTML = '👏';
+                    resultsTitle.textContent = '¡Buen trabajo!';
+                    resultsMessage.textContent = 'Tienes una buena comprensión. Repasa los detalles para mejorar.';
+                    starsContainer.innerHTML = '⭐⭐';
+                } else {
+                    resultsIcon.innerHTML = '📚';
+                    resultsTitle.textContent = 'Sigue practicando';
+                    resultsMessage.textContent = 'Necesitas repasar el concepto. No te preocupes, ¡la práctica hace al maestro!';
+                    starsContainer.innerHTML = '⭐';
+                }
+                
+                // Generar revisión de preguntas
+                questionReview.innerHTML = '<h3>Revisión de respuestas:</h3>';
+                questions.forEach((question, index) => {
+                    const isCorrect = answers[index] === question.respuestaCorrecta;
+                    const reviewItem = document.createElement('div');
+                    reviewItem.className = `review-item ${isCorrect ? 'correct' : 'incorrect'}`;
+                    reviewItem.innerHTML = `
+                        <div class="review-icon">${isCorrect ? '✅' : '❌'}</div>
+                        <div class="review-text">Pregunta ${index + 1}: ${isCorrect ? 'Correcta' : 'Incorrecta'}</div>
+                    `;
+                    questionReview.appendChild(reviewItem);
+                });
+                
+                // Guardar progreso final
+                const finalProgress = {
+                    quizId: 'LCS1D1',
+                    completed: true,
+                    score: score,
+                    percentage: percentage,
+                    correctAnswers: correctAnswers,
+                    totalQuestions: questions.length,
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem('quizProgress', JSON.stringify(finalProgress));
+                
+                // Completar misión si corresponde
+                if (percentage >= 60) {
+                    completeMission(1); // Misión de completar examen
+                    if (percentage >= 80) {
+                        completeMission(2); // Misión de buen puntaje
+                    }
+                }
+                
+                // Mostrar pantalla de resultados
+                questionScreen.style.display = 'none';
+                explanationScreen.style.display = 'none';
+                resultsScreen.style.display = 'block';
+            }
+            
+            // Guardar progreso
+            function saveProgress() {
+                const progress = {
+                    quizId: 'LCS1D1',
+                    currentQuestion: currentQuestion,
+                    score: score,
+                    hintsUsed: hintsUsed,
+                    answers: answers,
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem('quizProgress', JSON.stringify(progress));
+            }
+            
+            // Reiniciar cuestionario
+            retryBtn.addEventListener('click', () => {
+                initializeQuiz();
+            });
+            
+            // Continuar a la biblioteca
+            continueBtn.addEventListener('click', () => {
+                window.location.href = 'LCS1D.html';
+            });
+            
+            // Volver a la biblioteca
+            backBtn.addEventListener('click', () => {
+                if (confirm('¿Estás seguro de que quieres volver? Perderás el progreso actual.')) {
+                    window.location.href = 'LCS1D.html';
+                }
+            });
+            
+            // Actualizar barra de progreso
+            function updateProgress() {
+                const progress = ((currentQuestion + 1) / questions.length) * 100;
+                progressFill.style.width = progress + '%';
+            }
+            
+            // Funciones auxiliares
+            function completeMission(missionId) {
+                // Lógica para completar misiones
+                console.log(`Misión ${missionId} completada`);
+                showToast(`¡Misión ${missionId} completada!`);
+            }
+            
+            function showToast(message, duration = 3000) {
+                toast.textContent = message;
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, duration);
+            }
+            
+            // Navegación y usuario
+            hamburgerMenu.addEventListener('click', () => {
+                userDropdown.classList.toggle('active');
+            });
+            
+            logoutBtn.addEventListener('click', () => {
+                import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
+                    signOut(window.auth).then(() => window.location.href = 'index.html');
+                });
+            });
+            
+            window.addEventListener('click', (event) => {
+                if (!event.target.closest('.navbar')) {
+                    userDropdown.classList.remove('active');
+                }
+            });
+            
+            // Floating icons
+            document.getElementById('btn-misiones').addEventListener('click', () => {
+                showToast('🎯 Misiones próximamente...');
+            });
+            
+            document.getElementById('btn-nivel').addEventListener('click', () => {
+                showToast('⭐ Nivel actual: Aprendiz');
+            });
+            
+            document.getElementById('btn-progreso').addEventListener('click', () => {
+                showToast('📊 Progreso general: 45%');
+            });
+        });
+    </script>
+</body>
+</html>
