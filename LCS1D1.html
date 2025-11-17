@@ -351,6 +351,10 @@
                         <div class="stat-number" id="time-spent">0:00</div>
                         <div class="stat-label">Tiempo empleado</div>
                     </div>
+                    <div class="stat">
+                        <div class="stat-number" id="current-streak">0</div>
+                        <div class="stat-label">Racha actual</div>
+                    </div>
                 </div>
                 
                 <div class="action-buttons" style="justify-content: center;">
@@ -382,6 +386,8 @@
             let hintsUsed = 0;
             let startTime = Date.now();
             let currentView = 'quiz'; // quiz, tip, theory, results
+            let currentStreak = 0; // Racha actual de respuestas correctas
+            let maxStreak = 0; // Mejor racha en este cuestionario
             
             // Consejos y teorías para cada pregunta
             const tips = [
@@ -757,6 +763,7 @@
             const correctAnswers = document.getElementById('correct-answers');
             const hintsUsedStat = document.getElementById('hints-used');
             const timeSpent = document.getElementById('time-spent');
+            const currentStreakStat = document.getElementById('current-streak');
             
             const toast = document.getElementById('toast');
             
@@ -768,10 +775,33 @@
                     questions = data;
                     totalQuestions.textContent = questions.length;
                     totalQuestionsHeader.textContent = questions.length;
+                    
+                    // Cargar progreso guardado si existe
+                    loadSavedProgress();
+                    
                     loadQuestion();
                 } catch (error) {
                     console.error('Error al cargar las preguntas:', error);
                     showToast('Error al cargar las preguntas. Por favor, recarga la página.');
+                }
+            }
+            
+            // Cargar progreso guardado
+            function loadSavedProgress() {
+                const savedProgress = localStorage.getItem('skopia_quiz_progress_LCS1D1');
+                if (savedProgress) {
+                    const progress = JSON.parse(savedProgress);
+                    currentQuestionIndex = progress.currentQuestionIndex || 0;
+                    score = progress.score || 0;
+                    hintsUsed = progress.hintsUsed || 0;
+                    currentStreak = progress.currentStreak || 0;
+                    maxStreak = progress.maxStreak || 0;
+                    
+                    // Si el cuestionario ya fue completado, ir directamente a resultados
+                    if (progress.completed) {
+                        showResults();
+                        return;
+                    }
                 }
             }
             
@@ -823,6 +853,7 @@
                 
                 // Actualizar progreso
                 updateProgress();
+                saveProgress();
             }
             
             // Seleccionar opción
@@ -853,8 +884,14 @@
                 
                 if (isCorrect) {
                     // Respuesta correcta
-                    score++;
+                    score += 30; // 30 puntos por respuesta correcta
                     currentScore.textContent = score;
+                    currentStreak++; // Incrementar racha
+                    
+                    // Actualizar mejor racha si es necesario
+                    if (currentStreak > maxStreak) {
+                        maxStreak = currentStreak;
+                    }
                     
                     feedbackContainer.className = 'feedback-container correct';
                     feedbackTitle.innerHTML = '<i class="fas fa-check-circle"></i> ¡Correcto!';
@@ -879,10 +916,14 @@
                     
                     // Actualizar progreso
                     updateProgress();
+                    saveProgress();
                 } else {
                     // Respuesta incorrecta
                     feedbackContainer.className = 'feedback-container incorrect';
                     feedbackTitle.innerHTML = '<i class="fas fa-times-circle"></i> Incorrecto';
+                    
+                    // Reiniciar racha actual
+                    currentStreak = 0;
                     
                     if (attempts === 1) {
                         // Primer intento incorrecto, permitir volver a intentar
@@ -930,6 +971,7 @@
                 }
                 
                 feedbackContainer.style.display = 'block';
+                saveProgress();
             }
             
             // Mostrar pista
@@ -939,6 +981,7 @@
                 hintsUsed++;
                 hintsUsedStat.textContent = hintsUsed;
                 hintBtn.disabled = true;
+                saveProgress();
             }
             
             // Mostrar consejo
@@ -1036,9 +1079,9 @@
                 quizContainer.style.display = 'none';
                 resultsContainer.style.display = 'block';
                 
-                const percentage = Math.round((score / questions.length) * 100);
-                resultsScore.textContent = `${score}/${questions.length}`;
-                correctAnswers.textContent = score;
+                const percentage = Math.round((score / 300) * 100); // 300 puntos máximos (10 preguntas × 30 puntos)
+                resultsScore.textContent = `${score}/300`;
+                correctAnswers.textContent = Math.round(score / 30); // Convertir puntos a respuestas correctas
                 
                 // Calcular tiempo empleado
                 const endTime = Date.now();
@@ -1046,6 +1089,9 @@
                 const minutes = Math.floor(timeDiff / 60);
                 const seconds = timeDiff % 60;
                 timeSpent.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Mostrar racha actual y mejor racha
+                currentStreakStat.textContent = currentStreak;
                 
                 // Mensaje y estrellas según resultado
                 if (percentage >= 90) {
@@ -1060,7 +1106,7 @@
                 }
                 
                 // Guardar progreso
-                saveProgress();
+                saveProgress(true); // true indica que el cuestionario está completado
             }
             
             // Actualizar progreso
@@ -1070,18 +1116,25 @@
             }
             
             // Guardar progreso
-            function saveProgress() {
+            function saveProgress(completed = false) {
                 const progress = {
                     quiz: 'LCS1D1',
+                    currentQuestionIndex: currentQuestionIndex,
                     score: score,
-                    total: questions.length,
-                    percentage: Math.round((score / questions.length) * 100),
+                    points: score, // Puntos totales (30 por respuesta correcta)
+                    percentage: Math.round((score / 300) * 100),
                     hintsUsed: hintsUsed,
-                    completed: true,
+                    currentStreak: currentStreak,
+                    maxStreak: maxStreak,
+                    completed: completed,
                     timestamp: new Date().toISOString()
                 };
                 
-                localStorage.setItem('skopia_quiz_progress', JSON.stringify(progress));
+                // Guardar progreso individual del cuestionario
+                localStorage.setItem('skopia_quiz_progress_LCS1D1', JSON.stringify(progress));
+                
+                // Actualizar progreso global en la biblioteca
+                updateGlobalProgress(progress);
                 
                 // Completar misiones si corresponde
                 if (progress.percentage >= 60) {
@@ -1090,6 +1143,50 @@
                         completeMission(2); // Misión de buen puntaje
                     }
                 }
+            }
+            
+            // Actualizar progreso global en la biblioteca
+            function updateGlobalProgress(quizProgress) {
+                // Obtener progreso global actual
+                let globalStats = JSON.parse(localStorage.getItem('skopia_global_stats')) || {
+                    totalCompleted: 0,
+                    averageScore: 0,
+                    bestStreak: 0,
+                    totalPoints: 0,
+                    quizProgress: {}
+                };
+                
+                // Actualizar progreso del cuestionario actual
+                globalStats.quizProgress['LCS1D1.html'] = {
+                    completed: quizProgress.completed,
+                    score: quizProgress.score,
+                    points: quizProgress.points,
+                    maxStreak: quizProgress.maxStreak
+                };
+                
+                // Recalcular estadísticas globales
+                const completedQuizzes = Object.values(globalStats.quizProgress).filter(q => q.completed).length;
+                globalStats.totalCompleted = completedQuizzes;
+                
+                const scores = Object.values(globalStats.quizProgress)
+                    .filter(q => q.completed)
+                    .map(q => q.points);
+                
+                if (scores.length > 0) {
+                    globalStats.averageScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+                } else {
+                    globalStats.averageScore = 0;
+                }
+                
+                globalStats.totalPoints = Object.values(globalStats.quizProgress)
+                    .reduce((sum, q) => sum + q.points, 0);
+                
+                // Calcular mejor racha global
+                const streaks = Object.values(globalStats.quizProgress).map(q => q.maxStreak || 0);
+                globalStats.bestStreak = Math.max(...streaks, 0);
+                
+                // Guardar estadísticas globales actualizadas
+                localStorage.setItem('skopia_global_stats', JSON.stringify(globalStats));
             }
             
             // Completar misión
