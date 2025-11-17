@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuestionario de Ideas Principales - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;500;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        window.auth = auth;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            console.log("Usuario autenticado:", user.email);
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+            --color-correcto: #4caf50;
+            --color-incorrecto: #f44336;
+            --color-azul: #2196f3;
+            --color-amarillo: #ffeb3b;
+            --float-color: var(--color-oliva-oscuro);
+            --float-color-hover: var(--color-oliva-medio);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Roboto', sans-serif; background: linear-gradient(135deg, var(--color-crema) 0%, #f5efe5 100%); color: var(--color-oliva-oscuro); min-height: 100vh; display: flex; flex-direction: column; }
+        
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; background-color: white; box-shadow: 0 2px 10px var(--color-sombra); position: relative; z-index: 1000; }
+        .back-btn { background: var(--color-oliva-oscuro); color: white; border: none; padding: 10px 15px; border-radius: 25px; font-size: 1rem; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; }
+        .back-btn:hover { background-color: var(--color-oliva-medio); transform: scale(1.05); }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--color-oliva-medio); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        .user-name { font-weight: 500; color: var(--color-oliva-oscuro); }
+        .hamburger { width: 30px; height: 25px; position: relative; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; }
+        .hamburger span { display: block; height: 4px; width: 100%; background-color: var(--color-oliva-oscuro); border-radius: 2px; transition: all 0.3s ease-in-out; }
+        .user-dropdown { position: absolute; top: 70px; right: 40px; background-color: white; border-radius: 8px; box-shadow: 0 4px 20px var(--color-sombra); overflow: hidden; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: opacity 0.3s, transform 0.3s, visibility 0.3s; z-index: 1000; }
+        .user-dropdown.active { opacity: 1; visibility: visible; transform: translateY(0); }
+        .user-dropdown a { display: block; padding: 15px 25px; text-decoration: none; color: var(--color-oliva-oscuro); font-weight: 500; transition: background-color 0.2s; }
+        .user-dropdown a:hover { background-color: var(--color-crema); }
+        .user-dropdown hr { border: none; border-top: 1px solid #eee; margin: 0; }
+
+        .progress-container { padding: 20px 40px; background: white; box-shadow: 0 2px 10px var(--color-sombra); }
+        .progress-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .progress-text { font-size: 1rem; color: var(--color-oliva-oscuro); }
+        .progress-score { font-family: 'Orbitron', sans-serif; font-size: 1.2rem; font-weight: 700; color: var(--color-oliva-medio); }
+        .progress-bar { height: 10px; background: var(--color-oliva-claro); border-radius: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--color-oliva-medio), var(--color-oliva-oscuro)); width: 0%; transition: width 0.5s ease; }
+
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; padding: 30px 20px; }
+        .quiz-container { width: 100%; max-width: 800px; background: white; border-radius: 16px; box-shadow: 0 8px 25px var(--color-sombra); overflow: hidden; margin-bottom: 30px; }
+        
+        .quiz-header { padding: 25px 30px; background: linear-gradient(135deg, var(--color-oliva-oscuro), var(--color-oliva-medio)); color: white; border-bottom: 3px solid rgba(255,255,255,0.1); }
+        .question-number { font-size: 1rem; opacity: 0.8; margin-bottom: 5px; }
+        .question-text { font-family: 'Patrick Hand', cursive; font-size: 1.5rem; line-height: 1.5; font-weight: 500; }
+        
+        .quiz-body { padding: 30px; }
+        .text-passage { background-color: var(--color-crema); padding: 20px; border-radius: 8px; margin-bottom: 25px; font-size: 1.1rem; line-height: 1.6; border-left: 4px solid var(--color-oliva-claro); max-height: 300px; overflow-y: auto; }
+        
+        .options-container { display: grid; gap: 15px; margin-bottom: 25px; }
+        .option-btn { background: white; border: 2px solid var(--color-oliva-claro); padding: 15px 20px; border-radius: 12px; font-size: 1rem; text-align: left; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 15px; position: relative; }
+        .option-btn:hover { border-color: var(--color-oliva-medio); transform: translateX(5px); }
+        .option-btn.selected { border-color: var(--color-azul); background-color: rgba(33, 150, 243, 0.1); }
+        .option-btn.correct { border-color: var(--color-correcto); background-color: rgba(76, 175, 80, 0.1); }
+        .option-btn.incorrect { border-color: var(--color-incorrecto); background-color: rgba(244, 67, 54, 0.1); }
+        .option-letter { display: flex; align-items: center; justify-content: center; width: 35px; height: 35px; border-radius: 50%; background: var(--color-oliva-claro); font-weight: bold; color: white; flex-shrink: 0; }
+        .option-btn.correct .option-letter { background: var(--color-correcto); }
+        .option-btn.incorrect .option-letter { background: var(--color-incorrecto); }
+        .option-icon { position: absolute; right: 15px; font-size: 1.5rem; }
+        .option-icon.correct { color: var(--color-correcto); }
+        .option-icon.incorrect { color: var(--color-incorrecto); }
+        
+        .hint-container { background-color: #fff8e1; border-left: 4px solid var(--color-amarillo); padding: 15px; border-radius: 8px; margin-bottom: 25px; display: none; }
+        .hint-title { font-weight: bold; color: var(--color-oliva-oscuro); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .hint-text { font-size: 1rem; line-height: 1.5; color: var(--color-oliva-oscuro); }
+        
+        .feedback-container { background-color: #f5f5f5; border-radius: 8px; padding: 20px; margin-bottom: 25px; display: none; }
+        .feedback-container.correct { background-color: rgba(76, 175, 80, 0.1); border-left: 4px solid var(--color-correcto); }
+        .feedback-container.incorrect { background-color: rgba(244, 67, 54, 0.1); border-left: 4px solid var(--color-incorrecto); }
+        .feedback-title { font-weight: bold; margin-bottom: 10px; font-size: 1.1rem; color: var(--color-oliva-oscuro); display: flex; align-items: center; gap: 8px; }
+        .feedback-text { font-size: 1rem; line-height: 1.5; color: var(--color-oliva-oscuro); margin-bottom: 15px; }
+        .trick-box { background-color: white; border: 1px dashed var(--color-oliva-claro); padding: 15px; border-radius: 8px; }
+        .trick-title { font-weight: bold; color: var(--color-oliva-medio); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .trick-text { font-size: 0.95rem; line-height: 1.5; color: var(--color-oliva-oscuro); }
+        
+        .action-buttons { display: flex; justify-content: space-between; gap: 15px; }
+        .btn { background: var(--color-oliva-oscuro); color: white; border: none; padding: 12px 25px; border-radius: 25px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; }
+        .btn:hover { background-color: var(--color-oliva-medio); transform: scale(1.05); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-secondary { background: var(--color-oliva-claro); }
+        .btn-secondary:hover { background-color: var(--color-oliva-medio); }
+        .btn-primary { background: var(--color-azul); }
+        .btn-primary:hover { background-color: #0d8bf2; }
+        
+        .tip-container { width: 100%; max-width: 800px; background: white; border-radius: 16px; box-shadow: 0 8px 25px var(--color-sombra); overflow: hidden; margin-bottom: 30px; display: none; }
+        .tip-header { padding: 25px 30px; background: linear-gradient(135deg, var(--color-azul), #0d8bf2); color: white; display: flex; align-items: center; gap: 15px; }
+        .tip-icon { font-size: 2rem; }
+        .tip-title { font-family: 'Patrick Hand', cursive; font-size: 1.8rem; }
+        .tip-body { padding: 30px; }
+        .tip-content { font-size: 1.1rem; line-height: 1.6; color: var(--color-oliva-oscuro); margin-bottom: 20px; }
+        .tip-example { background-color: var(--color-crema); border-left: 4px solid var(--color-azul); padding: 15px; border-radius: 8px; font-size: 1rem; line-height: 1.5; }
+        
+        .theory-container { width: 100%; max-width: 900px; background: white; border-radius: 16px; box-shadow: 0 8px 25px var(--color-sombra); overflow: hidden; margin-bottom: 30px; display: none; }
+        .theory-header { padding: 25px 30px; background: linear-gradient(135deg, var(--color-oliva-medio), var(--color-oliva-oscuro)); color: white; display: flex; align-items: center; gap: 15px; }
+        .theory-icon { font-size: 2rem; }
+        .theory-title { font-family: 'Patrick Hand', cursive; font-size: 1.8rem; }
+        .theory-body { padding: 30px; }
+        .theory-content { font-size: 1.1rem; line-height: 1.6; color: var(--color-oliva-oscuro); margin-bottom: 20px; }
+        .theory-section { margin-bottom: 30px; }
+        .theory-subtitle { font-family: 'Patrick Hand', cursive; font-size: 1.4rem; color: var(--color-oliva-medio); margin-bottom: 15px; }
+        .theory-points { list-style-type: none; }
+        .theory-point { margin-bottom: 15px; padding-left: 25px; position: relative; }
+        .theory-point:before { content: "•"; color: var(--color-oliva-medio); font-size: 1.5rem; position: absolute; left: 0; top: -5px; }
+        
+        .visual-tip { background: linear-gradient(135deg, var(--color-crema), #f5efe5); border-radius: 12px; padding: 25px; margin: 20px 0; border: 2px solid var(--color-oliva-claro); }
+        .visual-tip-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+        .visual-tip-icon { font-size: 2.5rem; color: var(--color-oliva-medio); }
+        .visual-tip-title { font-family: 'Patrick Hand', cursive; font-size: 1.3rem; color: var(--color-oliva-oscuro); }
+        .visual-tip-content { font-size: 1rem; line-height: 1.6; color: var(--color-oliva-oscuro); }
+        .visual-tip-steps { margin-top: 15px; }
+        .visual-tip-step { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+        .step-number { background: var(--color-oliva-medio); color: white; width: 25px; height: 25px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; font-size: 0.9rem; }
+        .step-text { flex: 1; font-size: 0.95rem; }
+        
+        .example-box { background-color: var(--color-crema); border-left: 5px solid var(--color-azul); padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .example-title { font-weight: bold; color: var(--color-oliva-oscuro); margin-bottom: 10px; font-size: 1.1rem; }
+        .example-text { font-size: 1rem; line-height: 1.5; margin-bottom: 10px; }
+        .example-analysis { background-color: white; border: 1px dashed var(--color-oliva-claro); padding: 15px; border-radius: 8px; margin-top: 10px; }
+        .analysis-title { font-weight: bold; color: var(--color-oliva-medio); margin-bottom: 8px; }
+        
+        .results-container { width: 100%; max-width: 800px; background: white; border-radius: 16px; box-shadow: 0 8px 25px var(--color-sombra); overflow: hidden; margin-bottom: 30px; display: none; text-align: center; }
+        .results-header { padding: 25px 30px; background: linear-gradient(135deg, var(--color-oliva-medio), var(--color-oliva-oscuro)); color: white; }
+        .results-title { font-family: 'Patrick Hand', cursive; font-size: 2rem; margin-bottom: 10px; }
+        .results-subtitle { font-size: 1.1rem; opacity: 0.9; }
+        .results-body { padding: 30px; }
+        .results-score { font-family: 'Orbitron', sans-serif; font-size: 3rem; font-weight: 700; color: var(--color-oliva-medio); margin-bottom: 15px; }
+        .results-message { font-size: 1.2rem; color: var(--color-oliva-oscuro); margin-bottom: 30px; }
+        .stars-container { font-size: 2rem; margin-bottom: 30px; }
+        .results-stats { display: flex; justify-content: space-around; margin-bottom: 30px; }
+        .stat { text-align: center; }
+        .stat-number { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; font-weight: 700; color: var(--color-oliva-medio); }
+        .stat-label { font-size: 0.9rem; color: var(--color-oliva-oscuro); }
+        
+        .attempts-indicator { display: flex; align-items: center; gap: 5px; margin-bottom: 15px; font-size: 0.9rem; color: var(--color-oliva-oscuro); }
+        .attempt-dot { width: 12px; height: 12px; border-radius: 50%; background-color: var(--color-oliva-claro); }
+        .attempt-dot.used { background-color: var(--color-incorrecto); }
+        
+        .floating-icons { position: fixed; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; z-index: 2000; }
+        .floating-icons button { background: var(--float-color); color: white; width: 50px; height: 50px; border-radius: 50%; border: none; font-size: 18px; display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0,0,0,0.12); cursor: pointer; transition: transform .15s ease, background .15s ease; }
+        .floating-icons button:hover { transform: scale(1.08); background: var(--float-color-hover); }
+        
+        .toast { position: fixed; right: 20px; bottom: 20px; background: #fff7e6; border-left: 6px solid var(--color-oliva-medio); padding: 16px 20px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); z-index: 3000; display: none; font-size: 1rem; max-width: 350px; }
+        .toast.show { display: block; }
+        
+        @media (max-width: 768px) {
+            .navbar { padding: 15px 20px; }
+            .progress-container { padding: 15px 20px; }
+            .quiz-header { padding: 20px; }
+            .question-text { font-size: 1.3rem; }
+            .quiz-body { padding: 20px; }
+            .text-passage { padding: 15px; font-size: 1rem; }
+            .action-buttons { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+            .theory-container { max-width: 100%; }
+            .theory-body { padding: 20px; }
+            .visual-tip { padding: 20px; }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <button class="back-btn" id="back-btn">
+            <i class="fas fa-arrow-left"></i> Volver
+        </button>
+        
+        <div class="user-info">
+            <div class="hamburger" id="hamburger-menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <div class="user-name">Usuario</div>
+            <div class="user-avatar" id="user-avatar">U</div>
+        </div>
+        
+        <div class="user-dropdown" id="user-dropdown">
+            <a href="cuenta.html">Mi Cuenta</a>
+            <a href="configuracion.html">Configuración</a>
+            <a href="notificaciones.html">Notificaciones</a>
+            <hr>
+            <a href="index.html" id="logout-btn">Cerrar Sesión</a>
+        </div>
+    </nav>
+
+    <div class="progress-container">
+        <div class="progress-info">
+            <div class="progress-text">Progreso del cuestionario</div>
+            <div class="progress-score"><span id="current-score">0</span>/<span id="total-questions">10</span></div>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+    </div>
+
+    <main class="main-content">
+        <!-- Video introductorio -->
+        <div class="video-container" id="video-container">
+            <div class="video-header">
+                <h2>Video Introductorio</h2>
+            </div>
+            <div class="video-wrapper">
+                <iframe width="470" height="404" src="https://edpuzzle.com/embed/media/691b9cb7a786fdf61851697c" frameborder="0" allowfullscreen></iframe>
+            </div>
+            <div class="action-buttons" style="justify-content: center; margin-top: 20px;">
+                <button class="btn btn-primary" id="skip-video-btn">
+                    Saltar Video <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Contenedor de preguntas -->
+        <div class="quiz-container" id="quiz-container" style="display: none;">
+            <div class="quiz-header">
+                <div class="question-number">Pregunta <span id="question-number">1</span> de <span id="total-questions-header">10</span></div>
+                <div class="question-text" id="question-text"></div>
+            </div>
+            
+            <div class="quiz-body">
+                <div class="text-passage" id="text-passage"></div>
+                
+                <div class="attempts-indicator">
+                    <span>Intentos:</span>
+                    <div class="attempt-dot" id="attempt-1"></div>
+                    <div class="attempt-dot" id="attempt-2"></div>
+                </div>
+                
+                <div class="options-container" id="options-container"></div>
+                
+                <div class="hint-container" id="hint-container">
+                    <div class="hint-title">
+                        <i class="fas fa-lightbulb"></i> Pista
+                    </div>
+                    <div class="hint-text" id="hint-text"></div>
+                </div>
+                
+                <div class="feedback-container" id="feedback-container">
+                    <div class="feedback-title" id="feedback-title"></div>
+                    <div class="feedback-text" id="feedback-text"></div>
+                    <div class="trick-box" id="trick-box">
+                        <div class="trick-title">
+                            <i class="fas fa-magic"></i> Truco
+                        </div>
+                        <div class="trick-text" id="trick-text"></div>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" id="hint-btn">
+                        <i class="fas fa-lightbulb"></i> Pedir pista
+                    </button>
+                    <button class="btn btn-primary" id="check-btn" disabled>
+                        <i class="fas fa-check"></i> Verificar respuesta
+                    </button>
+                    <button class="btn" id="next-btn" style="display: none;">
+                        Siguiente <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contenedor de consejos -->
+        <div class="tip-container" id="tip-container">
+            <div class="tip-header">
+                <div class="tip-icon">💡</div>
+                <div class="tip-title">Consejo práctico</div>
+            </div>
+            <div class="tip-body">
+                <div class="tip-content" id="tip-content"></div>
+                <div class="tip-example" id="tip-example"></div>
+                
+                <div class="action-buttons" style="margin-top: 20px;">
+                    <button class="btn" id="continue-to-theory-btn">
+                        Ver teoría <i class="fas fa-book"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contenedor de teoría -->
+        <div class="theory-container" id="theory-container">
+            <div class="theory-header">
+                <div class="theory-icon">📚</div>
+                <div class="theory-title">Teoría complementaria</div>
+            </div>
+            <div class="theory-body">
+                <div class="theory-content" id="theory-content"></div>
+                <div id="theory-extra-content"></div>
+                <ul class="theory-points" id="theory-points"></ul>
+                
+                <div class="action-buttons" style="margin-top: 20px;">
+                    <button class="btn" id="continue-quiz-btn">
+                        Continuar <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contenedor de juego -->
+        <div class="game-container" id="game-container" style="display: none;">
+            <div class="game-header">
+                <div class="game-icon">🎮</div>
+                <div class="game-title">Juego de Ideas Principales</div>
+            </div>
+            <div class="game-body">
+                <iframe allow="fullscreen; autoplay;" width="795" height="690" frameborder="0" src="https://es.educaplay.com/juego/26705164-ideas_clave_en_textos_academicos_y_cientificos.html"></iframe>
+            </div>
+            <div class="action-buttons" style="justify-content: center; margin-top: 20px;">
+                <button class="btn btn-primary" id="continue-after-game-btn">
+                    Continuar <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Contenedor de resultados -->
+        <div class="results-container" id="results-container">
+            <div class="results-header">
+                <div class="results-title">¡Cuestionario completado!</div>
+                <div class="results-subtitle">Banco 2: Textos Académicos</div>
+            </div>
+            <div class="results-body">
+                <div class="results-score" id="results-score">0/10</div>
+                <div class="results-message" id="results-message">¡Buen trabajo!</div>
+                <div class="stars-container" id="stars-container">⭐⭐⭐</div>
+                
+                <div class="results-stats">
+                    <div class="stat">
+                        <div class="stat-number" id="correct-answers">0</div>
+                        <div class="stat-label">Respuestas correctas</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number" id="hints-used">0</div>
+                        <div class="stat-label">Pistas usadas</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number" id="time-spent">0:00</div>
+                        <div class="stat-label">Tiempo empleado</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number" id="current-streak">0</div>
+                        <div class="stat-label">Racha actual</div>
+                    </div>
+                </div>
+                
+                <div class="action-buttons" style="justify-content: center;">
+                    <button class="btn" id="finish-btn">
+                        Finalizar <i class="fas fa-check-circle"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="floating-icons" aria-hidden="false">
+        <button id="btn-misiones" title="Misiones">🎯</button>
+        <button id="btn-nivel" title="Nivel actual">⭐</button>
+        <button id="btn-progreso" title="Progreso">📊</button>
+        <button id="btn-analisis" title="Análisis">📈</button>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Estado de la aplicación
+            let currentQuestionIndex = 0;
+            let score = 0;
+            let attempts = 0;
+            let selectedOption = null;
+            let questions = [];
+            let hintsUsed = 0;
+            let startTime = Date.now();
+            let currentView = 'video'; // video, quiz, tip, theory, game, results
+            let currentStreak = 0; // Racha actual de respuestas correctas
+            let maxStreak = 0; // Mejor racha en este cuestionario
+            
+            // Consejos y teorías para cada pregunta
+            const tips = [
+                {
+                    content: "En textos académicos y científicos, las ideas principales suelen estar relacionadas con hipótesis, teorías o conclusiones importantes. Presta atención a palabras como 'por lo tanto', 'en conclusión', 'los resultados demuestran', 'la investigación sugiere' que indican la idea central.",
+                    example: "En un texto sobre el cambio climático, si dice 'los resultados demuestran que la temperatura está aumentando', la idea principal es que la evidencia científica confirma el calentamiento global."
+                },
+                {
+                    content: "Los textos académicos a menudo presentan una estructura de problema-solución. La idea principal suele ser la solución o el hallazgo principal del estudio, no los detalles del proceso.",
+                    example: "Si un texto describe un experimento y dice 'el resultado fue un éxito rotundo', la idea principal es que el experimento tuvo éxito, no los pasos intermedios."
+                },
+                {
+                    content: "En textos científicos, las ideas principales pueden ser teorías fundamentales o principios universales. Busca conceptos como 'ley', 'principio', 'teoría', 'ley fundamental' que el autor destaca como base del argumento.",
+                    example: "Si el texto menciona 'la ley de la gravedad de Newton', la idea principal es que esta ley fundamental gobierna el movimiento de los cuerpos."
+                },
+                {
+                    "Las investigaciones académicas suelen tener una pregunta central o hipótesis principal que guía todo el texto. Busca frases interrogativas o la pregunta explícita que el autor formula.",
+                    example: "Si el texto comienza con '¿Cómo afecta el sueño a la memoria?', la idea principal es la relación entre sueño y memoria."
+                },
+                {
+                    "Los resultados y conclusiones son la parte donde se presenta la idea principal en muchos textos académicos. Presta atención a frases como 'los resultados demuestran', 'la conclusión es', 'se concluye que' que resumen el hallazgo principal.",
+                    example: "Si el texto termina con 'se concluye que la energía solar es la clave del futuro', la idea principal es sobre la energía solar como fuente de energía del futuro."
+                },
+                {
+                    "En textos sobre metodología científica, la idea principal suele ser el método o enfoque principal utilizado para la investigación. Busca términos como 'método', 'enfoque', 'estrategia', 'protocolo' que el autor destaca.",
+                   : "Si el texto describe 'el método científico se basa en la observación sistemática', la idea principal es que la observación sistemática es la base del método científico."
+                },
+                {
+                    "Los textos académicos a menudo comparan diferentes teorías o enfoques. La idea principal puede ser la teoría que el autor apoya o la comparación entre diferentes enfoques.",
+                    "Si el texto dice 'a diferencia del modelo anterior, el nuevo modelo es más preciso', la idea principal es que el nuevo modelo es más preciso que el anterior."
+                },
+                {
+                    "En textos sobre experimentos, la idea principal puede ser el propósito u objetivo principal del experimento, no solo el procedimiento.",
+                    "Si el texto menciona 'el objetivo del experimento es probar la hipótesis de que X afecta a Y', la idea principal es que el experimento busca probar esa relación causal."
+                },
+                {
+                    "En revisiones de literatura académica, la idea principal suele ser la evaluación crítica o la síntesis de varias fuentes sobre un tema. Busca frases como 'la revisión sugiere', 'los estudios coinciden en que' que indican el consenso académico.",
+                    example: "Si el texto dice 'la revisión de estudios sugiere que la teoría X es la más aceptada', la idea principal es que la teoría X tiene mayor aceptación académica."
+                }
+            ];
+            
+            const theories = [
+                {
+                    content: "La identificación de ideas principales en textos académicos y científicos requiere una comprensión profunda de la estructura argumentativa y del método científico. Esta habilidad te permite diferenciar entre la evidencia empírica, las hipótesis y las conclusiones, logrando una visión crítica y fundamentada de la información presentada. Es esencial para el éxito académico y la investigación científica.",
+                    visualTip: {
+                        title: "🔍 El Enfoque Problema-Solución",
+                        content: "Cuando el texto presenta un problema y luego una solución, la idea principal suele ser la solución o el hallazgo principal que resuelve el problema planteado.",
+                        steps: [
+                            "Identifica el problema o pregunta central del texto",
+                            "Busca la solución o respuesta que el autor presenta",
+                            "Verifica que esta solución aborda directamente el problema"
+                        ]
+                    },
+                    examples: [
+                        {
+                            text: "Los investigadores analizaron datos de 50 años y encontraron que el aumento de la temperatura global ha sido constante. Para combatir este problema, proponen una transición completa a energías renovables para 2050. Este plan ambicioso incluye la eliminación del carbón para 2050, la electrificación del transporte y la reforestación masiva.",
+                            analysis: "La idea principal es el plan integral para combatir el cambio climático para 2050."
+                        },
+                        {
+                            text: "Para mejorar la eficiencia energética en edificios, los ingenieros desarrollaron un nuevo material aislante que reduce la pérdida de calor en un 40%. Este material, compuesto de aerogel y nanopartículas, permite mantener temperaturas cómodas con menos consumo energético.",
+                            analysis: "La idea principal es que el nuevo material aislante mejora la eficiencia energética en edificios."
+                        }
+                    ],
+                    points: [
+                        "Identifica el problema o pregunta central del texto.",
+                        "Busca palabras clave que indican hallazgos: 'resultados demuestran', 'la conclusión es', 'se concluye que'.",
+                        "Presta atención a las hipótesis y teorías que el autor destaca como fundamentales.",
+                        "Distingue entre evidencia (datos) y conclusiones (interpretaciones).",
+                        "En experimentos, enfócate en el propósito y resultado principal, no solo en los pasos intermedios."
+                    ]
+                },
+                {
+                    content: "El método científico es un proceso sistemático para adquirir conocimiento que se basa en la observación, hipótesis, experimentación y análisis. Comprender este proceso es clave para evaluar críticamente la información científica y distinguir entre hechos y opiniones.",
+                    visualTip: {
+                        title: "🔬 El Método Científico",
+                        content: "Cuando el texto describe el proceso de investigación, la idea principal suele ser el método o enfoque científico utilizado.",
+                        steps: [
+                            "Identifica los pasos del método descrito",
+                            "Observa cómo se relacionan entre sí",
+                            "Identifica el propósito final del método"
+                        ]
+                    },
+                    examples: [
+                        {
+                            text: "El método científico se basa en la observación sistemática, formulación de hipótesis, experimentación controlada y análisis de resultados. Este proceso permite a los científicos validar o refutar teorías de manera objetiva.",
+                            analysis: "La idea principal es el método científico como proceso sistemático."
+                        },
+                        {
+                            text: "Para investigar la fotosíntesis, los científicos utilizan el método experimental: controlan variables como la intensidad de la luz, la temperatura y el CO2 para medir el crecimiento de las plantas. Este método les permite aislar y estudiar cada factor individual.",
+                            analysis: "La idea principal es el método experimental para estudiar la fotosíntesis."
+                        }
+                    ],
+                    points: [
+                        "Los textos científicos siguen una estructura lógica: observación → hipótesis → experimento → resultados → conclusión.",
+                        "Busca términos como 'método', 'experimento', 'resultados', 'conclusión'.",
+                        "La idea principal suele estar en la conclusión o en la hipótesis central.",
+                        "Presta atención a las teorías y leyes mencionadas que el autor destaca como fundamentales."
+                    ]
+                },
+                {
+                    content: "La investigación científica moderna a menudo implica la colaboración entre múltiples disciplinas. La idea principal puede ser el descubrimiento o hallazgo principal que resulta de esta colaboración interdisciplinaria.",
+                    visualTip: {
+                        title: "🔬 La Colaboración Interdisciplinaria",
+                        content: "Cuando el texto menciona colaboración entre diferentes campos, la idea principal suele ser el descubrimiento principal que resulta de esta colaboración.",
+                        steps: [
+                            "Identifica las disciplinas involucradas",
+                            "Busca el resultado o descubrimiento principal",
+                            "Observa cómo las disciplinas se complementan entre sí"
+                        ]
+                    },
+                    examples: [
+                        {
+                            text: "La colaboración entre biólogos y físicos cuánticos ha llevado al descubrimiento del mecanismo cuántico que explica cómo las partículas subatómicas interactúan con la materia a nivel cuántico. Este hallazgo fundamental ha revolucionado nuestra comprensión del mundo a nivel atómico.",
+                            analysis: "La idea principal es el descubrimiento del mecanismo cuántico subatómico."
+                        },
+                        {
+                            text: "La investigación conjunta entre informáticos y psicólogos ha revelado patrones de comportamiento humano que antes eran desconocidos. Este hallazgo ha permitido desarrollar nuevas estrategias para la educación y la salud mental.",
+                            analysis: "La idea principal es el descubrimiento de patrones de comportamiento humano."
+                        }
+                    ],
+                    points: [
+                        "Identifica las disciplinas mencionadas en el texto.",
+                        "Busca el resultado o descubrimiento principal que resulta de la colaboración.",
+                        "Observa cómo las disciplinas se complementan entre sí para lograr el hallazgo.",
+                        "Presta atención a frases como 'la colaboración ha revelado', 'el estudio conjunto ha demostrado', 'el hallazgo fundamental'."
+                    ]
+                },
+                {
+                    content: "Los textos académicos a menudo presentan debates o controversias sobre diferentes teorías o enfoques. La idea principal suele ser la postura o el argumento que el autor defiende o apoya.",
+                    visualTip: {
+                        title: "🔍 El Debate Académico",
+                        content: "Cuando el texto presenta un debate entre diferentes teorías, la idea principal suele ser la postura del autor o la teoría que tiene más apoyo en el texto.",
+                        steps: [
+                            "Identifica las teorías o enfoques en debate",
+                            "Busca la postura o argumento que el autor apoya",
+                            "Verifica cuál postura tiene más evidencia o apoyo en el texto"
+                        ]
+                    },
+                    examples: [
+                        {
+                            text: "El debate sobre si la inteligencia es principalmente innata o adquirida ha sido una de las discusiones más largas en psicología. Aunque ambos lados presentan evidencia, la investigación reciente apoya que la inteligencia es mayormente adquirida, con factores genéticos jugando un rol importante.",
+                            analysis: "La idea principal es que la inteligencia es mayormente adquirida."
+                        },
+                        {
+                            text: "En economía, el debate entre keynesianismo y monetarismo sigue vigente. Aunque ambas teorías tienen méritos, la evidencia reciente sobre la desigualdad económica sugiere que el keynesianismo es un enfoque más realista.",
+                            analysis: "La idea principal es que el keynesianismo es un enfoque más realista."
+                        }
+                    ],
+                    points: [
+                        "Identifica las teorías o enfoques mencionados en el debate.",
+                        "Busca la postura o argumento que el autor apoya con mayor fuerza.",
+                        "Presta atención a frases como 'la evidencia sugiere', 'la investigación apoya', 'los datos demuestran'."
+                    ]
+                },
+                {
+                    content: "Los textos académicos a menudo incluyen revisiones sistemáticas o meta-análisis de la literatura existente. La idea principal suele ser la síntesis o conclusión de esta revisión.",
+                    visualTip: {
+                        title: "📚 La Revisión Sistemática",
+                        content: "Cuando el texto es una revisión de otros estudios, la idea principal suele ser la síntesis o conclusión de la revisión.",
+                        steps: [
+                            "Identifica el tema de la revisión",
+                            "Busca la conclusión o síntesis principal",
+                            "Observa qué se considera el hallazgo más importante"
+                        ]
+                    },
+                    examples: [
+                        {
+                            text: "Una revisión sistemática de 50 estudios sobre el aprendizaje basado en gamificación encontró que este enfoque mejora significativamente la retención del conocimiento a largo plazo. Los investigadores concluyen que la gamificación es una estrategia educativa efectiva.",
+                            analysis: "La idea principal es que la gamificación mejora la retención del conocimiento."
+                        },
+                        {
+                            text: "El meta-análisis de la literatura sobre el impacto de la inteligencia artificial en la educación revela tendencias preocupantes sobre la dependencia tecnológica y la necesidad de un enfoque equilibrado entre tecnología y pedagogía.",
+                            analysis: "La idea principal es la necesidad de un enfoque equilibrado entre tecnología y pedagogía."
+                        }
+                    ],
+                    points: [
+                        "Identifica si el texto es una revisión de otros estudios.",
+                        "Busca la conclusión o síntesis principal de la revisión.",
+                        "Presta atención a frases como 'la revisión concluye', 'el meta-análisis revela', 'los estudios sugieren'."
+                    ]
+                }
+            ];
+            
+            // Elementos del DOM
+            const videoContainer = document.getElementById('video-container');
+            const quizContainer = document.getElementById('quiz-container');
+            const gameContainer = document.getElementById('game-container');
+            const tipContainer = document.getElementById('tip-container');
+            const theoryContainer = document.getElementById('theory-container');
+            const resultsContainer = document.getElementById('results-container');
+            
+            const questionNumber = document.getElementById('question-number');
+            const totalQuestionsHeader = document.getElementById('total-questions-header');
+            const questionText = document.getElementById('question-text');
+            const textPassage = document.getElementById('text-passage');
+            const optionsContainer = document.getElementById('options-container');
+            const hintContainer = document.getElementById('hint-container');
+            const hintText = document.getElementById('hint-text');
+            const feedbackContainer = document.getElementById('feedback-container');
+            const feedbackTitle = document.getElementById('feedback-title');
+            const feedbackText = document.getElementById('feedback-text');
+            const trickBox = document.getElementById('trick-box');
+            const trickText = document.getElementById('trick-text');
+            const hintBtn = document.getElementById('hint-btn');
+            const checkBtn = document.getElementById('check-btn');
+            const nextBtn = document-btn('next-btn');
+            const skipVideoBtn = document.getElementById('skip-video-btn');
+            const continueToTheoryBtn = document.getElementById('continue-to-theory-btn');
+            const continueQuizBtn = document.getElementById('continue-quiz-btn');
+            const continueAfterGameBtn = document.getElementById('continue-after-game-btn');
+            const backBtn = document.getElementById('back-btn');
+            const continueToTheoryBtn2 = document.getElementById('continue-to-theory-btn-2');
+            const continueQuizBtn2 = document.getElementById('continue-quiz-btn-2');
+            const finishBtn = document.getElementById('finish-btn');
+            const hamburgerMenu = document.getElementById('hamburger-menu');
+            const userDropdown = document.getElementById('user-dropdown');
+            const logoutBtn = document.getElementById('logout-btn');
+            const userAvatar = document.getElementById('user-avatar');
+            
+            const currentScore = document.getElementById('current-score');
+            const totalQuestions = document.getElementById('total-questions');
+            const progressFill = document.getElementById('progress-fill');
+            const attempt1 = document.getElementById('attempt-1');
+            const attempt2 = document.getElementById('attempt-2');
+            
+            const tipContent = document.getElementById('tip-content');
+            const tipExample = document.getElementById('tip-example');
+            const theoryContent = document.getElementById('theory-content');
+            const theoryPoints = document.getElementById('theory-points');
+            
+            const resultsScore = document.getElementById('results-score');
+            const resultsMessage = document.getElementById('results-message');
+            const starsContainer = document.getElementById('stars-container');
+            const correctAnswers = document.getElementById('correct-answers');
+            const hintsUsedStat = document.getElementById('hints-used');
+            const timeSpent = document.getElementById('time-spent');
+            const currentStreakStat = document.getElementById('current-streak');
+            
+            const toast = document.getElementById('toast');
+            
+            // Cargar preguntas desde JSON
+            async function loadQuestions() {
+                try {
+                    const response = await fetch('preguntas.json');
+                    const data = await response.json();
+                    // Filtrar preguntas de Q000011 a Q000020
+                    questions = data.filter(q => q.id >= 'Q000011' && q.id <= 'Q000020');
+                    totalQuestions.textContent = questions.length;
+                    totalQuestionsHeader.textContent = questions.length;
+                    loadQuestion();
+                } catch (error) {
+                    console.error('Error al cargar las preguntas:', error);
+                    showToast('Error al cargar las preguntas. Por favor, recarga la página.');
+                }
+            }
+            
+            // Cargar pregunta actual
+            function loadQuestion() {
+                if (currentQuestionIndex >= questions.length) {
+                    showResults();
+                    return;
+                }
+                
+                const question = questions[currentQuestionIndex];
+                questionNumber.textContent = currentQuestion + 1;
+                
+                // Separar correctamente el texto de la pregunta
+                const parts = question.pregunta.split('\n\n');
+                const textContent = parts[0]; // El texto principal
+                const actualQuestion = parts[1] || question.pregunta; // La pregunta real
+                
+                // Mostrar el texto en el contenedor beige
+                textPassage.textContent = textContent;
+                
+                // Mostrar solo la pregunta en el header
+                questionText.textContent = actualQuestion;
+                
+                // Cargar opciones
+                optionsContainer.innerHTML = '';
+                question.opciones.forEach((option, index) => {
+                    const optionBtn = document.createElement('button');
+                    optionBtn.className = 'option-btn';
+                    optionBtn.innerHTML = `
+                        <span class="option-letter">${String.fromCharCode(65 + index)}</span>
+                        <span>${option}</span>
+                    `;
+                    optionBtn.onclick = () => selectOption(index);
+                    optionsContainer.appendChild(optionBtn);
+                });
+                
+                // Resetear estado
+                selectedOption = null;
+                attempts = 0;
+                attempt1.classList.remove('used');
+                attempt2.classList.remove('used');
+                hintContainer.style.display = 'none';
+                feedbackContainer.style.display = 'none';
+                nextBtn.style.display = 'none';
+                checkBtn.style.display = 'block';
+                checkBtn.disabled = true;
+                hintBtn.disabled = false;
+                
+                // Actualizar progreso
+                updateProgress();
+            }
+            
+            // Seleccionar opción
+            function selectOption(index) {
+                selectedOption = index;
+                const options = document.querySelectorAll('.option-btn');
+                options.forEach((opt, i) => {
+                    opt.classList.toggle('selected', i === index);
+                });
+                checkBtn.disabled = false;
+            }
+            
+            // Verificar respuesta
+            function checkAnswer() {
+                if (selectedOption === null) return;
+                
+                attempts++;
+                const question = questions[currentQuestionIndex];
+                const isCorrect = selectedOption === question.respuestaCorrecta;
+                const options = document.querySelectorAll('.option-btn');
+                
+                // Actualizar indicador de intentos
+                if (attempts === 1) {
+                    attempt1.classList.add('used');
+                } else if (attempts === 2) {
+                    attempt2.classList.add('used');
+                }
+                
+                if (isCorrect) {
+                    // Respuesta correcta
+                    score += 30; // 30 puntos por respuesta correcta
+                    currentScore.textContent = score;
+                    currentStreak++; // Incrementar racha
+                    
+                    // Actualizar mejor racha si es necesario
+                    if (currentStreak > maxStreak) {
+                        maxStreak = currentStreak;
+                    }
+                    
+                    feedbackContainer.className = 'feedback-container correct';
+                    feedbackTitle.innerHTML = '<i class="fas fa-check-circle"></i> ¡Correcto!';
+                    feedbackText.textContent = question.explicacion;
+                    trickBox.style.display = 'none';
+                    
+                    // Mostrar todas las opciones con sus estados
+                    options.forEach((opt, i) => {
+                        if (i === question.respuestaCorrecta) {
+                            opt.classList.add('correct');
+                            opt.innerHTML += '<span class="option-icon correct">✓</span>';
+                        }
+                        opt.onclick = null; // Deshabilitar clics
+                    });
+                    
+                    // Deshabilitar botón de pista
+                    hintBtn.disabled = true;
+                    
+                    // Mostrar botón de siguiente
+                    nextBtn.style.display = 'block';
+                    checkBtn.style.display = 'none';
+                    
+                    // Actualizar progreso
+                    updateProgress();
+                } else {
+                    // Respuesta incorrecta
+                    feedbackContainer.className = 'feedback-container incorrect';
+                    feedbackTitle.innerHTML = '<i class="fas fa-times-circle"></i> Incorrecto';
+                    
+                    // Reiniciar racha actual
+                    currentStreak = 0;
+                    
+                    if (attempts === 1) {
+                        // Primer intento incorrecto, permitir volver a intentar
+                        feedbackText.textContent = 'Inténtalo de nuevo. Puedes usar una pista si lo necesitas.';
+                        trickBox.style.display = 'none';
+                        
+                        // Rehabilitar opciones para volver a intentar
+                        options.forEach((opt, i) => {
+                            if (i === selectedOption) {
+                                opt.classList.remove('incorrect');
+                                opt.querySelector('.option-icon')?.remove();
+                            }
+                            opt.onclick = () => selectOption(i);
+                        });
+                        
+                        selectedOption = null;
+                        checkBtn.disabled = true;
+                    } else {
+                        // Segundo intento incorrecto, mostrar explicación y truco
+                        feedbackText.textContent = question.explicacion;
+                        trickBox.style.display = 'block';
+                        trickText.textContent = question.truco;
+                        
+                        // Mostrar todas las opciones con sus estados
+                        options.forEach((opt, i) => {
+                            if (i === question.respuestaCorrecta) {
+                                opt.classList.add('correct');
+                                opt.innerHTML += '<span class="option-icon correct">✓</span>';
+                            } else if (i === selectedOption && !opt.classList.contains('correct')) {
+                                opt.classList.add('incorrect');
+                                if (!opt.querySelector('.option-icon')) {
+                                    opt.innerHTML += '<span class="option-icon incorrect">✗</span>';
+                                }
+                            }
+                            opt.onclick = null; // Deshabilitar clics
+                        }
+                        
+                        // Deshabilitar botón de pista
+                        hintBtn.disabled = true;
+                        
+                        // Mostrar botón de siguiente
+                        nextBtn.style.display = 'block';
+                        checkBtn.style.display = 'none';
+                    }
+                }
+                
+                feedbackContainer.style.display = 'block';
+            }
+            
+            // Mostrar pista
+            function showHint() {
+                hintContainer.style.display = 'block';
+                hintText.textContent = "Lee atentamente el texto y fíjate en las palabras clave que indican la idea principal. Busca la opción que capture la esencia del mensaje del autor.";
+                hintsUsed++;
+                hintsUsedStat.textContent = hintsUsed;
+                hintBtn.disabled = true;
+            }
+            
+            // Mostrar consejo
+            function showTip() {
+                currentView = 'tip';
+                quizContainer.style.display = 'none';
+                tipContainer.style.display = 'block';
+                
+                const tip = tips[currentQuestionIndex];
+                tipContent.textContent = tip.content;
+                tipExample.textContent = tip.example;
+            }
+            
+            // Mostrar teoría
+            function showTheory() {
+                currentView = 'theory';
+                tipContainer.style.display = 'none';
+                theoryContainer.style.display = 'block';
+                
+                const theory = theories[currentQuestionIndex];
+                theoryContent.textContent = theory.content;
+                
+                // Crear contenido adicional
+                const extraContent = document.getElementById('theory-extra-content');
+                extraContent.innerHTML = '';
+                
+                // Añadir tip visual
+                if (theory.visualTip) {
+                    const visualTipSection = document.createElement('div');
+                    visualTipSection.className = 'theory-section';
+                    visualTipSection.innerHTML = `
+                        <h3 class="theory-subtitle">🎯 Estrategia Clave</h3>
+                        <div class="visual-tip">
+                            <div class="visual-tip-header">
+                                <div class="visual-tip-icon">${theory.visualTip.title.split(' ')[0]}</div>
+                                <div class="visual-tip-title">${theory.visualTip.title.substring(2)}</div>
+                            </div>
+                            <div class="visual-tip-content">${theory.visualTip.content}</div>
+                            <div class="visual-tip-steps">
+                                ${theory.visualTip.steps.map((step, index) => `
+                                    <div class="visual-tip-step">
+                                        <div class="step-number">${index + 1}</div>
+                                        <div class="step-text">${step}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                    extraContent.appendChild(visualTipSection);
+                }
+                
+                // Añadir ejemplos
+                if (theory.examples) {
+                    const examplesSection = document.createElement('div');
+                    examplesSection.className = 'theory-section';
+                    examplesSection.innerHTML = `
+                        <h3 class="theory-subtitle">📚 Ejemplos Prácticos</h3>
+                        ${theory.examples.map(example => `
+                            <div class="example-box">
+                                <div class="example-title">Ejemplo:</div>
+                                <div class="example-text">${example.text}</div>
+                                <div class="example-analysis">
+                                    <div class="analysis-title">Análisis:</div>
+                                    ${example.analysis}
+                                </div>
+                            </div>
+                        `).join('')}
+                    `;
+                    extraContent.appendChild(examplesSection);
+                }
+                
+                // Añadir puntos clave
+                theoryPoints.innerHTML = '';
+                theory.points.forEach(point => {
+                    const li = document.createElement('li');
+                    li.className = 'theory-point';
+                    li.textContent = point;
+                    theoryPoints.appendChild(li);
+                });
+            }
+            
+            // Continuar con el cuestionario
+            function continueQuiz() {
+                currentView = 'quiz';
+                theoryContainer.style.display = 'none';
+                quizContainer.style.display = 'block';
+                
+                currentQuestionIndex++;
+                loadQuestion();
+            }
+            
+            // Mostrar juego
+            function showGame() {
+                currentView = 'game';
+                quizContainer.style.display = 'none';
+                gameContainer.style.display = 'block';
+                
+                const gameIframe = gameContainer.querySelector('iframe');
+                gameIframe.src = gameIframe.src;
+            }
+            
+            // Continuar después del juego
+            function continueAfterGame() {
+                currentView = 'quiz';
+                gameContainer.style.display = 'none';
+                quizContainer.style.display = 'block';
+                
+                currentQuestionIndex++;
+                loadQuestion();
+            }
+            
+            // Mostrar resultados
+            function showResults() {
+                currentView = 'results';
+                quizContainer.style.display = 'none';
+                resultsContainer.style.display = 'block';
+                
+                const percentage = Math.round((score / 300) * 100);
+                resultsScore.textContent = `${score}/300`;
+                correctAnswers.textContent = Math.round(score / 30); // Convertir puntos a respuestas correctas
+                
+                // Calcular tiempo empleado
+                const endTime = Date.now();
+                const timeDiff = Math.floor((endTime - startTime) / 1000);
+                const minutes = Math.floor(timeDiff / 60);
+                const seconds = timeDiff % 60;
+                timeSpent.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Mostrar racha actual y mejor racha
+                currentStreakStat.textContent = currentStreak;
+                
+                // Mensaje y estrellas según resultado
+                if (percentage >= 90) {
+                    resultsMessage.textContent = '¡Excelente! Has dominado el concepto de ideas principales.';
+                    starsContainer.innerHTML = '⭐⭐⭐';
+                } else if (percentage >= 70) {
+                    resultsMessage.textContent = '¡Buen trabajo! Tienes una comprensión sólida del tema.';
+                    starsContainer.innerHTML = '⭐⭐';
+                } else {
+                    resultsMessage.textContent = 'Sigue practicando. Repasa los conceptos clave para mejorar.';
+                    starsContainer.innerHTML = '⭐';
+                }
+                
+                // Guardar progreso
+                saveProgress(true); // true indica que el cuestionario está completado
+            }
+            
+            // Actualizar progreso
+            function updateProgress() {
+                const progress = ((currentQuestionIndex + (attempts > 0 ? 1 : 0)) / questions.length) * 100;
+                progressFill.style.width = progress + '%';
+            }
+            
+            // Guardar progreso
+            function saveProgress(completed = false) {
+                const progress = {
+                    quiz: 'LCS1D2',
+                    currentQuestionIndex: currentQuestionIndex,
+                    score: score,
+                    points: score, // Puntos totales (30 por respuesta correcta)
+                    percentage: Math.round((score / 300) * 100),
+                    hintsUsed: hintsUsed,
+                    currentStreak: currentStreak,
+                    maxStreak: maxStreak,
+                    completed: completed,
+                    timestamp: new Date().toISOString()
+                };
+                
+                // Guardar progreso individual del cuestionario
+                localStorage.setItem('skopia_quiz_progress_LCS1D2', JSON.stringify(progress));
+                
+                // Actualizar progreso global en la biblioteca
+                updateGlobalProgress(progress);
+                
+                // Completar misiones si corresponde
+                if (progress.percentage >= 60) {
+                    completeMission(1); // Misión de completar examen
+                    if (progress.percentage >= 80) {
+                        completeMission(2); // Misión de buen puntaje
+                    }
+                }
+            }
+            
+            // Actualizar progreso global en la biblioteca
+            function updateGlobalProgress(quizProgress) {
+                // Obtener estadísticas globales actuales
+                let globalStats = JSON.parse(localStorage.getItem('skopia_global_stats')) || {
+                    totalCompleted: 0,
+                    averageScore: 0,
+                    bestStreak: 0,
+                    totalPoints: 0,
+                    quizProgress: {}
+                };
+                
+                // Actualizar progreso del cuestionario actual
+                globalStats.quizProgress['LCS1D2.html'] = {
+                    completed: quizProgress.completed,
+                    score: quizProgress.score,
+                    points: quizProgress.points,
+                    maxStreak: quizProgress.maxStreak
+                };
+                
+                // Recalcular estadísticas globales
+                const completed = Object.values(globalStats.quizProgress).filter(q => q.completed).length;
+                globalStats.totalCompleted = completed;
+                
+                const scores = Object.values(globalStats.quizProgress)
+                    .filter(q => q.completed)
+                    .map(q => q.points);
+                
+                if (scores.length > 0) {
+                    globalStats.averageScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+                } else {
+                    globalStats.averageScore = 0;
+                }
+                
+                globalStats.totalPoints = Object.values(globalStats.quizProgress)
+                    .reduce((sum, q) => sum + q.points, 0);
+                
+                // Calcular mejor racha global
+                const streaks = Object.values(globalStats.quizProgress).map(q => q.maxStreak || 0);
+                globalStats.bestStreak = Math.max(...streaks, 0);
+                
+                // Actualizar la interfaz
+                document.getElementById('total-completed').textContent = globalStats.totalCompleted;
+                document.getElementById('average-score').textContent = `${globalStats.averageScore}/300`;
+                document.getElementById('best-streak').textContent = globalStats.bestStreak;
+                document.getElementById('total-points').textContent = globalStats.totalPoints;
+                
+                // Guardar estadísticas globales actualizadas
+                localStorage.setItem('skopia_global_stats', JSON.stringify(globalStats));
+            }
+            
+            // Completar misión
+            function completeMission(missionId) {
+                // Lógica para completar misiones
+                console.log(`Misión ${missionId} completada`);
+                showToast(`¡Misión ${missionId} completada!`);
+            }
+            
+            // Mostrar notificación
+            function showToast(message, duration = 3000) {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, duration);
+            }
+            
+            // Event listeners
+            skipVideoBtn.addEventListener('click', () => {
+                videoContainer.style.display = 'none';
+                quizContainer.style.display = 'block';
+                loadQuestion();
+            });
+            
+            hintBtn.addEventListener('click', showHint);
+            checkBtn.addEventListener('click', checkAnswer);
+            nextBtn.addEventListener('click', () => {
+                // Mostrar consejo después de la pregunta 1
+                if (currentQuestionIndex === 1) {
+                    showTip();
+                } else if (currentQuestionIndex === 3) {
+                    showTheory();
+                } else if (currentQuestionIndex === 5) {
+                    showGame();
+                } else {
+                    currentQuestionIndex++;
+                    loadQuestion();
+                }
+            });
+            
+            continueToTheoryBtn.addEventListener('click', showTheory);
+            continueQuizBtn.addEventListener('click', continueQuiz);
+            continueAfterGameBtn.addEventListener('click', continueAfterGame);
+            
+            backBtn.addEventListener('click', () => {
+                if (currentView === 'quiz') {
+                    if (confirm('¿Estás seguro de que quieres salir? Perderás tu progreso actual.')) {
+                        window.location.href = 'LCS1D.html';
+                    }
+                } else if (currentView === 'tip') {
+                    currentView = 'quiz';
+                    tipContainer.style.display = 'none';
+                    quizContainer.style.display = 'block';
+                } else if (currentView === 'theory') {
+                    currentView = 'tip';
+                    theoryContainer.style.display = 'none';
+                    tipContainer.style.display = 'block';
+                } else if (currentView === 'game') {
+                    currentView = 'quiz';
+                    quizContainer.style.display = 'block';
+                }
+            });
+            
+            finishBtn.addEventListener('click', () => {
+                window.location.href = 'LCS1D.html';
+            });
+            
+            // Event listeners para el menú de usuario
+            hamburgerMenu.addEventListener('click', () => {
+                userDropdown.classList.toggle('active');
+            });
+            
+            logoutBtn.addEventListener('click', () => {
+                import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
+                    signOut(window.auth).then(() => window.location.href = 'index.html');
+                });
+            });
+            
+            window.addEventListener('click', (event) => {
+                if (!event.target.closest('.navbar')) {
+                    userDropdown.classList.remove('active');
+                }
+            });
+            
+            // Floating icons
+            document.getElementById('btn-misiones').addEventListener('click', () => {
+                showToast('🎯 Misiones próximamente...');
+            });
+            
+            document.getElementById('btn-nivel').addEventListener('click', () => {
+                showToast('⭐ Nivel actual: Aprendiz');
+            });
+            
+            document.getElementById('btn-progreso').addEventListener('click', () => {
+                const globalStats = JSON.parse(localStorage.getItem('skopia_global_stats')) || { totalCompleted: 0, averageScore: 0, bestStreak: 0, totalPoints: 0, quizProgress: {} };
+                showToast(`📊 Progreso general: ${globalStats.totalCompleted}/5 cuestionarios completados`);
+            });
+            
+            document.getElementById('btn-analisis').addEventListener('click', () => {
+                showToast('📈 Análisis de rendimiento próximamente...');
+            });
+            
+            // Actualizar información del usuario cuando esté disponible
+            window.addEventListener('userReady', (e) => {
+                const user = e.detail.user;
+                if (user.displayName) {
+                    document.querySelector('.user-name').textContent = user.displayName;
+                    userAvatar.textContent = user.displayName.charAt(0).toUpperCase();
+                } else if (user.email) {
+                    const emailName = user.email.split('@')[0];
+                    document.querySelector('.user-name').textContent = emailName;
+                    userAvatar.textContent = emailName.charAt(0).toUpperCase();
+                }
+            });
+            
+            // Inicializar
+            loadQuestions();
+        });
+    </script>
+</body>
+</html>
