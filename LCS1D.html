@@ -380,20 +380,18 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Inicializar datos de progreso desde localStorage o valores predeterminados
-            let quizProgress = JSON.parse(localStorage.getItem('skopia_quiz_progress_all')) || {
-                'LCS1D1.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0 },
-                'LCS1D2.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0 },
-                'LCS1D3.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0 },
-                'LCS1D4.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0, locked: true },
-                'LCS1D5.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0, locked: true }
-            };
-
-            // Datos de estadísticas globales
             let globalStats = JSON.parse(localStorage.getItem('skopia_global_stats')) || {
                 totalCompleted: 0,
                 averageScore: 0,
                 bestStreak: 0,
-                totalPoints: 0
+                totalPoints: 0,
+                quizProgress: {
+                    'LCS1D1.html': { completed: false, score: 0, points: 0, progress: 0, maxStreak: 0 },
+                    'LCS1D2.html': { completed: false, score: 0, points: 0, progress: 0, maxStreak: 0 },
+                    'LCS1D3.html': { completed: false, score: 0, points: 0, progress: 0, maxStreak: 0 },
+                    'LCS1D4.html': { completed: false, score: 0, points: 0, progress: 0, maxStreak: 0, locked: true },
+                    'LCS1D5.html': { completed: false, score: 0, points: 0, progress: 0, maxStreak: 0, locked: true }
+                }
             };
 
             // Elementos del DOM
@@ -406,11 +404,11 @@
             // Actualizar estadísticas globales
             function updateGlobalStats() {
                 // Calcular cuestionarios completados
-                const completed = Object.values(quizProgress).filter(q => q.completed).length;
+                const completed = Object.values(globalStats.quizProgress).filter(q => q.completed).length;
                 globalStats.totalCompleted = completed;
 
                 // Calcular puntaje promedio (30 puntos por respuesta correcta, 10 preguntas = 300 puntos máximos)
-                const scores = Object.values(quizProgress)
+                const scores = Object.values(globalStats.quizProgress)
                     .filter(q => q.completed)
                     .map(q => q.points);
                 
@@ -420,12 +418,13 @@
                     globalStats.averageScore = 0;
                 }
 
-                // Calcular mejor racha
-                const streaks = Object.values(quizProgress).map(q => q.streak);
+                // Calcular mejor racha global
+                const streaks = Object.values(globalStats.quizProgress).map(q => q.maxStreak || 0);
                 globalStats.bestStreak = Math.max(...streaks, 0);
 
                 // Calcular puntos totales
-                globalStats.totalPoints = Object.values(quizProgress).reduce((sum, q) => sum + q.points, 0);
+                globalStats.totalPoints = Object.values(globalStats.quizProgress)
+                    .reduce((sum, q) => sum + q.points, 0);
 
                 // Actualizar la interfaz
                 document.getElementById('total-completed').textContent = globalStats.totalCompleted;
@@ -435,12 +434,15 @@
 
                 // Guardar estadísticas en localStorage
                 localStorage.setItem('skopia_global_stats', JSON.stringify(globalStats));
+                
+                // Actualizar estado de las tarjetas
+                updateCardStates();
             }
 
             // Actualizar estado de las tarjetas
             function updateCardStates() {
-                Object.keys(quizProgress).forEach((quizUrl, index) => {
-                    const quiz = quizProgress[quizUrl];
+                Object.keys(globalStats.quizProgress).forEach((quizUrl, index) => {
+                    const quiz = globalStats.quizProgress[quizUrl];
                     const cardIndex = index + 1;
                     const progressBar = document.getElementById(`progress-${cardIndex}`);
                     const button = document.getElementById(`btn-${cardIndex}`);
@@ -463,20 +465,23 @@
                 });
 
                 // Desbloquear cuestionarios basados en el progreso
-                if (quizProgress['LCS1D1.html'].completed) {
-                    quizProgress['LCS1D4.html'].locked = false;
+                if (globalStats.quizProgress['LCS1D1.html'].completed) {
+                    globalStats.quizProgress['LCS1D4.html'].locked = false;
                 }
-                if (quizProgress['LCS1D2.html'].completed) {
-                    quizProgress['LCS1D4.html'].locked = false;
+                if (globalStats.quizProgress['LCS1D2.html'].completed) {
+                    globalStats.quizProgress['LCS1D4.html'].locked = false;
                 }
-                if (quizProgress['LCS1D3.html'].completed) {
-                    quizProgress['LCS1D5.html'].locked = false;
+                if (globalStats.quizProgress['LCS1D3.html'].completed) {
+                    globalStats.quizProgress['LCS1D5.html'].locked = false;
                 }
+                
+                // Guardar cambios
+                localStorage.setItem('skopia_global_stats', JSON.stringify(globalStats));
             }
 
             // Función para iniciar cuestionario
             function startQuiz(url) {
-                const progress = quizProgress[url];
+                const progress = globalStats.quizProgress[url];
                 
                 if (progress.locked) {
                     showToast('🔒 Este cuestionario está bloqueado. Completa los anteriores para desbloquearlo.');
@@ -485,7 +490,7 @@
 
                 // Guardar progreso actual
                 localStorage.setItem('currentQuiz', url);
-                localStorage.setItem('skopia_quiz_progress_all', JSON.stringify(quizProgress));
+                localStorage.setItem('skopia_global_stats', JSON.stringify(globalStats));
                 
                 // Mostrar mensaje y redirigir
                 if (progress.progress > 0 && !progress.completed) {
@@ -544,7 +549,6 @@
 
             // Inicializar
             updateGlobalStats();
-            updateCardStates();
 
             // Animación de entrada para las tarjetas
             const cards = document.querySelectorAll('.quiz-card');
@@ -570,17 +574,11 @@
 
         // Hacer la función accesible globalmente
         window.startQuiz = function(url) {
-            const quizProgress = JSON.parse(localStorage.getItem('skopia_quiz_progress_all')) || {
-                'LCS1D1.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0 },
-                'LCS1D2.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0 },
-                'LCS1D3.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0 },
-                'LCS1D4.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0, locked: true },
-                'LCS1D5.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0, locked: true }
-            };
+            const progress = globalStats.quizProgress[url];
             
             const toast = document.getElementById('toast');
             
-            if (quizProgress[url].locked) {
+            if (progress.locked) {
                 toast.textContent = '🔒 Este cuestionario está bloqueado. Completa los anteriores para desbloquearlo.';
                 toast.classList.add('show');
                 setTimeout(() => toast.classList.remove('show'), 3000);
@@ -588,9 +586,9 @@
             }
 
             localStorage.setItem('currentQuiz', url);
-            localStorage.setItem('skopia_quiz_progress_all', JSON.stringify(quizProgress));
+            localStorage.setItem('skopia_global_stats', JSON.stringify(globalStats));
             
-            if (quizProgress[url].progress > 0 && !quizProgress[url].completed) {
+            if (progress.progress > 0 && !progress.completed) {
                 toast.textContent = '📚 Reanudando cuestionario anterior...';
             } else {
                 toast.textContent = '🚀 Iniciando nuevo cuestionario...';
