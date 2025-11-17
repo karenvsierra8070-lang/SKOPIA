@@ -170,7 +170,7 @@
             <div class="stat-label">Cuestionarios Completados</div>
         </div>
         <div class="stat-item">
-            <div class="stat-number" id="average-score">0%</div>
+            <div class="stat-number" id="average-score">0/300</div>
             <div class="stat-label">Puntaje Promedio</div>
         </div>
         <div class="stat-item">
@@ -211,7 +211,7 @@
                             </div>
                         </div>
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: 0%"></div>
+                            <div class="progress-fill" id="progress-1" style="width: 0%"></div>
                         </div>
                         <div class="card-footer">
                             <div class="difficulty">
@@ -219,7 +219,7 @@
                                 <span class="difficulty-star">★</span>
                                 <span class="difficulty-star">★</span>
                             </div>
-                            <button class="start-btn">
+                            <button class="start-btn" id="btn-1">
                                 Comenzar <i class="fas fa-arrow-right"></i>
                             </button>
                         </div>
@@ -246,7 +246,7 @@
                             </div>
                         </div>
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: 30%"></div>
+                            <div class="progress-fill" id="progress-2" style="width: 0%"></div>
                         </div>
                         <div class="card-footer">
                             <div class="difficulty">
@@ -254,8 +254,8 @@
                                 <span class="difficulty-star filled">★</span>
                                 <span class="difficulty-star">★</span>
                             </div>
-                            <button class="start-btn">
-                                Continuar <i class="fas fa-play"></i>
+                            <button class="start-btn" id="btn-2">
+                                Comenzar <i class="fas fa-play"></i>
                             </button>
                         </div>
                     </div>
@@ -281,7 +281,7 @@
                             </div>
                         </div>
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: 60%"></div>
+                            <div class="progress-fill" id="progress-3" style="width: 0%"></div>
                         </div>
                         <div class="card-footer">
                             <div class="difficulty">
@@ -289,8 +289,8 @@
                                 <span class="difficulty-star filled">★</span>
                                 <span class="difficulty-star filled">★</span>
                             </div>
-                            <button class="start-btn">
-                                Reanudar <i class="fas fa-redo"></i>
+                            <button class="start-btn" id="btn-3">
+                                Comenzar <i class="fas fa-redo"></i>
                             </button>
                         </div>
                     </div>
@@ -316,16 +316,16 @@
                             </div>
                         </div>
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: 0%"></div>
+                            <div class="progress-fill" id="progress-4" style="width: 0%"></div>
                         </div>
                         <div class="card-footer">
                             <div class="difficulty">
                                 <span class="difficulty-star filled">★</span>
                                 <span class="difficulty-star filled">★</span>
-                                <span class="difficulty-star">★</span>
+                                <span class="difficulty-star filled">★</span>
                             </div>
-                            <button class="start-btn">
-                                Desbloquear <i class="fas fa-lock"></i>
+                            <button class="start-btn" id="btn-4">
+                                Comenzar <i class="fas fa-lock"></i>
                             </button>
                         </div>
                     </div>
@@ -351,7 +351,7 @@
                             </div>
                         </div>
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: 0%"></div>
+                            <div class="progress-fill" id="progress-5" style="width: 0%"></div>
                         </div>
                         <div class="card-footer">
                             <div class="difficulty">
@@ -359,7 +359,7 @@
                                 <span class="difficulty-star filled">★</span>
                                 <span class="difficulty-star filled">★</span>
                             </div>
-                            <button class="start-btn">
+                            <button class="start-btn" id="btn-5">
                                 Comenzar <i class="fas fa-crown"></i>
                             </button>
                         </div>
@@ -379,13 +379,21 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Datos de progreso simulados
-            const quizProgress = {
-                'LCS1D1.html': { completed: false, score: 0, progress: 0 },
-                'LCS1D2.html': { completed: false, score: 75, progress: 30 },
-                'LCS1D3.html': { completed: false, score: 85, progress: 60 },
-                'LCS1D4.html': { completed: false, score: 0, progress: 0, locked: true },
-                'LCS1D5.html': { completed: false, score: 0, progress: 0 }
+            // Inicializar datos de progreso desde localStorage o valores predeterminados
+            let quizProgress = JSON.parse(localStorage.getItem('skopia_quiz_progress_all')) || {
+                'LCS1D1.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0 },
+                'LCS1D2.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0 },
+                'LCS1D3.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0 },
+                'LCS1D4.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0, locked: true },
+                'LCS1D5.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0, locked: true }
+            };
+
+            // Datos de estadísticas globales
+            let globalStats = JSON.parse(localStorage.getItem('skopia_global_stats')) || {
+                totalCompleted: 0,
+                averageScore: 0,
+                bestStreak: 0,
+                totalPoints: 0
             };
 
             // Elementos del DOM
@@ -395,17 +403,75 @@
             const closeBtn = document.getElementById('close-btn');
             const toast = document.getElementById('toast');
 
-            // Actualizar estadísticas
-            function updateStats() {
+            // Actualizar estadísticas globales
+            function updateGlobalStats() {
+                // Calcular cuestionarios completados
                 const completed = Object.values(quizProgress).filter(q => q.completed).length;
-                const scores = Object.values(quizProgress).map(q => q.score).filter(s => s > 0);
-                const average = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
-                const totalPoints = Object.values(quizProgress).reduce((sum, q) => sum + (q.completed ? 100 : 0), 0);
+                globalStats.totalCompleted = completed;
 
-                document.getElementById('total-completed').textContent = completed;
-                document.getElementById('average-score').textContent = average + '%';
-                document.getElementById('best-streak').textContent = '3';
-                document.getElementById('total-points').textContent = totalPoints;
+                // Calcular puntaje promedio (30 puntos por respuesta correcta, 10 preguntas = 300 puntos máximos)
+                const scores = Object.values(quizProgress)
+                    .filter(q => q.completed)
+                    .map(q => q.points);
+                
+                if (scores.length > 0) {
+                    globalStats.averageScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+                } else {
+                    globalStats.averageScore = 0;
+                }
+
+                // Calcular mejor racha
+                const streaks = Object.values(quizProgress).map(q => q.streak);
+                globalStats.bestStreak = Math.max(...streaks, 0);
+
+                // Calcular puntos totales
+                globalStats.totalPoints = Object.values(quizProgress).reduce((sum, q) => sum + q.points, 0);
+
+                // Actualizar la interfaz
+                document.getElementById('total-completed').textContent = globalStats.totalCompleted;
+                document.getElementById('average-score').textContent = `${globalStats.averageScore}/300`;
+                document.getElementById('best-streak').textContent = globalStats.bestStreak;
+                document.getElementById('total-points').textContent = globalStats.totalPoints;
+
+                // Guardar estadísticas en localStorage
+                localStorage.setItem('skopia_global_stats', JSON.stringify(globalStats));
+            }
+
+            // Actualizar estado de las tarjetas
+            function updateCardStates() {
+                Object.keys(quizProgress).forEach((quizUrl, index) => {
+                    const quiz = quizProgress[quizUrl];
+                    const cardIndex = index + 1;
+                    const progressBar = document.getElementById(`progress-${cardIndex}`);
+                    const button = document.getElementById(`btn-${cardIndex}`);
+
+                    if (progressBar && button) {
+                        // Actualizar barra de progreso
+                        progressBar.style.width = `${quiz.progress}%`;
+
+                        // Actualizar texto del botón
+                        if (quiz.locked) {
+                            button.innerHTML = 'Desbloquear <i class="fas fa-lock"></i>';
+                        } else if (quiz.completed) {
+                            button.innerHTML = 'Repetir <i class="fas fa-redo"></i>';
+                        } else if (quiz.progress > 0) {
+                            button.innerHTML = 'Continuar <i class="fas fa-play"></i>';
+                        } else {
+                            button.innerHTML = 'Comenzar <i class="fas fa-arrow-right"></i>';
+                        }
+                    }
+                });
+
+                // Desbloquear cuestionarios basados en el progreso
+                if (quizProgress['LCS1D1.html'].completed) {
+                    quizProgress['LCS1D4.html'].locked = false;
+                }
+                if (quizProgress['LCS1D2.html'].completed) {
+                    quizProgress['LCS1D4.html'].locked = false;
+                }
+                if (quizProgress['LCS1D3.html'].completed) {
+                    quizProgress['LCS1D5.html'].locked = false;
+                }
             }
 
             // Función para iniciar cuestionario
@@ -419,7 +485,7 @@
 
                 // Guardar progreso actual
                 localStorage.setItem('currentQuiz', url);
-                localStorage.setItem('quizProgress', JSON.stringify(quizProgress));
+                localStorage.setItem('skopia_quiz_progress_all', JSON.stringify(quizProgress));
                 
                 // Mostrar mensaje y redirigir
                 if (progress.progress > 0 && !progress.completed) {
@@ -473,11 +539,12 @@
             });
 
             document.getElementById('btn-progreso').addEventListener('click', () => {
-                showToast('📊 Progreso general: 45%');
+                showToast(`📊 Progreso general: ${globalStats.totalCompleted}/5 cuestionarios completados`);
             });
 
             // Inicializar
-            updateStats();
+            updateGlobalStats();
+            updateCardStates();
 
             // Animación de entrada para las tarjetas
             const cards = document.querySelectorAll('.quiz-card');
@@ -503,17 +570,17 @@
 
         // Hacer la función accesible globalmente
         window.startQuiz = function(url) {
-            const progress = {
-                'LCS1D1.html': { completed: false, score: 0, progress: 0 },
-                'LCS1D2.html': { completed: false, score: 75, progress: 30 },
-                'LCS1D3.html': { completed: false, score: 85, progress: 60 },
-                'LCS1D4.html': { completed: false, score: 0, progress: 0, locked: true },
-                'LCS1D5.html': { completed: false, score: 0, progress: 0 }
+            const quizProgress = JSON.parse(localStorage.getItem('skopia_quiz_progress_all')) || {
+                'LCS1D1.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0 },
+                'LCS1D2.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0 },
+                'LCS1D3.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0 },
+                'LCS1D4.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0, locked: true },
+                'LCS1D5.html': { completed: false, score: 0, progress: 0, streak: 0, points: 0, locked: true }
             };
-
+            
             const toast = document.getElementById('toast');
             
-            if (progress[url].locked) {
+            if (quizProgress[url].locked) {
                 toast.textContent = '🔒 Este cuestionario está bloqueado. Completa los anteriores para desbloquearlo.';
                 toast.classList.add('show');
                 setTimeout(() => toast.classList.remove('show'), 3000);
@@ -521,9 +588,9 @@
             }
 
             localStorage.setItem('currentQuiz', url);
-            localStorage.setItem('quizProgress', JSON.stringify(progress));
+            localStorage.setItem('skopia_quiz_progress_all', JSON.stringify(quizProgress));
             
-            if (progress[url].progress > 0 && !progress[url].completed) {
+            if (quizProgress[url].progress > 0 && !quizProgress[url].completed) {
                 toast.textContent = '📚 Reanudando cuestionario anterior...';
             } else {
                 toast.textContent = '🚀 Iniciando nuevo cuestionario...';
