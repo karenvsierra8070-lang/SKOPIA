@@ -1,813 +1,673 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Biblioteca - Skópia</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa de Rutas - Skópia</title>
 
-<!-- Google Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;500;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
 
-<!-- Font Awesome for Icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-<!-- Firebase SDKs -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
 
-const firebaseConfig = {
-    apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
-    authDomain: "skopia-aa786.firebaseapp.com",
-    projectId: "skopia-aa786",
-    storageBucket: "skopia-aa786.firebasestorage.app",
-    messagingSenderId: "719823055099",
-    appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-window.auth = auth;
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
 
-onAuthStateChanged(auth, (user) => {
-    if (!user) {
-        window.location.href = 'index.html';
-        return;
-    }
-    console.log("Usuario autenticado:", user.email);
-});
-</script>
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
 
-<style>
-:root {
-    --color-crema: #fdfbf5;
-    --color-oliva-claro: #bec092;
-    --color-oliva-medio: #5a6133;
-    --color-oliva-oscuro: #272b00;
-    --color-sombra: rgba(39, 43, 0, 0.1);
-    --float-color: var(--color-oliva-oscuro);
-    --float-color-hover: var(--color-oliva-medio);
-}
-
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); color: var(--color-oliva-oscuro); min-height: 100vh; display: flex; flex-direction: column; }
-
-/* --- BARRA DE NAVEGACIÓN PRINCIPAL (CORREGIDA) --- */
-.main-navigation {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-    width: 100%;
-}
-.main-navigation ul {
-    list-style: none;
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-}
-.main-navigation > ul > li {
-    position: relative;
-}
-.main-navigation > ul > li > span, .main-navigation > ul > li > a {
-    display: flex;
-    align-items: center;
-    padding: 18px 24px;
-    color: var(--color-oliva-oscuro);
-    text-decoration: none;
-    font-weight: 700;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    position: relative;
-    cursor: default;
-}
-.main-navigation > ul > li > a {
-    cursor: pointer;
-}
-.main-navigation > ul > li > a::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    width: 0;
-    height: 2px;
-    background-color: var(--color-oliva-medio);
-    transform: translateX(-50%);
-    transition: width 0.3s ease;
-}
-.main-navigation > ul > li:hover > a::after {
-    width: 80%;
-}
-.main-navigation > ul > li:hover > span, .main-navigation > ul > li:hover > a {
-    background-color: rgba(94, 97, 51, 0.1);
-    color: var(--color-oliva-medio);
-}
-.main-navigation .emoji {
-    margin-right: 8px;
-    font-size: 1.2em;
-}
-
-/* --- Dropdowns de primer nivel --- */
-.main-navigation > ul > li > .dropdown {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    min-width: 280px;
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
-    border-radius: 0 0 12px 12px;
-    overflow: visible;
-}
-.main-navigation > ul > li:hover > .dropdown {
-    display: block;
-}
-.main-navigation > ul > li > .dropdown > li {
-    width: 100%;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-    position: relative;
-}
-.main-navigation > ul > li > .dropdown > li:last-child {
-    border-bottom: none;
-}
-.main-navigation > ul > li > .dropdown > li > a, .main-navigation > ul > li > .dropdown > li > span {
-    padding: 14px 24px;
-    font-weight: 500;
-    font-size: 0.95rem;
-    display: flex;
-    align-items: center;
-    color: var(--color-oliva-oscuro);
-    text-decoration: none;
-    transition: all 0.2s ease;
-}
-.main-navigation > ul > li > .dropdown > li > span {
-    cursor: default;
-    font-weight: 700;
-}
-.main-navigation > ul > li > .dropdown > li:hover > a, .main-navigation > ul > li > .dropdown > li:hover > span {
-    background-color: rgba(94, 97, 51, 0.15);
-    color: var(--color-oliva-oscuro);
-}
-
-/* --- Sub-Dropdowns (anidados) --- */
-.main-navigation > ul > li > .dropdown > li > .sub-dropdown {
-    display: none;
-    position: absolute;
-    top: 0;
-    left: 100%;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    min-width: 250px;
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
-    border-radius: 0 12px 12px 0;
-}
-.main-navigation > ul > li > .dropdown > li:hover > .sub-dropdown {
-    display: block;
-}
-.main-navigation > ul > li > .dropdown > li > .sub-dropdown li a {
-    padding: 12px 20px;
-    font-weight: 400;
-    font-size: 0.9rem;
-}
-.main-navigation > ul > li > .dropdown > li > .sub-dropdown li a .emoji {
-    font-size: 1em;
-}
-
-/* --- NAVBAR DE USUARIO --- */
-.navbar { display: flex; justify-content: flex-end; align-items: center; padding: 15px 40px; background-color: white; box-shadow: 0 2px 10px var(--color-sombra); position: relative; z-index: 999; }
-.hamburger { width: 30px; height: 25px; position: relative; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; }
-.hamburger span { display: block; height: 4px; width: 100%; background-color: var(--color-oliva-oscuro); border-radius: 2px; transition: all 0.3s ease-in-out; }
-.user-dropdown { position: absolute; top: 70px; right: 40px; background-color: white; border-radius: 8px; box-shadow: 0 4px 20px var(--color-sombra); overflow: hidden; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: opacity 0.3s, transform 0.3s, visibility 0.3s; z-index: 1001; }
-.user-dropdown.active { opacity: 1; visibility: visible; transform: translateY(0); }
-.user-dropdown a { display: block; padding: 15px 25px; text-decoration: none; color: var(--color-oliva-oscuro); font-weight: 500; transition: background-color 0.2s; }
-.user-dropdown a:hover { background-color: var(--color-crema); }
-.user-dropdown hr { border: none; border-top: 1px solid #eee; margin: 0; }
-
-/* --- CONTENIDO PRINCIPAL --- */
-.main-content { flex-grow: 1; padding: 40px 20px; background-image: url('biblioteca.png'); background-size: cover; background-position: center; background-attachment: fixed; position: relative; }
-.main-content::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(253, 251, 245, 0.92); z-index: 1; }
-.container { max-width: 1200px; margin: 0 auto; position: relative; z-index: 2; }
-
-.search-container { background-color: var(--color-crema); border-radius: 16px; padding: 40px; box-shadow: 0 8px 25px var(--color-sombra); margin-bottom: 40px; text-align: center; }
-.search-title { font-family: 'Patrick Hand', cursive; font-size: 2.5rem; color: var(--color-oliva-oscuro); margin-bottom: 30px; }
-
-.filters-container { display: flex; justify-content: center; gap: 30px; margin-bottom: 30px; flex-wrap: wrap; }
-.filter-group { flex: 1; min-width: 250px; max-width: 400px; }
-.filter-label { display: block; margin-bottom: 10px; font-weight: 500; color: var(--color-oliva-oscuro); text-align: left; }
-.filter-select { width: 100%; padding: 12px 15px; border: 2px solid var(--color-oliva-claro); border-radius: 8px; background-color: white; font-size: 1rem; color: var(--color-oliva-oscuro); cursor: pointer; transition: border-color 0.3s; }
-.filter-select:focus { outline: none; border-color: var(--color-oliva-medio); }
-
-.search-button { background-color: var(--color-oliva-oscuro); color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; transition: background-color 0.3s; }
-.search-button:hover { background-color: var(--color-oliva-medio); }
-
-.results-container { background-color: var(--color-crema); border-radius: 16px; padding: 30px; box-shadow: 0 8px 25px var(--color-sombra); }
-.results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-.results-title { font-family: 'Patrick Hand', cursive; font-size: 2rem; color: var(--color-oliva-oscuro); }
-.results-count { font-size: 1rem; color: var(--color-oliva-medio); }
-.readings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-.reading-card { background-color: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px var(--color-sombra); transition: transform 0.3s, box-shadow 0.3s; cursor: pointer; }
-.reading-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(39, 43, 0, 0.15); }
-.reading-image { height: 180px; background-color: var(--color-oliva-claro); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.reading-image img { width: 100%; height: 100%; object-fit: cover; }
-.reading-content { padding: 20px; }
-.reading-title { font-family: 'Patrick Hand', cursive; font-size: 1.3rem; color: var(--color-oliva-oscuro); margin-bottom: 10px; }
-.reading-description { font-size: 0.9rem; color: var(--color-oliva-medio); margin-bottom: 15px; line-height: 1.4; }
-.reading-meta { display: flex; justify-content: space-between; align-items: center; }
-.reading-type { font-size: 0.8rem; color: var(--color-oliva-medio); background-color: var(--color-crema); padding: 5px 10px; border-radius: 20px; }
-
-/* --- Modal --- */
-.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 2000; overflow-y: auto; align-items: center; justify-content: center; padding: 20px 0;}
-.modal.active { display: flex; }
-.modal-content { background-color: white; border-radius: 16px; width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; position: relative; }
-.modal-header { padding: 20px 30px; border-bottom: 1px solid var(--color-oliva-claro); display: flex; justify-content: space-between; align-items: center; }
-.modal-title { font-family: 'Patrick Hand', cursive; font-size: 1.8rem; color: var(--color-oliva-oscuro); }
-.modal-close { background: none; border: none; font-size: 1.5rem; color: var(--color-oliva-medio); cursor: pointer; transition: color 0.3s; }
-.modal-close:hover { color: var(--color-oliva-oscuro); }
-.modal-body { padding: 30px; }
-.modal-text { font-size: 1.1rem; line-height: 1.7; color: var(--color-oliva-oscuro); margin-bottom: 20px; text-align: justify; }
-.modal-text .word { cursor: pointer; border-bottom: 1px dashed var(--color-oliva-claro); transition: background-color 0.2s; }
-.modal-text .word:hover { background-color: rgba(190, 192, 146, 0.2); }
-.modal-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; flex-wrap: wrap; gap: 15px; }
-.difficulty-selector { display: flex; gap: 10px; }
-.difficulty-btn { padding: 8px 15px; border: 2px solid var(--color-oliva-claro); background-color: white; color: var(--color-oliva-oscuro); border-radius: 8px; cursor: pointer; transition: all 0.3s; }
-.difficulty-btn.active { background-color: var(--color-oliva-medio); color: white; border-color: var(--color-oliva-medio); }
-.audio-controls { display: flex; align-items: center; gap: 15px; }
-.audio-btn { background-color: var(--color-oliva-oscuro); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color 0.3s; }
-.audio-btn:hover { background-color: var(--color-oliva-medio); }
-.audio-speed { font-size: 0.9rem; color: var(--color-oliva-medio); }
-
-/* --- Tooltip --- */
-.tooltip { position: absolute; background-color: var(--color-oliva-oscuro); color: white; padding: 10px 15px; border-radius: 8px; font-size: 0.9rem; z-index: 3000; max-width: 300px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; pointer-events: none; }
-.tooltip.active { opacity: 1; visibility: visible; }
-.tooltip-title { font-weight: 700; margin-bottom: 5px; }
-.tooltip-synonyms { font-style: italic; margin-top: 5px; }
-
-/* --- Iconos Flotantes y Toast --- */
-.floating-icons { position: fixed; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; z-index: 1999; }
-.floating-icons button { background: var(--float-color); color: white; width: 50px; height: 50px; border-radius: 50%; border: none; font-size: 18px; display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0,0,0,0.12); cursor: pointer; transition: transform .15s ease, background .15s ease; }
-.floating-icons button:hover { transform: scale(1.08); background: var(--float-color-hover); }
-.toast { position: fixed; right: 20px; bottom: 20px; background: #fff7e6; border-left: 6px solid var(--color-oliva-medio); padding: 16px 20px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); z-index: 3001; display: none; font-size: 1rem; max-width: 350px; }
-.toast.show { display: block; }
-
-/* --- Responsive --- */
-@media (max-width: 1024px) {
-    .main-navigation > ul > li > .dropdown {
-        position: static;
-        display: none;
-        width: 100%;
-        box-shadow: none;
-    }
-    .main-navigation > ul > li > .dropdown > li > .sub-dropdown {
-        position: static;
-        display: none;
-        width: 100%;
-        box-shadow: none;
-    }
-    .main-navigation > ul > li:hover > .dropdown {
-        display: none;
-    }
-    .main-navigation > ul > li.active > .dropdown {
-        display: block;
-    }
-    .main-navigation > ul > li > .dropdown > li.active > .sub-dropdown {
-        display: block;
-    }
-    .main-navigation > ul > li > a, .main-navigation > ul > li > span {
-        padding: 15px;
-    }
-    .search-title { font-size: 2rem; }
-    .filters-container { flex-direction: column; }
-    .filter-group { max-width: 100%; }
-    .readings-grid { grid-template-columns: 1fr; }
-    .modal-content { width: 95%; }
-}
-</style>
-</head>
-
-<body>
-<!-- BARRA DE NAVEGACIÓN PRINCIPAL (REESTRUCTURADA POR MÓDULOS) -->
-<nav class="main-navigation">
-    <ul>
-        <li>
-            <span><span class="emoji">🟦</span> MÓDULO 1 — Lectura Crítica</span>
-            <ul class="dropdown">
-                <li><a href="biblioteca.html"><span class="emoji">📚</span> Biblioteca</a></li>
-                <li>
-                    <span><span class="emoji">✍️</span> Talleres de escritura y análisis</span>
-                    <ul class="sub-dropdown">
-                        <li><a href="reescritura.html"><span class="emoji">🔄</span> Reescritura</a></li>
-                        <li><a href="conectores.html"><span class="emoji">🔗</span> Conectores lógicos</a></li>
-                        <li><a href="parrafos.html"><span class="emoji">📝</span> Ordenar párrafos</a></li>
-                        <li><a href="cohesion.html"><span class="emoji">🧩</span> Reparación por cohesión</a></li>
-                        <li><a href="123.html"><span class="emoji">1️⃣2️⃣3️⃣</span> Técnica 1-2-3</a></li>
-                    </ul>
-                </li>
-                <li>
-                    <span><span class="emoji">📈</span> Laboratorio de análisis gráfico</span>
-                    <ul class="sub-dropdown">
-                        <li><a href="lineal.html"><span class="emoji">📉</span> Gráfico de líneas</a></li>
-                        <li><a href="constucciongrafico.html"><span class="emoji">🛠️</span> Construcción de gráficos</a></li>
-                        <li><a href="correcciongrafico.html"><span class="emoji">✅</span> Corrección de gráfico</a></li>
-                        <li><a href="graficocomparar.html"><span class="emoji">⚖️</span> Comparación de gráficos</a></li>
-                        <li><a href="graficointerpretar.html"><span class="emoji">🤔</span> Interpretación de gráficos</a></li>
-                        <li><a href="selecciongrafico.html"><span class="emoji">👆</span> Seleccionar el gráfico correcto</a></li>
-                    </ul>
-                </li>
-                <li>
-                    <span><span class="emoji">⚡</span> Entrenador de velocidad de lectura</span>
-                    <ul class="sub-dropdown">
-                        <li><a href="timelectura.html"><span class="emoji">⏱️</span> Lectura cronometrada</a></li>
-                        <li><a href="minutelectura.html"><span class="emoji">⏳</span> Examen tiempo por pregunta</a></li>
-                        <li><a href="palabrasdesaparecidas.html"><span class="emoji">👻</span> Desaparecer palabras</a></li>
-                        <li><a href="relojlectura.html"><span class="emoji">⏰</span> Texto a contra reloj</a></li>
-                        <li><a href="velocimetrolec.html"><span class="emoji">🚀</span> Velocímetro de lectura</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </li>
-        <li>
-            <span><span class="emoji">🟩</span> MÓDULO 2 — Razonamiento Cuantitativo</span>
-            <ul class="dropdown">
-                <li>
-                    <span><span class="emoji">🧠</span> Laboratorio lógico-matemático</span>
-                    <ul class="sub-dropdown">
-                        <li><a href="crepatron.html"><span class="emoji">📈</span> Patrones crecientes</a></li>
-                        <li><a href="decrepatron.html"><span class="emoji">📉</span> Patrones decrecientes</a></li>
-                        <li><a href="secuencia.html"><span class="emoji">🔢</span> Secuencias visuales</a></li>
-                        <li><a href="argumento.html"><span class="emoji">🗣️</span> Corregir argumento inválido</a></li>
-                        <li><a href="falacias.html"><span class="emoji">❌</span> Detectar falacias</a></li>
-                        <li><a href="tablas.html"><span class="emoji">📊</span> Completar tablas incompletas</a></li>
-                        <li><a href="causaefecto.html"><span class="emoji">🎯</span> Relación causa-efecto</a></li>
-                        <li><a href="datatabla.html"><span class="emoji">🔄</span> Cambiar datos</a></li>
-                        <li><a href="contradicciones.html"><span class="emoji">⚠️</span> Contradicciones</a></li>
-                    </ul>
-                </li>
-                <li>
-                    <span><span class="emoji">🔢</span> Razonamiento lógico-matemático</span>
-                    <ul class="sub-dropdown">
-                        <li><a href="R1.html"><span class="emoji">🗺️</span> Mapa de laberintos matemáticos</a></li>
-                        <li><a href="R2.html"><span class="emoji">🔺</span> Triángulos mágicos para completar</a></li>
-                        <li><a href="R3.html"><span class="emoji">🤖</span> Algoritmo visualizado paso a paso</a></li>
-                        <li><a href="R4.html"><span class="emoji">🧩</span> Minijuegos de lógica simbólica</a></li>
-                        <li><a href="R5.html"><span class="emoji">🔢</span> Bloques de secuencias numéricas para ordenar</a></li>
-                        <li><a href="R6.html"><span class="emoji">🕵️</span> Detective matemático</a></li>
-                        <li><a href="R7.html"><span class="emoji">📊</span> Reconstrucción de tablas incompletas</a></li>
-                        <li><a href="R8.html"><span class="emoji">🔍</span> Desafío de patrones ocultos</a></li>
-                        <li><a href="R9.html"><span class="emoji">🧩</span> Sala de rompecódigos</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </li>
-        <li>
-            <span><span class="emoji">🟧</span> MÓDULO 3 — Competencias Ciudadanas</span>
-            <ul class="dropdown">
-                <li>
-                    <span><span class="emoji">⚖️</span> Dilemas + decisiones</span>
-                    <ul class="sub-dropdown">
-                        <li><a href="d1.html"><span class="emoji">🤔</span> Simulador de dilemas morales</a></li>
-                        <li><a href="d2.html"><span class="emoji">📖</span> Historias interactivas</a></li>
-                        <li><a href="d3.html"><span class="emoji">🤝</span> Reconstrucción de conflictos</a></li>
-                        <li><a href="d4.html"><span class="emoji">❓</span> ¿Qué harías tú?</a></li>
-                        <li><a href="d5.html"><span class="emoji">🏆</span> Retos éticos por niveles</a></li>
-                        <li><a href="d6.html"><span class="emoji">📚</span> Estudio de casos reales</a></li>
-                        <li><a href="d7.html"><span class="emoji">👥</span> Simulaciones grupales</a></li>
-                        <li><a href="d8.html"><span class="emoji">⚖️</span> Juzgado ciudadano</a></li>
-                        <li><a href="d9.html"><span class="emoji">🎤</span> Panel de debate simulado</a></li>
-                        <li><a href="d10.html"><span class="emoji">🗳️</span> Simulador de votación</a></li>
-                    </ul>
-                </li>
-                <li>
-                    <span><span class="emoji">🌍</span> Contextos sociales</span>
-                    <ul class="sub-dropdown">
-                        <li><a href="CS1.html"><span class="emoji">🗺️</span> Mapa de problemas sociales</a></li>
-                        <li><a href="CS2.html"><span class="emoji">📰</span> Análisis de noticias reales</a></li>
-                        <li><a href="CS3.html"><span class="emoji">📜</span> Sala de derechos y deberes</a></li>
-                        <li><a href="CS4.html"><span class="emoji">🏫</span> Minijuego de convivencia</a></li>
-                        <li><a href="CS5.html"><span class="emoji">❌</span> Historias de discriminación</a></li>
-                        <li><a href="CS6.html"><span class="emoji">❤️</span> Sala de empatía</a></li>
-                        <li><a href="CS7.html"><span class="emoji">🤝</span> Resolución de conflictos</a></li>
-                        <li><a href="CS8.html"><span class="emoji">🌳</span> Árboles de decisiones</a></li>
-                        <li><a href="CS9.html"><span class="emoji">👀</span> Observatorio de normas</a></li>
-                        <li><a href="C10.html"><span class="emoji">🎙️</span> Reconstrucción de discursos</a></li>
-                    </ul>
-                </li>
-                <li>
-                    <a href="archivo.html"><span class="emoji">🗂️</span> Archivos de casos reales</a>
-                    <ul class="sub-dropdown">
-                        <li><a href="archivo1.html"><span class="emoji">📄</span> Casos tipo Saber Pro reales</a></li>
-                        <li><a href="archivo2.html"><span class="emoji">🏢</span> Casos de empresas</a></li>
-                        <li><a href="archivo3.html"><span class="emoji">🌐</span> Casos sociales</a></li>
-                        <li><a href="archivo4.html"><span class="emoji">📈</span> Casos de datos ficticios</a></li>
-                        <li><a href="archivo5.html"><span class="emoji">⚖️</span> Casos legales simplificados</a></li>
-                        <li><a href="archivo6.html"><span class="emoji">🔬</span> Casos científicos</a></li>
-                        <li><a href="archivo7.html"><span class="emoji">❓</span> Casos ambiguos</a></li>
-                        <li><a href="archivo8.html"><span class="emoji">🤔</span> Casos contradictorios</a></li>
-                        <li><a href="archivo9.html"><span class="emoji">🔍</span> Casos para identificar sesgos</a></li>
-                        <li><a href="archivo10.html"><span class="emoji">🧩</span> Casos donde debes decidir qué dato falta</a></li>
-                    </ul>
-                </li>
-                <li>
-                    <span><span class="emoji">♟️</span> Laboratorio de estrategias</span>
-                    <ul class="sub-dropdown">
-                        <li><a href="E1.html"><span class="emoji">✏️</span> Cómo subrayar bien (con ejemplos)</a></li>
-                        <li><a href="E2.html"><span class="emoji">📚</span> Estrategia de resumen por capas</a></li>
-                        <li><a href="E3.html"><span class="emoji">👀</span> Técnica de lectura por bloques visuales</a></li>
-                        <li><a href="E4.html"><span class="emoji">🚫</span> Cómo ignorar distractores</a></li>
-                        <li><a href="E5.html"><span class="emoji">🏃‍♂️</span> Cómo leer rápido sin perder comprensión</a></li>
-                        <li><a href="E6.html"><span class="emoji">✔️</span> Checklist antes de responder un caso</a></li>
-                        <li><a href="E7.html"><span class="emoji">🚫</span> Cómo evitar conclusiones erróneas</a></li>
-                        <li><a href="E8.html"><span class="emoji">🕵️</span> Mini-guía de preguntas trampas</a></li>
-                        <li><a href="E9.html"><span class="emoji">🎯</span> Cómo identificar el propósito del autor</a></li>
-                        <li><a href="E10.html"><span class="emoji">💡</span> Cómo transformar evidencia en conclusión</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </li>
-        <li>
-            <span><span class="emoji">🟪</span> MÓDULO 4 — Inglés</span>
-            <ul class="dropdown">
-                <li>
-                    <span><span class="emoji">📖</span> Comprensión lectora en inglés</span>
-                    <ul class="sub-dropdown">
-                        <li><a href="CLI1.html"><span class="emoji">📖</span> Galería de textos graduados</a></li>
-                        <li><a href="CLI2.html"><span class="emoji">💡</span> ¿Cuál es la idea principal?</a></li>
-                        <li><a href="CLI3.html"><span class="emoji">🎯</span> Identificar la intención del autor</a></li>
-                        <li><a href="CLI4.html"><span class="emoji">📝</span> Ordenar párrafos</a></li>
-                        <li><a href="CLI5.html"><span class="emoji">🔗</span> Relacionar párrafos con títulos</a></li>
-                        <li><a href="CLI6.html"><span class="emoji">🧩</span> Completa el sentido del texto</a></li>
-                        <li><a href="CLI7.html"><span class="emoji">🤔</span> Inferencias y deducciones</a></li>
-                        <li><a href="CLI8.html"><span class="emoji">😊</span> Preguntas de tono y emoción</a></li>
-                        <li><a href="CLI9.html"><span class="emoji">🎯</span> Reconocer propósito de oraciones</a></li>
-                        <li><a href="CLI10.html"><span class="emoji">🚫</span> Falsos amigos</a></li>
-                    </ul>
-                </li>
-                <li>
-                    <span><span class="emoji">📖</span> Vocabulario en contexto</span>
-                    <ul class="sub-dropdown">
-                        <li><a href="vocab11.html"><span class="emoji">🔄</span> Sustituir palabras por sinónimos</a></li>
-                        <li><a href="vocab12.html"><span class="emoji">🧩</span> Completar frases</a></li>
-                        <li><a href="vocab13.html"><span class="emoji">🔗</span> Banco de conectores</a></li>
-                        <li><a href="vocab14.html"><span class="emoji">🤔</span> Rellenar huecos</a></li>
-                        <li><a href="vocab15.html"><span class="emoji">💬</span> Reemplazo de expresiones idiomáticas</a></li>
-                        <li><a href="vocab16.html"><span class="emoji">🔍</span> Identificar definiciones implícitas</a></li>
-                        <li><a href="vocab17.html"><span class="emoji">🎯</span> Selección de vocabulario preciso</a></li>
-                        <li><a href="vocab18.html"><span class="emoji">📂</span> Clasificador de palabras</a></li>
-                        <li><a href="vocab19.html"><span class="emoji">🚫</span> Detección de redundancias</a></li>
-                        <li><a href="vocab20.html"><span class="emoji">🤔</span> Diferencias entre palabras confusas</a></li>
-                    </ul>
-                </li>
-                <li>
-                    <span><span class="emoji">🔗</span> Cohesión en inglés</span>
-                    <ul class="sub-dropdown">
-                        <li><a href="coh1.html"><span class="emoji">👉</span> Identificar referentes</a></li>
-                        <li><a href="coh2.html"><span class="emoji">🔄</span> Reemplazo de pronombres</a></li>
-                        <li><a href="coh3.html"><span class="emoji">❌</span> Conectores mal usados</a></li>
-                        <li><a href="coh4.html"><span class="emoji">🔍</span> Encuentra el error de cohesión</a></li>
-                        <li><a href="coh5.html"><span class="emoji">📝</span> Reordenar oraciones</a></li>
-                        <li><a href="coh6.html"><span class="emoji">🔗</span> Relacionar frases con su función</a></li>
-                        <li><a href="coh7.html"><span class="emoji">✍️</span> Parafraseo guiado</a></li>
-                        <li><a href="coh8.html"><span class="emoji">✔️</span> Detectar afirmaciones V/F</a></li>
-                        <li><a href="coh9.html"><span class="emoji">🔗</span> Conexión entre partes del texto</a></li>
-                        <li><a href="coh10.html"><span class="emoji">📄</span> Seleccionar el resumen adecuado</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </li>
-    </ul>
-</nav>
-
-<nav class="navbar">
-    <div class="hamburger" id="hamburger-menu"><span></span><span></span><span></span></div>
-    <div class="user-dropdown" id="user-dropdown">
-        <a href="cuenta.html">Mi Cuenta</a>
-        <a href="configuracion.html">Configuración</a>
-        <a href="notificaciones.html">Notificaciones</a>
-        <hr>
-        <a href="index.html" id="logout-btn">Cerrar Sesión</a>
-    </div>
-</nav>
-
-<main class="main-content">
-    <div class="container">
-        <div class="search-container">
-            <h1 class="search-title">¿Qué quieres buscar?</h1>
-            <div class="filters-container">
-                <div class="filter-group">
-                    <label class="filter-label" for="objective-filter">Según objetivo:</label>
-                    <select id="objective-filter" class="filter-select">
-                        <option value="">Seleccionar objetivo</option>
-                        <option value="ideas-principales">Identificar ideas principales</option>
-                        <option value="ideas-secundarias">Identificar ideas secundarias</option>
-                        <option value="datos">Identificar datos</option>
-                        <option value="argumentos">Identificar argumentos</option>
-                        <option value="intenciones">Identificar intenciones del autor</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label class="filter-label" for="type-filter">Según tipo de texto:</label>
-                    <select id="type-filter" class="filter-select">
-                        <option value="">Seleccionar tipo de texto</option>
-                        <option value="noticias">Noticias</option>
-                        <option value="columnas">Columnas</option>
-                        <option value="cuentos">Cuentos</option>
-                        <option value="articulos">Artículos</option>
-                        <option value="graficos">Gráficos</option>
-                        <option value="instrucciones">Instrucciones</option>
-                    </select>
-                </div>
-            </div>
-            <button id="search-btn" class="search-button">Buscar</button>
-        </div>
-
-        <div class="results-container" id="results-container" style="display: none;">
-            <div class="results-header">
-                <h2 class="results-title">Resultados de búsqueda</h2>
-                <span class="results-count" id="results-count">0 resultados encontrados</span>
-            </div>
-            <div class="readings-grid" id="readings-grid">
-                <!-- Las tarjetas de lectura se insertarán aquí dinámicamente -->
-            </div>
-        </div>
-    </div>
-</main>
-
-<!-- Modal para el texto completo -->
-<div class="modal" id="reading-modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title" id="modal-title">Título del texto</h3>
-            <button class="modal-close" id="modal-close">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div class="modal-text" id="modal-text">
-                <!-- El texto se insertará aquí dinámicamente -->
-            </div>
-            <div class="modal-controls">
-                <div class="difficulty-selector">
-                    <button class="difficulty-btn active" data-level="facil">Fácil</button>
-                    <button class="difficulty-btn" data-level="medio">Medio</button>
-                    <button class="difficulty-btn" data-level="dificil">Difícil</button>
-                </div>
-                <div class="audio-controls">
-                    <button class="audio-btn" id="play-btn"><i class="fas fa-play"></i></button>
-                    <span class="audio-speed" id="audio-speed">Velocidad: 1x</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Tooltip para palabras -->
-<div class="tooltip" id="word-tooltip">
-    <div class="tooltip-title" id="tooltip-title">Palabra</div>
-    <div class="tooltip-definition" id="tooltip-definition">Definición</div>
-    <div class="tooltip-synonyms" id="tooltip-synonyms">Sinónimos: palabra1, palabra2</div>
-</div>
-
-<div class="floating-icons" aria-hidden="false">
-    <button id="btn-misiones" title="Misiones">🎯</button>
-    <button id="btn-nivel" title="Nivel actual">⭐</button>
-    <button id="btn-progreso" title="Progreso">📊</button>
-</div>
-
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    // --- ELEMENTOS DEL DOM ---
-    const hamburgerMenu = document.getElementById('hamburger-menu');
-    const userDropdown = document.getElementById('user-dropdown');
-    const logoutBtn = document.getElementById('logout-btn');
-    const searchBtn = document.getElementById('search-btn');
-    const objectiveFilter = document.getElementById('objective-filter');
-    const typeFilter = document.getElementById('type-filter');
-    const resultsContainer = document.getElementById('results-container');
-    const readingsGrid = document.getElementById('readings-grid');
-    const resultsCount = document.getElementById('results-count');
-    const modal = document.getElementById('reading-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const modalText = document.getElementById('modal-text');
-    const modalClose = document.getElementById('modal-close');
-    const playBtn = document.getElementById('play-btn');
-    const tooltip = document.getElementById('word-tooltip');
-    const tooltipTitle = document.getElementById('tooltip-title');
-    const tooltipDefinition = document.getElementById('tooltip-definition');
-    const tooltipSynonyms = document.getElementById('tooltip-synonyms');
-    const toast = document.getElementById('toast');
-
-    // --- VARIABLES DE ESTADO ---
-    let allData = null; // Almacenará los textos y el diccionario del JSON
-    let currentReading = null;
-    let currentDifficulty = 'facil';
-    let speechSynthesis = window.speechSynthesis;
-    let speechUtterance = null;
-
-    // --- FUNCIONES PRINCIPALES ---
-
-    // Cargar datos desde el archivo JSON
-    async function loadData() {
-        try {
-            const response = await fetch('textos_biblioteca.json');
-            if (!response.ok) {
-                throw new Error(`Error HTTP: ${response.status}`);
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
             }
-            allData = await response.json();
-            console.log("Datos cargados correctamente.");
-        } catch (error) {
-            console.error("No se pudo cargar el archivo JSON:", error);
-            showToast("Error al cargar los contenidos. Por favor, recarga la página.");
-        }
-    }
-
-    // Mostrar notificación toast
-    function showToast(message) {
-        toast.textContent = message;
-        toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), 3000);
-    }
-
-    // Renderizar los resultados de la búsqueda
-    function renderResults(readings) {
-        readingsGrid.innerHTML = '';
-        if (readings.length === 0) {
-            readingsGrid.innerHTML = '<p style="text-align:center; color: var(--color-oliva-medio);">No se encontraron lecturas para esta combinación.</p>';
-            return;
-        }
-        readings.forEach(reading => {
-            const card = document.createElement('div');
-            card.className = 'reading-card';
-            card.innerHTML = `
-                <div class="reading-image">
-                    <img src="${reading.image}" alt="${reading.title}">
-                </div>
-                <div class="reading-content">
-                    <h3 class="reading-title">${reading.title}</h3>
-                    <p class="reading-description">${reading.description}</p>
-                    <div class="reading-meta">
-                        <span class="reading-type">${typeFilter.options[typeFilter.selectedIndex].text}</span>
-                    </div>
-                </div>
-            `;
-            card.addEventListener('click', () => openModal(reading));
-            readingsGrid.appendChild(card);
+            initializePage(user);
         });
-        resultsCount.textContent = `${readings.length} resultados encontrados`;
-    }
 
-    // Abrir el modal con el texto seleccionado
-    function openModal(reading) {
-        if (!allData) { showToast("Los datos aún no se han cargado."); return; }
-        currentReading = reading;
-        currentDifficulty = 'facil';
-        modalTitle.textContent = reading.title;
-        updateModalText();
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    }
-
-    // Actualizar el texto del modal según la dificultad
-    function updateModalText() {
-        if (!currentReading) return;
-        const text = currentReading.levels[currentDifficulty];
-        const words = text.split(/(\s+)/);
-        modalText.innerHTML = words.map(word => {
-            if (/\s+/.test(word)) return word;
-            const cleanWord = word.toLowerCase().replace(/[.,!?;:]/g, '');
-            if (allData.diccionario[cleanWord]) {
-                return `<span class="word" data-word="${cleanWord}">${word}</span>`;
-            }
-            return `<span class="word">${word}</span>`;
-        }).join('');
-
-        modalText.querySelectorAll('.word').forEach(wordSpan => {
-            wordSpan.addEventListener('click', handleWordClick);
-        });
-    }
-
-    // Manejar el clic en una palabra para mostrar el tooltip
-    function handleWordClick(event) {
-        const wordKey = event.target.dataset.word;
-        if (!allData || !allData.diccionario[wordKey]) return;
-        
-        const entry = allData.diccionario[wordKey];
-        tooltipTitle.textContent = wordKey;
-        tooltipDefinition.textContent = entry.definicion;
-        tooltipSynonyms.textContent = `Sinónimos: ${entry.sinonimos}`;
-        
-        const rect = event.target.getBoundingClientRect();
-        tooltip.style.left = `${rect.left + window.scrollX}px`;
-        tooltip.style.top = `${rect.bottom + window.scrollY + 5}px`;
-        tooltip.classList.add('active');
-    }
-
-    // Cerrar el modal
-    function closeModal() {
-        modal.classList.remove('active');
-        document.body.style.overflow = '';
-        if (speechSynthesis.speaking) {
-            speechSynthesis.cancel();
-        }
-        currentReading = null;
-        tooltip.classList.remove('active');
-    }
-
-    // --- EVENT LISTENERS ---
-    hamburgerMenu.addEventListener('click', () => userDropdown.classList.toggle('active'));
-    logoutBtn.addEventListener('click', () => {
-        import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
-            signOut(window.auth).then(() => window.location.href = 'index.html');
-        });
-    });
-    window.addEventListener('click', (event) => { if (!event.target.closest('.navbar')) userDropdown.classList.remove('active'); });
-
-    searchBtn.addEventListener('click', () => {
-        const objective = objectiveFilter.value;
-        const type = typeFilter.value;
-        if (!objective || !type) {
-            showToast("Por favor, selecciona ambos filtros.");
-            return;
-        }
-        if (!allData) { showToast("Espere un momento, los datos se están cargando."); return; }
-
-        const readings = allData.textos[objective] && allData.textos[objective][type] ? allData.textos[objective][type] : [];
-        renderResults(readings);
-        resultsContainer.style.display = 'block';
-        resultsContainer.scrollIntoView({ behavior: 'smooth' });
-    });
-
-    modalClose.addEventListener('click', closeModal);
-    modal.addEventListener('click', (event) => { if (event.target === modal) closeModal(); });
-    
-    document.querySelectorAll('.difficulty-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelector('.difficulty-btn.active').classList.remove('active');
-            btn.classList.add('active');
-            currentDifficulty = btn.dataset.level;
-            updateModalText();
-        });
-    });
-
-    playBtn.addEventListener('click', () => {
-        if (speechSynthesis.speaking) {
-            speechSynthesis.cancel();
-            playBtn.innerHTML = '<i class="fas fa-play"></i>';
-            return;
-        }
-        const text = modalText.innerText;
-        speechUtterance = new SpeechSynthesisUtterance(text);
-        speechUtterance.lang = 'es-ES';
-        speechUtterance.onend = () => { playBtn.innerHTML = '<i class="fas fa-play"></i>'; };
-        speechSynthesis.speak(speechUtterance);
-        playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-    });
-
-    document.addEventListener('click', (event) => {
-        if (!event.target.classList.contains('word')) {
-            tooltip.classList.remove('active');
-        }
-    });
-
-    document.getElementById('btn-misiones').addEventListener('click', () => showToast('🎯 Misiones próximamente...'));
-    document.getElementById('btn-nivel').addEventListener('click', () => showToast('⭐ Nivel actual: Aprendiz'));
-    document.getElementById('btn-progreso').addEventListener('click', () => showToast('📊 Progreso general: 45%'));
-    
-    // --- MANEJO DE NAVEGACIÓN MÓVIL ---
-    const navItems = document.querySelectorAll('.main-navigation > ul > li');
-    navItems.forEach(item => {
-        const link = item.querySelector('span');
-        if (link && item.querySelector('.dropdown')) {
-            link.addEventListener('click', (e) => {
-                if (window.innerWidth <= 1024) {
-                    e.preventDefault();
-                    item.classList.toggle('active');
-                }
+        function initializePage(user) {
+            const logoutBtn = document.getElementById('logout-btn');
+            logoutBtn.addEventListener('click', () => {
+                signOut(auth).then(() => window.location.href = 'index.html');
             });
         }
-        // JS for nested dropdowns on mobile
-        const subItems = item.querySelectorAll('.dropdown > li');
-        subItems.forEach(subItem => {
-            const subLink = subItem.querySelector('span');
-            if(subLink && subItem.querySelector('.sub-dropdown')) {
-                subLink.addEventListener('click', (e) => {
-                    if (window.innerWidth <= 1024) {
-                        e.preventDefault();
-                        subItem.classList.toggle('active');
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+
+            /* color for floating icons matched to start-route btn */
+            --float-color: var(--color-oliva-oscuro);
+            --float-color-hover: var(--color-oliva-medio);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--color-crema) 0%, #f5efe5 100%);
+            color: var(--color-oliva-oscuro);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- BARRA DE NAVEGACIÓN PRINCIPAL (REESTRUCTURADA) --- */
+        /* --- BARRA DE NAVEGACIÓN PRINCIPAL (REESTRUCTURADA POR MÓDULOS) --- */
+        .main-navigation {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(15px);
+@@ -95,10 +95,10 @@
+            justify-content: center;
+            flex-wrap: wrap; /* Para que se adapte en móviles */
+        }
+        .main-navigation ul li {
+        .main-navigation > ul > li {
+            position: relative;
+        }
+        .main-navigation ul li a, .main-navigation ul li span {
+        .main-navigation > ul > li > span, .main-navigation > ul > li > a {
+            display: flex;
+            align-items: center;
+            padding: 18px 24px;
+@@ -108,11 +108,12 @@
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .main-navigation ul li span {
+            cursor: default;
+        }
+        .main-navigation ul li a::after {
+        .main-navigation > ul > li > a {
+            cursor: pointer;
+        }
+        .main-navigation > ul > li > a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+@@ -123,50 +124,85 @@
+            transform: translateX(-50%);
+            transition: width 0.3s ease;
+        }
+        .main-navigation ul li:hover > a::after {
+        .main-navigation > ul > li:hover > a::after {
+            width: 80%;
+        }
+        .main-navigation ul li:hover > a, .main-navigation ul li:hover > span {
+        .main-navigation > ul > li:hover > span, .main-navigation > ul > li:hover > a {
+            background-color: rgba(94, 97, 51, 0.1);
+            color: var(--color-oliva-medio);
+        }
+        .main-navigation ul li .dropdown {
+        .main-navigation .emoji {
+            margin-right: 8px;
+            font-size: 1.2em;
+        }
+
+        /* --- Dropdowns de primer nivel --- */
+        .main-navigation > ul > li > .dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            min-width: 280px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+            border-radius: 0 0 12px 12px;
+            overflow: hidden;
+            overflow: visible;
+        }
+        .main-navigation ul li:hover .dropdown {
+        .main-navigation > ul > li:hover > .dropdown {
+            display: block;
+        }
+        .main-navigation ul li .dropdown li {
+        .main-navigation > ul > li > .dropdown > li {
+            width: 100%;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            position: relative;
+        }
+        .main-navigation ul li .dropdown li:last-child {
+        .main-navigation > ul > li > .dropdown > li:last-child {
+            border-bottom: none;
+        }
+        .main-navigation ul li .dropdown li a {
+        .main-navigation > ul > li > .dropdown > li > a, .main-navigation > ul > li > .dropdown > li > span {
+            padding: 14px 24px;
+            font-weight: 400;
+            font-weight: 500;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            color: var(--color-oliva-oscuro);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .main-navigation > ul > li > .dropdown > li > span {
+            cursor: default;
+            font-weight: 700;
+        }
+        .main-navigation ul li .dropdown li a:hover {
+        .main-navigation > ul > li > .dropdown > li:hover > a, .main-navigation > ul > li > .dropdown > li:hover > span {
+            background-color: rgba(94, 97, 51, 0.15);
+            color: var(--color-oliva-oscuro);
+        }
+        .main-navigation .emoji {
+            margin-right: 8px;
+            font-size: 1.2em;
+        
+        /* --- Sub-Dropdowns (anidados) --- */
+        .main-navigation > ul > li > .dropdown > li > .sub-dropdown {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            min-width: 250px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+            border-radius: 0 12px 12px 0;
+        }
+        .main-navigation > ul > li > .dropdown > li:hover > .sub-dropdown {
+            display: block;
+        }
+        .main-navigation > ul > li > .dropdown > li > .sub-dropdown li a {
+            padding: 12px 20px;
+            font-weight: 400;
+            font-size: 0.9rem;
+        }
+        .main-navigation > ul > li > .dropdown > li > .sub-dropdown li a .emoji {
+            font-size: 1em;
+        }
+
+        /* --- NAVBAR DE USUARIO (EXISTENTE) --- */
+@@ -239,7 +275,7 @@
+        .logo-centro {
+            display: block;
+            margin: 0 auto 20px auto;
+            height: 150px; /* Aumentado de 80px a 150px */
+            height: 150px;
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+@@ -401,25 +437,25 @@
+            right: 90px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 420px; /* Aumentado de 360px a 420px */
+            width: 420px;
+            max-height: 75vh;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+            overflow: auto;
+            padding: 24px; /* Aumentado de 18px a 24px */
+            padding: 24px;
+            z-index: 2100;
+            display: none;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.2rem; /* Aumentado el tamaño de fuente */
+            font-size: 1.2rem;
+        }
+        .panel-box.active { display: block; }
+
+        .panel-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+        .panel-header h3 { margin:0; font-size:1.6rem; color:var(--color-oliva-oscuro); } /* Aumentado de 1.2rem a 1.6rem */
+        .close-panel { background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--color-oliva-medio); } /* Aumentado de 1.1rem a 1.4rem */
+        .panel-header h3 { margin:0; font-size:1.6rem; color:var(--color-oliva-oscuro); }
+        .close-panel { background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--color-oliva-medio); }
+
+        .mission-row { padding:12px; border-radius:8px; margin-bottom:10px; background:#fffaf0; box-shadow: 0 2px 6px rgba(0,0,0,0.04); display:flex; justify-content:space-between; align-items:center; } /* Aumentado padding */
+        .mission-row { padding:12px; border-radius:8px; margin-bottom:10px; background:#fffaf0; box-shadow: 0 2px 6px rgba(0,0,0,0.04); display:flex; justify-content:space-between; align-items:center; }
+        .mission-row.completed { opacity:0.6; text-decoration:line-through; background:#f0fff4; }
+
+        .toast {
+@@ -428,32 +464,41 @@
+            bottom: 20px;
+            background: #fff7e6;
+            border-left: 6px solid var(--color-oliva-medio);
+            padding: 16px 20px; /* Aumentado padding */
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            z-index: 3000;
+            display: none;
+            font-size: 1.1rem; /* Aumentado tamaño de fuente */
+            max-width: 400px; /* Añadido ancho máximo */
+            font-size: 1.1rem;
+            max-width: 400px;
+        }
+        .toast.show { display: block; }
+
+        .info { font-family: 'Roboto', sans-serif; color:var(--color-oliva-oscuro); font-size:1.1rem; margin-bottom:12px; } /* Aumentado tamaño de fuente y margen */
+        .info { font-family: 'Roboto', sans-serif; color:var(--color-oliva-oscuro); font-size:1.1rem; margin-bottom:12px; }
+
+        @media (max-width: 1024px) {
+            .main-navigation ul li .dropdown {
+            .main-navigation > ul > li > .dropdown {
+                position: static;
+                display: none;
+                width: 100%;
+                box-shadow: none;
+            }
+            .main-navigation ul li:hover .dropdown {
+                display: none; /* Oculto por defecto en móvil */
+            .main-navigation > ul > li > .dropdown > li > .sub-dropdown {
+                position: static;
+                display: none;
+                width: 100%;
+                box-shadow: none;
+            }
+            .main-navigation > ul > li:hover > .dropdown {
+                display: none;
+            }
+            .main-navigation > ul > li.active > .dropdown {
+                display: block;
+            }
+            .main-navigation ul li.active .dropdown {
+                display: block; /* Se muestra con la clase 'active' en móvil */
+            .main-navigation > ul > li > .dropdown > li.active > .sub-dropdown {
+                display: block;
+            }
+            .main-navigation ul li a, .main-navigation ul li span {
+            .main-navigation > ul > li > a, .main-navigation > ul > li > span {
+                padding: 15px;
+            }
+            .main-content { flex-direction: column; }
+@@ -470,109 +515,191 @@
+    <!-- BARRA DE NAVEGACIÓN PRINCIPAL (REESTRUCTURADA POR MÓDULOS) -->
+    <nav class="main-navigation">
+        <ul>
+            <li><a href="biblioteca.html"><span class="emoji">📚</span> Biblioteca</a></li>
+            <li>
+                <span><span class="emoji">📖</span> Lectura Crítica</span>
+                <span><span class="emoji">🟦</span> MÓDULO 1 — Lectura Crítica</span>
+                <ul class="dropdown">
+                    <li><a href="tallersesiones.html"><span class="emoji">✍️</span> Talleres de escritura</a></li>
+                    <li><a href="reescritura.html"><span class="emoji">🔄</span> Reescritura</a></li>
+                    <li><a href="conectores.html"><span class="emoji">🔗</span> Conectores lógicos</a></li>
+                    <li><a href="parrafos.html"><span class="emoji">📝</span> Ordenar párrafos</a></li>
+                    <li><a href="cohesion.html"><span class="emoji">🧩</span> Reparación por cohesión</a></li>
+                    <li><a href="123.html"><span class="emoji">1️⃣2️⃣3️⃣</span> Técnica 1-2-3</a></li>
+                    <li><a href="velocidad.html"><span class="emoji">⚡</span> Entrenador de velocidad</a></li>
+                    <li><a href="biblioteca.html"><span class="emoji">📚</span> Biblioteca</a></li>
+                    <li>
+                        <span><span class="emoji">✍️</span> Talleres de escritura y análisis</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="reescritura.html"><span class="emoji">🔄</span> Reescritura</a></li>
+                            <li><a href="conectores.html"><span class="emoji">🔗</span> Conectores lógicos</a></li>
+                            <li><a href="parrafos.html"><span class="emoji">📝</span> Ordenar párrafos</a></li>
+                            <li><a href="cohesion.html"><span class="emoji">🧩</span> Reparación por cohesión</a></li>
+                            <li><a href="123.html"><span class="emoji">1️⃣2️⃣3️⃣</span> Técnica 1-2-3</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">📈</span> Laboratorio de análisis gráfico</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="lineal.html"><span class="emoji">📉</span> Gráfico de líneas</a></li>
+                            <li><a href="constucciongrafico.html"><span class="emoji">🛠️</span> Construcción de gráficos</a></li>
+                            <li><a href="correcciongrafico.html"><span class="emoji">✅</span> Corrección de gráfico</a></li>
+                            <li><a href="graficocomparar.html"><span class="emoji">⚖️</span> Comparación de gráficos</a></li>
+                            <li><a href="graficointerpretar.html"><span class="emoji">🤔</span> Interpretación de gráficos</a></li>
+                            <li><a href="selecciongrafico.html"><span class="emoji">👆</span> Seleccionar el gráfico correcto</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">⚡</span> Entrenador de velocidad de lectura</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="timelectura.html"><span class="emoji">⏱️</span> Lectura cronometrada</a></li>
+                            <li><a href="minutelectura.html"><span class="emoji">⏳</span> Examen tiempo por pregunta</a></li>
+                            <li><a href="palabrasdesaparecidas.html"><span class="emoji">👻</span> Desaparecer palabras</a></li>
+                            <li><a href="relojlectura.html"><span class="emoji">⏰</span> Texto a contra reloj</a></li>
+                            <li><a href="velocimetrolec.html"><span class="emoji">🚀</span> Velocímetro de lectura</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <span><span class="emoji">🔢</span> Razonamiento Cuantitativo</span>
+                <span><span class="emoji">🟩</span> MÓDULO 2 — Razonamiento Cuantitativo</span>
+                <ul class="dropdown">
+                    <li><a href="labgrafico.html"><span class="emoji">📈</span> Laboratorio de análisis gráfico</a></li>
+                    <li><a href="lineal.html"><span class="emoji">📉</span> Gráfico de líneas</a></li>
+                    <li><a href="constucciongrafico.html"><span class="emoji">🛠️</span> Construcción de gráficos</a></li>
+                    <li><a href="correcciongrafico.html"><span class="emoji">✅</span> Corrección de gráfico</a></li>
+                    <li><a href="graficocomparar.html"><span class="emoji">⚖️</span> Comparación de gráficos</a></li>
+                    <li><a href="graficointerpretar.html"><span class="emoji">🤔</span> Interpretación de gráficos</a></li>
+                    <li><a href="selecciongrafico.html"><span class="emoji">👆</span> Seleccionar el gráfico correcto</a></li>
+                    <li><a href="logic.html"><span class="emoji">🧠</span> Laboratorio lógico</a></li>
+                    <li><a href="crepatron.html"><span class="emoji">📈</span> Patrones crecientes</a></li>
+                    <li><a href="decrepatron.html"><span class="emoji">📉</span> Patrones decrecientes</a></li>
+                    <li><a href="secuencia.html"><span class="emoji">🔢</span> Secuencias visuales</a></li>
+                    <li><a href="argumento.html"><span class="emoji">🗣️</span> Corregir argumento inválido</a></li>
+                    <li><a href="falacias.html"><span class="emoji">❌</span> Detectar falacias</a></li>
+                    <li><a href="tablas.html"><span class="emoji">📊</span> Completar tablas incompletas</a></li>
+                    <li><a href="causaefecto.html"><span class="emoji">🎯</span> Relación causa-efecto</a></li>
+                    <li><a href="datatabla.html"><span class="emoji">🔄</span> Cambiar datos</a></li>
+                    <li><a href="contradicciones.html"><span class="emoji">⚠️</span> Contradicciones</a></li>
+                    <li>
+                        <span><span class="emoji">🧠</span> Laboratorio lógico-matemático</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="crepatron.html"><span class="emoji">📈</span> Patrones crecientes</a></li>
+                            <li><a href="decrepatron.html"><span class="emoji">📉</span> Patrones decrecientes</a></li>
+                            <li><a href="secuencia.html"><span class="emoji">🔢</span> Secuencias visuales</a></li>
+                            <li><a href="argumento.html"><span class="emoji">🗣️</span> Corregir argumento inválido</a></li>
+                            <li><a href="falacias.html"><span class="emoji">❌</span> Detectar falacias</a></li>
+                            <li><a href="tablas.html"><span class="emoji">📊</span> Completar tablas incompletas</a></li>
+                            <li><a href="causaefecto.html"><span class="emoji">🎯</span> Relación causa-efecto</a></li>
+                            <li><a href="datatabla.html"><span class="emoji">🔄</span> Cambiar datos</a></li>
+                            <li><a href="contradicciones.html"><span class="emoji">⚠️</span> Contradicciones</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">🔢</span> Razonamiento lógico-matemático</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="R1.html"><span class="emoji">🗺️</span> Mapa de laberintos matemáticos</a></li>
+                            <li><a href="R2.html"><span class="emoji">🔺</span> Triángulos mágicos para completar</a></li>
+                            <li><a href="R3.html"><span class="emoji">🤖</span> Algoritmo visualizado paso a paso</a></li>
+                            <li><a href="R4.html"><span class="emoji">🧩</span> Minijuegos de lógica simbólica</a></li>
+                            <li><a href="R5.html"><span class="emoji">🔢</span> Bloques de secuencias numéricas para ordenar</a></li>
+                            <li><a href="R6.html"><span class="emoji">🕵️</span> Detective matemático</a></li>
+                            <li><a href="R7.html"><span class="emoji">📊</span> Reconstrucción de tablas incompletas</a></li>
+                            <li><a href="R8.html"><span class="emoji">🔍</span> Desafío de patrones ocultos</a></li>
+                            <li><a href="R9.html"><span class="emoji">🧩</span> Sala de rompecódigos</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <span><span class="emoji">🌐</span> Competencias Ciudadanas</span>
+                <span><span class="emoji">🟧</span> MÓDULO 3 — Competencias Ciudadanas</span>
+                <ul class="dropdown">
+                    <li><a href="d1.html"><span class="emoji">⚖️</span> Dilemas y decisiones</a></li>
+                    <li><a href="d1.html"><span class="emoji">🤔</span> Simulador de dilemas morales</a></li>
+                    <li><a href="d2.html"><span class="emoji">📖</span> Historias interactivas</a></li>
+                    <li><a href="d3.html"><span class="emoji">🤝</span> Reconstrucción de conflictos</a></li>
+                    <li><a href="d4.html"><span class="emoji">❓</span> ¿Qué harías tú?</a></li>
+                    <li><a href="d5.html"><span class="emoji">🏆</span> Retos éticos por niveles</a></li>
+                    <li><a href="d6.html"><span class="emoji">📚</span> Estudio de casos reales</a></li>
+                    <li><a href="d7.html"><span class="emoji">👥</span> Simulaciones grupales</a></li>
+                    <li><a href="d8.html"><span class="emoji">⚖️</span> Juzgado ciudadano</a></li>
+                    <li><a href="d9.html"><span class="emoji">🎤</span> Panel de debate simulado</a></li>
+                    <li><a href="d10.html"><span class="emoji">🗳️</span> Simulador de votación</a></li>
+                    <li><a href="CS1.html"><span class="emoji">🌍</span> Contextos sociales</a></li>
+                    <li><a href="CS1.html"><span class="emoji">🗺️</span> Mapa de problemas sociales</a></li>
+                    <li><a href="CS2.html"><span class="emoji">📰</span> Análisis de noticias reales</a></li>
+                    <li><a href="CS3.html"><span class="emoji">📜</span> Sala de derechos y deberes</a></li>
+                    <li><a href="CS4.html"><span class="emoji">🏫</span> Minijuego de convivencia</a></li>
+                    <li><a href="CS5.html"><span class="emoji">❌</span> Historias de discriminación</a></li>
+                    <li><a href="CS6.html"><span class="emoji">❤️</span> Sala de empatía</a></li>
+                    <li><a href="CS7.html"><span class="emoji">🤝</span> Resolución de conflictos</a></li>
+                    <li><a href="CS8.html"><span class="emoji">🌳</span> Árboles de decisiones</a></li>
+                    <li><a href="CS9.html"><span class="emoji">👀</span> Observatorio de normas</a></li>
+                    <li><a href="C10.html"><span class="emoji">🎙️</span> Reconstrucción de discursos</a></li>
+                    <li>
+                        <span><span class="emoji">⚖️</span> Dilemas + decisiones</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="d1.html"><span class="emoji">🤔</span> Simulador de dilemas morales</a></li>
+                            <li><a href="d2.html"><span class="emoji">📖</span> Historias interactivas</a></li>
+                            <li><a href="d3.html"><span class="emoji">🤝</span> Reconstrucción de conflictos</a></li>
+                            <li><a href="d4.html"><span class="emoji">❓</span> ¿Qué harías tú?</a></li>
+                            <li><a href="d5.html"><span class="emoji">🏆</span> Retos éticos por niveles</a></li>
+                            <li><a href="d6.html"><span class="emoji">📚</span> Estudio de casos reales</a></li>
+                            <li><a href="d7.html"><span class="emoji">👥</span> Simulaciones grupales</a></li>
+                            <li><a href="d8.html"><span class="emoji">⚖️</span> Juzgado ciudadano</a></li>
+                            <li><a href="d9.html"><span class="emoji">🎤</span> Panel de debate simulado</a></li>
+                            <li><a href="d10.html"><span class="emoji">🗳️</span> Simulador de votación</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">🌍</span> Contextos sociales</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="CS1.html"><span class="emoji">🗺️</span> Mapa de problemas sociales</a></li>
+                            <li><a href="CS2.html"><span class="emoji">📰</span> Análisis de noticias reales</a></li>
+                            <li><a href="CS3.html"><span class="emoji">📜</span> Sala de derechos y deberes</a></li>
+                            <li><a href="CS4.html"><span class="emoji">🏫</span> Minijuego de convivencia</a></li>
+                            <li><a href="CS5.html"><span class="emoji">❌</span> Historias de discriminación</a></li>
+                            <li><a href="CS6.html"><span class="emoji">❤️</span> Sala de empatía</a></li>
+                            <li><a href="CS7.html"><span class="emoji">🤝</span> Resolución de conflictos</a></li>
+                            <li><a href="CS8.html"><span class="emoji">🌳</span> Árboles de decisiones</a></li>
+                            <li><a href="CS9.html"><span class="emoji">👀</span> Observatorio de normas</a></li>
+                            <li><a href="C10.html"><span class="emoji">🎙️</span> Reconstrucción de discursos</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <a href="archivo.html"><span class="emoji">🗂️</span> Archivos de casos reales</a>
+                        <ul class="sub-dropdown">
+                            <li><a href="archivo1.html"><span class="emoji">📄</span> Casos tipo Saber Pro reales</a></li>
+                            <li><a href="archivo2.html"><span class="emoji">🏢</span> Casos de empresas</a></li>
+                            <li><a href="archivo3.html"><span class="emoji">🌐</span> Casos sociales</a></li>
+                            <li><a href="archivo4.html"><span class="emoji">📈</span> Casos de datos ficticios</a></li>
+                            <li><a href="archivo5.html"><span class="emoji">⚖️</span> Casos legales simplificados</a></li>
+                            <li><a href="archivo6.html"><span class="emoji">🔬</span> Casos científicos</a></li>
+                            <li><a href="archivo7.html"><span class="emoji">❓</span> Casos ambiguos</a></li>
+                            <li><a href="archivo8.html"><span class="emoji">🤔</span> Casos contradictorios</a></li>
+                            <li><a href="archivo9.html"><span class="emoji">🔍</span> Casos para identificar sesgos</a></li>
+                            <li><a href="archivo10.html"><span class="emoji">🧩</span> Casos donde debes decidir qué dato falta</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">♟️</span> Laboratorio de estrategias</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="E1.html"><span class="emoji">✏️</span> Cómo subrayar bien (con ejemplos)</a></li>
+                            <li><a href="E2.html"><span class="emoji">📚</span> Estrategia de resumen por capas</a></li>
+                            <li><a href="E3.html"><span class="emoji">👀</span> Técnica de lectura por bloques visuales</a></li>
+                            <li><a href="E4.html"><span class="emoji">🚫</span> Cómo ignorar distractores</a></li>
+                            <li><a href="E5.html"><span class="emoji">🏃‍♂️</span> Cómo leer rápido sin perder comprensión</a></li>
+                            <li><a href="E6.html"><span class="emoji">✔️</span> Checklist antes de responder un caso</a></li>
+                            <li><a href="E7.html"><span class="emoji">🚫</span> Cómo evitar conclusiones erróneas</a></li>
+                            <li><a href="E8.html"><span class="emoji">🕵️</span> Mini-guía de preguntas trampas</a></li>
+                            <li><a href="E9.html"><span class="emoji">🎯</span> Cómo identificar el propósito del autor</a></li>
+                            <li><a href="E10.html"><span class="emoji">💡</span> Cómo transformar evidencia en conclusión</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <span><span class="emoji">🇬🇧</span> Inglés</span>
+                <span><span class="emoji">🟪</span> MÓDULO 4 — Inglés</span>
+                <ul class="dropdown">
+                    <li><a href="CLI1.html"><span class="emoji">📖</span> Comprensión lectora</a></li>
+                    <li><a href="CLI1.html"><span class="emoji">📚</span> Galería de textos graduados</a></li>
+                    <li><a href="CLI2.html"><span class="emoji">💡</span> Idea principal</a></li>
+                    <li><a href="CLI3.html"><span class="emoji">🎯</span> Intención del autor</a></li>
+                    <li><a href="CLI4.html"><span class="emoji">📝</span> Ordenar párrafos</a></li>
+                    <li><a href="CLI5.html"><span class="emoji">🔗</span> Relacionar con títulos</a></li>
+                    <li><a href="CLI6.html"><span class="emoji">🧩</span> Completa el sentido</a></li>
+                    <li><a href="CLI7.html"><span class="emoji">🤔</span> Inferencias</a></li>
+                    <li><a href="CLI8.html"><span class="emoji">😊</span> Tono y emoción</a></li>
+                    <li><a href="CLI9.html"><span class="emoji">🎯</span> Propósito de oraciones</a></li>
+                    <li><a href="CLI10.html"><span class="emoji">🚫</span> Falsos amigos</a></li>
+                    <li><a href="11.html"><span class="emoji">📖</span> Vocabulario en contexto</a></li>
+                    <li><a href="11.html"><span class="emoji">🔄</span> Sustituir por sinónimos</a></li>
+                    <li><a href="12.html"><span class="emoji">🧩</span> Completar frases</a></li>
+                    <li><a href="13.html"><span class="emoji">🔗</span> Banco de conectores</a></li>
+                    <li><a href="14.html"><span class="emoji">🤔</span> Rellenar huecos</a></li>
+                    <li><a href="15.html"><span class="emoji">💬</span> Expresiones idiomáticas</a></li>
+                    <li><a href="16.html"><span class="emoji">🔍</span> Definiciones implícitas</a></li>
+                    <li><a href="17.html"><span class="emoji">🎯</span> Vocabulario preciso</a></li>
+                    <li><a href="18.html"><span class="emoji">📂</span> Clasificador de palabras</a></li>
+                    <li><a href="19.html"><span class="emoji">🚫</span> Detección de redundancias</a></li>
+                    <li><a href="20.html"><span class="emoji">🤔</span> Palabras confusas</a></li>
+                    <li><a href="21.html"><span class="emoji">🔗</span> Cohesión</a></li>
+                    <li><a href="21.html"><span class="emoji">👉</span> Identificar referentes</a></li>
+                    <li><a href="22.html"><span class="emoji">🔄</span> Reemplazo de pronombres</a></li>
+                    <li><a href="23.html"><span class="emoji">❌</span> Conectores mal usados</a></li>
+                    <li><a href="24.html"><span class="emoji">🔍</span> Error de cohesión</a></li>
+                    <li><a href="25.html"><span class="emoji">📝</span> Reordenar oraciones</a></li>
+                    <li><a href="26.html"><span class="emoji">🔗</span> Función de frases</a></li>
+                    <li><a href="27.html"><span class="emoji">✍️</span> Parafraseo guiado</a></li>
+                    <li><a href="28.html"><span class="emoji">✔️</span> Afirmaciones V/F</a></li>
+                    <li><a href="29.html"><span class="emoji">🔗</span> Conexión de partes</a></li>
+                    <li><a href="30.html"><span class="emoji">📄</span> Seleccionar resumen</a></li>
+                    <li>
+                        <span><span class="emoji">📖</span> Comprensión lectora en inglés</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="CLI1.html"><span class="emoji">📖</span> Galería de textos graduados</a></li>
+                            <li><a href="CLI2.html"><span class="emoji">💡</span> ¿Cuál es la idea principal?</a></li>
+                            <li><a href="CLI3.html"><span class="emoji">🎯</span> Identificar la intención del autor</a></li>
+                            <li><a href="CLI4.html"><span class="emoji">📝</span> Ordenar párrafos</a></li>
+                            <li><a href="CLI5.html"><span class="emoji">🔗</span> Relacionar párrafos con títulos</a></li>
+                            <li><a href="CLI6.html"><span class="emoji">🧩</span> Completa el sentido del texto</a></li>
+                            <li><a href="CLI7.html"><span class="emoji">🤔</span> Inferencias y deducciones</a></li>
+                            <li><a href="CLI8.html"><span class="emoji">😊</span> Preguntas de tono y emoción</a></li>
+                            <li><a href="CLI9.html"><span class="emoji">🎯</span> Reconocer propósito de oraciones</a></li>
+                            <li><a href="CLI10.html"><span class="emoji">🚫</span> Falsos amigos</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">📖</span> Vocabulario en contexto</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="vocab11.html"><span class="emoji">🔄</span> Sustituir palabras por sinónimos</a></li>
+                            <li><a href="vocab12.html"><span class="emoji">🧩</span> Completar frases</a></li>
+                            <li><a href="vocab13.html"><span class="emoji">🔗</span> Banco de conectores</a></li>
+                            <li><a href="vocab14.html"><span class="emoji">🤔</span> Rellenar huecos</a></li>
+                            <li><a href="vocab15.html"><span class="emoji">💬</span> Reemplazo de expresiones idiomáticas</a></li>
+                            <li><a href="vocab16.html"><span class="emoji">🔍</span> Identificar definiciones implícitas</a></li>
+                            <li><a href="vocab17.html"><span class="emoji">🎯</span> Selección de vocabulario preciso</a></li>
+                            <li><a href="vocab18.html"><span class="emoji">📂</span> Clasificador de palabras</a></li>
+                            <li><a href="vocab19.html"><span class="emoji">🚫</span> Detección de redundancias</a></li>
+                            <li><a href="vocab20.html"><span class="emoji">🤔</span> Diferencias entre palabras confusas</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">🔗</span> Cohesión en inglés</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="coh1.html"><span class="emoji">👉</span> Identificar referentes</a></li>
+                            <li><a href="coh2.html"><span class="emoji">🔄</span> Reemplazo de pronombres</a></li>
+                            <li><a href="coh3.html"><span class="emoji">❌</span> Conectores mal usados</a></li>
+                            <li><a href="coh4.html"><span class="emoji">🔍</span> Encuentra el error de cohesión</a></li>
+                            <li><a href="coh5.html"><span class="emoji">📝</span> Reordenar oraciones</a></li>
+                            <li><a href="coh6.html"><span class="emoji">🔗</span> Relacionar frases con su función</a></li>
+                            <li><a href="coh7.html"><span class="emoji">✍️</span> Parafraseo guiado</a></li>
+                            <li><a href="coh8.html"><span class="emoji">✔️</span> Detectar afirmaciones V/F</a></li>
+                            <li><a href="coh9.html"><span class="emoji">🔗</span> Conexión entre partes del texto</a></li>
+                            <li><a href="coh10.html"><span class="emoji">📄</span> Seleccionar el resumen adecuado</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <a href="archivo.html"><span class="emoji">🗂️</span> Archivos de Casos</a>
+            </li>
+        </ul>
+    </nav>
+
+@@ -717,7 +844,7 @@
+            { id: 24, title: "Lee toda la teoría sin usar pistas", points: 40 },
+            { id: 25, title: "Completa todos los subniveles del nivel 6", points: 140 },
+            { id: 26, title: "Suma 1000 estrellas totales", points: 50 },
+            { id: 27, title: "Gana un juego en menos de 2 minutos", points: 50 },
+            { id: 27, title: "Gana un examen con tiempo limitado", points: 80 },
+            { id: 28, title: "Juega y gana el modo “escape room”", points: 60 },
+            { id: 29, title: "Gana un juego de ahorcado correctamente", points: 50 },
+            { id: 30, title: "Haz un examen de repaso general", points: 70 },
+@@ -1049,12 +1176,11 @@
+        window.SKOPIA = { addExamScore, completeMission, getTotalPoints: getTotalPoints, getLevel: ()=> getLevelFromPoints(getTotalPoints()) };
+    </script>
+
+    <!-- ORIGINAL SCRIPTS (kept unchanged) -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const navItems = document.querySelectorAll('.main-navigation > ul > li');
+            navItems.forEach(item => {
+                const link = item.querySelector('a, span');
+                const link = item.querySelector('span');
+                if (link && item.querySelector('.dropdown')) {
+                    link.addEventListener('click', (e) => {
+                        if (window.innerWidth <= 1024) {
+@@ -1063,51 +1189,64 @@
+                        }
+                    });
+                }
+                // JS for nested dropdowns on mobile
+                const subItems = item.querySelectorAll('.dropdown > li');
+                subItems.forEach(subItem => {
+                    const subLink = subItem.querySelector('span');
+                    if(subLink && subItem.querySelector('.sub-dropdown')) {
+                        subLink.addEventListener('click', (e) => {
+                            if (window.innerWidth <= 1024) {
+                                e.preventDefault();
+                                subItem.classList.toggle('active');
+                            }
+                        });
                     }
                 });
+            });
+
+            const hamburgerMenu = document.getElementById('hamburger-menu');
+            const userDropdown = document.getElementById('user-dropdown');
+            hamburgerMenu.addEventListener('click', () => { userDropdown.classList.toggle('active'); });
+            window.addEventListener('click', (event) => { if (!event.target.closest('.navbar')) { userDropdown.classList.remove('active'); } });
+
+            const clockElement = document.getElementById('digital-clock');
+            let lastHour = -1;
+            function updateClock() {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                const currentHour = now.getHours();
+                if (currentHour !== lastHour) {
+                    clockElement.classList.add('hour-change');
+                    setTimeout(() => { clockElement.textContent = `${hours}:${minutes}:${seconds}`; clockElement.classList.remove('hour-change'); }, 300);
+                    lastHour = currentHour;
+                } else {
+                    clockElement.textContent = `${hours}:${minutes}:${seconds}`;
+                }
             }
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            const quotes = [ "El estudio es la llave que abre las puertas del futuro.", "Cada día es una nueva oportunidad para aprender algo nuevo.", "El conocimiento es poder, pero la curiosidad es la chispa que lo enciende.", "No tengas miedo a cometer errores, ten miedo a no intentar.", "El experto en algo fue una vez un principiante.", "El éxito es la suma de pequeños esfuerzos repetidos día tras día." ];
+            let currentQuoteIndex = 0;
+            const quoteElement = document.getElementById('motivational-quote');
+            function changeQuote() {
+                quoteElement.style.animation = 'none';
+                setTimeout(() => { quoteElement.textContent = quotes[currentQuoteIndex]; quoteElement.style.animation = 'fadeIn 1s forwards'; }, 20);
+                currentQuoteIndex = (currentQuoteIndex + 1) % quotes.length;
+            }
+            changeQuote();
+            setInterval(changeQuote, 120000);
+
+            const routeButtons = document.querySelectorAll('.start-route-btn');
+            routeButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetPage = button.getAttribute('data-target');
+                    if (targetPage) { window.location.href = targetPage; }
+                });
+            });
         });
-    });
-    
-    // --- INICIALIZACIÓN ---
-    loadData();
-});
-</script>
+    </script>
 </body>
 </html>
