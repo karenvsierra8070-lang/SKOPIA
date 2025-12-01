@@ -232,6 +232,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .modal-close:hover { color: var(--color-oliva-oscuro); }
 .modal-body { padding: 30px; }
 .modal-text { font-size: 1.1rem; line-height: 1.7; color: var(--color-oliva-oscuro); margin-bottom: 20px; text-align: justify; }
+.modal-text p { margin-bottom: 1em; }
 .modal-text .word { cursor: pointer; border-bottom: 1px dashed var(--color-oliva-claro); transition: background-color 0.2s; }
 .modal-text .word:hover { background-color: rgba(190, 192, 146, 0.2); }
 .modal-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; flex-wrap: wrap; gap: 15px; }
@@ -243,11 +244,38 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .audio-btn:hover { background-color: var(--color-oliva-medio); }
 .audio-speed { font-size: 0.9rem; color: var(--color-oliva-medio); }
 
-/* --- Tooltip --- */
-.tooltip { position: absolute; background-color: var(--color-oliva-oscuro); color: white; padding: 10px 15px; border-radius: 8px; font-size: 0.9rem; z-index: 3000; max-width: 300px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; pointer-events: none; }
-.tooltip.active { opacity: 1; visibility: visible; }
-.tooltip-title { font-weight: 700; margin-bottom: 5px; }
-.tooltip-synonyms { font-style: italic; margin-top: 5px; }
+/* --- Tooltip Mejorado --- */
+.tooltip { 
+    position: absolute; 
+    background-color: #333; 
+    color: white; 
+    padding: 15px 20px; 
+    border-radius: 12px; 
+    font-size: 1rem; 
+    line-height: 1.5;
+    z-index: 3000; 
+    max-width: 350px; 
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4); 
+    border: 1px solid #555; 
+    opacity: 0; 
+    visibility: hidden; 
+    transition: opacity 0.3s, visibility 0.3s, transform 0.3s; 
+    transform: translateY(-5px); 
+    pointer-events: none; 
+}
+.tooltip.active { 
+    opacity: 1; 
+    visibility: visible; 
+    transform: translateY(0); 
+}
+.tooltip-title { font-weight: 700; margin-bottom: 8px; }
+.tooltip-synonyms { 
+    font-style: italic; 
+    opacity: 0.9; 
+    border-top: 1px solid #555; 
+    padding-top: 8px; 
+    margin-top: 8px; 
+}
 
 /* --- Iconos Flotantes y Toast --- */
 .floating-icons { position: fixed; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; z-index: 1999; }
@@ -672,13 +700,23 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.style.overflow = 'hidden';
     }
 
-    // Actualizar el texto del modal según la dificultad
+    // Actualizar el texto del modal según la dificultad (MANEJO DE PÁRRAFOS)
     function updateModalText() {
         if (!currentReading) return;
+        
+        // 1. Obtenemos el texto del JSON
         const text = currentReading.levels[currentDifficulty];
-        const words = text.split(/(\s+)/);
+        
+        // 2. Reemplazamos los saltos de línea (\n\n) por etiquetas de párrafo HTML
+        const paragraphs = text.split(/\n\n/).map(paragraph => `<p>${paragraph}</p>`).join('');
+        
+        // 3. Ahora procesamos las palabras para los tooltips
+        const words = paragraphs.split(/(\s+)/);
         modalText.innerHTML = words.map(word => {
-            if (/\s+/.test(word)) return word;
+            // No procesamos las etiquetas HTML para no romperlas
+            if (word.startsWith('<')) return word; 
+            if (/\s+/.test(word)) return word; // No envolver espacios
+            
             const cleanWord = word.toLowerCase().replace(/[.,!?;:]/g, '');
             if (allData.diccionario[cleanWord]) {
                 return `<span class="word" data-word="${cleanWord}">${word}</span>`;
@@ -686,6 +724,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return `<span class="word">${word}</span>`;
         }).join('');
 
+        // 4. Añadimos los listeners a las palabras
         modalText.querySelectorAll('.word').forEach(wordSpan => {
             wordSpan.addEventListener('click', handleWordClick);
         });
