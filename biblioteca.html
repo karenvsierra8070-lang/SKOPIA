@@ -20,7 +20,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
     authDomain: "skopia-aa786.firebaseapp.com",
     projectId: "skopia-aa786",
-    storageBucket: "skopia-786.firebasestorage.app",
+    storageBucket: "skopia-aa786.firebasestorage.app",
     messagingSenderId: "719823055099",
     appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
 };
@@ -649,29 +649,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const toast = document.getElementById('toast');
 
     // --- VARIABLES DE ESTADO ---
-    let allData = null;
+    let allData = null; // Almacenará los textos y el diccionario del JSON
     let currentReading = null;
     let currentDifficulty = 'facil';
     let speechSynthesis = window.speechSynthesis;
     let speechUtterance = null;
-    let apiCache = {};
 
     // --- FUNCIONES PRINCIPALES ---
 
-    // Cargar datos desde el archivo JSON (ACTUALIZADO PARA GITHUB)
+    // Cargar datos desde el archivo JSON
     async function loadData() {
         try {
-            // Construye la URL cruda al archivo JSON en tu repositorio de GitHub
-            const jsonUrl = `https://raw.githubusercontent.com/karenvsierra8070-lang/SKOPIA/main/textos_biblioteca.json`;
-            
-            const response = await fetch(jsonUrl);
+            const response = await fetch('textos_biblioteca.json');
             if (!response.ok) {
                 throw new Error(`Error HTTP: ${response.status}`);
             }
             allData = await response.json();
-            console.log("Datos cargados correctamente desde GitHub.");
+            console.log("Datos cargados correctamente.");
         } catch (error) {
-            console.error("No se pudo cargar el archivo JSON desde GitHub:", error);
+            console.error("No se pudo cargar el archivo JSON:", error);
             showToast("Error al cargar los contenidos. Por favor, recarga la página.");
         }
     }
@@ -720,14 +716,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- MANEJO DE LA IMAGEN DEL MODAL ---
         const modalMedia = document.getElementById('modal-media');
-        const imageToLoad = reading.modalImageUrl || reading.chartImage;
+        const imageToLoad = reading.modalImageUrl || reading.chartImage; // Usa modalImageUrl o chartImage como fallback
 
         if (imageToLoad) {
             modalMedia.innerHTML = `<img src="${imageToLoad}" alt="Imagen para ${reading.title}">`;
-            modalMedia.style.display = 'block';
+            modalMedia.style.display = 'block'; // Muestra el contenedor
         } else {
-            modalMedia.innerHTML = '';
-            modalMedia.style.display = 'none';
+            modalMedia.innerHTML = ''; // Limpia el contenido
+            modalMedia.style.display = 'none'; // Oculta el contenedor si no hay imagen
         }
 
         updateModalText();
@@ -739,79 +735,46 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateModalText() {
         if (!currentReading) return;
         
+        // 1. Obtenemos el texto del JSON
         const text = currentReading.levels[currentDifficulty];
         
-        // 1. Obtenemos el texto del JSON
+        // 2. Reemplazamos los saltos de línea (\n\n) por etiquetas de párrafo HTML
         const paragraphs = text.split(/\n\n/).map(paragraph => `<p>${paragraph}</p>`).join('');
         
-        // 2. Ahora procesamos las palabras para los tooltips
-        const words = paragraphs.split(/(\s+/);
+        // 3. Ahora procesamos las palabras para los tooltips
+        const words = paragraphs.split(/(\s+)/);
         modalText.innerHTML = words.map(word => {
+            // No procesamos las etiquetas HTML para no romperlas
             if (word.startsWith('<')) return word; 
             if (/\s+/.test(word)) return word; // No envolver espacios
             
             const cleanWord = word.toLowerCase().replace(/[.,!?;:]/g, '');
-            // Todas las palabras son "clickeables"
-            return `<span class="word" data-word="${cleanWord}">${word}</span>`;
+            if (allData.diccionario[cleanWord]) {
+                return `<span class="word" data-word="${cleanWord}">${word}</span>`;
+            }
+            return `<span class="word">${word}</span>`;
         }).join('');
 
-        // 3. Añadimos los listeners a las palabras
+        // 4. Añadimos los listeners a las palabras
         modalText.querySelectorAll('.word').forEach(wordSpan => {
             wordSpan.addEventListener('click', handleWordClick);
         });
     }
 
-    // Manejar el clic en una palabra para mostrar el tooltip (AHORA CON API)
-    async function handleWordClick(event) {
+    // Manejar el clic en una palabra para mostrar el tooltip
+    function handleWordClick(event) {
         const wordKey = event.target.dataset.word;
-        if (!wordKey) return;
-
-        // 1. MOSTRAR UN MENSAJE DE CARGA MIENTRAS BUSCA
+        if (!allData || !allData.diccionario[wordKey]) return;
+        
+        const entry = allData.diccionario[wordKey];
         tooltipTitle.textContent = wordKey;
-        tooltipDefinition.textContent = 'Buscando definición...';
-        tooltipSynonyms.textContent = '';
+        tooltipDefinition.textContent = entry.definicion;
+        tooltipSynonyms.textContent = `Sinónimos: ${entry.sinonimos}`;
+        
+        const rect = event.target.getBoundingClientRect();
+        tooltip.style.left = `${rect.left + window.scrollX}px`;
+        tooltip.style.top = `${rect.bottom + window.scrollY + 5}px`;
         tooltip.classList.add('active');
-
-        // 2. REVISAR EL CACHÉ ANTES DE HACER LA LLAMADA A LA API
-        if (apiCache[wordKey]) {
-            const entry = apiCache[wordKey];
-            tooltipDefinition.textContent = entry.definicion;
-            tooltipSynonyms.textContent = `Sinónimos: ${entry.sinonimos}`;
-            return;
-        }
-
-        // 3. SI NO ESTÁ EN EL CACHÉ, LLAMAR A LA API
-        try {
-            const apiUrl = `https://api.wordreference.com/api/v2/json/es_es/${wordKey}`;
-            const response = await fetch(apiUrl);
-            const data = await response.json();
-
-            // 4. PROCESAR LA RESPUESTA DE LA API
-            if (data && data.def && data.def.length > 0) {
-                const firstDefinition = data.def[0].text;
-                const synonyms = data.def[0].tr && data.def[0].tr.length > 0 ? data.def[0].tr[0].text : 'No disponibles';
-
-                // 5. GUARDAR EN EL CACHÉ
-                apiCache[wordKey] = {
-                    definicion: firstDefinition,
-                    sinonimos: synonyms
-                };
-
-                // 6. ACTUALIZAR EL TOOLTIP CON LOS DATOS OBTENIDOS
-                tooltipDefinition.textContent = firstDefinition;
-                tooltipSynonyms.textContent = `Sinónimos: ${synonyms}`;
-
-            } else {
-                // 7. SI LA API NO ENCONTRÓ LA PALABRA
-                tooltipDefinition.textContent = 'No se encontró una definición para esta palabra.';
-                tooltipSynonyms.textContent = '';
-            }
-        } catch (error) {
-            // 8. MANEJO DE ERRORES (EJ: SIN INTERNET)
-            console.error("Error al buscar la palabra en la API:", error);
-            tooltipDefinition.textContent = 'Error al conectar con el diccionario.';
-            tooltipSynonyms.textContent = '';
-        }
     }
 
     // Cerrar el modal
