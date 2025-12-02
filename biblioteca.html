@@ -591,9 +591,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
             <button class="modal-close" id="modal-close">&times;</button>
         </div>
         <div class="modal-body">
-            <!-- NUEVO CONTENEDOR PARA LA IMAGEN O GRÁFICO -->
             <div class="modal-media" id="modal-media"></div>
-            
             <div class="modal-text" id="modal-text">
                 <!-- El texto se insertará aquí dinámicamente -->
             </div>
@@ -651,11 +649,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const toast = document.getElementById('toast');
 
     // --- VARIABLES DE ESTADO ---
-    let allData = null; // Almacenará los textos y el diccionario del JSON
+    let allData = null; // Almacenará los textos del JSON
     let currentReading = null;
     let currentDifficulty = 'facil';
     let speechSynthesis = window.speechSynthesis;
     let speechUtterance = null;
+    let apiCache = {}; // Caché para la API del diccionario
 
     // --- FUNCIONES PRINCIPALES ---
 
@@ -751,10 +750,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (/\s+/.test(word)) return word; // No envolver espacios
             
             const cleanWord = word.toLowerCase().replace(/[.,!?;:]/g, '');
-            if (allData.diccionario[cleanWord]) {
-                return `<span class="word" data-word="${cleanWord}">${word}</span>`;
-            }
-            return `<span class="word">${word}</span>`;
+            // Ya no buscamos en el diccionario local, todas las palabras son "clickeables"
+            return `<span class="word" data-word="${cleanWord}">${word}</span>`;
         }).join('');
 
         // 4. Añadimos los listeners a las palabras
@@ -763,20 +760,57 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Manejar el clic en una palabra para mostrar el tooltip
-    function handleWordClick(event) {
+    // Manejar el clic en una palabra para mostrar el tooltip (AHORA CON API)
+    async function handleWordClick(event) {
         const wordKey = event.target.dataset.word;
-        if (!allData || !allData.diccionario[wordKey]) return;
-        
-        const entry = allData.diccionario[wordKey];
+        if (!wordKey) return;
+
+        // 1. MOSTRAR UN MENSAJE DE CARGA MIENTRAS BUSCA
         tooltipTitle.textContent = wordKey;
-        tooltipDefinition.textContent = entry.definicion;
-        tooltipSynonyms.textContent = `Sinónimos: ${entry.sinonimos}`;
-        
-        const rect = event.target.getBoundingClientRect();
-        tooltip.style.left = `${rect.left + window.scrollX}px`;
-        tooltip.style.top = `${rect.bottom + window.scrollY + 5}px`;
+        tooltipDefinition.textContent = 'Buscando definición...';
+        tooltipSynonyms.textContent = '';
         tooltip.classList.add('active');
+
+        // 2. REVISAR EL CACHÉ ANTES DE HACER LA LLAMADA A LA API
+        if (apiCache[wordKey]) {
+            const entry = apiCache[wordKey];
+            tooltipDefinition.textContent = entry.definicion;
+            tooltipSynonyms.textContent = `Sinónimos: ${entry.sinonimos}`;
+            return;
+        }
+
+        // 3. SI NO ESTÁ EN EL CACHÉ, LLAMAR A LA API
+        try {
+            const apiUrl = `https://api.wordreference.com/api/v2/json/es_es/${wordKey}`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+
+            // 4. PROCESAR LA RESPUESTA DE LA API
+            if (data && data.def && data.def.length > 0) {
+                const firstDefinition = data.def[0].text;
+                const synonyms = data.def[0].tr && data.def[0].tr.length > 0 ? data.def[0].tr[0].text : 'No disponibles';
+
+                // 5. GUARDAR EN EL CACHÉ
+                apiCache[wordKey] = {
+                    definicion: firstDefinition,
+                    sinonimos: synonyms
+                };
+
+                // 6. ACTUALIZAR EL TOOLTIP CON LOS DATOS OBTENIDOS
+                tooltipDefinition.textContent = firstDefinition;
+                tooltipSynonyms.textContent = `Sinónimos: ${synonyms}`;
+
+            } else {
+                // 7. SI LA API NO ENCONTRÓ LA PALABRA
+                tooltipDefinition.textContent = 'No se encontró una definición para esta palabra.';
+                tooltipSynonyms.textContent = '';
+            }
+        } catch (error) {
+            // 8. MANEJO DE ERRORES (EJ: SIN INTERNET)
+            console.error("Error al buscar la palabra en la API:", error);
+            tooltipDefinition.textContent = 'Error al conectar con el diccionario.';
+            tooltipSynonyms.textContent = '';
+        }
     }
 
     // Cerrar el modal
