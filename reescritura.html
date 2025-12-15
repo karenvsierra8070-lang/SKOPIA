@@ -63,7 +63,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .main-navigation > ul > li:hover > span, .main-navigation > ul > li:hover > a { background-color: rgba(94, 97, 51, 0.1); color: var(--color-oliva-medio); }
 .main-navigation .emoji { margin-right: 8px; font-size: 1.2em; }
 
-/* --- Dropdowns --- */
+/* --- Dropdowns de primer nivel --- */
 .main-navigation > ul > li > .dropdown { display: none; position: absolute; top: 100%; left: 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); min-width: 280px; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2); border-radius: 0 0 12px 12px; overflow: visible; }
 .main-navigation > ul > li:hover > .dropdown { display: block; }
 .main-navigation > ul > li > .dropdown > li { width: 100%; border-bottom: 1px solid rgba(0,0,0,0.05); position: relative; }
@@ -226,7 +226,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                     <span><span class="emoji">⚖️</span> Dilemas + decisiones</span>
                     <ul class="sub-dropdown">
                         <li><a href="d1.html"><span class="emoji">🤔</span> Simulador de dilemas morales</a></li>
-                        <li><a href="d2.html"><span class="emoji">📖</span> Historias interactivas</a></li>
+                        <li><a href="d2.html"><span class=" palabras que no se entienden">Historias interactivas</a></li>
                         <li><a href="d3.html"><span class="emoji">🤝</span> Reconstrucción de conflictos</a></li>
                         <li><a href="d4.html"><span class="emoji">❓</span> ¿Qué harías tú?</a></li>
                         <li><a href="d5.html"><span class="emoji">🏆</span> Retos éticos por niveles</a></li>
@@ -312,7 +312,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                         <li><a href="vocab15.html"><span class="emoji">💬</span> Reemplazo de expresiones idiomáticas</a></li>
                         <li><a href="vocab16.html"><span class="emoji">🔍</span> Identificar definiciones implícitas</a></li>
                         <li><a href="vocab17.html"><span class="emoji">🎯</span> Selección de vocabulario preciso</a></li>
-                        <li><a href="vocab18.html"><span class="emoji">📂</span> Clasificador de palabras</a></li>
+                        <li><a href="vocab18.html"><span class="emojies">📂</span> Clasificador de palabras</a></li>
                         <li><a href="vocab19.html"><span class="emoji">🚫</span> Detección de redundancias</a></li>
                         <li><a href="vocab20.html"><span class="emoji">🤔</span> Diferencias entre palabras confusas</a></li>
                     </ul>
@@ -393,21 +393,17 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 <div class="floating-icons" aria-hidden="false">
     <button id="btn-misiones" title="Misiones">🎯</button>
     <button id="btn-nivel" title="Nivel actual">⭐</button>
-    <button id="btn-progreso" title="Progreso">📊</button>
-</div>
-
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script type="module">
-// --- CONFIGURACIÓN ---
-// PEGA TU API KEY DE COHERE AQUÍ
-const apiKey = 't6r6xbxjORUXMqnkPHChfIT1ttJcEsolxLyAGb4f';
+// <<< CAMBIO IMPORTANTE: PEGA TU API KEY DE COHERE AQUÍ, SIN ESPACIOS ADICIONALES
+const apiKey = 'AQUI_VA_TU_API_KEY_DE_COHERE_AQUÍ';
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- ELEMENTOS DEL DOM ---
     const hamburgerMenu = document.getElementById('hamburger-menu');
     const userDropdown = document.getElementById('user-dropdown');
-    const logoutBtn = document.getElementById('logout-btn');
+    const logoutBtn = document del elemento 'logout-btn';
     const textSelect = document.getElementById('text-select');
     const challengeArea = document.getElementById('challenge-area');
     const originalTextEl = document.getElementById('original-text');
@@ -420,7 +416,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const toast = document.getElementById('toast');
 
     // --- VARIABLES DE ESTADO ---
-    let allTexts = []; // Array plano con todos los textos disponibles
+    let allTexts = [];
+    let allSynonyms = {}; // Cargaremos el diccionario del JSON aquí
     let currentOriginalText = '';
 
     // --- FUNCIONES PRINCIPALES ---
@@ -428,13 +425,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cargar y procesar todos los textos del JSON
     async function loadAllTexts() {
         try {
+            // Cargar el JSON principal
             const response = await fetch('textos_biblioteca.json');
             if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
             const data = await response.json();
             
+            // Cargar el diccionario de sinónimos desde el JSON
+            if (data.diccionario) {
+                allSynonyms = data.diccionario;
+            }
+            
             const texts = data.textos;
             const flatTexts = [];
 
+            // Iterar sobre todas las categorías y tipos para aplanar los textos
             for (const categoryKey in texts) {
                 const category = texts[categoryKey];
                 for (const typeKey in category) {
@@ -498,7 +502,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // --- LÓGICA DE ANÁLISIS CON API DE COHERE ---
+    // --- LÓGICA DE ANÁLISIS (Cohere + Diccionario) ---
+
+    // <<< CAMBIO IMPORTANTE: Nueva función de detección de plagio más robusta
+    // Detecta si hay una secuencia larga del texto original en el texto reescrito.
+    // Usa secuencias más largas y una comparación de longitudes para evitar falsos positivos.
+    function hasVerbatimCopy(original, rewritten, minLength = 10, minLengthRatio = 0.3) {
+        const originalWords = original.toLowerCase().split(/\s+/);
+        const rewrittenWords = rewritten.toLowerCase().split(/\s+/);
+
+        // Si el texto reescrito es mucho más corto, es improbable que sea plagio.
+        if (rewrittenWords.length < originalWords.length * minLengthRatio) {
+            return false;
+        }
+
+        // Buscar secuencias largas y únicas del texto original en el texto reescrito.
+        for (let i = 0; i <= originalWords.length - minLength; i++) {
+            const ngram = originalWords.slice(i, i + minLength).join(' ');
+            if (rewritten.includes(ngram)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     // Calcular la similitud del coseno entre dos vectores
     function cosineSimilarity(vecA, vecB) {
@@ -506,29 +532,15 @@ document.addEventListener('DOMContentLoaded', () => {
         let normA = 0;
         let normB = 0;
         for (let i = 0; i < vecA.length; i++) {
-            dotProduct += vecA[i] * vecB[i];
+            dotProduct += vecA[i] * (vecB[i] || 0);
             normA += vecA[i] * vecA[i];
             normB += vecB[i] * vecB[i];
         }
         if (normA === 0 || normB === 0) return 0;
         return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
-    
-    // Detectar si hay copia textual (n-gramas idénticos)
-    function hasVerbatimCopy(original, rewritten, n = 4) {
-        const originalTokens = original.toLowerCase().split(/\s+/);
-        const rewrittenTokens = rewritten.toLowerCase().split(/\s+/);
-        
-        for (let i = 0; i <= originalTokens.length - n; i++) {
-            const ngram = originalTokens.slice(i, i + n).join(' ');
-            if (rewritten.toLowerCase().includes(ngram)) {
-                return true;
-            }
-        }
-        return false;
-    }
 
-    // Analizar la reescritura del usuario
+    // Analizar la reescritura del usuario (VERSIÓN FINAL)
     async function analyzeRewrite() {
         const rewrittenText = rewrittenTextEl.value.trim();
         if (!rewrittenText) {
@@ -536,17 +548,18 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 1. Detección de copia textual
+        // 1. Detección de plagio (con la función mejorada)
         if (hasVerbatimCopy(currentOriginalText, rewrittenText)) {
             scoreDisplay.textContent = 'Trampa Detectada';
             scoreDisplay.className = 'score-display low';
-            feedbackMessage.innerHTML = `<strong>¡Cuidado!</strong> Parece que has copiado partes del texto original. El objetivo es reescribirlo con tus propias palabras.`;
+            feedbackMessage.innerHTML = `<strong>¡Cuidado!</strong> Se ha detectado una porción de texto demasiado idéntica al original. El objetivo es reescribirlo con tus propias palabras.`;
             resultsBox.classList.add('active');
             return;
         }
 
         // 2. Obtener los "embeddings" (vectores semánticos) de la API de Cohere
         try {
+            // Llamada a la API para el texto original
             const responseOriginal = await fetch('https://api.cohere.ai/v1/embed', {
                 method: 'POST',
                 headers: {
@@ -564,12 +577,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const dataOriginal = await responseOriginal.json();
             const embeddingOriginal = dataOriginal.embeddings[0];
 
+            // Llamada a la API para el texto reescrito
             const responseRewritten = await fetch('https://api.cohere.ai/v1/embed', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
-                    'Content-Type': 'application/json',
-                    'Cohere-Version': '2022-12-06'
+                    'Content-Type': 'pequeño'
                 },
                 body: JSON.stringify({
                     texts: [rewrittenText],
@@ -579,32 +592,63 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (!responseRewritten.ok) throw new Error('Error en la API de Cohere (texto reescrito)');
             const dataRewritten = await responseRewritten.json();
-            const embeddingRewritten = dataRewritten.embeddings[0];
+            const embeddingRewritten = dataRewritten.json.embeddings[0];
 
             // 3. Calcular la similitud del coseno entre los dos vectores semánticos
             const similarity = cosineSimilarity(embeddingOriginal, embeddingRewritten);
-            const score = Math.round(similarity * 100);
+            let score = Math.round(similarity * 100);
 
-            // 4. Generar feedback
-            let feedback = '';
-            if (score < 70) {
-                feedback = `<strong>Puntuación: ${score}%</strong>. Tu reescritura se aleja un poco del significado del texto original. Intenta usar diferentes palabras pero manteniendo la idea central y los detalles clave. ¡Sigue intentándolo!`;
-            } else if (score < 90) {
-                feedback = `<strong>¡Buen trabajo!</strong> Tu reescritura captura bien la esencia del texto original (${score}% de similitud semántica). Revisa si puedes añadir algún detalle importante que haya quedado fuera.`;
-            } else {
-                feedback = `<strong>¡Excelente trabajo!</strong> Tu reescritura captura muy bien la esencia del texto original (${score}% de similitud semántica). Has logrado expresar las ideas con tus propias palabras de manera efectiva.`;
+            // 4. <<< CAMBIO IMPORTANTE: Añadir lógica del diccionario local para dar una bonificación
+            let dictionaryBonus = 0;
+            if (Object.keys(allSynonyms).length > 0) {
+                const originalTokens = currentOriginalText.toLowerCase().split(/\s+/);
+                const rewrittenTokens = rewrittenText.toLowerCase().split(/\s+/);
+                
+                // Buscar palabras clave en el texto original que no están en el reescrito
+                for (const key in allSynonyms) {
+                    if (originalTokens.includes(key) && !rewrittenTokens.includes(key)) {
+                        // Si la palabra clave no está en el texto reescrito, pero SÍ sus sinónimos sí, se da una pequeña bonificación.
+                        let hasSynonym = allSynonyms[key].some(syn => rewrittenTokens.includes(syn));
+                        if (hasSynonym) {
+                            dictionaryBonus += 2; // Pequeña bonificación por usar sinónimos de una palabra clave.
+                        }
+                    }
+                }
             }
 
-            // 5. Mostrar resultados
-            scoreDisplay.textContent = `${score}%`;
-            scoreDisplay.className = `score-display ${score < 70 ? 'low' : score < 90 ? 'medium' : 'high'}`;
+            // La puntuación final no puede pasar del 100
+            const finalScore = Math.min(100, score + dictionaryBonus);
+
+            // 5. Generación de Feedback (más inteligente)
+            let feedback = '';
+            if (finalScore < 70) {
+                feedback = `<strong>Puntuación: ${finalScore}%</strong>. Tu reescritura se aleja del significado del texto original. Intenta usar diferentes palabras pero manteniendo la idea central.`;
+                if (dictionaryBonus > 0) {
+                    feedback += ` Se ha reconocido el uso de sinónimos de tu diccionario local, ¡muy buen trabajo!`;
+                }
+            } else if (finalScore < 90) {
+                feedback = `<strong>¡Buen trabajo!</strong> Tu reescritura captura bien la esencia del texto original (${finalScore}% de similitud semántica). Revisa si puedes añadir algún detalle importante que haya quedado fuera.`;
+            } else {
+                feedback = `<strong>¡Excelente trabajo!</strong> Tu reescritura captura muy bien la esencia del texto original (${finalScore}% de similitud semántica). Has logrado expresar las ideas con tus propias palabras de manera efectiva.`;
+            }
+
+            // 6. Mostrar Resultados
+            scoreDisplay.textContent = `${finalScore}%`;
+            scoreDisplay.className = `score-display ${finalScore < 70 ? 'low' : finalScore < 90 ? 'medium' : 'high'}`;
             feedbackMessage.innerHTML = feedback;
             resultsBox.classList.add('active');
 
         } catch (error) {
             console.error("Error al llamar a la API de Cohere:", error);
-            showToast('Error al analizar el texto con la API. Revisa la consola para más detalles.');
-            feedbackMessage.innerHTML = `<strong>Error:</strong> No se pudo conectar con el servicio de análisis. Revisa tu API Key o inténtalo de nuevo.`;
+            
+            // Mostrar un error detallado al usuario
+            let errorMessage = 'No se pudo conectar con el servicio de análisis.';
+            if (error.message) {
+                errorMessage = `Error de la API: ${error.message}`;
+            }
+            
+            showToast(errorMessage);
+            feedbackMessage.innerHTML = `<strong>Error de Conexión:</strong> ${errorMessage}. Revisa tu API Key o tu conexión a internet.`;
             resultsBox.classList.add('active');
         }
     }
@@ -644,6 +688,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
+        // JS for nested dropdowns on mobile
         const subItems = item.querySelectorAll('.dropdown > li');
         subItems.forEach(subItem => {
             const subLink = subItem.querySelector('span');
