@@ -231,11 +231,11 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .floating-icons { position: fixed; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; z-index: 1999; }
 .floating-icons button { background: var(--float-color); color: white; width: 50px; height: 50px; border-radius: 50%; border: none; font-size: 18px; display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0,0,0,0.12); cursor: pointer; transition: transform .15s ease, background .15s ease; }
 .floating-icons button:hover { transform: scale(1.08); background: var(--float-color-hover); }
-.toast { position: fixed; right: 20px; bottom: 20px; background: #fff7e6; border-left: 6px solid var(--color-oliva-medio); padding:16px 20px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); z-index: 3001; display: none; font-size: 1rem; max-width: 350px; }
+.toast { position: fixed; right: 20px; bottom: 20px; background: #fff7e6; border-left: 6px solid var(--color-oliva-medio); padding: 16px 20px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); z-index: 3001; display: none; font-size: 1rem; max-width: 350px; }
 .toast.show { display: block; }
 
 /* --- Responsive --- */
-@media (max-width:768px) {
+@media (max-width: 768px) {
     .challenge-area { grid-template-columns: 1fr; }
     .navbar { padding: 15px 20px; }
     .user-dropdown { right: 20px; }
@@ -617,19 +617,61 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // --- LÓGICA DE ANÁLISIS (NLP Simplificado) ---
+    // --- LÓGICA DE ANÁLISIS (NLP Mejorado) ---
 
     // Lista de palabras comunes a ignorar (stop words)
     const stopWords = new Set(['el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'del', 'y', 'o', 'pero', 'mas', 'si', 'no', 'en', 'a', 'con', 'por', 'para', 'que', 'como', 'al', 'lo', 'le', 'se', 'sus', 'mi', 'tu', 'su']);
 
+    // PEQUEÑO DICCIONARIO DE SINÓNIMOS (¡Puedes expandirlo!)
+    const synonyms = {
+        'aumento': ['incremento', 'crecimiento', 'elevación'],
+        'disminución': ['reducción', 'bajada', 'descenso'],
+        'problema': ['dificultad', 'inconveniente', 'desafío', 'obstáculo'],
+        'solución': ['respuesta', 'resolución', 'arreglo', 'salida'],
+        'importante': ['relevante', 'significativo', 'crucial', 'clave'],
+        'cambio': ['modificación', 'transformación', 'variación', 'alteración'],
+        'mejora': ['mejoramiento', 'progreso', 'avance', 'optimización'],
+        'daño': ['perjuicio', 'afectación', 'deterioro', 'impacto negativo'],
+        'causa': ['motivo', 'razón', 'origen'],
+        'efecto': ['consecuencia', 'resultado', 'impacto'],
+        'futuro': ['porvenir', 'venir', 'venidero'],
+        'tecnología': ['tecnología', 'avances técnicos', 'innovación'],
+        'sociedad': ['comunidad', 'población', 'colectivo'],
+        'persona': ['individuo', 'sujeto', 'gente'],
+        'país': ['nación', 'estado', 'territorio'],
+        'energía': ['potencia', 'fuerza', 'vigor'],
+        'recursos': ['medios', 'materiales', 'insumos'],
+        'investigación': ['estudio', 'análisis', 'indagación'],
+        'desarrollo': ['progreso', 'evolución', 'avance'],
+        'económico': ['financiero', 'monetario', 'económico'],
+        'ambiental': ['medioambiental', 'ecológico'],
+        'social': ['societal', 'comunitario'],
+        'salud': ['bienestar', 'sanidad'],
+        'educación': ['enseñanza', 'instrucción', 'formación'],
+        // Añade más pares según necesites...
+    };
+
+    // --- FUNCIONES DE ANÁLISIS MEJORADAS ---
+
+    // Tokeniza y expande con sinónimos
     function tokenize(text) {
-        return text.toLowerCase()
-                  .replace(/[.,!?;:()]/g, '') // Quitar puntuación
-                  .split(/\s+/) // Separar por espacios
-                  .filter(word => word && !stopWords.has(word)); // Quitar vacíos y stop words
+        const tokens = text.toLowerCase()
+                      .replace(/[.,!?;:()]/g, '')
+                      .split(/\s+/)
+                      .filter(word => word && !stopWords.has(word));
+        
+        const expandedTokens = new Set();
+        tokens.forEach(token => {
+            expandedTokens.add(token);
+            // Añadir sinónimos si existen
+            if (synonyms[token]) {
+                synonyms[token].forEach(syn => expandedTokens.add(syn));
+            }
+        });
+        return Array.from(expandedTokens);
     }
 
-    // Crear un vector TF-IDF simplificado (aquí solo TF)
+    // Crear un vector TF que ya tiene en cuenta los sinónimos
     function createTfVector(text, vocabulary) {
         const tokens = tokenize(text);
         const vector = {};
@@ -672,11 +714,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return false;
     }
 
-    // Analizar la reescritura del usuario
+    // Analizar la reescritura del usuario (CON FEEDBACK MEJORADO)
     function analyzeRewrite() {
         const rewrittenText = rewrittenTextEl.value.trim();
         if (!rewrittenText) {
-            alert('Por favor, escribe tu reescritura antes de analizar.');
+            showToast('Por favor, escribe tu reescritura antes de analizar.');
             return;
         }
 
@@ -689,7 +731,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 2. Cálculo de Similitud
+        // 2. Cálculo de Similitud (ahora con sinónimos)
         const originalTokens = tokenize(currentOriginalText);
         const rewrittenTokens = tokenize(rewrittenText);
         const vocabulary = [...new Set([...originalTokens, ...rewrittenTokens])];
@@ -700,21 +742,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const similarity = cosineSimilarity(vecOriginal, vecRewritten);
         const score = Math.round(similarity * 100);
 
-        // 3. Generación de Feedback
+        // 3. Generación de Feedback (más inteligente)
         let feedback = '';
         if (score < 70) {
-            // Encontrar palabras clave faltantes
             const originalTf = createTfVector(currentOriginalText, originalTokens);
             const sortedKeywords = Object.entries(originalTf).sort((a, b) => b[1] - a[1]).slice(0, 5).map(entry => entry[0]);
             
-            const missingKeywords = sortedKeywords.filter(word => !rewrittenTokens.includes(word));
-            
-            feedback = `<strong>Puntuación: ${score}%</strong>. Para mejorar tu reescritura, asegúrate de mantener la idea principal.`;
+            // Identificar palabras clave faltantes que NO tienen sinónimos en el texto reescrito
+            const missingKeywords = sortedKeywords.filter(word => {
+                if (rewrittenTokens.includes(word)) return false; // La palabra está
+                if (synonyms[word]) { // Si tiene sinónimos, comprobar si se usó alguno
+                    return !synonyms[word].some(syn => rewrittenTokens.includes(syn));
+                }
+                return true; // No tiene sinónimos y no está la palabra
+            });
+
+            feedback = `<strong>Puntuación: ${score}%</strong>. ¡Buen intento! Para mejorar, intenta mantener la idea principal.`;
             if (missingKeywords.length > 0) {
-                feedback += ` Considera incluir conceptos clave que podrían faltar, como: <strong>${missingKeywords.join(', ')}</strong>.`;
-            }
-            if (rewrittenTokens.length < originalTokens.length * 0.6) {
-                feedback += ` Además, tu texto es considerablemente más corto. Asegúrate de cubrir todos los puntos importantes del original.`;
+                feedback += ` Parece que podrías incluir conceptos clave como: <strong>${missingKeywords.join(', ')}</strong>.`;
+            } else {
+                feedback += ` Estás yendo bien por buen camino, pero asegúrate de que todos los detalles importantes del texto original estén presentes en tu versión.`;
             }
         } else {
             feedback = `<strong>¡Excelente trabajo!</strong> Tu reescritura captura muy bien la esencia del texto original (${score}% de similitud). Has logrado expresar las ideas con tus propias palabras de manera efectiva.`;
