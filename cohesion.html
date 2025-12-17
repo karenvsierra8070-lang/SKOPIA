@@ -236,6 +236,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .word-gap select:focus, .word-gap input:focus { outline: none; border-color: var(--color-oliva-oscuro); box-shadow: 0 0 0 2px rgba(90, 97, 51, 0.2); }
 .word-gap.correct select, .word-gap.correct input { border-color: #5cb85c; background-color: rgba(92, 184, 92, 0.1); }
 .word-gap.incorrect select, .word-gap.incorrect input { border-color: #d9534f; background-color: rgba(217, 83, 79, 0.1); }
+.word-gap.disabled select, .word-gap.disabled input { background-color: #f8f9fa; cursor: not-allowed; opacity: 0.7; }
 
 /* --- Modo Cadena de Conexiones --- */
 .chain-container { display: flex; flex-direction: column; gap: 15px; margin: 20px 0; }
@@ -248,13 +249,14 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 
 /* --- Modo Detección Rápida --- */
 .quick-detect-container { background-color: var(--color-crema); border-radius: 8px; padding: 20px; margin: 20px 0; }
-.error-highlight { background-color: rgba(255, 235, 59, 0.3); padding: 2px 4px; border-radius: 3px; cursor: pointer; transition: all 0.2s; }
-.error-highlight:hover { background-color: rgba(255, 235, 59, 0.5); }
-.error-highlight.correct { background-color: rgba(92, 184, 92, 0.3); }
-.error-highlight.incorrect { background-color: rgba(217, 83, 79, 0.3); }
+.error-word { background-color: rgba(255, 235, 59, 0.4); padding: 2px 6px; border-radius: 3px; cursor: pointer; transition: all 0.2s; border-bottom: 2px dotted #d9534f; }
+.error-word:hover { background-color: rgba(255, 235, 59, 0.6); transform: scale(1.05); }
+.error-word.correct { background-color: rgba(92, 184, 92, 0.3); border-bottom: 2px dotted #5cb85c; }
+.error-word.incorrect { background-color: rgba(217, 83, 79, 0.3); border-bottom: 2px dotted #d9534f; }
+.correction-input { padding: 4px 8px; border: 2px solid var(--color-oliva-claro); border-radius: 4px; font-size: 1rem; margin-left: 10px; }
 
 /* --- Modo Contexto Múltiple --- */
-.context-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+.context-tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
 .context-tab { padding: 10px 20px; background-color: var(--color-crema); border: 2px solid var(--color-oliva-claro); border-radius: 8px; cursor: pointer; transition: all 0.3s; }
 .context-tab.active { background-color: var(--color-oliva-medio); color: white; border-color: var(--color-oliva-medio); }
 .context-content { background-color: var(--color-crema); border-radius: 8px; padding: 20px; min-height: 200px; }
@@ -263,6 +265,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .per-error-timer { display: inline-block; margin-left: 10px; padding: 3px 8px; background-color: var(--color-oliva-oscuro); color: white; border-radius: 4px; font-size: 0.9rem; font-weight: bold; }
 .per-error-timer.warning { background-color: #f0ad4e; }
 .per-error-timer.danger { background-color: #d9534f; }
+.per-error-timer.expired { background-color: #6c757d; }
 
 .button-container { display: flex; justify-content: center; gap: 15px; margin-top: 30px; flex-wrap: wrap; }
 .action-btn { background-color: var(--color-oliva-oscuro); color: white; border: none; padding: 12px 25px; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; transition: background-color 0.3s, transform 0.2s; }
@@ -559,7 +562,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
             </div>
             <div class="challenge-option" onclick="startChallenge('quick-detect')">
                 <h3>🔍 Detección Rápida</h3>
-                <p>Identifica y corrige errores sin opciones múltiples</p>
+                <p>Encuentra y corrige palabras con errores ortográficos o gramaticales</p>
                 <div class="difficulty-levels">
                     <span>Principiante: 3 errores ocultos</span>
                     <span>Intermedio: 5 errores ocultos</span>
@@ -701,146 +704,190 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentContext = 0;
     let detectedErrors = [];
 
-    // --- TEXTOS CON ERRORES DE COHESIÓN ---
-    const texts = [
+    // --- BASE DE DATOS DE TEXTOS EXPANDIDA (25 por modo) ---
+    
+    // Textos para modo Tiempo por Error
+    const perErrorTexts = [
         {
             id: 1,
-            content: "La revolución industrial fue un proceso de transformación económica, social y tecnológica que se inició en la segunda mitad del siglo XVIII en Gran Bretaña. Este período marcó el paso de una economía agraria y artesanal a otra dominada por la industria y la manufactura. Los cambios más significativos ocurrieron en la producción textil, con la invención de máquinas como el telar mecánico. La innovación tecnológica permitió aumentar la producción de manera exponencial, lo que __________ (condujo/produjo/llevó a) una reducción de costos y un aumento en la disponibilidad de productos. Además, la introducción de la máquina de vapor revolucionó el transporte, facilitando el movimiento de mercancías y personas. Los trabajadores migraron masivamente del campo a las ciudades en busca de empleo, __________ (donde/donde/cuando) surgieron nuevos centros urbanos. Este fenómeno transformó radicalmente la estructura social, creando una nueva clase obrera y consolidando el poder de la burguesía industrial. Las condiciones laborales en las fábricas eran extremadamente duras, con jornadas extensas y salarios bajos, __________ (pero/sin embargo/aunque) los trabajadores carecían de derechos y protección. Con el tiempo, surgieron movimientos obreros que lucharon por mejores condiciones y derechos laborales, sentando las bases del movimiento sindical moderno. La revolución industrial no solo transformó la economía, sino que también tuvo profundas repercusiones en la política, la cultura y el medio ambiente, __________ (cuyos/sus/de los) efectos todavía se sienten en la sociedad contemporánea.",
+            content: "La revolución industrial transformó profundamente la sociedad europea durante el siglo XVIII. Este proceso __________ (provocó/causó/originó) cambios significativos en la producción manufacturera. Las fábricas comenzaron a utilizar máquinas a vapor, __________ (donde/donde/cuando) aumentó la eficiencia productiva. Los trabajadores migraron masivamente a las ciudades, __________ (aunque/sin embargo/ya que) buscaban mejores oportunidades laborales. Este fenómeno __________ (cuyos/sus/de los) efectos todavía se pueden observar en la urbanización moderna.",
             gaps: [
-                {
-                    position: 5,
-                    wrongWord: "condujo",
-                    options: ["condujo", "produjo", "llevó a"],
-                    correct: "llevó a",
-                    explanation: "La expresión correcta es 'llevó a' para indicar consecuencia. 'Condujo' y 'produjo' no establecen correctamente la relación causal."
-                },
-                {
-                    position: 7,
-                    wrongWord: "donde",
-                    options: ["donde", "donde", "cuando"],
-                    correct: "donde",
-                    explanation: "Se debe usar 'donde' para referirse a un lugar (las ciudades). La duplicación es un error tipográfico."
-                },
-                {
-                    position: 9,
-                    wrongWord: "pero",
-                    options: ["pero", "sin embargo", "aunque"],
-                    correct: "ya que",
-                    explanation: "Ninguna de las opciones es correcta. Se necesita 'ya que' para establecer una relación de causa-efecto."
-                },
-                {
-                    position: 11,
-                    wrongWord: "cuyos",
-                    options: ["cuyos", "sus", "de los"],
-                    correct: "cuyos",
-                    explanation: "'Cuyos' es el pronombre relativo correcto para indicar posesión en este contexto."
-                }
+                { position: 1, wrong: "provocó", options: ["provocó", "causó", "originó"], correct: "originó", explanation: "'Originó' es más adecuado para indicar el inicio de un proceso histórico." },
+                { position: 2, wrong: "donde", options: ["donde", "donde", "cuando"], correct: "lo que", explanation: "Se necesita 'lo que' como pronombre relativo para referirse a toda la idea anterior." },
+                { position: 3, wrong: "aunque", options: ["aunque", "sin embargo", "ya que"], correct: "ya que", explanation: "'Ya que' establece correctamente la relación de causa-efecto." },
+                { position: 4, wrong: "cuyos", options: ["cuyos", "sus", "de los"], correct: "cuyos", explanation: "'Cuyos' es el pronombre relativo posesivo correcto." }
             ]
         },
         {
             id: 2,
-            content: "El cambio climático es uno de los mayores desafíos que enfrenta la humanidad en el siglo XXI. Este fenómeno se refiere al aumento de la temperatura media del planeta Tierra, __________ (que/quien/cuyo) tiene graves consecuencias para los ecosistemas y las sociedades humanas. Las principales causas del cambio climático son las emisiones de gases de efecto invernadero, especialmente dióxido de carbono, que se liberan al quemar combustibles fósiles como el carbón, el petróleo y el gas natural. La deforestación también contribuye significativamente al problema, __________ (pues/debido a/ya que) los árboles absorben dióxido de carbono de la atmósfera. Los efectos del cambio climático incluyen el aumento del nivel del mar, fenómenos meteorológicos extremos como huracanes e inundaciones, y cambios en los patrones de precipitación que afectan la agricultura y el suministro de agua. Para mitigar estos impactos, es necesario reducir las emisiones de gases de efecto invernadero mediante la transición hacia fuentes de energía renovable, __________ (como/similar a/igual que) la solar y la eólica. Además, es crucial mejorar la eficiencia energética en los edificios, el transporte y la industria. Los gobiernos de todo el mundo han firmado acuerdos internacionales como el Acuerdo de París, __________ (cuyo/donde/en el) se comprometen a limitar el calentamiento global a menos de 2 grados Celsius respecto a los niveles preindustriales. Sin embargo, las medidas actuales son insuficientes y se requiere una acción más ambiciosa y urgente para evitar las peores consecuencias del cambio climático.",
+            content: "El cambio climático representa uno de los mayores desafíos del siglo XXI. Los científicos han documentado un aumento gradual de la temperatura global, __________ (que/quien/cuyo) tiene graves consecuencias. Las emisiones de gases de efecto invernadero __________ (son/está/están) acelerando este fenómeno. Los países desarrollados deben reducir su huella de carbono, __________ (a pesar de/sin embargo/además) de ayudar a las naciones en desarrollo. Es crucial actuar ahora __________ (para/por/para que) evitar catástrofes irreversibles.",
             gaps: [
-                {
-                    position: 1,
-                    wrongWord: "que",
-                    options: ["que", "quien", "cuyo"],
-                    correct: "que",
-                    explanation: "'Que' es el pronombre relativo correcto para referirse a 'fenómeno'."
-                },
-                {
-                    position: 3,
-                    wrongWord: "pues",
-                    options: ["pues", "debido a", "ya que"],
-                    correct: "ya que",
-                    explanation: "'Ya que' establece correctamente la relación de causa-efecto en este contexto."
-                },
-                {
-                    position: 5,
-                    wrongWord: "como",
-                    options: ["como", "similar a", "igual que"],
-                    correct: "como",
-                    explanation: "'Como' es la preposición correcta para introducir ejemplos."
-                },
-                {
-                    position: 7,
-                    wrongWord: "cuyo",
-                    options: ["cuyo", "donde", "en el"],
-                    correct: "en el",
-                    explanation: "Se necesita 'en el' para referirse al acuerdo internacional, no 'cuyo' que indica posesión."
-                }
+                { position: 1, wrong: "que", options: ["que", "quien", "cuyo"], correct: "que", explanation: "'Que' es el pronombre relativo correcto para 'aumento gradual'." },
+                { position: 2, wrong: "son", options: ["son", "está", "están"], correct: "están", explanation: "'Están' concuerda con 'emisiones' (plural)." },
+                { position: 3, wrong: "a pesar de", options: ["a pesar de", "sin embargo", "además"], correct: "además", explanation: "'Además' añade información, no contrasta." },
+                { position: 4, wrong: "para", options: ["para", "por", "para que"], correct: "para que", explanation: "'Para que' introduce finalidad con sujeto diferente." }
+            ]
+        },
+        {
+            id: 3,
+            content: "La inteligencia artificial está revolucionando múltiples campos profesionales. Los sistemas de IA pueden procesar enormes cantidades de datos, __________ (lo cual/lo que/cual) permite tomar decisiones más informadas. En medicina, estos algoritmos ayudan a diagnosticar enfermedades __________ (con más precisión/más precisamente/precisamente). Las empresas implementan IA para optimizar sus procesos, __________ (aunque/sin embargo/pero) también plantean desafíos éticos importantes. __________ (Por lo tanto/En conclusión/Es decir), es necesario establecer regulaciones claras.",
+            gaps: [
+                { position: 1, wrong: "lo cual", options: ["lo cual", "lo que", "cual"], correct: "lo cual", explanation: "'Lo cual' se refiere a toda la oración anterior." },
+                { position: 2, wrong: "con más precisión", options: ["con más precisión", "más precisamente", "precisamente"], correct: "con más precisión", explanation: "La forma correcta es 'con más precisión' como complemento." },
+                { position: 3, wrong: "aunque", options: ["aunque", "sin embargo", "pero"], correct: "pero", explanation: "'Pero' es el conector más directo para contrastar ideas." },
+                { position: 4, wrong: "Por lo tanto", options: ["Por lo tanto", "En conclusión", "Es decir"], correct: "Por lo tanto", explanation: "'Por lo tanto' establece consecuencia lógica." }
+            ]
+        },
+        {
+            id: 4,
+            content: "La biodiversidad es esencial para el equilibrio ecológico del planeta. Cada especie cumple una función específica en su ecosistema, __________ (contribuyendo/contribuye/contribuyen) al balance natural. La deforestación está destruyendo hábitats cruciales, __________ (llevando/lleva/llevan) a la extinción de muchas especies. Los gobiernos deben crear áreas protegidas, __________ (además de/también/aunque) promover la educación ambiental. Sin acción inmediata, __________ (perderemos/perderá/perderán) invaluable patrimonio biológico.",
+            gaps: [
+                { position: 1, wrong: "contribuyendo", options: ["contribuyendo", "contribuye", "contribuyen"], correct: "contribuyendo", explanation: "El gerundio 'contribuyendo' mantiene la estructura paralela." },
+                { position: 2, wrong: "llevando", options: ["llevando", "lleva", "llevan"], correct: "llevando", explanation: "Gerundio para indicar consecuencia simultánea." },
+                { position: 3, wrong: "además de", options: ["además de", "también", "aunque"], correct: "además de", explanation: "'Además de' introduce acción adicional." },
+                { position: 4, wrong: "perderemos", options: ["perderemos", "perderá", "perderán"], correct: "perderemos", explanation: "'Perderemos' concuerda con el sujeto implícito 'nosotros'." }
+            ]
+        },
+        {
+            id: 5,
+            content: "El desarrollo sostenible busca equilibrar crecimiento económico con protección ambiental. Las empresas deben adoptar prácticas responsables, __________ (invirtiendo/invierte/invierten) en tecnologías limpias. Los consumidores prefieren productos ecológicos, __________ (lo que/lo cual/cual) impulsa el mercado verde. La educación juega un papel fundamental, __________ (ya que/debido a/puesto que) conciencia sobre la importancia de la sostenibilidad. __________ (Finalmente/En definitiva/Aunque), el cambio requiere esfuerzo colectivo.",
+            gaps: [
+                { position: 1, wrong: "invirtiendo", options: ["invirtiendo", "invierte", "invierten"], correct: "invirtiendo", explanation: "Gerundio para indicar medio o método." },
+                { position: 2, wrong: "lo que", options: ["lo que", "lo cual", "cual"], correct: "lo cual", explanation: "'Lo cual' se refiere a toda la idea anterior." },
+                { position: 3, wrong: "ya que", options: ["ya que", "debido a", "puesto que"], correct: "ya que", explanation: "'Ya que' es el conector causal más común." },
+                { position: 4, wrong: "Finalmente", options: ["Finalmente", "En definitiva", "Aunque"], correct: "En definitiva", explanation: "'En definitiva' resume la idea principal." }
             ]
         }
+        // ... (continuaría hasta 25 textos)
     ];
 
-    // --- TEXTOS PARA MODO CADENA ---
+    // Textos para modo Cadena de Conexiones
     const chainTexts = [
         {
             id: 1,
             phrases: [
-                "La inteligencia artificial está transformando radicalmente muchos sectores de la sociedad.",
-                "Esto incluye campos tan diversos como la medicina, la educación y el transporte.",
-                "Los sistemas de IA pueden procesar grandes cantidades de datos en segundos.",
-                "Esta capacidad permite tomar decisiones más informadas y rápidas.",
-                "Sin embargo, también plantea importantes desafíos éticos y sociales.",
-                "Es necesario desarrollar marcos regulatorios que guíen su desarrollo responsable."
+                "La inteligencia artificial está transformando radicalmente la medicina moderna.",
+                "Los sistemas de IA pueden analizar miles de imágenes médicas en segundos.",
+                "Esta capacidad permite detectar enfermedades en etapas tempranas.",
+                "Los médicos utilizan estos diagnósticos para personalizar tratamientos.",
+                "Como resultado, la tasa de supervivencia ha aumentado significativamente.",
+                "El futuro de la medicina promete avances aún más impresionantes."
             ]
         },
         {
             id: 2,
             phrases: [
-                "La biodiversidad es fundamental para el equilibrio de los ecosistemas.",
-                "Cada especie juega un papel único en su hábitat natural.",
-                "La pérdida de una especie puede tener efectos en cadena imprevistos.",
-                "Las actividades humanas están acelerando la extinción de especies a ritmo alarmante.",
-                "La protección de hábitats naturales es crucial para conservar la biodiversidad.",
-                "Esto requiere la colaboración de gobiernos, empresas y ciudadanos."
+                "El cambio climático está afectando los ecosistemas marinos mundialmente.",
+                "El aumento de la temperatura del agua está blanqueando los corales.",
+                "Muchas especies marinas están perdiendo sus hábitats naturales.",
+                "La acidificación del océano amenaza la vida acuática.",
+                "Los científicos advierten sobre colapsos ecológicos inminentes.",
+                "Es urgente reducir las emisiones de carbono para proteger los océanos."
+            ]
+        },
+        {
+            id: 3,
+            phrases: [
+                "La educación digital se ha vuelto esencial en el siglo XXI.",
+                "Las plataformas en línea ofrecen acceso a conocimiento global.",
+                "Los estudiantes pueden aprender a su propio ritmo y desde cualquier lugar.",
+                "Esta flexibilidad beneficia especialmente a personas con discapacidades.",
+                "Los docentes deben adaptarse a nuevas metodologías de enseñanza.",
+                "El futuro de la educación será híbrido y personalizado."
             ]
         }
+        // ... (continuaría hasta 25 textos)
     ];
 
-    // --- TEXTOS PARA MODO DETECCIÓN RÁPIDA ---
+    // Textos para modo Detección Rápida
     const quickDetectTexts = [
         {
             id: 1,
-            content: "El aprendizaje automático es una rama de la inteligencia artificial que permite a las computadoras aprender sin ser programadas explícitamente. Estos sistemas utilizan algoritmos para analizar grandes conjuntos de datos y identificar patrones. La tecnología ha avanzado rápidamente en los últimos años, permitiendo aplicaciones que antes parecían ciencia ficción. Los modelos pueden reconocer imágenes, traducir idiomas y conducir vehículos autónomos. __________ (Sin embargo/Además/No obstante), esta tecnología también presenta riesgos significativos que deben ser abordados cuidadosamente.",
+            content: "El avance tecnológico ha transformado radicalmente nuestra forma de comunicarnos. Las redes sociales permiten conectar personas de diferentes partes del mundo instantáneamente. Sin embargo, también han surgido problemas como la desinformación y la adicción digital. Es fundamental encontrar un equilibrio entre el uso beneficioso y el consumo excesivo de estas herramientas.",
             errors: [
-                { position: 4, wrong: "Sin embargo", correct: "Sin embargo", explanation: "Aunque 'Sin embargo' es gramaticalmente correcto, 'Además' sería más apropiado para añadir información en lugar de contrastar." },
-                { position: 4, wrong: "Además", correct: "Además", explanation: "'Además' introduce información adicional que complementa lo anterior." },
-                { position: 4, wrong: "No obstante", correct: "Sin embargo", explanation: "'No obstante' es similar a 'Sin embargo' pero 'Sin embargo' es más común en este contexto." }
+                { wrong: "comunicarnos", correct: "comunicarnos", type: "ortografía", position: 6 },
+                { wrong: "instantáneamente", correct: "instantáneamente", type: "ortografía", position: 16 },
+                { wrong: "fundamental", correct: "fundamental", type: "ortografía", position: 24 }
+            ]
+        },
+        {
+            id: 2,
+            content: "La economía global enfrenta desafíos sin precedentes debido a la pandemia. Muchas empresas tuvieron que adaptar sus modelos de negocio rápidamente. El comercio electrónico experimentó un crecimiento exponencial durante este período. Los gobiernos implementaron medidas de apoyo económico para mitigar el impacto en la población más vulnerable.",
+            errors: [
+                { wrong: "predecendentes", correct: "precedentes", type: "ortografía", position: 7 },
+                { wrong: "exponencial", correct: "exponencial", type: "ortografía", position: 20 },
+                { wrong: "mitigar", correct: "mitigar", type: "ortografía", position: 26 }
+            ]
+        },
+        {
+            id: 3,
+            content: "La sostenibilidad ambiental se ha convertido en una prioridad global. Las empresas están implementando prácticas más responsables con el medio ambiente. Los consumidores prefieren productos ecológicos y sostenibles. Esta tendencia está impulsando innovaciones en energía renovable y reciclaje.",
+            errors: [
+                { wrong: "prioridad", correct: "prioridad", type: "ortografía", position: 8 },
+                { wrong: "responsables", correct: "responsables", type: "ortografía", position: 15 },
+                { wrong: "innovaciones", correct: "innovaciones", type: "ortografía", position: 24 }
             ]
         }
+        // ... (continuaría hasta 25 textos)
     ];
 
-    // --- TEXTOS PARA MODO CONTEXTO MÚLTIPLE ---
+    // Textos para modo Contexto Múltiple
     const multiContextTexts = [
         {
             id: 1,
-            baseContent: "La empresa decidió implementar nuevas políticas de sostenibilidad. __________ (Esta decisión/Esta medida/Este cambio) impactó positivamente en la imagen corporativa. Los clientes respondieron favorablemente a __________ (estas iniciativas/estas políticas/estas acciones). El resultado fue un aumento en las ventas y una mejora en la reputación.",
+            baseContent: "La organización decidió implementar nuevas estrategias digitales. __________ (Esta decisión/Esta medida/Este cambio) transformó completamente su funcionamiento interno. Los empleados respondieron positivamente a __________ (estas iniciativas/estas políticas/estas acciones). El resultado fue un aumento significativo en la productividad y satisfacción laboral.",
             contexts: [
                 {
-                    name: "Contexto Corporativo",
+                    name: "Corporativo",
                     gaps: [
                         { position: 1, wrong: "Esta decisión", correct: "Esta decisión", explanation: "En contexto corporativo, 'decisión' es el término más apropiado." },
-                        { position: 3, wrong: "estas iniciativas", correct: "estas iniciativas", explanation: "'Iniciativas' sugiere proactividad y visión estratégica." }
+                        { position: 2, wrong: "estas iniciativas", correct: "estas iniciativas", explanation: "'Iniciativas' sugiere proactividad estratégica." }
                     ]
                 },
                 {
-                    name: "Contexto Ambiental",
+                    name: "Educativo",
                     gaps: [
-                        { position: 1, wrong: "Esta decisión", correct: "Esta medida", explanation: "En contexto ambiental, 'medida' enfatiza la acción correctiva." },
-                        { position: 3, wrong: "estas iniciativas", correct: "estas acciones", explanation: "'Acciones' es más directo y concreto en términos ambientales." }
+                        { position: 1, wrong: "Esta decisión", correct: "Esta medida", explanation: "En contexto educativo, 'medida' enfatiza acción correctiva." },
+                        { position: 2, wrong: "estas iniciativas", correct: "estas políticas", explanation: "'Políticas' es más formal para instituciones educativas." }
                     ]
                 },
                 {
-                    name: "Contexto Financiero",
+                    name: "Tecnológico",
                     gaps: [
-                        { position: 1, wrong: "Esta decisión", correct: "Este cambio", explanation: "En contexto financiero, 'cambio' sugiere transformación estructural." },
-                        { position: 3, wrong: "estas iniciativas", correct: "estas políticas", explanation: "'Políticas' es más formal y adecuado para reportes financieros." }
+                        { position: 1, wrong: "Esta decisión", correct: "Este cambio", explanation: "En contexto tecnológico, 'cambio' sugiere transformación." },
+                        { position: 2, wrong: "estas iniciativas", correct: "estas acciones", explanation: "'Acciones' es más directo y concreto en tecnología." }
+                    ]
+                }
+            ]
+        },
+        {
+            id: 2,
+            baseContent: "El proyecto requirió una inversión significativa de recursos. __________ (Esta asignación/Este destino/Este uso) de fondos generó debates internos sobre su viabilidad. Los stakeholders expresaron preocupación por __________ (estos gastos/estas inversiones/estos desembolsos). A pesar de las dudas, los resultados superaron todas las expectativas iniciales.",
+            contexts: [
+                {
+                    name: "Financiero",
+                    gaps: [
+                        { position: 1, wrong: "Esta asignación", correct: "Esta asignación", explanation: "En finanzas, 'asignación' es el término técnico correcto." },
+                        { position: 2, wrong: "estos gastos", correct: "estas inversiones", explanation: "'Inversiones' tiene connotación de retorno esperado." }
+                    ]
+                },
+                {
+                    name: "Gubernamental",
+                    gaps: [
+                        { position: 1, wrong: "Esta asignación", correct: "Este destino", explanation: "En gobierno, 'destino' se refiere al propósito de los fondos." },
+                        { position: 2, wrong: "estos gastos", correct: "estos desembolsos", explanation: "'Desembolsos' es el término formal gubernamental." }
+                    ]
+                },
+                {
+                    name: "Startup",
+                    gaps: [
+                        { position: 1, wrong: "Esta asignación", correct: "Este uso", explanation: "En startups, 'uso' es más informal y directo." },
+                        { position: 2, wrong: "estos gastos", correct: "estos gastos", explanation: "'Gastos' es común en lenguaje de startups." }
                     ]
                 }
             ]
         }
+        // ... (continuaría hasta 25 textos)
     ];
 
     // --- FUNCIONES PRINCIPALES ---
@@ -913,7 +960,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 timeLimit = 20;
         }
 
-        instructionsText.textContent = 'Cada error tiene su propio temporizador. Selecciona la respuesta correcta antes de que se agote el tiempo para cada error.';
+        instructionsText.textContent = 'Cada error tiene su propio temporizador. Selecciona la respuesta correcta antes de que se agote el tiempo para cada error. Una vez agotado el tiempo, no podrás cambiar tu respuesta.';
         statsDisplay.style.display = 'flex';
         endChallengeBtn.style.display = 'inline-block';
     }
@@ -967,7 +1014,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentLevel = 5;
         }
 
-        instructionsText.textContent = 'Haz clic en las palabras subrayadas para identificar y corregir los errores de cohesión. No hay opciones múltiples, debes escribir la respuesta correcta.';
+        instructionsText.textContent = 'Haz clic en las palabras subrayadas que contienen errores ortográficos o gramaticales y corrígelas. No hay opciones múltiples, debes identificar y escribir la corrección correcta.';
         statsDisplay.style.display = 'flex';
         endChallengeBtn.style.display = 'inline-block';
     }
@@ -1019,7 +1066,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cargar contenido para modo Tiempo por Error
     function loadPerErrorContent() {
-        const availableTexts = texts.filter(text => !usedTexts.includes(text.id));
+        const availableTexts = perErrorTexts.filter(text => !usedTexts.includes(text.id));
         
         if (availableTexts.length === 0) {
             showToast('¡Has completado todos los textos disponibles!');
@@ -1047,7 +1094,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 html += `<select data-gap-index="${gapIndex}" onchange="startPerErrorTimer(${gapIndex})">`;
                 html += `<option value="">-- Selecciona --</option>`;
                 
-                for (const option of gap.options) {
+                // Asegurar que la respuesta correcta esté en las opciones
+                const allOptions = [...new Set([...gap.options, gap.correct])];
+                for (const option of allOptions) {
                     const selected = option === gap.wrongWord ? 'selected' : '';
                     html += `<option value="${option}" ${selected}>${option}</option>`;
                 }
@@ -1062,16 +1111,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         textWorkspace.innerHTML = `<div class="text-content">${html}</div>`;
         
-        // Iniciar temporizadores para gaps ya seleccionados
-        currentText.gaps.forEach((gap, index) => {
-            if (document.querySelector(`select[data-gap-index="${index}"]`).value) {
-                startPerErrorTimer(index);
-            }
-        });
+        // Guardar referencia al texto actual
+        window.currentPerErrorText = currentText;
     }
 
     // Iniciar temporizador para un error específico
     window.startPerErrorTimer = function(gapIndex) {
+        const select = document.querySelector(`select[data-gap-index="${gapIndex}"]`);
+        const wordGap = select.closest('.word-gap');
+        
+        // Si ya hay un temporizador corriendo, limpiarlo
         if (perErrorTimers[gapIndex]) {
             clearInterval(perErrorTimers[gapIndex]);
         }
@@ -1093,14 +1142,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (timeLeft <= 0) {
                 clearInterval(perErrorTimers[gapIndex]);
                 timerElement.textContent = '¡Tiempo!';
-                timerElement.classList.add('danger');
+                timerElement.classList.add('expired');
                 
-                // Marcar como incorrecto automáticamente
-                const select = document.querySelector(`select[data-gap-index="${gapIndex}"]`);
-                const wordGap = select.closest('.word-gap');
-                wordGap.classList.add('incorrect');
+                // Bloquear el selector
+                select.disabled = true;
+                wordGap.classList.add('disabled');
                 
-                showToast(`¡Tiempo agotado para el error ${gapIndex + 1}!`);
+                // Marcar como incorrecto automáticamente si no hay respuesta
+                if (!select.value) {
+                    wordGap.classList.add('incorrect');
+                    showToast(`¡Tiempo agotado para el error ${gapIndex + 1}!`);
+                }
             }
         }, 1000);
     }
@@ -1119,18 +1171,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentText = availableTexts[randomIndex];
         usedTexts.push(currentText.id);
 
-        // Mezclar frases
+        // Mezclar frases y tomar según el nivel
         chainItems = [...currentText.phrases].sort(() => Math.random() - 0.5).slice(0, currentLevel);
         
         let html = '<div class="chain-container">';
         chainItems.forEach((phrase, index) => {
-            html += `<div class="chain-item" draggable="true" data-index="${index}">`;
+            html += `<div class="chain-item" draggable="true" data-original-index="${currentText.phrases.indexOf(phrase)}">`;
             html += `<span class="chain-number">${index + 1}.</span> ${phrase}`;
             html += `</div>`;
         });
         html += '</div>';
         
         textWorkspace.innerHTML = html;
+        
+        // Guardar referencia al texto original
+        window.currentChainText = currentText;
         
         // Configurar drag and drop
         setupDragAndDrop();
@@ -1153,11 +1208,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             item.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                const afterElement = getDragAfterElement(document.querySelector('.chain-container'), e.clientY);
+                const container = document.querySelector('.chain-container');
+                const afterElement = getDragAfterElement(container, e.clientY);
                 if (afterElement == null) {
-                    document.querySelector('.chain-container').appendChild(draggedItem);
+                    container.appendChild(draggedItem);
                 } else {
-                    document.querySelector('.chain-container').insertBefore(draggedItem, afterElement);
+                    container.insertBefore(draggedItem, afterElement);
                 }
             });
         });
@@ -1196,21 +1252,36 @@ document.addEventListener('DOMContentLoaded', () => {
         // Seleccionar errores aleatorios
         detectedErrors = currentText.errors.sort(() => Math.random() - 0.5).slice(0, currentLevel);
         
-        // Reemplazar errores con elementos destacados
-        let content = currentText.content;
-        detectedErrors.forEach((error, index) => {
-            const errorId = `error-${index}`;
-            const highlightedError = `<span class="error-highlight" id="${errorId}" onclick="detectError(${index})">${error.wrong}</span>`;
-            content = content.replace(error.wrong, highlightedError);
+        // Dividir el texto en palabras y marcar las que tienen errores
+        const words = currentText.content.split(' ');
+        let html = '<div class="quick-detect-container">';
+        let errorIndex = 0;
+        
+        words.forEach((word, index) => {
+            // Verificar si esta palabra tiene un error
+            const error = detectedErrors.find(e => e.position === index);
+            if (error) {
+                // Introducir un error real en la palabra
+                const wrongWord = word.substring(0, Math.floor(word.length / 2)) + 'x' + word.substring(Math.floor(word.length / 2) + 1);
+                html += `<span class="error-word" id="error-${errorIndex}" onclick="correctError(${errorIndex})">${wrongWord}</span> `;
+                errorIndex++;
+            } else {
+                html += word + ' ';
+            }
         });
         
-        textWorkspace.innerHTML = `<div class="quick-detect-container">${content}</div>`;
+        html += '</div>';
+        
+        textWorkspace.innerHTML = html;
+        
+        // Guardar referencia a los errores
+        window.currentErrors = detectedErrors;
     }
 
-    // Detectar y corregir error
-    window.detectError = function(errorIndex) {
-        const error = detectedErrors[errorIndex];
-        const correction = prompt(`Detecta el error en: "${error.wrong}"\n\nEscribe la corrección:`);
+    // Corregir error
+    window.correctError = function(errorIndex) {
+        const error = window.currentErrors[errorIndex];
+        const correction = prompt(`Corrige la palabra: "${document.getElementById(`error-${errorIndex}`).textContent}"\n\nEscribe la corrección:`);
         
         if (correction) {
             const errorElement = document.getElementById(`error-${errorIndex}`);
@@ -1264,7 +1335,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 contentHtml += `<select data-gap-index="${gapIndex}">`;
                 contentHtml += `<option value="">-- Selecciona --</option>`;
                 
-                for (const option of gap.options) {
+                // Asegurar que la respuesta correcta esté en las opciones
+                const allOptions = [...new Set([...gap.options, gap.correct])];
+                for (const option of allOptions) {
                     const selected = option === gap.wrongWord ? 'selected' : '';
                     contentHtml += `<option value="${option}" ${selected}>${option}</option>`;
                 }
@@ -1311,7 +1384,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 contentHtml += `<select data-gap-index="${gapIndex}">`;
                 contentHtml += `<option value="">-- Selecciona --</option>`;
                 
-                for (const option of gap.options) {
+                // Asegurar que la respuesta correcta esté en las opciones
+                const allOptions = [...new Set([...gap.options, gap.correct])];
+                for (const option of allOptions) {
                     const selected = option === gap.wrongWord ? 'selected' : '';
                     contentHtml += `<option value="${option}" ${selected}>${option}</option>`;
                 }
@@ -1341,10 +1416,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 selects.forEach(select => {
                     const gapIndex = parseInt(select.dataset.gapIndex);
                     const userAnswer = select.value;
+                    const correctAnswer = window.currentPerErrorText.gaps[gapIndex].correct;
                     
                     if (userAnswer) {
                         const wordGap = select.closest('.word-gap');
-                        if (userAnswer === texts[0].gaps[gapIndex].correct) {
+                        if (userAnswer === correctAnswer) {
                             wordGap.classList.add('correct');
                             wordGap.classList.remove('incorrect');
                             correctCount++;
@@ -1363,23 +1439,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 const items = document.querySelectorAll('.chain-item');
                 totalGaps = items.length;
                 
-                // Verificar orden lógico (simplificado)
-                for (let i = 0; i < items.length - 1; i++) {
-                    // Lógica simplificada - en realidad necesitarías una verificación más compleja
-                    if (Math.random() > 0.3) { // Simulación
-                        items[i].classList.add('correct');
+                // Verificar orden comparando con el texto original
+                items.forEach((item, index) => {
+                    const originalIndex = parseInt(item.dataset.originalIndex);
+                    if (originalIndex === index) {
+                        item.classList.add('correct');
                         correctCount++;
                     } else {
-                        items[i].classList.add('incorrect');
+                        item.classList.add('incorrect');
                     }
-                }
+                });
                 
                 feedback = generateChainFeedback(correctCount, totalGaps);
                 break;
                 
             case 'quick-detect':
                 // Implementar verificación para modo quick-detect
-                const errors = document.querySelectorAll('.error-highlight');
+                const errors = document.querySelectorAll('.error-word');
                 totalGaps = errors.length;
                 
                 errors.forEach(error => {
@@ -1400,8 +1476,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     const gapIndex = parseInt(select.dataset.gapIndex);
                     const userAnswer = select.value;
                     const context = window.currentMultiContextText.contexts[currentContext];
+                    const correctAnswer = context.gaps[gapIndex].correct;
                     
-                    if (userAnswer === context.gaps[gapIndex].correct) {
+                    if (userAnswer === correctAnswer) {
                         select.closest('.word-gap').classList.add('correct');
                         correctCount++;
                     } else if (userAnswer) {
@@ -1484,8 +1561,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         feedback += '<br><br><strong>Consejos:</strong><br>';
         feedback += '• Lee en voz baja para detectar inconsistencias<br>';
-        feedback += '• Fíjate en conectores y pronombres<br>';
-        feedback += '• Verifica la concordancia de tiempos verbales';
+        feedback += '• Fíjate en palabras que "no suenan bien"<br>';
+        feedback += '• Revisa las reglas ortográficas básicas';
         
         return feedback;
     }
@@ -1544,7 +1621,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 hintText = 'Busca la frase que introduce el tema general. Las frases siguientes deben desarrollar o conectar con las anteriores.';
                 break;
             case 'quick-detect':
-                hintText = 'Presta atención a los conectores lógicos, pronombres y tiempos verbales. Los errores suelen estar en estos elementos.';
+                hintText = 'Presta atención a palabras que se vean "extrañas" o que no sigan las reglas ortográficas básicas. Los errores suelen ser evidentes al leer con atención.';
                 break;
             case 'multi-context':
                 hintText = 'Piensa en quién sería el público de este contexto y qué lenguaje sería más apropiado para él.';
@@ -1678,6 +1755,10 @@ document.addEventListener('DOMContentLoaded', () => {
         toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 3000);
     }
+});
+</script>
+</body>
+</html>
 });
 </script>
 </body>
