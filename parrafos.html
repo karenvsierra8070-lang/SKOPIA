@@ -231,17 +231,19 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .paragraphs-source { background-color: var(--color-crema); border-radius: 8px; padding: 15px; }
 .paragraphs-target { background-color: white; border: 2px dashed var(--color-oliva-claro); border-radius: 8px; padding: 15px; min-height: 300px; }
 .paragraphs-box h3 { font-family: 'Patrick Hand', cursive; font-size: 1.1rem; margin-bottom: 10px; color: var(--color-oliva-medio); }
-.paragraph-item { background-color: white; border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 10px; cursor: move; transition: all 0.2s ease; position: relative; }
+.paragraph-item { background-color: white; border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 10px; position: relative; }
 .paragraph-item:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-.paragraph-item.dragging { opacity: 0.5; transform: rotate(2deg); }
 .paragraph-item.correct { border-left: 4px solid #5cb85c; }
 .paragraph-item.incorrect { border-left: 4px solid #d9534f; }
 .paragraph-number { position: absolute; top: 10px; left: 10px; background-color: var(--color-oliva-medio); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem; }
 .paragraph-text { margin-left: 35px; line-height: 1.5; }
 
-.drop-zone { min-height: 50px; border: 2px dashed var(--color-oliva-claro); border-radius: 8px; margin-bottom: 10px; padding: 10px; transition: all 0.2s ease; }
-.drop-zone.active { background-color: rgba(190, 192, 146, 0.2); border-color: var(--color-oliva-medio); }
-.drop-zone-label { color: var(--color-oliva-medio); font-style: italic; text-align: center; padding: 10px 0; }
+.order-input-container { display: flex; align-items: center; margin-bottom: 15px; }
+.order-input-label { width: 120px; font-weight: 500; color: var(--color-oliva-medio); }
+.order-input { flex: 1; padding: 8px 12px; border: 2px solid var(--color-oliva-claro); border-radius: 6px; font-size: 1rem; transition: border-color 0.2s; }
+.order-input:focus { outline: none; border-color: var(--color-oliva-medio); }
+.order-input.correct { border-color: #5cb85c; background-color: rgba(92, 184, 92, 0.1); }
+.order-input.incorrect { border-color: #d9534f; background-color: rgba(217, 83, 79, 0.1); }
 
 .button-container { display: flex; justify-content: center; gap: 15px; margin-top: 30px; flex-wrap: wrap; }
 .action-btn { background-color: var(--color-oliva-oscuro); color: white; border: none; padding: 12px 25px; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; transition: background-color 0.3s, transform 0.2s; }
@@ -302,6 +304,8 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     .button-container { flex-direction: column; }
     .action-btn { width: 100%; }
     .challenge-modal-content { padding: 20px; }
+    .order-input-container { flex-direction: column; align-items: flex-start; }
+    .order-input-label { margin-bottom: 5px; }
 }
 </style>
 </head>
@@ -584,7 +588,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
             <!-- Instrucciones -->
             <div class="instructions">
                 <h3>¿Cómo funciona?</h3>
-                <p>Arrastra y suelta los párrafos de la izquierda en las zonas de la derecha para ordenarlos correctamente. El primer párrafo debe ir en la primera zona, el segundo en la segunda, y así sucesivamente. Cuando creas que tienes el orden correcto, presiona "Verificar orden" para comprobar tu respuesta.</p>
+                <p>Asigna un número (1-5) a cada párrafo para indicar el orden correcto. El primer párrafo debe marcarse con 1, el segundo con 2, y así sucesivamente. Cuando creas que tienes el orden correcto, presiona "Verificar orden" para comprobar tu respuesta.</p>
             </div>
 
             <div class="paragraphs-workspace">
@@ -598,9 +602,9 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                 </div>
                 <div class="paragraphs-target">
                     <div class="paragraphs-box">
-                        <h3>Orden correcto</h3>
-                        <div id="drop-zones-container">
-                            <!-- Las zonas de destino se generarán dinámicamente -->
+                        <h3>Asigna el orden correcto</h3>
+                        <div id="order-inputs-container">
+                            <!-- Los campos de entrada se generarán dinámicamente -->
                         </div>
                     </div>
                 </div>
@@ -655,7 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalCountEl = document.getElementById('total-count');
     const scoreCountEl = document.getElementById('score-count');
     const paragraphsContainer = document.getElementById('paragraphs-container');
-    const dropZonesContainer = document.getElementById('drop-zones-container');
+    const orderInputsContainer = document.getElementById('order-inputs-container');
     const checkOrderBtn = document.getElementById('check-order-btn');
     const resetBtn = document.getElementById('reset-btn');
     const newTextBtn = document.getElementById('new-text-btn');
@@ -684,7 +688,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let consecutiveCorrect = 0;
     let maxConsecutiveCorrect = 0;
     let scorePenalty = 0;
-    let draggedElement = null;
 
     // --- FUNCIONES PRINCIPALES ---
 
@@ -902,7 +905,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 [currentParagraphs[i], currentParagraphs[j]] = [currentParagraphs[j], currentParagraphs[i]];
             }
             
-            // Renderizar los párrafos y las zonas de destino
+            // Renderizar los párrafos y los campos de entrada
             renderParagraphs();
             
         } catch (error) {
@@ -911,43 +914,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Renderizar los párrafos y las zonas de destino
+    // Renderizar los párrafos y los campos de entrada
     function renderParagraphs() {
         // Limpiar contenedores
         paragraphsContainer.innerHTML = '';
-        dropZonesContainer.innerHTML = '';
+        orderInputsContainer.innerHTML = '';
         
-        // Crear los párrafos arrastrables
+        // Crear los párrafos
         currentParagraphs.forEach((paragraph, index) => {
             const paragraphElement = document.createElement('div');
             paragraphElement.className = 'paragraph-item';
-            paragraphElement.draggable = true;
             paragraphElement.dataset.index = index;
             paragraphElement.innerHTML = `
-                <div class="paragraph-number">${index + 1}</div>
+                <div class="paragraph-number">${String.fromCharCode(65 + index)}</div>
                 <div class="paragraph-text">${paragraph}</div>
             `;
-            
-            // Añadir event listeners para arrastrar y soltar
-            paragraphElement.addEventListener('dragstart', handleDragStart);
-            paragraphElement.addEventListener('dragend', handleDragEnd);
             
             paragraphsContainer.appendChild(paragraphElement);
         });
         
-        // Crear las zonas de destino
+        // Crear los campos de entrada para el orden
         for (let i = 0; i < 5; i++) {
-            const dropZone = document.createElement('div');
-            dropZone.className = 'drop-zone';
-            dropZone.dataset.index = i;
-            dropZone.innerHTML = `<div class="drop-zone-label">Párrafo ${i + 1}</div>`;
+            const inputContainer = document.createElement('div');
+            inputContainer.className = 'order-input-container';
             
-            // Añadir event listeners para arrastrar y soltar
-            dropZone.addEventListener('dragover', handleDragOver);
-            dropZone.addEventListener('drop', handleDrop);
-            dropZone.addEventListener('dragleave', handleDragLeave);
+            const label = document.createElement('div');
+            label.className = 'order-input-label';
+            label.textContent = `Posición ${i + 1}:`;
             
-            dropZonesContainer.appendChild(dropZone);
+            const input = document.createElement('input');
+            input.className = 'order-input';
+            input.type = 'text';
+            input.dataset.position = i;
+            input.placeholder = 'A, B, C, D o E';
+            input.maxLength = 1;
+            
+            inputContainer.appendChild(label);
+            inputContainer.appendChild(input);
+            
+            orderInputsContainer.appendChild(inputContainer);
         }
         
         // Ocultar resultados y pista
@@ -955,78 +960,44 @@ document.addEventListener('DOMContentLoaded', () => {
         hintBox.classList.remove('active');
     }
 
-    // Funciones para manejar el arrastrar y soltar
-    function handleDragStart(e) {
-        draggedElement = e.target.closest('.paragraph-item');
-        draggedElement.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/html', draggedElement.innerHTML);
-    }
-
-    function handleDragEnd(e) {
-        if (draggedElement) {
-            draggedElement.classList.remove('dragging');
-        }
-        draggedElement = null;
-    }
-
-    function handleDragOver(e) {
-        if (e.preventDefault) {
-            e.preventDefault();
-        }
-        e.dataTransfer.dropEffect = 'move';
-        e.target.closest('.drop-zone').classList.add('active');
-    }
-
-    function handleDragLeave(e) {
-        e.target.closest('.drop-zone').classList.remove('active');
-    }
-
-    function handleDrop(e) {
-        e.preventDefault();
-        const dropZone = e.target.closest('.drop-zone');
-        dropZone.classList.remove('active');
-        
-        if (draggedElement) {
-            // Verificar si la zona ya tiene un párrafo
-            const existingParagraph = dropZone.querySelector('.paragraph-item');
-            if (existingParagraph) {
-                // Si ya hay un párrafo, intercambiar posiciones
-                const originalParent = draggedElement.parentNode;
-                originalParent.appendChild(existingParagraph);
-            }
-            
-            dropZone.appendChild(draggedElement);
-        }
-    }
-
     // Verificar el orden de los párrafos
     function checkOrder() {
-        const dropZones = document.querySelectorAll('.drop-zone');
+        const inputs = document.querySelectorAll('.order-input');
         const userOrder = [];
         
         // Recolectar el orden actual de los párrafos
-        dropZones.forEach(zone => {
-            const paragraph = zone.querySelector('.paragraph-item');
-            if (paragraph) {
-                const index = parseInt(paragraph.dataset.index);
-                userOrder.push(index);
+        inputs.forEach(input => {
+            const value = input.value.toUpperCase().trim();
+            if (value && value >= 'A' && value <= 'E') {
+                userOrder.push(value.charCodeAt(0) - 65); // Convertir A-E a 0-4
             } else {
-                // Si una zona está vacía, se considera incorrecta
-                userOrder.push(-1);
+                userOrder.push(-1); // Valor inválido
             }
         });
         
-        // Verificar si todas las zonas tienen un párrafo
+        // Verificar si todas las posiciones tienen un valor válido
         if (userOrder.length !== 5 || userOrder.includes(-1)) {
-            showToast('Por favor, coloca todos los párrafos en las zonas correspondientes.');
+            showToast('Por favor, completa todos los campos con una letra (A, B, C, D o E).');
+            return;
+        }
+        
+        // Verificar si hay valores duplicados
+        const uniqueValues = [...new Set(userOrder)];
+        if (uniqueValues.length !== 5) {
+            showToast('Por favor, usa cada letra (A, B, C, D, E) exactamente una vez.');
             return;
         }
         
         // Verificar si el orden es correcto
         let isCorrect = true;
         for (let i = 0; i < 5; i++) {
-            if (userOrder[i] !== correctOrder.findIndex(p => p === currentParagraphs[userOrder[i]])) {
+            // Obtener el índice del párrafo en el orden original
+            const paragraphIndex = userOrder[i];
+            
+            // Verificar si este párrafo está en la posición correcta
+            const originalIndex = correctOrder.findIndex(p => p === currentParagraphs[paragraphIndex]);
+            
+            if (originalIndex !== i) {
                 isCorrect = false;
                 break;
             }
@@ -1069,11 +1040,11 @@ document.addEventListener('DOMContentLoaded', () => {
         scoreCountEl.textContent = currentScore;
         
         // Mostrar resultados
-        showResults(isCorrect);
+        showResults(isCorrect, userOrder);
     }
 
     // Mostrar resultados
-    function showResults(isCorrect) {
+    function showResults(isCorrect, userOrder) {
         const score = isCorrect ? 100 : 0;
         
         scoreDisplay.textContent = `${score}%`;
@@ -1101,18 +1072,20 @@ document.addEventListener('DOMContentLoaded', () => {
         feedbackMessage.innerHTML = feedback;
         resultsBox.classList.add('active');
         
-        // Marcar visualmente los párrafos correctos e incorrectos
-        const dropZones = document.querySelectorAll('.drop-zone');
-        dropZones.forEach((zone, index) => {
-            const paragraph = zone.querySelector('.paragraph-item');
-            if (paragraph) {
-                const paragraphIndex = parseInt(paragraph.dataset.index);
-                const correctIndex = correctOrder.findIndex(p => p === currentParagraphs[paragraphIndex]);
+        // Marcar visualmente las entradas correctas e incorrectas
+        const inputs = document.querySelectorAll('.order-input');
+        inputs.forEach((input, index) => {
+            const value = input.value.toUpperCase().trim();
+            if (value && value >= 'A' && value <= 'E') {
+                const paragraphIndex = value.charCodeAt(0) - 65;
+                const originalIndex = correctOrder.findIndex(p => p === currentParagraphs[paragraphIndex]);
                 
-                if (correctIndex === index) {
-                    paragraph.classList.add('correct');
+                if (originalIndex === index) {
+                    input.classList.add('correct');
+                    input.classList.remove('incorrect');
                 } else {
-                    paragraph.classList.add('incorrect');
+                    input.classList.add('incorrect');
+                    input.classList.remove('correct');
                 }
             }
         });
@@ -1127,30 +1100,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Mostrar pista
     function showHint() {
-        const dropZones = document.querySelectorAll('.drop-zone');
         let hintText = '';
         
         // Encontrar el primer párrafo correcto que no está en su lugar
         for (let i = 0; i < 5; i++) {
-            const zone = dropZones[i];
-            const paragraph = zone.querySelector('.paragraph-item');
+            const inputs = document.querySelectorAll('.order-input');
+            const input = inputs[i];
+            const value = input.value.toUpperCase().trim();
             
-            if (!paragraph) {
+            if (!value || value < 'A' || value > 'E') {
                 // Encontrar el párrafo que debería ir aquí
-                const correctIndex = correctOrder.findIndex(p => p === currentParagraphs[i]);
-                const correctParagraph = currentParagraphs[correctIndex];
+                const correctParagraph = correctOrder[i];
                 const paragraphIndex = currentParagraphs.indexOf(correctParagraph);
+                const letter = String.fromCharCode(65 + paragraphIndex);
                 
-                hintText = `El párrafo que comienza con "${correctParagraph.substring(0, 30)}..." debería ir en la posición ${i + 1}.`;
+                hintText = `El párrafo "${correctParagraph.substring(0, 30)}..." (letra ${letter}) debería ir en la posición ${i + 1}.`;
                 break;
             } else {
-                const paragraphIndex = parseInt(paragraph.dataset.index);
-                const correctIndex = correctOrder.findIndex(p => p === currentParagraphs[paragraphIndex]);
+                const paragraphIndex = value.charCodeAt(0) - 65;
+                const originalIndex = correctOrder.findIndex(p => p === currentParagraphs[paragraphIndex]);
                 
-                if (correctIndex !== i) {
+                if (originalIndex !== i) {
                     // Encontrar el párrafo que debería ir aquí
-                    const correctParagraph = currentParagraphs[correctIndex];
-                    hintText = `El párrafo que comienza con "${correctParagraph.substring(0, 30)}..." debería ir en la posición ${i + 1} en lugar del actual.`;
+                    const correctParagraph = correctOrder[i];
+                    const correctParagraphIndex = currentParagraphs.indexOf(correctParagraph);
+                    const correctLetter = String.fromCharCode(65 + correctParagraphIndex);
+                    
+                    hintText = `El párrafo "${correctParagraph.substring(0, 30)}..." (letra ${correctLetter}) debería ir en la posición ${i + 1} en lugar del actual.`;
                     break;
                 }
             }
