@@ -212,15 +212,56 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .original-text { font-size: 1rem; line-height: 1.8; color: #333; min-height: 200px; background-color: var(--color-crema); padding: 20px; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word; }
 
 /* --- Estilos para errores en el texto --- */
-.error-container { display: inline-block; position: relative; margin: 0 2px; }
-.error-word { background-color: rgba(255, 200, 200, 0.6); border-radius: 3px; padding: 2px 4px; cursor: pointer; transition: background-color 0.3s; }
-.error-word:hover { background-color: rgba(255, 150, 150, 0.7); }
-.dropdown-options { display: none; position: absolute; top: 100%; left: 0; background-color: white; border: 2px solid var(--color-oliva-claro); border-radius: 8px; box-shadow: 0 4px 15px var(--color-sombra); z-index: 100; min-width: 200px; margin-top: 5px; }
-.dropdown-options.active { display: block; }
-.option-item { padding: 10px 15px; cursor: pointer; transition: background-color 0.2s; border-bottom: 1px solid #eee; }
-.option-item:last-child { border-bottom: none; }
+.word-gap { 
+    display: inline-block; 
+    position: relative; 
+    margin: 0 3px;
+    border-bottom: 2px dashed var(--color-oliva-medio);
+    min-width: 80px;
+    padding: 0 5px;
+    height: 1.2em;
+    vertical-align: text-bottom;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.word-gap:hover { 
+    background-color: rgba(190, 192, 146, 0.2);
+}
+.word-gap.answered { 
+    border-bottom: 2px solid var(--color-oliva-medio);
+    background-color: rgba(190, 192, 146, 0.3);
+    cursor: default;
+}
+.word-gap.correct { 
+    border-bottom: 2px solid #5cb85c;
+    background-color: rgba(92, 184, 92, 0.2);
+}
+.word-gap.incorrect { 
+    border-bottom: 2px solid #d9534f;
+    background-color: rgba(217, 83, 79, 0.2);
+}
+
+.word-options { 
+    display: none; 
+    position: absolute; 
+    top: 100%; 
+    left: 0; 
+    background-color: white; 
+    border: 1px solid var(--color-oliva-claro); 
+    border-radius: 4px; 
+    box-shadow: 0 2px 10px var(--color-sombra); 
+    z-index: 100; 
+    min-width: 150px;
+    margin-top: 5px;
+}
+.word-options.active { display: block; }
+.option-item { 
+    padding: 8px 12px; 
+    cursor: pointer; 
+    transition: background-color 0.2s; 
+    font-size: 0.9rem;
+}
 .option-item:hover { background-color: var(--color-crema); }
-.option-item.selected { background-color: rgba(190, 192, 146, 0.3); font-weight: 500; }
 
 .analyze-btn-container { text-align: center; margin-top: 30px; display: none; }
 .analyze-btn-container.active { display: block; }
@@ -279,9 +320,9 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
         display: block;
     }
     .main-navigation > ul > li > a, .main-navigation > ul > li > span {
-        padding: 15px;
+        padding:15px;
     }
-    .dropdown-options { min-width: 150px; }
+    .word-options { min-width: 120px; }
 }
 </style>
 </head>
@@ -497,7 +538,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
         <div class="cohesion-container">
             <div class="cohesion-header">
                 <h2 class="cohesion-title">Desafío de Cohesión Textual</h2>
-                <p class="cohesion-subtitle">Identifica y corrige los errores de cohesión en el texto. Haz clic en las palabras resaltadas para ver las opciones.</p>
+                <p class="cohesion-subtitle">Identifica y corrige los errores de cohesión en el texto. Haz clic en los espacios en blanco para ver las opciones.</p>
             </div>
 
             <div class="challenge-selector">
@@ -668,30 +709,139 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function generateErrorsForText(textIndex) {
-        // Tipos de errores variados
-        const errorTypes = [
-            { type: "pronombre", wrong: "Ellos", correct: "Estos", options: ["Ellos", "Ellas", "Estos", "Estas"], explanation: "Error de concordancia: el pronombre debe concordar en género y número con el sustantivo al que se refiere." },
-            { type: "pronombre", wrong: "su", correct: "sus", options: ["su", "sus", "nuestro", "nuestros"], explanation: "Error de número: el posesivo debe concordar con el sustantivo plural." },
-            { type: "conector", wrong: "lo que", correct: "lo cual", options: ["lo que", "lo cual", "cuyo", "donde"], explanation: "Error de conector: 'lo cual' se usa para referirse a una idea completa anterior." },
-            { type: "verbo", wrong: "Existen", correct: "Existe", options: ["Existen", "Existe", "Hay", "Hubo"], explanation: "Error de concordancia verbal: el verbo debe concordar con el sujeto singular." },
-            { type: "pronombre", wrong: "Este", correct: "Esta", options: ["Este", "Esta", "Estos", "Estas"], explanation: "Error de género: el pronombre debe concordar con el sustantivo femenino." }
-        ];
-
-        // Generar 5 errores por texto en posiciones variadas
+        // Texto base para trabajar
+        const baseText = generateLongText(textIndex);
+        
+        // Encontrar palabras reales en el texto para crear errores
+        const words = baseText.split(/\s+/);
         const errors = [];
-        for (let i = 0; i < 5; i++) {
-            const errorType = errorTypes[i % errorTypes.length];
-            const basePosition = 100 + (i * 150) + (textIndex * 50); // Variar posición según texto
+        
+        // Patrones de errores con opciones coherentes
+        const errorPatterns = [
+            {
+                // Error de pronombre demostrativo
+                findWords: ['este', 'esta', 'estos', 'estas'],
+                replacements: {
+                    'este': ['este', 'ese', 'aquel', 'el'],
+                    'esta': ['esta', 'esa', 'aquella', 'la'],
+                    'estos': ['estos', 'esos', 'aquellos', 'los'],
+                    'estas': ['estas', 'esas', 'aquellas', 'las']
+                },
+                explanation: "Error de pronombre demostrativo: el pronombre debe indicar la distancia correcta del referente."
+            },
+            {
+                // Error de conector
+                findWords: ['porque', 'por qué', 'por que', 'porqué'],
+                replacements: {
+                    'porque': ['porque', 'ya que', 'puesto que', 'debido a que'],
+                    'ya que': ['ya que', 'puesto que', 'debido a que', 'porque']
+                },
+                explanation: "Error de conector causal: se debe usar el conector apropiado según el contexto."
+            },
+            {
+                // Error de concordancia verbal
+                findWords: ['han', 'ha', 'han', 'has'],
+                replacements: {
+                    'han': ['han', 'ha', 'han', 'han'],
+                    'ha': ['ha', 'han', 'han', 'ha']
+                },
+                explanation: "Error de concordancia verbal: el verbo debe concordar en número con el sujeto."
+            },
+            {
+                // Error de pronombre relativo
+                findWords: ['cuyo', 'cuya', 'cuyos', 'cuyas'],
+                replacements: {
+                    'cuyo': ['cuyo', 'de cuyo', 'del cual', 'donde'],
+                    'cuya': ['cuya', 'de cuya', 'de la cual', 'donde'],
+                    'cuyos': ['cuyos', 'de cuyos', 'de los cuales', 'donde'],
+                    'cuyas': ['cuyas', 'de cuyas', 'de las cuales', 'donde']
+                },
+                explanation: "Error de pronombre relativo: se debe usar el pronombre relativo correcto."
+            },
+            {
+                // Error de adjetivo
+                findWords: ['importante', 'importantes', 'importante', 'importantes'],
+                replacements: {
+                    'importante': ['importante', 'importante', 'relevante', 'significativo'],
+                    'importantes': ['importantes', 'relevantes', 'significativos', 'cruciales']
+                },
+                explanation: "Error de adjetivo: el adjetivo debe concordar en género y número con el sustantivo."
+            }
+        ];
+        
+        // Encontrar 5 palabras para crear errores
+        let foundErrors = 0;
+        let usedPositions = new Set();
+        
+        for (let i = 0; i < words.length && foundErrors < 5; i++) {
+            const word = words[i].toLowerCase().replace(/[.,;:!?()]/g, '');
             
-            errors.push({
-                id: `error_${textIndex}_${i}`,
-                index: basePosition,
-                word: errorType.wrong,
-                correct: errorType.correct,
-                type: errorType.type,
-                options: errorType.options,
-                explanation: errorType.explanation
-            });
+            // Buscar si la palabra coincide con algún patrón
+            for (let patternIndex = 0; patternIndex < errorPatterns.length && foundErrors < 5; patternIndex++) {
+                const pattern = errorPatterns[patternIndex];
+                
+                if (pattern.findWords.includes(word) && !usedPositions.has(i)) {
+                    const replacements = pattern.replacements[word];
+                    if (replacements && replacements.length > 1) {
+                        // Seleccionar una opción incorrecta como "wrong"
+                        const wrongIndex = (textIndex + patternIndex) % replacements.length;
+                        const wrongWord = replacements[wrongIndex];
+                        const correctWord = word;
+                        
+                        // Crear array de opciones (mezclando correcta e incorrectas)
+                        const options = [...replacements.filter(r => r !== wrongWord)];
+                        options.splice(Math.floor(Math.random() * options.length), 0, correctWord);
+                        
+                        errors.push({
+                            id: `error_${textIndex}_${foundErrors}`,
+                            index: i,
+                            word: wrongWord,
+                            correct: correctWord,
+                            type: pattern.findWords[0],
+                            options: options.slice(0, 4), // Máximo 4 opciones
+                            explanation: pattern.explanation
+                        });
+                        
+                        // Reemplazar la palabra en el texto
+                        words[i] = wrongWord;
+                        usedPositions.add(i);
+                        foundErrors++;
+                        
+                        // Saltar algunas posiciones para no poner errores muy juntos
+                        i += Math.floor(Math.random() * 20) + 10;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Si no encontramos suficientes errores, crear algunos artificiales
+        while (errors.length < 5) {
+            const randomPos = Math.floor(Math.random() * (words.length - 100)) + 50;
+            if (!usedPositions.has(randomPos)) {
+                const word = words[randomPos];
+                if (word.length > 3) {
+                    errors.push({
+                        id: `error_${textIndex}_${errors.length}`,
+                        index: randomPos,
+                        word: word,
+                        correct: word,
+                        type: "sustantivo",
+                        options: [word, word + 's', word.slice(0, -1) + 'a', word.slice(0, -1)],
+                        explanation: "Error de concordancia: la palabra debe concordar con el contexto."
+                    });
+                    usedPositions.add(randomPos);
+                }
+            }
+        }
+        
+        // Reconstruir el texto con los errores
+        const modifiedText = words.join(' ');
+        
+        // Actualizar el texto en el objeto
+        const textoIndex = allTexts.findIndex(t => t.id === `texto${textIndex + 1}`);
+        if (textoIndex !== -1) {
+            allTexts[textoIndex].text = modifiedText;
         }
         
         return errors;
@@ -735,89 +885,77 @@ document.addEventListener('DOMContentLoaded', () => {
         challengeArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    // Mostrar el texto con errores y casillas desplegables
+    // Mostrar el texto con espacios en blanco para completar
     function displayTextWithErrors() {
-        let textWithErrors = currentText.text;
+        let textWithGaps = currentText.text;
         
         // Ordenar errores por posición (de mayor a menor para no afectar los índices)
         const sortedErrors = [...currentText.errors].sort((a, b) => b.index - a.index);
         
-        // Insertar errores con sus casillas desplegables
+        // Reemplazar palabras incorrectas con espacios en blanco
         sortedErrors.forEach(error => {
+            const words = textWithGaps.split(/\s+/);
             const startIndex = error.index;
-            const endIndex = startIndex + error.word.length;
             
-            const beforeError = textWithErrors.substring(0, startIndex);
-            const errorWord = textWithErrors.substring(startIndex, endIndex);
-            const afterError = textWithErrors.substring(endIndex);
-            
-            // Crear el HTML para el error con su dropdown
-            const errorHTML = `
-                <span class="error-container" data-error-id="${error.id}">
-                    <span class="error-word">${errorWord}</span>
-                    <div class="dropdown-options" id="dropdown-${error.id}">
+            if (startIndex < words.length) {
+                words[startIndex] = `______${error.id}____`;
+                textWithGaps = words.join(' ');
+            }
+        });
+        
+        // Convertir a HTML con los espacios
+        let htmlText = textWithGaps;
+        currentText.errors.forEach(error => {
+            const gapId = `______${error.id}____`;
+            const gapHTML = `
+                <span class="word-gap" data-error-id="${error.id}" onclick="toggleOptions('${error.id}')">
+                    <span class="gap-text">______</span>
+                    <div class="word-options" id="options-${error.id}">
                         ${error.options.map(option => `
                             <div class="option-item" onclick="selectOption('${error.id}', '${option}')">${option}</div>
                         `).join('')}
                     </div>
                 </span>
             `;
-            
-            textWithErrors = beforeError + errorHTML + afterError;
+            htmlText = htmlText.replace(gapId, gapHTML);
         });
         
-        originalTextEl.innerHTML = textWithErrors;
-        
-        // Agregar eventos click a las palabras error
-        document.querySelectorAll('.error-word').forEach(word => {
-            word.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const container = this.parentElement;
-                const dropdown = container.querySelector('.dropdown-options');
-                
-                // Cerrar otros dropdowns
-                document.querySelectorAll('.dropdown-options.active').forEach(d => {
-                    if (d !== dropdown) d.classList.remove('active');
-                });
-                
-                // Toggle este dropdown
-                dropdown.classList.toggle('active');
-            });
-        });
-        
-        // Cerrar dropdowns al hacer clic fuera
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.error-container')) {
-                document.querySelectorAll('.dropdown-options.active').forEach(d => {
-                    d.classList.remove('active');
-                });
-            }
-        });
+        originalTextEl.innerHTML = htmlText;
     }
 
-    // Seleccionar una opción (sin mostrar si es correcta o no)
+    // Alternar la visibilidad de las opciones
+    window.toggleOptions = function(errorId) {
+        const options = document.getElementById(`options-${errorId}`);
+        const isActive = options.classList.contains('active');
+        
+        // Cerrar todas las opciones
+        document.querySelectorAll('.word-options.active').forEach(opt => {
+            opt.classList.remove('active');
+        });
+        
+        // Abrir esta opción si estaba cerrada
+        if (!isActive) {
+            options.classList.add('active');
+        }
+    };
+
+    // Seleccionar una opción
     window.selectOption = function(errorId, option) {
         userAnswers[errorId] = option;
         
         // Actualizar visualmente la selección
-        const container = document.querySelector(`[data-error-id="${errorId}"]`);
-        const errorWord = container.querySelector('.error-word');
-        const dropdown = container.querySelector('.dropdown-options');
+        const gap = document.querySelector(`[data-error-id="${errorId}"]`);
+        const gapText = gap.querySelector('.gap-text');
+        const options = document.getElementById(`options-${errorId}`);
         
-        // Cambiar el texto de la palabra error
-        errorWord.textContent = option;
+        // Cambiar el texto del espacio en blanco
+        gapText.textContent = option;
         
-        // Marcar como seleccionado
-        container.querySelectorAll('.option-item').forEach(item => {
-            item.classList.remove('selected');
-        });
-        event.target.classList.add('selected');
+        // Marcar como respondido
+        gap.classList.add('answered');
         
-        // Cerrar dropdown
-        dropdown.classList.remove('active');
-        
-        // Cambiar color de fondo para indicar que ha sido respondido
-        errorWord.style.backgroundColor = 'rgba(190, 192, 146, 0.4)';
+        // Cerrar opciones
+        options.classList.remove('active');
     };
 
     // Analizar las correcciones del usuario
@@ -852,9 +990,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Generar retroalimentación
         let feedback = '';
         if (score < 50) {
-            feedback = `<strong>Puntuación: ${score}%</strong>. Has respondido correctamente ${correctCount} de ${totalErrors} errores (${answeredErrors} respondidos). Para mejorar, presta especial atención a la concordancia de género y número en los pronombres. Recuerda que "lo cual" se usa para referirse a ideas completas, mientras que "lo que" introduce cláusulas especificativas. Revisa las explicaciones de cada error para entender mejor las reglas gramaticales.`;
+            feedback = `<strong>Puntuación: ${score}%</strong>. Has respondido correctamente ${correctCount} de ${totalErrors} errores (${answeredErrors} respondidos). Para mejorar, presta especial atención a la concordancia de género y número en los pronombres. Recuerda que los conectores causales como "porque" tienen usos específicos. Revisa las explicaciones de cada error para entender mejor las reglas gramaticales.`;
         } else if (score < 80) {
-            feedback = `<strong>Puntuación: ${score}%</strong>. Has respondido correctamente ${correctCount} de ${totalErrors} errores (${answeredErrors} respondidos). ¡Buen trabajo! Para alcanzar una puntuación más alta, revisa detenidamente los errores que no has respondido correctamente. Fíjate especialmente en las diferencias entre conectores y en la concordancia verbal.`;
+            feedback = `<strong>Puntuación: ${score}%</strong>. Has respondido correctamente ${correctCount} de ${totalErrors} errores (${answeredErrors} respondidos). ¡Buen trabajo! Para alcanzar una puntuación más alta, revisa detenidamente los errores que no has respondido correctamente. Fíjate especialmente en las diferencias entre pronombres demostrativos y relativos.`;
         } else {
             feedback = `<strong>¡Excelente trabajo!</strong> Has respondido correctamente ${correctCount} de ${totalErrors} errores (${answeredErrors} respondidos) (${score}% de acierto). Demuestras una gran comprensión de la cohesión textual y las reglas gramaticales españolas. Sigue practicando para mantener este nivel.`;
         }
@@ -894,6 +1032,20 @@ document.addEventListener('DOMContentLoaded', () => {
         feedbackMessage.innerHTML = feedback;
         errorsSummary.innerHTML = summaryHtml;
         resultsBox.classList.add('active');
+        
+        // Marcar visualmente las respuestas correctas e incorrectas
+        currentText.errors.forEach(error => {
+            const gap = document.querySelector(`[data-error-id="${error.id}"]`);
+            const userAnswer = userAnswers[error.id];
+            
+            if (userAnswer !== undefined) {
+                if (userAnswer === error.correct) {
+                    gap.classList.add('correct');
+                } else {
+                    gap.classList.add('incorrect');
+                }
+            }
+        });
         
         // Scroll a resultados
         resultsBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
