@@ -964,6 +964,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function checkOrder() {
         const inputs = document.querySelectorAll('.order-input');
         const userOrder = [];
+        let correctPositions = 0;
         
         // Recolectar el orden actual de los párrafos
         inputs.forEach(input => {
@@ -988,8 +989,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Verificar si el orden es correcto
-        let isCorrect = true;
+        // Contar cuántos párrafos están en la posición correcta
         for (let i = 0; i < 5; i++) {
             // Obtener el índice del párrafo en el orden original
             const paragraphIndex = userOrder[i];
@@ -997,15 +997,18 @@ document.addEventListener('DOMContentLoaded', () => {
             // Verificar si este párrafo está en la posición correcta
             const originalIndex = correctOrder.findIndex(p => p === currentParagraphs[paragraphIndex]);
             
-            if (originalIndex !== i) {
-                isCorrect = false;
-                break;
+            if (originalIndex === i) {
+                correctPositions++;
             }
         }
         
+        // Calcular el puntaje (20% por cada posición correcta)
+        const score = Math.round((correctPositions / 5) * 100);
+        const isFullyCorrect = (correctPositions === 5);
+        
         // Actualizar estadísticas
         totalTexts++;
-        if (isCorrect) {
+        if (isFullyCorrect) {
             correctCount++;
             consecutiveCorrect++;
             
@@ -1031,6 +1034,18 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             incorrectCount++;
             consecutiveCorrect = 0;
+            
+            // Calcular puntuación parcial
+            let points = score;
+            
+            // Aplicar penalización por tiempo en modo puntuación
+            if (challengeMode === 'score' && scorePenalty > 0) {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const penalty = Math.floor(elapsed / 60) * scorePenalty;
+                points = Math.max(0, score - penalty);
+            }
+            
+            currentScore += points;
         }
         
         // Actualizar display
@@ -1040,26 +1055,30 @@ document.addEventListener('DOMContentLoaded', () => {
         scoreCountEl.textContent = currentScore;
         
         // Mostrar resultados
-        showResults(isCorrect, userOrder);
+        showResults(score, correctPositions, userOrder);
     }
 
     // Mostrar resultados
-    function showResults(isCorrect, userOrder) {
-        const score = isCorrect ? 100 : 0;
-        
+    function showResults(score, correctPositions, userOrder) {
         scoreDisplay.textContent = `${score}%`;
         scoreDisplay.className = `score-display ${score < 70 ? 'low' : score < 90 ? 'medium' : 'high'}`;
         
         let feedback = '';
-        if (isCorrect) {
-            feedback = `<strong>¡Excelente trabajo!</strong> Has ordenado los párrafos correctamente. El texto ahora tiene coherencia y fluidez.`;
+        if (score === 100) {
+            feedback = `<strong>¡Excelente trabajo!</strong> Has ordenado todos los párrafos correctamente. El texto ahora tiene coherencia y fluidez.`;
             
             // Añadir retroalimentación educativa
             feedback += '<br><br><strong>¿Por qué este orden es correcto?</strong><br>';
             feedback += 'Los párrafos están organizados de manera que cada uno sigue lógicamente al anterior, creando una progresión natural de ideas. ';
             feedback += 'El primer párrafo introduce el tema principal, los siguientes desarrollan los detalles o argumentos, y el último concluye o resume la idea principal.';
         } else {
-            feedback = `<strong>No es el orden correcto.</strong> Inténtalo de nuevo o solicita una pista para ayudarte.`;
+            feedback = `<strong>Has ordenado correctamente ${correctPositions} de 5 párrafos (${score}%).</strong> `;
+            
+            if (correctPositions >= 3) {
+                feedback += '¡Buen trabajo! Estás cerca del orden correcto.';
+            } else {
+                feedback += 'Sigue practicando para mejorar tu comprensión de la estructura textual.';
+            }
             
             // Añadir retroalimentación educativa
             feedback += '<br><br><strong>Consejos para ordenar párrafos:</strong><br>';
