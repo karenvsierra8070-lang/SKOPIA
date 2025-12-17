@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cohesión Textual - Skópia</title>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;500;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+
+<!-- Font Awesome for Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+    authDomain: "skopia-aa786.firebaseapp.com",
+    projectId: "skopia-aa786",
+    storageBucket: "skopia-aa786.firebasestorage.app",
+    messagingSenderId: "719823055099",
+    appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+window.auth = auth;
+
+onAuthStateChanged(auth, (user) => {
+    if (!user) {
+        window.location.href = 'index.html';
+        return;
+    }
+    console.log("Usuario autenticado:", user.email);
+});
+</script>
+
+<style>
+:root {
+    --color-crema: #fdfbf5;
+    --color-oliva-claro: #bec092;
+    --color-oliva-medio: #5a6133;
+    --color-oliva-oscuro: #272b00;
+    --color-sombra: rgba(39, 43, 0, 0.1);
+    --float-color: var(--color-oliva-oscuro);
+    --float-color-hover: var(--color-oliva-medio);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); color: var(--color-oliva-oscuro); min-height: 100vh; display: flex; flex-direction: column; }
+
+/* --- BARRA DE NAVEGACIÓN PRINCIPAL (CORREGIDA) --- */
+.main-navigation {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    width: 100%;
+}
+.main-navigation ul {
+    list-style: none;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.main-navigation > ul > li {
+    position: relative;
+}
+.main-navigation > ul > li > span, .main-navigation > ul > li > a {
+    display: flex;
+    align-items: center;
+    padding: 18px 24px;
+    color: var(--color-oliva-oscuro);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    position: relative;
+    cursor: default;
+}
+.main-navigation > ul > li > a {
+    cursor: pointer;
+}
+.main-navigation > ul > li > a::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background-color: var(--color-oliva-medio);
+    transform: translateX(-50%);
+    transition: width 0.3s ease;
+}
+.main-navigation > ul > li:hover > a::after {
+    width: 80%;
+}
+.main-navigation > ul > li:hover > span, .main-navigation > ul > li:hover > a {
+    background-color: rgba(94, 97, 51, 0.1);
+    color: var(--color-oliva-medio);
+}
+.main-navigation .emoji {
+    margin-right: 8px;
+    font-size: 1.2em;
+}
+
+/* --- Dropdowns de primer nivel --- */
+.main-navigation > ul > li > .dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    min-width: 280px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+    border-radius: 0 0 12px 12px;
+    overflow: visible;
+}
+.main-navigation > ul > li:hover > .dropdown {
+    display: block;
+}
+.main-navigation > ul > li > .dropdown > li {
+    width: 100%;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    position: relative;
+}
+.main-navigation > ul > li > .dropdown > li:last-child {
+    border-bottom: none;
+}
+.main-navigation > ul > li > .dropdown > li > a, .main-navigation > ul > li > .dropdown > li > span {
+    padding: 14px 24px;
+    font-weight: 500;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    color: var(--color-oliva-oscuro);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+.main-navigation > ul > li > .dropdown > li > span {
+    cursor: default;
+    font-weight: 700;
+}
+.main-navigation > ul > li > .dropdown > li:hover > a, .main-navigation > ul > li > .dropdown > li:hover > span {
+    background-color: rgba(94, 97, 51, 0.15);
+    color: var(--color-oliva-oscuro);
+}
+
+/* --- Sub-Dropdowns (anidados) --- */
+.main-navigation > ul > li > .dropdown > li > .sub-dropdown {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    min-width: 250px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+    border-radius: 0 12px 12px 0;
+}
+.main-navigation > ul > li > .dropdown > li:hover > .sub-dropdown {
+    display: block;
+}
+.main-navigation > ul > li > .dropdown > li > .sub-dropdown li a {
+    padding: 12px 20px;
+    font-weight: 400;
+    font-size: 0.9rem;
+}
+.main-navigation > ul > li > .dropdown > li > .sub-dropdown li a .emoji {
+    font-size: 1em;
+}
+
+/* --- NAVBAR DE USUARIO --- */
+.navbar { display: flex; justify-content: flex-end; align-items: center; padding: 15px 40px; background-color: white; box-shadow: 0 2px 10px var(--color-sombra); position: relative; z-index: 999; }
+.hamburger { width: 30px; height: 25px; position: relative; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; }
+.hamburger span { display: block; height: 4px; width: 100%; background-color: var(--color-oliva-oscuro); border-radius: 2px; transition: all 0.3s ease-in-out; }
+.user-dropdown { position: absolute; top: 70px; right: 40px; background-color: white; border-radius: 8px; box-shadow: 0 4px 20px var(--color-sombra); overflow: hidden; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: opacity 0.3s, transform 0.3s, visibility 0.3s; z-index: 1001; }
+.user-dropdown.active { opacity: 1; visibility: visible; transform: translateY(0); }
+.user-dropdown a { display: block; padding: 15px 25px; text-decoration: none; color: var(--color-oliva-oscuro); font-weight: 500; transition: background-color 0.2s; }
+.user-dropdown a:hover { background-color: var(--color-crema); }
+.user-dropdown hr { border: none; border-top: 1px solid #eee; margin: 0; }
+
+/* --- CONTENIDO PRINCIPAL --- */
+.main-content { flex-grow: 1; padding: 40px 20px; background-image: url('biblioteca.png'); background-size: cover; background-position: center; background-attachment: fixed; position: relative; }
+.main-content::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(253, 251, 245, 0.92); z-index: 1; }
+.container { max-width: 900px; margin: 0 auto; position: relative; z-index: 2; }
+
+/* --- Sección de Cohesión --- */
+.cohesion-container { background-color: white; border-radius: 16px; padding: 30px; box-shadow: 0 8px 25px var(--color-sombra); margin-bottom: 20px; }
+.cohesion-header { text-align: center; margin-bottom: 30px; }
+.cohesion-title { font-family: 'Patrick Hand', cursive; font-size: 2.2rem; color: var(--color-oliva-oscuro); margin-bottom: 10px; }
+.cohesion-subtitle { font-size: 1rem; color: var(--color-oliva-medio); }
+
+.text-selector { margin-bottom: 30px; }
+.selector-label { display: block; margin-bottom: 10px; font-weight: 500; color: var(--color-oliva-oscuro); }
+.selector-select { width: 100%; padding: 12px 15px; border: 2px solid var(--color-oliva-claro); border-radius: 8px; background-color: white; font-size: 1rem; color: var(--color-oliva-oscuro); cursor: pointer; transition: border-color 0.3s; }
+.selector-select:focus { outline: none; border-color: var(--color-oliva-medio); }
+
+.challenge-area { display: grid; grid-template-columns: 1fr; gap: 20px; }
+.text-box { border: 1px solid #ddd; border-radius: 8px; padding: 20px; }
+.text-box h3 { font-family: 'Patrick Hand', cursive; font-size: 1.3rem; margin-bottom: 15px; color: var(--color-oliva-medio); }
+.original-text { font-size: 1rem; line-height: 1.6; color: #333; min-height: 200px; background-color: var(--color-crema); padding: 15px; border-radius: 5px; white-space: pre-wrap; word-wrap: break-word; }
+.original-text .error { background-color: rgba(255, 200, 200, 0.5); cursor: pointer; position: relative; }
+.original-text .error:hover::after { content: "Haz clic para corregir"; position: absolute; top: -25px; left: 0; background-color: var(--color-oliva-oscuro); color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; white-space: nowrap; }
+.original-text .corrected { background-color: rgba(200, 255, 200, 0.5); }
+
+.correction-area { margin-top: 20px; display: none; }
+.correction-area.active { display: block; }
+.correction-input { width: 100%; padding: 10px; border: 1px solid var(--color-oliva-claro); border-radius: 5px; font-family: 'Roboto', sans-serif; margin-bottom: 10px; }
+.correction-buttons { display: flex; gap: 10px; }
+.correction-btn { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: 500; transition: background-color 0.3s; }
+.accept-btn { background-color: var(--color-oliva-medio); color: white; }
+.accept-btn:hover { background-color: var(--color-oliva-oscuro); }
+.cancel-btn { background-color: #ddd; color: var(--color-oliva-oscuro); }
+.cancel-btn:hover { background-color: #ccc; }
+
+.analyze-btn-container { text-align: center; margin-top: 30px; }
+.analyze-btn { background-color: var(--color-oliva-oscuro); color: white; border: none; padding: 15px 40px; border-radius: 8px; font-size: 1.1rem; font-weight: 500; cursor: pointer; transition: background-color 0.3s, transform 0.2s; }
+.analyze-btn:hover { background-color: var(--color-oliva-medio); transform: translateY(-2px); }
+.analyze-btn:disabled { background-color: #ccc; cursor: not-allowed; transform: none; }
+
+.results-box { margin-top: 30px; border: 2px dashed var(--color-oliva-claro); border-radius: 8px; padding: 25px; text-align: center; display: none; }
+.results-box.active { display: block; border-style: solid; animation: fadeIn 0.5s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.score-display { font-size: 3rem; font-weight: 700; font-family: 'Orbitron', sans-serif; margin-bottom: 10px; }
+.score-display.low { color: #d9534f; }
+.score-display.medium { color: #f0ad4e; }
+.score-display.high { color: #5cb85c; }
+.feedback-message { font-size: 1.1rem; line-height: 1.6; color: var(--color-oliva-oscuro); text-align: left; background-color: #fff8e1; padding: 15px; border-radius: 5px; border-left: 5px solid var(--color-oliva-medio); }
+
+.errors-found { margin-top: 15px; }
+.error-item { margin-bottom: 10px; padding: 10px; border-radius: 5px; }
+.error-item.correct { background-color: rgba(92, 184, 92, 0.2); }
+.error-item.incorrect { background-color: rgba(217, 83, 79, 0.2); }
+
+/* --- Iconos Flotantes y Toast --- */
+.floating-icons { position: fixed; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; z-index: 1999; }
+.floating-icons button { background: var(--float-color); color: white; width: 50px; height: 50px; border-radius: 50%; border: none; font-size: 18px; display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0,0,0,0.12); cursor: pointer; transition: transform .15s ease, background .15s ease; }
+.floating-icons button:hover { transform: scale(1.08); background: var(--float-color-hover); }
+.toast { position: fixed; right: 20px; bottom: 20px; background: #fff7e6; border-left: 6px solid var(--color-oliva-medio); padding: 16px 20px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); z-index: 3001; display: none; font-size: 1rem; max-width: 350px; }
+.toast.show { display: block; }
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+    .challenge-area { grid-template-columns: 1fr; }
+    .navbar { padding: 15px 20px; }
+    .user-dropdown { right: 20px; }
+    .main-navigation > ul > li > .dropdown {
+        position: static;
+        display: none;
+        width: 100%;
+        box-shadow: none;
+    }
+    .main-navigation > ul > li > .dropdown > li > .sub-dropdown {
+        position: static;
+        display: none;
+        width: 100%;
+        box-shadow: none;
+    }
+    .main-navigation > ul > li:hover > .dropdown {
+        display: none;
+    }
+    .main-navigation > ul > li.active > .dropdown {
+        display: block;
+    }
+    .main-navigation > ul > li > .dropdown > li.active > .sub-dropdown {
+        display: block;
+    }
+    .main-navigation > ul > li > a, .main-navigation > ul > li > span {
+        padding: 15px;
+    }
+}
+</style>
+</head>
+
+<body>
+<!-- BARRA DE NAVEGACIÓN PRINCIPAL (REESTRUCTURADA POR MÓDULOS) -->
+<nav class="main-navigation">
+    <ul>
+        <li>
+            <a href="modulos.html"><span class="emoji">🏠</span> Inicio</a>
+        </li>
+        <li>
+            <span><span class="emoji">🟦</span> MÓDULO 1 — Lectura Crítica</span>
+            <ul class="dropdown">
+                <li><a href="biblioteca.html"><span class="emoji">📚</span> Biblioteca</a></li>
+                <li>
+                    <span><span class="emoji">✍️</span> Talleres de escritura y análisis</span>
+                    <ul class="sub-dropdown">
+                        <li><a href="reescritura.html"><span class="emoji">🔄</span> Reescritura</a></li>
+                        <li><a href="conectores.html"><span class="emoji">🔗</span> Conectores lógicos</a></li>
+                        <li><a href="parrafos.html"><span class="emoji">📝</span> Ordenar párrafos</a></li>
+                        <li><a href="cohesion.html"><span class="emoji">🧩</span> Reparación por cohesión</a></li>
+                        <li><a href="123.html"><span class="emoji">1️⃣2️⃣3️⃣</span> Técnica 1-2-3</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <span><span class="emoji">📈</span> Laboratorio de análisis gráfico</span>
+                    <ul class="sub-dropdown">
+                        <li><a href="lineal.html"><span class="emoji">📉</span> Gráfico de líneas</a></li>
+                        <li><a href="constucciongrafico.html"><span class="emoji">🛠️</span> Construcción de gráficos</a></li>
+                        <li><a href="correcciongrafico.html"><span class="emoji">✅</span> Corrección de gráfico</a></li>
+                        <li><a href="graficocomparar.html"><span class="emoji">⚖️</span> Comparación de gráficos</a></li>
+                        <li><a href="graficointerpretar.html"><span class="emoji">🤔</span> Interpretación de gráficos</a></li>
+                        <li><a href="selecciongrafico.html"><span class="emoji">👆</span> Seleccionar el gráfico correcto</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <span><span class="emoji">⚡</span> Entrenador de velocidad de lectura</span>
+                    <ul class="sub-dropdown">
+                        <li><a href="timelectura.html"><span class="emoji">⏱️</span> Lectura cronometrada</a></li>
+                        <li><a href="minutelectura.html"><span class="emoji">⏳</span> Examen tiempo por pregunta</a></li>
+                        <li><a href="palabrasdesaparecidas.html"><span class="emoji">👻</span> Desaparecer palabras</a></li>
+                        <li><a href="relojlectura.html"><span class="emoji">⏰</span> Texto a contra reloj</a></li>
+                        <li><a href="velocimetrolec.html"><span class="emoji">🚀</span> Velocímetro de lectura</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <li>
+            <span><span class="emoji">🟩</span> MÓDULO 2 — Razonamiento Cuantitativo</span>
+            <ul class="dropdown">
+                <li>
+                    <span><span class="emoji">🧠</span> Laboratorio lógico-matemático</span>
+                    <ul class="sub-dropdown">
+                        <li><a href="crepatron.html"><span class="emoji">📈</span> Patrones crecientes</a></li>
+                        <li><a href="decrepatron.html"><span class="emoji">📉</span> Patrones decrecientes</a></li>
+                        <li><a href="secuencia.html"><span class="emoji">🔢</span> Secuencias visuales</a></li>
+                        <li><a href="argumento.html"><span class="emoji">🗣️</span> Corregir argumento inválido</a></li>
+                        <li><a href="falacias.html"><span class="emoji">❌</span> Detectar falacias</a></li>
+                        <li><a href="tablas.html"><span class="emoji">📊</span> Completar tablas incompletas</a></li>
+                        <li><a href="causaefecto.html"><span class="emoji">🎯</span> Relación causa-efecto</a></li>
+                        <li><a href="datatabla.html"><span class="emoji">🔄</span> Cambiar datos</a></li>
+                        <li><a href="contradicciones.html"><span class="emoji">⚠️</span> Contradicciones</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <span><span class="emoji">🔢</span> Razonamiento lógico-matemático</span>
+                    <ul class="sub-dropdown">
+                        <li><a href="R1.html"><span class="emoji">🗺️</span> Mapa de laberintos matemáticos</a></li>
+                        <li><a href="R2.html"><span class="emoji">🔺</span> Triángulos mágicos para completar</a></li>
+                        <li><a href="R3.html"><span class="emoji">🤖</span> Algoritmo visualizado paso a paso</a></li>
+                        <li><a href="R4.html"><span class="emoji">🧩</span> Minijuegos de lógica simbólica</a></li>
+                        <li><a href="R5.html"><span class="emoji">🔢</span> Bloques de secuencias numéricas para ordenar</a></li>
+                        <li><a href="R6.html"><span class="emoji">🕵️</span> Detective matemático</a></li>
+                        <li><a href="R7.html"><span class="emoji">📊</span> Reconstrucción de tablas incompletas</a></li>
+                        <li><a href="R8.html"><span class="emoji">🔍</span> Desafío de patrones ocultos</a></li>
+                        <li><a href="R9.html"><span class="emoji">🧩</span> Sala de rompecódigos</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <li>
+            <span><span class="emoji">🟧</span> MÓDULO 3 — Competencias Ciudadanas</span>
+            <ul class="dropdown">
+                <li>
+                    <span><span class="emoji">⚖️</span> Dilemas + decisiones</span>
+                    <ul class="sub-dropdown">
+                        <li><a href="d1.html"><span class="emoji">🤔</span> Simulador de dilemas morales</a></li>
+                        <li><a href="d2.html"><span class="emoji">📖</span> Historias interactivas</a></li>
+                        <li><a href="d3.html"><span class="emoji">🤝</span> Reconstrucción de conflictos</a></li>
+                        <li><a href="d4.html"><span class="emoji">❓</span> ¿Qué harías tú?</a></li>
+                        <li><a href="d5.html"><span class="emoji">🏆</span> Retos éticos por niveles</a></li>
+                        <li><a href="d6.html"><span class="emoji">📚</span> Estudio de casos reales</a></li>
+                        <li><a href="d7.html"><span class="emoji">👥</span> Simulaciones grupales</a></li>
+                        <li><a href="d8.html"><span class="emoji">⚖️</span> Juzgado ciudadano</a></li>
+                        <li><a href="d9.html"><span class="emoji">🎤</span> Panel de debate simulado</a></li>
+                        <li><a href="d10.html"><span class="emoji">🗳️</span> Simulador de votación</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <span><span class="emoji">🌍</span> Contextos sociales</span>
+                    <ul class="sub-dropdown">
+                        <li><a href="CS1.html"><span class="emoji">🗺️</span> Mapa de problemas sociales</a></li>
+                        <li><a href="CS2.html"><span class="emoji">📰</span> Análisis de noticias reales</a></li>
+                        <li><a href="CS3.html"><span class="emoji">📜</span> Sala de derechos y deberes</a></li>
+                        <li><a href="CS4.html"><span class="emoji">🏫</span> Minijuego de convivencia</a></li>
+                        <li><a href="CS5.html"><span class="emoji">❌</span> Historias de discriminación</a></li>
+                        <li><a href="CS6.html"><span class="emoji">❤️</span> Sala de empatía</a></li>
+                        <li><a href="CS7.html"><span class="emoji">🤝</span> Resolución de conflictos</a></li>
+                        <li><a href="CS8.html"><span class="emoji">🌳</span> Árboles de decisiones</a></li>
+                        <li><a href="CS9.html"><span class="emoji">👀</span> Observatorio de normas</a></li>
+                        <li><a href="C10.html"><span class="emoji">🎙️</span> Reconstrucción de discursos</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <a href="archivo.html"><span class="emoji">🗂️</span> Archivos de casos reales</a>
+                    <ul class="sub-dropdown">
+                        <li><a href="archivo1.html"><span class="emoji">📄</span> Casos tipo Saber Pro reales</a></li>
+                        <li><a href="archivo2.html"><span class="emoji">🏢</span> Casos de empresas</a></li>
+                        <li><a href="archivo3.html"><span class="emoji">🌐</span> Casos sociales</a></li>
+                        <li><a href="archivo4.html"><span class="emoji">📈</span> Casos de datos ficticios</a></li>
+                        <li><a href="archivo5.html"><span class="emoji">⚖️</span> Casos legales simplificados</a></li>
+                        <li><a href="archivo6.html"><span class="emoji">🔬</span> Casos científicos</a></li>
+                        <li><a href="archivo7.html"><span class="emoji">❓</span> Casos ambiguos</a></li>
+                        <li><a href="archivo8.html"><span class="emoji">🤔</span> Casos contradictorios</a></li>
+                        <li><a href="archivo9.html"><span class="emoji">🔍</span> Casos para identificar sesgos</a></li>
+                        <li><a href="archivo10.html"><span class="emoji">🧩</span> Casos donde debes decidir qué dato falta</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <span><span class="emoji">♟️</span> Laboratorio de estrategias</span>
+                    <ul class="sub-dropdown">
+                        <li><a href="E1.html"><span class="emoji">✏️</span> Cómo subrayar bien (con ejemplos)</a></li>
+                        <li><a href="E2.html"><span class="emoji">📚</span> Estrategia de resumen por capas</a></li>
+                        <li><a href="E3.html"><span class="emoji">👀</span> Técnica de lectura por bloques visuales</a></li>
+                        <li><a href="E4.html"><span class="emoji">🚫</span> Cómo ignorar distractores</a></li>
+                        <li><a href="E5.html"><span class="emoji">🏃‍♂️</span> Cómo leer rápido sin perder comprensión</a></li>
+                        <li><a href="E6.html"><span class="emoji">✔️</span> Checklist antes de responder un caso</a></li>
+                        <li><a href="E7.html"><span class="emoji">🚫</span> Cómo evitar conclusiones erróneas</a></li>
+                        <li><a href="E8.html"><span class="emoji">🕵️</span> Mini-guía de preguntas trampas</a></li>
+                        <li><a href="E9.html"><span class="emoji">🎯</span> Cómo identificar el propósito del autor</a></li>
+                        <li><a href="E10.html"><span class="emoji">💡</span> Cómo transformar evidencia en conclusión</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <li>
+            <span><span class="emoji">🟪</span> MÓDULO 4 — Inglés</span>
+            <ul class="dropdown">
+                <li>
+                    <span><span class="emoji">📖</span> Comprensión lectora en inglés</span>
+                    <ul class="sub-dropdown">
+                        <li><a href="CLI1.html"><span class="emoji">📖</span> Galería de textos graduados</a></li>
+                        <li><a href="CLI2.html"><span class="emoji">💡</span> ¿Cuál es la idea principal?</a></li>
+                        <li><a href="CLI3.html"><span class="emoji">🎯</span> Identificar la intención del autor</a></li>
+                        <li><a href="CLI4.html"><span class="emoji">📝</span> Ordenar párrafos</a></li>
+                        <li><a href="CLI5.html"><span class="emoji">🔗</span> Relacionar párrafos con títulos</a></li>
+                        <li><a href="CLI6.html"><span class="emoji">🧩</span> Completa el sentido del texto</a></li>
+                        <li><a href="CLI7.html"><span class="emoji">🤔</span> Inferencias y deducciones</a></li>
+                        <li><a href="CLI8.html"><span class="emoji">😊</span> Preguntas de tono y emoción</a></li>
+                        <li><a href="CLI9.html"><span class="emoji">🎯</span> Reconocer propósito de oraciones</a></li>
+                        <li><a href="CLI10.html"><span class="emoji">🚫</span> Falsos amigos</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <span><span class="emoji">📖</span> Vocabulario en contexto</span>
+                    <ul class="sub-dropdown">
+                        <li><a href="vocab11.html"><span class="emoji">🔄</span> Sustituir palabras por sinónimos</a></li>
+                        <li><a href="vocab12.html"><span class="emoji">🧩</span> Completar frases</a></li>
+                        <li><a href="vocab13.html"><span class="emoji">🔗</span> Banco de conectores</a></li>
+                        <li><a href="vocab14.html"><span class="emoji">🤔</span> Rellenar huecos</a></li>
+                        <li><a href="vocab15.html"><span class="emoji">💬</span> Reemplazo de expresiones idiomáticas</a></li>
+                        <li><a href="vocab16.html"><span class="emoji">🔍</span> Identificar definiciones implícitas</a></li>
+                        <li><a href="vocab17.html"><span class="emoji">🎯</span> Selección de vocabulario preciso</a></li>
+                        <li><a href="vocab18.html"><span class="emoji">📂</span> Clasificador de palabras</a></li>
+                        <li><a href="vocab19.html"><span class="emoji">🚫</span> Detección de redundancias</a></li>
+                        <li><a href="vocab20.html"><span class="emoji">🤔</span> Diferencias entre palabras confusas</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <span><span class="emoji">🔗</span> Cohesión en inglés</span>
+                    <ul class="sub-dropdown">
+                        <li><a href="coh1.html"><span class="emoji">👉</span> Identificar referentes</a></li>
+                        <li><a href="coh2.html"><span class="emoji">🔄</span> Reemplazo de pronombres</a></li>
+                        <li><a href="coh3.html"><span class="emoji">❌</span> Conectores mal usados</a></li>
+                        <li><a href="coh4.html"><span class="emoji">🔍</span> Encuentra el error de cohesión</a></li>
+                        <li><a href="coh5.html"><span class="emoji">📝</span> Reordenar oraciones</a></li>
+                        <li><a href="coh6.html"><span class="emoji">🔗</span> Relacionar frases con su función</a></li>
+                        <li><a href="coh7.html"><span class="emoji">✍️</span> Parafraseo guiado</a></li>
+                        <li><a href="coh8.html"><span class="emoji">✔️</span> Detectar afirmaciones V/F</a></li>
+                        <li><a href="coh9.html"><span class="emoji">🔗</span> Conexión entre partes del texto</a></li>
+                        <li><a href="coh10.html"><span class="emoji">📄</span> Seleccionar el resumen adecuado</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+    </ul>
+</nav>
+
+<nav class="navbar">
+    <div class="hamburger" id="hamburger-menu"><span></span><span></span><span></span></div>
+    <div class="user-dropdown" id="user-dropdown">
+        <a href="cuenta.html">Mi Cuenta</a>
+        <a href="configuracion.html">Configuración</a>
+        <a href="notificaciones.html">Notificaciones</a>
+        <hr>
+        <a href="index.html" id="logout-btn">Cerrar Sesión</a>
+    </div>
+</nav>
+
+<main class="main-content">
+    <div class="container">
+        <div class="cohesion-container">
+            <div class="cohesion-header">
+                <h2 class="cohesion-title">Desafío de Cohesión Textual</h2>
+                <p class="cohesion-subtitle">Identifica y corrige los pronombres mal usados y las frases mal conectadas en los siguientes textos.</p>
+            </div>
+
+            <div class="text-selector">
+                <label class="selector-label" for="text-select">1. Elige un texto para analizar:</label>
+                <select id="text-select" class="selector-select">
+                    <option value="">-- Selecciona un texto --</option>
+                </select>
+            </div>
+
+            <div class="challenge-area" id="challenge-area" style="display: none;">
+                <div class="text-box">
+                    <h3>Texto con Errores de Cohesión</h3>
+                    <div class="original-text" id="original-text">
+                        El texto aparecerá aquí...
+                    </div>
+                </div>
+                
+                <div class="correction-area" id="correction-area">
+                    <h3>Corrección del Error</h3>
+                    <input type="text" class="correction-input" id="correction-input" placeholder="Escribe tu corrección aquí...">
+                    <div class="correction-buttons">
+                        <button class="correction-btn accept-btn" id="accept-btn">Aceptar</button>
+                        <button class="correction-btn cancel-btn" id="cancel-btn">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analyze-btn-container" id="analyze-btn-container" style="display: none;">
+                <button id="analyze-btn" class="analyze-btn">Evaluar Mis Correcciones</button>
+            </div>
+
+            <div class="results-box" id="results-box">
+                <div class="score-display" id="score-display">0%</div>
+                <div class="feedback-message" id="feedback-message">
+                    <!-- Feedback dinámico -->
+                </div>
+                <div class="errors-found" id="errors-found">
+                    <!-- Detalles de errores encontrados -->
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div class="floating-icons" aria-hidden="false">
+    <button id="btn-misiones" title="Misiones">🎯</button>
+    <button id="btn-nivel" title="Nivel actual">⭐</button>
+    <button id="btn-progreso" title="Progreso">📊</button>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- ELEMENTOS DEL DOM ---
+    const hamburgerMenu = document.getElementById('hamburger-menu');
+    const userDropdown = document.getElementById('user-dropdown');
+    const logoutBtn = document.getElementById('logout-btn');
+    const textSelect = document.getElementById('text-select');
+    const challengeArea = document.getElementById('challenge-area');
+    const originalTextEl = document.getElementById('original-text');
+    const correctionArea = document.getElementById('correction-area');
+    const correctionInput = document.getElementById('correction-input');
+    const acceptBtn = document.getElementById('accept-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const analyzeBtnContainer = document.getElementById('analyze-btn-container');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const resultsBox = document.getElementById('results-box');
+    const scoreDisplay = document.getElementById('score-display');
+    const feedbackMessage = document.getElementById('feedback-message');
+    const errorsFound = document.getElementById('errors-found');
+    const toast = document.getElementById('toast');
+
+    // --- VARIABLES DE ESTADO ---
+    let allTexts = []; // Array con todos los textos disponibles
+    let currentText = null;
+    let currentErrors = [];
+    let correctedErrors = [];
+    let selectedErrorIndex = -1;
+
+    // --- FUNCIONES PRINCIPALES ---
+
+    // Crear textos con errores de cohesión
+    function createTextsWithErrors() {
+        // Texto 1
+        const texto1 = {
+            id: 'texto1',
+            title: 'El cambio climático y sus efectos',
+            text: 'El cambio climático es uno de los mayores desafíos que enfrenta la humanidad en el siglo XXI. Sus efectos ya son visibles en todo el mundo, desde el aumento del nivel del mar hasta eventos meteorológicos extremos. Los científicos han advertido sobre este problema durante décadas, pero las medidas tomadas han sido insuficientes. La comunidad internacional debe tomar acciones más drásticas para mitigar sus impactos. Si no actuamos ahora, las futuras generaciones enfrentarán consecuencias devastadoras. Ellos no tendrán los mismos recursos que nosotros para adaptarse a un planeta cada vez más hostil. Por eso, es responsabilidad de todos reducir nuestra huella de carbono y promover prácticas sostenibles.',
+            errors: [
+                { index: 120, word: 'sus', type: 'pronombre', correct: 'sus', explanation: 'El pronombre "sus" se refiere correctamente a "efectos del cambio climático". No hay error aquí.' },
+                { index: 240, word: 'Ellos', type: 'pronombre', correct: 'Estas', explanation: 'El pronombre "Ellos" debería referirse a "futuras generaciones", pero es incorrecto porque "generaciones" es un sustantivo femenino plural. Debería ser "Estas".' },
+                { index: 290, word: 'nuestra', type: 'pronombre', correct: 'nuestra', explanation: 'El pronombre "nuestra" se refiere correctamente a "de todos". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 2
+        const texto2 = {
+            id: 'texto2',
+            title: 'La inteligencia artificial en la medicina',
+            text: 'La inteligencia artificial está revolucionando el campo de la medicina de maneras que antes parecían ciencia ficción. Los algoritmos de aprendizaje automático pueden analizar imágenes médicas con una precisión que a menudo supera a los humanos. Además, pueden procesar grandes volúmenes de datos clínicos para identificar patrones que podrían pasar desapercibidos para los médicos. Sin embargo, su implementación también plantea desafíos éticos importantes. La privacidad de los datos de los pacientes es una preocupación principal, ya que los sistemas podrían ser vulnerables a brechas de seguridad. Por otro lado, existe el temor de que la automatización pueda reemplazar a profesionales de la salud en ciertas tareas, lo que podría tener implicaciones económicas significativas. A pesar de estos desafíos, el potencial de la inteligencia artificial para mejorar los resultados de salud es innegable.',
+            errors: [
+                { index: 180, word: 'pueden', type: 'pronombre', correct: 'pueden', explanation: 'El pronombre "pueden" se refiere correctamente a "algoritmos de aprendizaje automático". No hay error aquí.' },
+                { index: 380, word: 'su', type: 'pronombre', correct: 'su', explanation: 'El pronombre "su" se refiere correctamente a "implementación". No hay error aquí.' },
+                { index: 520, word: 'lo que', type: 'conector', correct: 'lo cual', explanation: 'El conector "lo que" debería ser "lo cual" para referirse a toda la idea anterior de que "la automatización podría reemplazar a profesionales".' }
+            ]
+        };
+
+        // Texto 3
+        const texto3 = {
+            id: 'texto3',
+            title: 'La importancia de la educación financiera',
+            text: 'La educación financiera es una habilidad fundamental que debería enseñarse en las escuelas desde una edad temprana. Muchas personas adultas luchan con la gestión del dinero debido a la falta de conocimientos básicos sobre presupuestos, inversiones y ahorro. Esta situación conduce a problemas como el endeudamiento excesivo y la incapacidad para planificar a largo plazo. Los sistemas educativos de muchos países no priorizan este tipo de formación, centrándose más en materias académicas tradicionales. Sin embargo, numerosos estudios demuestran que las personas con educación financiera tienen mayor probabilidad de alcanzar estabilidad económica. Por eso, algunos expertos proponen incluir asignaturas específicas sobre finanzas personales en los currículos escolares. Estas medidas podrían ayudar a reducir la brecha económica y promover una sociedad más equitativa.',
+            errors: [
+                { index: 200, word: 'Esta', type: 'pronombre', correct: 'Esta', explanation: 'El pronombre "Esta" se refiere correctamente a "situación". No hay error aquí.' },
+                { index: 320, word: 'Los', type: 'pronombre', correct: 'Los', explanation: 'El pronombre "Los" se refiere correctamente a "sistemas educativos". No hay error aquí.' },
+                { index: 580, word: 'Estas', type: 'pronombre', correct: 'Estas', explanation: 'El pronombre "Estas" se refiere correctamente a "medidas". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 4
+        const texto4 = {
+            id: 'texto4',
+            title: 'El futuro del trabajo remoto',
+            text: 'El trabajo remoto ha experimentado un crecimiento exponencial en los últimos años, acelerado por la pandemia de COVID-19. Muchas empresas han descubierto que sus empleados pueden ser igual o más productivos trabajando desde casa. Esta modalidad ofrece beneficios tanto para los trabajadores como para los empleadores, como mayor flexibilidad y reducción de costos. Sin embargo, también presenta desafíos significativos. La comunicación efectiva puede ser más difícil en entornos virtuales, y algunos empleados reportan sentimientos de aislamiento. Además, la línea entre el trabajo y la vida personal se vuelve borrosa, lo que puede llevar al agotamiento. A pesar de estos inconvenientes, es probable que el trabajo remoto continúe creciendo en el futuro. Muchas empresas están adoptando modelos híbridos que combinan trabajo en la oficina y desde casa, buscando aprovechar lo mejor de ambos mundos.',
+            errors: [
+                { index: 140, word: 'sus', type: 'pronombre', correct: 'sus', explanation: 'El pronombre "sus" se refiere correctamente a "empresas". No hay error aquí.' },
+                { index: 280, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "comunicación efectiva". No hay error aquí.' },
+                { index: 420, word: 'lo que', type: 'conector', correct: 'lo cual', explanation: 'El conector "lo que" debería ser "lo cual" para referirse a toda la idea anterior de que "la línea entre el trabajo y la vida personal se vuelve borrosa".' }
+            ]
+        };
+
+        // Texto 5
+        const texto5 = {
+            id: 'texto5',
+            title: 'La sostenibilidad en la industria de la moda',
+            text: 'La industria de la moda es una de las más contaminantes del mundo, responsable de una cantidad significativa de emisiones de carbono y residuos textiles. El modelo de "fast fashion" promueve un consumo excesivo y desechable, con colecciones que cambian cada pocas semanas. Este enfoque tiene graves consecuencias ambientales y sociales, desde la explotación laboral en países en desarrollo hasta la contaminación del agua por tintes y productos químicos. Afortunadamente, está surgiendo una creciente conciencia sobre estos problemas. Los consumidores están comenzando a exigir mayor transparencia y prácticas más sostenibles. Como respuesta, algunas marcas están explorando materiales reciclados, procesos de producción más limpios y modelos de negocio circulares. Sin embargo, el cambio es lento y enfrenta numerosos obstáculos, incluyendo el costo de las alternativas sostenibles y la resistencia a cambiar hábitos de consumo arraigados.',
+            errors: [
+                { index: 220, word: 'Este', type: 'pronombre', correct: 'Este', explanation: 'El pronombre "Este" se refiere correctamente a "enfoque". No hay error aquí.' },
+                { index: 380, word: 'Los', type: 'pronombre', correct: 'Los', explanation: 'El pronombre "Los" se refiere correctamente a "consumidores". No hay error aquí.' },
+                { index: 540, word: 'el', type: 'pronombre', correct: 'el', explanation: 'El pronombre "el" se refiere correctamente a "cambio". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 6
+        const texto6 = {
+            id: 'texto6',
+            title: 'Los beneficios de la meditación',
+            text: 'La meditación es una práctica milenaria que ha ganado popularidad en el mundo occidental en las últimas décadas. Numerosos estudios científicos han demostrado sus beneficios tanto para la salud mental como física. La práctica regular de la meditación puede reducir el estrés, mejorar la concentración y promover sentimientos de bienestar. Además, se ha asociado con cambios positivos en el cerebro, incluyendo un aumento en la densidad de materia gris en áreas relacionadas con la memoria y la conciencia. A pesar de estos beneficios, muchas personas aún encuentran difícil incorporar la meditación en su rutina diaria. La falta de tiempo y la percepción de que es una práctica complicada son barreras comunes. Sin embargo, existen muchas formas accesibles de meditación, desde aplicaciones móviles hasta sesiones guiadas cortas que pueden durar solo unos minutos. Con práctica y paciencia, cualquiera puede experimentar los beneficios transformadores de esta antigua disciplina.',
+            errors: [
+                { index: 160, word: 'sus', type: 'pronombre', correct: 'sus', explanation: 'El pronombre "sus" se refiere correctamente a "beneficios". No hay error aquí.' },
+                { index: 340, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "falta de tiempo". No hay error aquí.' },
+                { index: 520, word: 'esta', type: 'pronombre', correct: 'esta', explanation: 'El pronombre "esta" se refiere correctamente a "disciplina". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 7
+        const texto7 = {
+            id: 'texto7',
+            title: 'El impacto de las redes sociales en la sociedad',
+            text: 'Las redes sociales han transformado radicalmente la forma en que nos comunicamos y compartimos información. Estas plataformas permiten conexiones instantáneas con personas de todo el mundo, rompiendo barreras geográficas y temporales. Sin embargo, su impacto no ha sido enteramente positivo. La difusión rápida de desinformación y noticias falsas se ha convertido en un problema grave, con consecuencias políticas y sociales significativas. Además, estudios han demostrado que el uso excesivo de las redes sociales puede afectar negativamente la salud mental, contribuyendo a la ansiedad, la depresión y la baja autoestima. Por otro lado, estas plataformas también han sido herramientas poderosas para activismo social y cambio político, permitiendo que voces marginadas sean escuchadas. El desafío actual es encontrar un equilibrio que maximice los beneficios de las redes sociales mientras se mitigan sus riesgos.',
+            errors: [
+                { index: 120, word: 'Estas', type: 'pronombre', correct: 'Estas', explanation: 'El pronombre "Estas" se refiere correctamente a "plataformas". No hay error aquí.' },
+                { index: 220, word: 'su', type: 'pronombre', correct: 'su', explanation: 'El pronombre "su" se refiere correctamente a "impacto". No hay error aquí.' },
+                { index: 520, word: 'El', type: 'pronombre', correct: 'El', explanation: 'El pronombre "El" se refiere correctamente a "desafío". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 8
+        const texto8 = {
+            id: 'texto8',
+            title: 'La economía circular como solución',
+            text: 'La economía circular es un modelo económico que busca minimizar el desperdicio y maximizar el uso de recursos. A diferencia del modelo lineal tradicional de "extraer, producir y desechar", la economía circular se basa en principios como el diseño para la durabilidad, la reparación, el reuso y el reciclaje. Este enfoque no solo tiene beneficios ambientales, sino también económicos, ya que puede crear nuevos empleos y modelos de negocio innovadores. Empresas de diversos sectores están adoptando prácticas circulares, desde la moda hasta la electrónica. Por ejemplo, algunas compañías ofrecen programas de devolución para sus productos, que luego son reparados, reacondicionados o reciclados. A pesar de estos avances, la transición hacia una economía circular enfrenta desafíos significativos, incluyendo la necesidad de cambiar mentalidades arraigadas y desarrollar infraestructuras adecuadas. Sin embargo, a medida que los recursos naturales se vuelven más escasos y costosos, la economía circular se presenta como una solución cada vez más necesaria y viable.',
+            errors: [
+                { index: 260, word: 'Este', type: 'pronombre', correct: 'Este', explanation: 'El pronombre "Este" se refiere correctamente a "enfoque". No hay error aquí.' },
+                { index: 380, word: 'sus', type: 'pronombre', correct: 'sus', explanation: 'El pronombre "sus" se refiere correctamente a "compañías". No hay error aquí.' },
+                { index: 580, word: 'la', type: 'pronombre', correct: 'la', explanation: 'El pronombre "la" se refiere correctamente a "economía circular". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 9
+        const texto9 = {
+            id: 'texto9',
+            title: 'El futuro de las energías renovables',
+            text: 'Las energías renovables, como la solar y la eólica, están ganando terreno como alternativas a los combustibles fósiles. Estas fuentes de energía son limpias, inagotables y cada vez más económicas. A medida que la tecnología avanza, la eficiencia de los paneles solares y las turbinas eólicas ha mejorado significativamente, reduciendo los costos de producción. Además, la creciente conciencia sobre el cambio climático ha impulsado políticas gubernamentales que favorecen la transición hacia energías más limpias. Sin embargo, la integración masiva de energías renovables en las redes eléctricas existentes presenta desafíos técnicos importantes. La intermitencia de fuentes como la solar y la eólica requiere soluciones de almacenamiento energético avanzadas. A pesar de estos obstáculos, el futuro de las energías renovables parece prometedor, con inversiones crecientes y avances tecnológicos continuos que podrían acelerar la transición hacia un sistema energético más sostenible.',
+            errors: [
+                { index: 120, word: 'Estas', type: 'pronombre', correct: 'Estas', explanation: 'El pronombre "Estas" se refiere correctamente a "fuentes de energía". No hay error aquí.' },
+                { index: 340, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "intermitencia". No hay error aquí.' },
+                { index: 520, word: 'el', type: 'pronombre', correct: 'el', explanation: 'El pronombre "el" se refiere correctamente a "futuro". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 10
+        const texto10 = {
+            id: 'texto10',
+            title: 'La importancia de la biodiversidad',
+            text: 'La biodiversidad, o la variedad de vida en la Tierra, es fundamental para el funcionamiento de los ecosistemas y el bienestar humano. Los ecosistemas diversos son más resilientes y capaces de adaptarse a cambios ambientales. Además, proporcionan servicios esenciales como la polinización de cultivos, la purificación del agua y el aire, y la regulación del clima. A pesar de su importancia, la biodiversidad está disminuyendo a un ritmo alarmante debido a actividades humanas como la deforestación, la contaminación y el cambio climático. La pérdida de especies y hábitats no solo representa una crisis ética, sino también amenaza la seguridad alimentaria y la salud humana. Por eso, la conservación de la biodiversidad se ha convertido en una prioridad global. Esfuerzos internacionales como el Convenio sobre la Diversidad Biológica buscan promover la protección y el uso sostenible de los recursos naturales, pero se necesita más acción y compromiso a todos los niveles para revertir esta tendencia preocupante.',
+            errors: [
+                { index: 160, word: 'proporcionan', type: 'pronombre', correct: 'proporcionan', explanation: 'El verbo "proporcionan" se refiere correctamente a "ecosistemas diversos". No hay error aquí.' },
+                { index: 280, word: 'su', type: 'pronombre', correct: 'su', explanation: 'El pronombre "su" se refiere correctamente a "biodiversidad". No hay error aquí.' },
+                { index: 520, word: 'esta', type: 'pronombre', correct: 'esta', explanation: 'El pronombre "esta" se refiere correctamente a "tendencia". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 11
+        const texto11 = {
+            id: 'texto11',
+            title: 'Los desafíos de la urbanización',
+            text: 'La urbanización es uno de los fenómenos demográficos más significativos del siglo XXI. Cada vez más personas se mudan a las ciudades en busca de oportunidades económicas y una mejor calidad de vida. Sin embargo, este crecimiento urbano rápido presenta numerosos desafíos. La infraestructura de muchas ciudades no está preparada para absorber este aumento de población, resultando en problemas de vivienda, transporte y servicios básicos. Además, la concentración de personas y actividades en áreas urbanas intensifica la presión sobre los recursos naturales y aumenta la contaminación. Por otro lado, las ciudades también son centros de innovación, cultura y desarrollo económico. La planificación urbana sostenible se presenta como una solución para abordar estos desafíos, buscando crear ciudades más habitables, eficientes y resilientes. Esto requiere un enfoque integral que considere aspectos sociales, económicos y ambientales.',
+            errors: [
+                { index: 180, word: 'este', type: 'pronombre', correct: 'este', explanation: 'El pronombre "este" se refiere correctamente a "crecimiento urbano rápido". No hay error aquí.' },
+                { index: 320, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "infraestructura". No hay error aquí.' },
+                { index: 580, word: 'Esto', type: 'pronombre', correct: 'Esto', explanation: 'El pronombre "Esto" se refiere correctamente a toda la idea anterior sobre "planificación urbana sostenible". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 12
+        const texto12 = {
+            id: 'texto12',
+            title: 'La revolución de la biotecnología',
+            text: 'La biotecnología está transformando numerosos campos, desde la medicina hasta la agricultura. Los avances en edición genética, como la tecnología CRISPR, permiten modificar organismos con una precisión sin precedentes. En medicina, estas herramientas están abriendo nuevas posibilidades para el tratamiento de enfermedades genéticas y el desarrollo de terapias personalizadas. En agricultura, la biotecnología ha contribuido al desarrollo de cultivos más resistentes a plagas y condiciones climáticas adversas, ayudando a mejorar la seguridad alimentaria. Sin embargo, estas aplicaciones también plantean importantes cuestiones éticas y de seguridad. La modificación genética de organismos y la liberación de especies modificadas en el entorno podrían tener consecuencias impredecibles. Por eso, es crucial establecer marcos regulatorios sólidos y promover un debate informado sobre los beneficios y riesgos de la biotecnología, asegurando que su desarrollo se realice de manera responsable y ética.',
+            errors: [
+                { index: 180, word: 'estas', type: 'pronombre', correct: 'estas', explanation: 'El pronombre "estas" se refiere correctamente a "herramientas". No hay error aquí.' },
+                { index: 420, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "modificación genética". No hay error aquí.' },
+                { index: 560, word: 'su', type: 'pronombre', correct: 'su', explanation: 'El pronombre "su" se refiere correctamente a "desarrollo". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 13
+        const texto13 = {
+            id: 'texto13',
+            title: 'El futuro de la movilidad urbana',
+            text: 'La movilidad urbana está experimentando una transformación radical impulsada por la tecnología y la necesidad de reducir las emisiones de carbono. Los vehículos eléctricos están ganando popularidad, pero su adopción masiva enfrenta desafíos como la autonomía limitada y la falta de infraestructura de carga. Además, está surgiendo un cambio de paradigma: en lugar de poseer vehículos, cada vez más personas optan por servicios de movilidad compartida. Este modelo no solo reduce el número de vehículos en las ciudades, sino que también promueve un uso más eficiente de los recursos. Por otro lado, las ciudades están invirtiendo en infraestructuras para fomentar el transporte público y modos de transporte activos como caminar y andar en bicicleta. La integración de diferentes modos de transporte a través de plataformas digitales está haciendo que la movilidad urbana sea más eficiente y sostenible. Sin embargo, la transición hacia un sistema de transporte más limpio y eficiente requiere inversión significativa y cambios en las políticas urbanas.',
+            errors: [
+                { index: 160, word: 'su', type: 'pronombre', correct: 'su', explanation: 'El pronombre "su" se refiere correctamente a "adopción masiva". No hay error aquí.' },
+                { index: 260, word: 'Este', type: 'pronombre', correct: 'Este', explanation: 'El pronombre "Este" se refiere correctamente a "modelo". No hay error aquí.' },
+                { index: 520, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "integración". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 14
+        const texto14 = {
+            id: 'texto14',
+            title: 'La crisis del agua dulce',
+            text: 'El agua dulce es un recurso finito y esencial para la vida, pero su disponibilidad está disminuyendo en muchas partes del mundo. El cambio climático, la contaminación y el uso excesivo están agotando fuentes de agua dulce como ríos, lagos y acuíferos. Esta situación amenaza no solo el acceso al agua potable, sino también la seguridad alimentaria, ya que la agricultura consume aproximadamente el 70% del agua dulce mundial. A pesar de su importancia, la gestión del agua a menudo es ineficiente y fragmentada. Las pérdidas en los sistemas de distribución y el uso de técnicas de riego ineficientes agravan el problema. Sin embargo, existen soluciones que pueden ayudar a abordar esta crisis. La mejora de la eficiencia en el uso del agua, el tratamiento y reutilización de aguas residuales, y la protección de ecosistemas acuáticos son medidas clave. Además, la innovación tecnológica está ofreciendo nuevas herramientas, como la desalinización y la recolección de agua de lluvia, que pueden complementar las fuentes tradicionales.',
+            errors: [
+                { index: 120, word: 'su', type: 'pronombre', correct: 'su', explanation: 'El pronombre "su" se refiere correctamente a "agua dulce". No hay error aquí.' },
+                { index: 280, word: 'su', type: 'pronombre', correct: 'su', explanation: 'El pronombre "su" se refiere correctamente a "importancia". No hay error aquí.' },
+                { index: 520, word: 'que', type: 'conector', correct: 'las cuales', explanation: 'El conector "que" debería ser "las cuales" para referirse a "herramientas" de manera más específica.' }
+            ]
+        };
+
+        // Texto 15
+        const texto15 = {
+            id: 'texto15',
+            title: 'El impacto de la tecnología en la educación',
+            text: 'La tecnología está transformando radicalmente el campo de la educación, ofreciendo nuevas oportunidades para el aprendizaje y la enseñanza. Las plataformas en línea y las herramientas digitales permiten el acceso a recursos educativos desde cualquier lugar del mundo, rompiendo barreras geográficas y económicas. Además, la tecnología puede personalizar el aprendizaje, adaptándose al ritmo y estilo de cada estudiante. Los sistemas de aprendizaje adaptativo utilizan algoritmos para identificar las fortalezas y debilidades de los estudiantes, ofreciendo contenido y actividades personalizadas. Sin embargo, la integración de la tecnología en la educación también presenta desafíos. La brecha digital significa que no todos los estudiantes tienen igual acceso a estas herramientas, lo que puede ampliar las desigualdades existentes. Además, existe preocupación sobre el impacto de la tecnología en las habilidades sociales y la capacidad de atención de los estudiantes. Un enfoque equilibrado que combine tecnología con métodos tradicionales parece ser el camino más prometedor para el futuro de la educación.',
+            errors: [
+                { index: 200, word: 'Los', type: 'pronombre', correct: 'Los', explanation: 'El pronombre "Los" se refiere correctamente a "sistemas de aprendizaje adaptativo". No hay error aquí.' },
+                { index: 420, word: 'lo que', type: 'conector', correct: 'lo cual', explanation: 'El conector "lo que" debería ser "lo cual" para referirse a toda la idea anterior de que "no todos los estudiantes tienen igual acceso a estas herramientas".' },
+                { index: 580, word: 'Un', type: 'pronombre', correct: 'Un', explanation: 'El pronombre "Un" se refiere correctamente a "enfoque". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 16
+        const texto16 = {
+            id: 'texto16',
+            title: 'La economía del conocimiento',
+            text: 'La economía del conocimiento es un concepto que describe la transición desde una economía basada en la producción de bienes a una basada en la creación y distribución de conocimiento. En este nuevo paradigma económico, la información, la innovación y la creatividad son los principales motores del crecimiento y la competitividad. Las empresas exitosas en la economía del conocimiento son aquellas que pueden generar, procesar y aplicar información de manera efectiva. Además, el capital humano, es decir, las habilidades y conocimientos de los trabajadores, se vuelve más importante que el capital físico. Esta transformación tiene profundas implicaciones para los sistemas educativos, que deben adaptarse para desarrollar las habilidades necesarias en la economía del conocimiento. Además, plantea desafíos en términos de propiedad intelectual y distribución de la riqueza, ya que el conocimiento puede ser fácilmente replicado y difundido a través de tecnologías digitales. A pesar de estos desafíos, la economía del conocimiento ofrece oportunidades sin precedentes para la innovación y el desarrollo.',
+            errors: [
+                { index: 180, word: 'Las', type: 'pronombre', correct: 'Las', explanation: 'El pronombre "Las" se refiere correctamente a "empresas". No hay error aquí.' },
+                { index: 340, word: 'Esta', type: 'pronombre', correct: 'Esta', explanation: 'El pronombre "Esta" se refiere correctamente a "transformación". No hay error aquí.' },
+                { index: 580, word: 'la', type: 'pronombre', correct: 'la', explanation: 'El pronombre "la" se refiere correctamente a "economía del conocimiento". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 17
+        const texto17 = {
+            id: 'texto17',
+            title: 'Los desafíos de la gobernanza global',
+            text: 'La gobernanza global se refiere a las estructuras, procesos y acuerdos que permiten abordar problemas que trascienden las fronteras nacionales. En un mundo cada vez más interconectado, desafíos como el cambio climático, las pandemias y la inestabilidad financiera requieren cooperación internacional. Sin embargo, el sistema actual de gobernanza global enfrenta numerosos desafíos. Las instituciones internacionales, como las Naciones Unidas y el Fondo Monetario Internacional, fueron creadas en un contexto histórico diferente y a menudo tienen dificultades para adaptarse a los problemas actuales. Además, el creciente nacionalismo y las tensiones geopolíticas complican la cooperación internacional. Por otro lado, están surgiendo nuevos actores en la escena global, como empresas multinacionales y redes de la sociedad civil, que desafían las estructuras tradicionales de gobernanza. Reformar y fortalecer la gobernanza global es crucial para abordar eficazmente los desafíos del siglo XXI, pero esto requiere un equilibrio delicado entre la soberanía nacional y la cooperación internacional.',
+            errors: [
+                { index: 220, word: 'Las', type: 'pronombre', correct: 'Las', explanation: 'El pronombre "Las" se refiere correctamente a "instituciones internacionales". No hay error aquí.' },
+                { index: 380, word: 'esto', type: 'pronombre', correct: 'esto', explanation: 'El pronombre "esto" se refiere correctamente a toda la idea anterior sobre "reformar y fortalecer la gobernanza global". No hay error aquí.' },
+                { index: 180, word: 'que', type: 'conector', correct: 'los cuales', explanation: 'El conector "que" debería ser "los cuales" para referirse a "desafíos" de manera más específica.' }
+            ]
+        };
+
+        // Texto 18
+        const texto18 = {
+            id: 'texto18',
+            title: 'El futuro de la alimentación',
+            text: 'El sistema alimentario global está enfrentando presiones sin precedentes debido al crecimiento de la población, el cambio climático y la degradación de los recursos naturales. Para alimentar a una población mundial que se espera alcance los 10 mil millones de personas para 2050, será necesario transformar radicalmente la forma en que producimos y consumimos alimentos. La agricultura sostenible, que minimiza el impacto ambiental y preserva la biodiversidad, es una parte fundamental de esta transformación. Además, está creciendo el interés en alternativas a la proteína animal, como las carnes vegetales y los productos cultivados en laboratorio, que tienen una huella ambiental significativamente menor. Por otro lado, la reducción del desperdicio de alimentos es crucial, ya que aproximadamente un tercio de los alimentos producidos a nivel mundial se desperdicia. La tecnología también está desempeñando un papel importante, con innovaciones como la agricultura de precisión y los alimentos modificados genéticamente que pueden aumentar la productividad y la resistencia de los cultivos.',
+            errors: [
+                { index: 260, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "agricultura sostenible". No hay error aquí.' },
+                { index: 420, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "reducción del desperdicio de alimentos". No hay error aquí.' },
+                { index: 560, word: 'que', type: 'conector', correct: 'las cuales', explanation: 'El conector "que" debería ser "las cuales" para referirse a "innovaciones" de manera más específica.' }
+            ]
+        };
+
+        // Texto 19
+        const texto19 = {
+            id: 'texto19',
+            title: 'La era de la información',
+            text: 'Vivimos en la era de la información, caracterizada por una abundancia sin precedentes de datos y conocimiento. Internet y las tecnologías digitales han democratizado el acceso a la información, permitiendo que personas de todo el mundo puedan aprender, comunicarse y colaborar de nuevas maneras. Sin embargo, esta abundancia de información también presenta desafíos significativos. La sobreabundancia de datos puede dificultar la identificación de información relevante y confiable. Además, la velocidad con que se difunde la información, especialmente a través de las redes sociales, ha facilitado la propagación de desinformación y noticias falsas. Por otro lado, las grandes empresas tecnológicas concentran un poder sin precedentes, controlando no solo el acceso a la información, sino también la forma en que esta es presentada y organizada. Esto plantea importantes cuestiones sobre la privacidad, la manipulación y la democracia. Desarrollar habilidades de pensamiento crítico y alfabetización mediática es fundamental para navegar eficazmente en la era de la información.',
+            errors: [
+                { index: 200, word: 'esta', type: 'pronombre', correct: 'esta', explanation: 'El pronombre "esta" se refiere correctamente a "abundancia de información". No hay error aquí.' },
+                { index: 420, word: 'Esto', type: 'pronombre', correct: 'Esto', explanation: 'El pronombre "Esto" se refiere correctamente a toda la idea anterior sobre "el poder de las grandes empresas tecnológicas". No hay error aquí.' },
+                { index: 540, word: 'esta', type: 'pronombre', correct: 'esta', explanation: 'El pronombre "esta" se refiere correctamente a "información". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 20
+        const texto20 = {
+            id: 'texto20',
+            title: 'El futuro de los océanos',
+            text: 'Los océanos cubren más del 70% de la superficie de la Tierra y desempeñan un papel fundamental en la regulación del clima, la producción de oxígeno y el soporte de la vida marina. Sin embargo, están enfrentando presiones sin precedentes debido a actividades humanas. La contaminación por plásticos, la sobrepesca y el cambio climático están amenazando la salud de los ecosistemas marinos. El aumento de la temperatura y la acidificación de los océanos debido a la absorción de dióxido de carbono están causando el blanqueamiento de corales y afectando a numerosas especies marinas. A pesar de estos desafíos, los océanos también ofrecen soluciones importantes para el futuro. La energía mareomotriz y la eólica marina son fuentes de energía renovable con un gran potencial. Además, los océanos juegan un papel crucial en la captura y almacenamiento de carbono, ayudando a mitigar el cambio climático. Proteger y restaurar la salud de los océanos es fundamental no solo para la vida marina, sino también para el bienestar humano y la salud del planeta.',
+            errors: [
+                { index: 180, word: 'El', type: 'pronombre', correct: 'El', explanation: 'El pronombre "El" se refiere correctamente a "aumento de la temperatura". No hay error aquí.' },
+                { index: 380, word: 'Los', type: 'pronombre', correct: 'Los', explanation: 'El pronombre "Los" se refiere correctamente a "océanos". No hay error aquí.' },
+                { index: 540, word: 'la', type: 'pronombre', correct: 'la', explanation: 'El pronombre "la" se refiere correctamente a "salud". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 21
+        const texto21 = {
+            id: 'texto21',
+            title: 'La revolución de las ciudades inteligentes',
+            text: 'Las ciudades inteligentes utilizan tecnología y datos para mejorar la calidad de vida de sus habitantes y hacer un uso más eficiente de los recursos urbanos. Sensores y dispositivos conectados recopilan información sobre el tráfico, el consumo de energía, la calidad del aire y muchos otros aspectos de la vida urbana. Esta información se analiza para optimizar servicios como el transporte público, la gestión de residuos y la distribución de energía. Además, las ciudades inteligentes promueven la participación ciudadana a través de plataformas digitales que permiten a los residentes reportar problemas y proponer soluciones. Sin embargo, el desarrollo de ciudades inteligentes también plantea desafíos importantes. La privacidad de los datos es una preocupación principal, ya que la recopilación masiva de información podría ser utilizada para vigilancia o control. Además, existe el riesgo de crear una brecha digital entre aquellos que tienen acceso a estas tecnologías y quienes no. Para que las ciudades inteligentes sean verdaderamente inclusivas y sostenibles, es necesario abordar estos desafíos de manera proactiva.',
+            errors: [
+                { index: 160, word: 'Esta', type: 'pronombre', correct: 'Esta', explanation: 'El pronombre "Esta" se refiere correctamente a "información". No hay error aquí.' },
+                { index: 380, word: 'la', type: 'pronombre', correct: 'la', explanation: 'El pronombre "la" se refiere correctamente a "recopilación masiva de información". No hay error aquí.' },
+                { index: 540, word: 'estas', type: 'pronombre', correct: 'estas', explanation: 'El pronombre "estas" se refiere correctamente a "tecnologías". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 22
+        const texto22 = {
+            id: 'texto22',
+            title: 'El futuro del trabajo',
+            text: 'El mundo del trabajo está experimentando una transformación profunda impulsada por la automatización, la inteligencia artificial y la globalización. Muchos trabajos tradicionales están siendo reemplazados por máquinas y algoritmos, mientras que surgen nuevas profesiones que requieren habilidades diferentes. Esta transición plantea desafíos significativos para los trabajadores, que necesitan adaptarse y adquirir nuevas competencias para permanecer relevantes en el mercado laboral. Además, está cambiando la naturaleza misma del trabajo, con un aumento del trabajo remoto, los contratos flexibles y la economía gig. Por otro lado, estas transformaciones también ofrecen oportunidades para una mayor flexibilidad y autonomía. La educación continua y el aprendizaje a lo largo de la vida se vuelven esenciales en este nuevo contexto. Además, surgen debates sobre la necesidad de nuevos modelos de protección social, como la renta básica universal, para abordar los desafíos de un mercado laboral en constante evolución.',
+            errors: [
+                { index: 160, word: 'Esta', type: 'pronombre', correct: 'Esta', explanation: 'El pronombre "Esta" se refiere correctamente a "transición". No hay error aquí.' },
+                { index: 340, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "educación continua". No hay error aquí.' },
+                { index: 520, word: 'un', type: 'pronombre', correct: 'un', explanation: 'El pronombre "un" se refiere correctamente a "mercado laboral". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 23
+        const texto23 = {
+            id: 'texto23',
+            title: 'La crisis de la biodiversidad',
+            text: 'La Tierra está enfrentando una crisis de biodiversidad sin precedentes, con especies que se extinguen a un ritmo mil veces superior al natural. Esta pérdida de biodiversidad amenaza la estabilidad de los ecosistemas y los servicios que proporcionan a la humanidad, como la polinización, la purificación del agua y el control del clima. Las principales causas de esta crisis incluyen la destrucción de hábitats, la sobreexplotación de recursos, la contaminación y el cambio climático. A pesar de la gravedad de esta situación, las medidas de conservación han sido insuficientes hasta ahora. Es necesario un enfoque más integral que combine la protección de áreas naturales con prácticas sostenibles en agricultura, pesca e industria. Además, es crucial abordar las causas subyacentes de la crisis, como el consumo insostenible y los modelos económicos que no valoran adecuadamente los servicios de los ecosistemas. La cooperación internacional y el compromiso de todos los sectores de la sociedad son fundamentales para revertir esta tendencia antes de que sea demasiado tarde.',
+            errors: [
+                { index: 120, word: 'Esta', type: 'pronombre', correct: 'Esta', explanation: 'El pronombre "Esta" se refiere correctamente a "pérdida de biodiversidad". No hay error aquí.' },
+                { index: 340, word: 'Es', type: 'pronombre', correct: 'Es', explanation: 'El pronombre "Es" se refiere correctamente a "un enfoque más integral". No hay error aquí.' },
+                { index: 540, word: 'esta', type: 'pronombre', correct: 'esta', explanation: 'El pronombre "esta" se refiere correctamente a "tendencia". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 24
+        const texto24 = {
+            id: 'texto24',
+            title: 'El futuro de la energía nuclear',
+            text: 'La energía nuclear es una de las fuentes de energía más controvertidas en el debate sobre la transición hacia un sistema energético bajo en carbono. Por un lado, la energía nuclear puede generar grandes cantidades de electricidad sin emitir gases de efecto invernadero durante su operación. Además, tiene una alta densidad energética, lo que significa que requiere menos espacio que otras fuentes de energía como la solar o la eólica. Sin embargo, presenta desafíos significativos. La gestión de los residuos nucleares, que permanecen radiactivos durante miles de años, es uno de los principales problemas. Además, el riesgo de accidentes nucleares, aunque bajo, tiene consecuencias potencialmente catastróficas. Por otro lado, los avances tecnológicos están desarrollando reactores más seguros y eficientes, así como nuevas formas de gestionar los residuos. El debate sobre el papel de la energía nuclear en el futuro energético continúa, con opiniones divididas sobre si es una solución necesaria o un riesgo inaceptable.',
+            errors: [
+                { index: 220, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "gestión de los residuos nucleares". No hay error aquí.' },
+                { index: 380, word: 'El', type: 'pronombre', correct: 'El', explanation: 'El pronombre "El" se refiere correctamente a "debate". No hay error aquí.' },
+                { index: 540, word: 'si', type: 'conector', correct: 'si', explanation: 'El conector "si" se usa correctamente para expresar una condición. No hay error aquí.' }
+            ]
+        };
+
+        // Texto 25
+        const texto25 = {
+            id: 'texto25',
+            title: 'La economía colaborativa',
+            text: 'La economía colaborativa, también conocida como economía del compartir, es un modelo económico basado en el intercambio, el alquiler y el consumo compartido de bienes y servicios. Plataformas digitales como Uber, Airbnb y TaskRabbit han revolucionado sectores como el transporte, el alojamiento y los servicios domésticos. Este modelo ofrece beneficios como una mayor eficiencia en el uso de recursos, costos más bajos para los consumidores y oportunidades de ingresos para los proveedores. Sin embargo, también plantea desafíos importantes. La regulación de estas plataformas es compleja, ya que operan en una zona gris entre lo personal y lo comercial. Además, han surgido preocupaciones sobre la precarización laboral y la erosión de los derechos de los trabajadores. Por otro lado, algunas empresas están explorando modelos más equitativos que combinan los beneficios de la economía colaborativa con mejores condiciones para los trabajadores. El futuro de la economía colaborativa dependerá de cómo se aborden estos desafíos regulatorios y sociales.',
+            errors: [
+                { index: 160, word: 'Este', type: 'pronombre', correct: 'Este', explanation: 'El pronombre "Este" se refiere correctamente a "modelo". No hay error aquí.' },
+                { index: 340, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "regulación". No hay error aquí.' },
+                { index: 540, word: 'El', type: 'pronombre', correct: 'El', explanation: 'El pronombre "El" se refiere correctamente a "futuro". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 26
+        const texto26 = {
+            id: 'texto26',
+            title: 'La revolución de la impresión 3D',
+            text: 'La impresión 3D, o fabricación aditiva, está transformando la forma en que diseñamos, producimos y distribuimos objetos. Esta tecnología permite crear objetos tridimensionales a partir de un modelo digital, añadiendo material capa por capa. A diferencia de la fabricación tradicional, que a menudo requiere moldes y herramientas costosos, la impresión 3D permite producir objetos complejos con menos desperdicio de material. Sus aplicaciones son muy diversas, desde la fabricación de prototipos y piezas personalizadas hasta la producción de órganos para trasplantes y viviendas asequibles. Sin embargo, la impresión 3D también plantea desafíos. La protección de la propiedad intelectual se vuelve más difícil cuando los diseños pueden ser fácilmente compartidos y replicados. Además, existen preocupaciones sobre la seguridad, especialmente con la impresión 3D de armas o componentes críticos sin la debida supervisión. A pesar de estos desafíos, la impresión 3D tiene el potencial de democratizar la producción y permitir una mayor personalización y eficiencia en la fabricación.',
+            errors: [
+                { index: 120, word: 'Esta', type: 'pronombre', correct: 'Esta', explanation: 'El pronombre "Esta" se refiere correctamente a "tecnología". No hay error aquí.' },
+                { index: 340, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "protección de la propiedad intelectual". No hay error aquí.' },
+                { index: 540, word: 'la', type: 'pronombre', correct: 'la', explanation: 'El pronombre "la" se refiere correctamente a "fabricación". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 27
+        const texto27 = {
+            id: 'texto27',
+            title: 'El futuro de la realidad virtual',
+            text: 'La realidad virtual (VR) está pasando de ser una tecnología de nicho a convertirse en una plataforma con aplicaciones en numerosos campos. Originalmente desarrollada principalmente para el entretenimiento, la VR ahora se utiliza en educación, medicina, arquitectura y muchos otros sectores. En medicina, por ejemplo, se utiliza para la formación de cirujanos, el tratamiento de fobias y la rehabilitación de pacientes. En educación, permite experiencias inmersivas que pueden mejorar el aprendizaje y la retención de información. Sin embargo, la adopción masiva de la realidad virtual enfrenta obstáculos. El costo del equipo sigue siendo una barrera para muchos usuarios, y algunas personas experimentan mareos o incomodidad durante su uso. Además, existen preocupaciones sobre el aislamiento social que podría resultar de un uso excesivo de tecnologías inmersivas. A pesar de estos desafíos, los avances tecnológicos están haciendo la realidad virtual más accesible y cómoda, expandiendo su potencial para transformar numerous aspectos de nuestra vida.',
+            errors: [
+                { index: 180, word: 'se', type: 'pronombre', correct: 'se', explanation: 'El pronombre "se" se refiere correctamente a "la realidad virtual". No hay error aquí.' },
+                { index: 380, word: 'El', type: 'pronombre', correct: 'El', explanation: 'El pronombre "El" se refiere correctamente a "costo del equipo". No hay error aquí.' },
+                { index: 540, word: 'nuestros', type: 'pronombre', correct: 'nuestros', explanation: 'El pronombre "nuestros" se refiere correctamente a "de nosotros". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 28
+        const texto28 = {
+            id: 'texto28',
+            title: 'La economía del espacio',
+            text: 'La economía del espacio está experimentando un renacimiento impulsado por empresas privadas y tecnologías más accesibles. Durante décadas, la exploración y utilización del espacio fue dominio exclusivo de agencias gubernamentales como la NASA y la Roscosmos. Sin embargo, empresas como SpaceX, Blue Origin y Virgin Galactic están democratizando el acceso al espacio. Esto está abriendo nuevas oportunidades económicas, desde el turismo espacial hasta la minería de asteroides y la fabricación en microgravedad. Además, la constelación de satélites para comunicaciones y observación de la Tierra está creciendo rápidamente, mejorando la conectividad global y permitiendo un monitoreo ambiental más preciso. Sin embargo, el desarrollo de la economía espacial también plantea desafíos. La basura espacial es un problema creciente que amenaza los satélites y las misiones tripuladas. Además, existen cuestiones legales y éticas sobre la propiedad y explotación de recursos espaciales. A medida que la economía del espacio se expande, será necesario desarrollar marcos regulatorios internacionales para abordar estos desafíos.',
+            errors: [
+                { index: 200, word: 'Esto', type: 'pronombre', correct: 'Esto', explanation: 'El pronombre "Esto" se refiere correctamente a toda la idea anterior sobre "empresas privadas democratizando el acceso al espacio". No hay error aquí.' },
+                { index: 420, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "basura espacial". No hay error aquí.' },
+                { index: 580, word: 'estos', type: 'pronombre', correct: 'estos', explanation: 'El pronombre "estos" se refiere correctamente a "desafíos". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 29
+        const texto29 = {
+            id: 'texto29',
+            title: 'El futuro de la medicina personalizada',
+            text: 'La medicina personalizada representa un cambio paradigmático en el enfoque de la atención médica, pasando de un modelo "talla única" a tratamientos adaptados a las características individuales de cada paciente. Los avances en genómica, proteómica y otras tecnologías ómicas permiten una comprensión más profunda de las bases moleculares de las enfermedades. Esto, combinado con la inteligencia artificial y el análisis de big data, está abriendo nuevas posibilidades para diagnosticar enfermedades de manera más temprana y precisa. Además, permite desarrollar terapias dirigidas que son más efectivas y tienen menos efectos secundarios que los tratamientos convencionales. Sin embargo, la implementación de la medicina personalizada enfrenta desafíos significativos. El costo de las tecnologías y tratamientos personalizados puede ser prohibitivo, creando desigualdades en el acceso a la atención médica. Además, plantea cuestiones éticas sobre la privacidad de la información genética y la posibilidad de discriminación basada en perfiles genéticos. A pesar de estos desafíos, la medicina personalizada tiene el potencial de transformar radicalmente la práctica médica y mejorar los resultados de salud.',
+            errors: [
+                { index: 160, word: 'Esto', type: 'pronombre', correct: 'Esto', explanation: 'El pronombre "Esto" se refiere correctamente a toda la idea anterior sobre "avances en genómica y tecnologías ómicas". No hay error aquí.' },
+                { index: 380, word: 'El', type: 'pronombre', correct: 'El', explanation: 'El pronombre "El" se refiere correctamente a "costo". No hay error aquí.' },
+                { index: 540, word: 'la', type: 'pronombre', correct: 'la', explanation: 'El pronombre "la" se refiere correctamente a "práctica médica". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 30
+        const texto30 = {
+            id: 'texto30',
+            title: 'El futuro de la educación online',
+            text: 'La educación online ha experimentado un crecimiento exponencial en la última década, acelerado por la pandemia de COVID-19. Esta modalidad educativa ofrece flexibilidad y acceso a una amplia variedad de cursos y programas sin las barreras geográficas de la educación tradicional. Además, las plataformas online pueden utilizar tecnologías adaptativas para personalizar el aprendizaje según las necesidades individuales de cada estudiante. Sin embargo, la educación online también presenta desafíos importantes. La falta de interacción cara a cara puede dificultar el desarrollo de habilidades sociales y el sentido de comunidad entre los estudiantes. Además, requiere una mayor autodisciplina y motivación por parte de los estudiantes, lo que puede resultar en tasas de abandono más altas. Por otro lado, la brecha digital significa que no todos los estudiantes tienen igual acceso a la tecnología necesaria para la educación online. A medida que las instituciones educativas continúan integrando elementos online en sus programas, es probable que surja un modelo híbrido que combine lo mejor de ambos mundos: la flexibilidad de la educación online y la interacción de la educación presencial.',
+            errors: [
+                { index: 120, word: 'Esta', type: 'pronombre', correct: 'Esta', explanation: 'El pronombre "Esta" se refiere correctamente a "modalidad educativa". No hay error aquí.' },
+                { index: 340, word: 'lo que', type: 'conector', correct: 'lo cual', explanation: 'El conector "lo que" debería ser "lo cual" para referirse a toda la idea anterior de que "requiere una mayor autodisciplina y motivación".' },
+                { index: 540, word: 'lo', type: 'pronombre', correct: 'lo', explanation: 'El pronombre "lo" se refiere correctamente a "mejor". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 31
+        const texto31 = {
+            id: 'texto31',
+            title: 'El futuro de los materiales avanzados',
+            text: 'Los materiales avanzados están revolucionando numerosas industrias, desde la electrónica hasta la medicina y la construcción. Materiales como el grafeno, los metamateriales y las aleaciones de alto rendimiento tienen propiedades extraordinarias que superan a los materiales convencionales. El grafeno, por ejemplo, es extremadamente fuerte, ligero y conductor, lo que lo hace ideal para aplicaciones en electrónica, almacenamiento de energía y sensores. Los metamateriales, por otro lado, tienen propiedades no encontradas en la naturaleza, como la invisibilidad ante ciertas longitudes de onda. Sin embargo, el desarrollo y producción de estos materiales enfrenta desafíos significativos. Los costos de producción son a menudo altos y los procesos de fabricación pueden ser complejos y difíciles de escalar. Además, existen preocupaciones sobre la seguridad y el impacto ambiental de algunos nanomateriales. A pesar de estos desafíos, la investigación en materiales avanzados continúa avanzando, prometiendo innovaciones que podrían transformar numerosos aspectos de nuestra vida cotidiana.',
+            errors: [
+                { index: 180, word: 'lo', type: 'pronombre', correct: 'lo', explanation: 'El pronombre "lo" se refiere correctamente a "grafeno". No hay error aquí.' },
+                { index: 380, word: 'Los', type: 'pronombre', correct: 'Los', explanation: 'El pronombre "Los" se refiere correctamente a "costos de producción". No hay error aquí.' },
+                { index: 540, word: 'nuestra', type: 'pronombre', correct: 'nuestra', explanation: 'El pronombre "nuestra" se refiere correctamente a "de nosotros". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 32
+        const texto32 = {
+            id: 'texto32',
+            title: 'El futuro de la robótica',
+            text: 'La robótica está experimentando un avance rápido, impulsado por mejoras en la inteligencia artificial, la sensores y la actuación. Los robots están pasando de ser herramientas especializadas en entornos controlados, como las fábricas, a integrarse en numerosos aspectos de la vida cotidiana. En el hogar, los robots asistentes pueden ayudar con tareas domésticas, el cuidado de personas mayores y la educación de los niños. En medicina, los robots quirúrgicos permiten procedimientos más precisos y menos invasivos. En agricultura, los robots autónomos pueden realizar tareas como la siembra, el cultivo y la cosecha con mayor eficiencia que los métodos tradicionales. Sin embargo, la expansión de la robótica también plantea desafíos. Existen preocupaciones sobre el impacto en el empleo, ya que los robots podrían reemplazar a humanos en numerosas tareas. Además, surgen cuestiones éticas sobre la autonomía de los robots y la responsabilidad en caso de errores o accidentes. A medida que la robótica continúa evolucionando, será necesario abordar estos desafíos para maximizar sus beneficios mientras se minimizan los riesgos.',
+            errors: [
+                { index: 200, word: 'En', type: 'pronombre', correct: 'En', explanation: 'El pronombre "En" se refiere correctamente a "el hogar". No hay error aquí.' },
+                { index: 380, word: 'Existe', type: 'pronombre', correct: 'Existen', explanation: 'El pronombre "Existe" debería ser "Existen" para concordar con "preocupaciones", que es plural.' },
+                { index: 540, word: 'sus', type: 'pronombre', correct: 'sus', explanation: 'El pronombre "sus" se refiere correctamente a "beneficios". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 33
+        const texto33 = {
+            id: 'texto33',
+            title: 'El futuro de la blockchain',
+            text: 'La tecnología blockchain, originalmente desarrollada como el registro subyacente de las criptomonedas como Bitcoin, está encontrando aplicaciones mucho más allá de las finanzas. La blockchain es esencialmente un registro distribuido e inmutable que permite transacciones seguras sin necesidad de un intermediario centralizado. Esto tiene implicaciones significativas para numerosos sectores. En la cadena de suministro, por ejemplo, puede mejorar la trazabilidad y transparencia de productos. En salud, puede facilitar el intercambio seguro de registros médicos entre proveedores. En votaciones, puede ofrecer sistemas más transparentes y resistentes al fraude. Sin embargo, la adopción de la blockchain enfrenta desafíos importantes. La escalabilidad es un problema, ya que muchas redes blockchain tienen limitaciones en términos de transacciones por segundo. Además, el consumo de energía de algunas blockchains, especialmente las que utilizan mecanismos de consenso de prueba de trabajo, es significativo. A pesar de estos desafíos, la investigación en tecnologías blockchain continúa avanzando, buscando soluciones que hagan esta tecnología más eficiente y accesible.',
+            errors: [
+                { index: 160, word: 'Esto', type: 'pronombre', correct: 'Esto', explanation: 'El pronombre "Esto" se refiere correctamente a toda la idea anterior sobre "blockchain como registro distribuido". No hay error aquí.' },
+                { index: 380, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "escalabilidad". No hay error aquí.' },
+                { index: 540, word: 'esta', type: 'pronombre', correct: 'esta', explanation: 'El pronombre "esta" se refiere correctamente a "tecnología". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 34
+        const texto34 = {
+            id: 'texto34',
+            title: 'El futuro de la computación cuántica',
+            text: 'La computación cuántica representa un cambio paradigmático en el procesamiento de información, con el potencial de resolver problemas que son intratables para las computadoras clásicas. A diferencia de las computadoras clásicas, que utilizan bits que pueden ser 0 o 1, las computadoras cuánticas utilizan qubits, que pueden existir en superposición de estados simultáneamente. Esto permite realizar ciertos cálculos de manera exponencialmente más rápida. Las aplicaciones potenciales de la computación cuántica son vastas, desde el descubrimiento de nuevos fármacos y materiales hasta la optimización de sistemas complejos y la criptografía. Sin embargo, la computación cuántica enfrenta desafíos técnicos significativos. Los qubits son extremadamente frágiles y pueden perder su estado cuántico debido a la decoherencia, lo que requiere condiciones de operación muy específicas, como temperaturas cercanas al cero absoluto. Además, el desarrollo de algoritmos cuánticos es un campo complejo que requiere conocimientos especializados. A pesar de estos desafíos, grandes empresas y gobiernos están invirtiendo masivamente en esta tecnología, reconociendo su potencial transformador.',
+            errors: [
+                { index: 160, word: 'Esto', type: 'pronombre', correct: 'Esto', explanation: 'El pronombre "Esto" se refiere correctamente a toda la idea anterior sobre "computadoras cuánticas utilizando qubits". No hay error aquí.' },
+                { index: 380, word: 'lo que', type: 'conector', correct: 'lo cual', explanation: 'El conector "lo que" debería ser "lo cual" para referirse a toda la idea anterior de que "los qubits son extremadamente frágiles".' },
+                { index: 540, word: 'su', type: 'pronombre', correct: 'su', explanation: 'El pronombre "su" se refiere correctamente a "potencial". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 35
+        const texto35 = {
+            id: 'texto35',
+            title: 'El futuro de la biología sintética',
+            text: 'La biología sintética es un campo interdisciplinario que combina la biología, la ingeniería y la informática para diseñar y construir nuevas partes biológicas, dispositivos y sistemas. Esta disciplina va más allá de la modificación genética tradicional, permitiendo la creación de organismos con funciones completamente nuevas. Sus aplicaciones potenciales son amplias y transformadoras. En medicina, por ejemplo, podría permitir el desarrollo de bacterias programadas para detectar y tratar enfermedades como el cáncer. En medio ambiente, podrían diseñarse microorganismos que degraden contaminantes o produzcan biocombustibles de manera más eficiente. Sin embargo, la biología sintética también plantea importantes cuestiones éticas y de seguridad. La creación de organismos sintéticos podría tener consecuencias impredecibles si se liberan en el entorno. Además, existe el riesgo de que estas tecnologías se utilicen para crear agentes biológicos peligrosos. Por eso, es crucial establecer marcos regulatorios sólidos y promover un debate informado sobre los beneficios y riesgos de la biología sintética, asegurando que su desarrollo se realice de manera responsable y ética.',
+            errors: [
+                { index: 120, word: 'Esta', type: 'pronombre', correct: 'Esta', explanation: 'El pronombre "Esta" se refiere correctamente a "disciplina". No hay error aquí.' },
+                { index: 340, word: 'si', type: 'conector', correct: 'si', explanation: 'El conector "si" se usa correctamente para expresar una condición. No hay error aquí.' },
+                { index: 520, word: 'su', type: 'pronombre', correct: 'su', explanation: 'El pronombre "su" se refiere correctamente a "desarrollo". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 36
+        const texto36 = {
+            id: 'texto36',
+            title: 'El futuro de la nanotecnología',
+            text: 'La nanotecnología se refiere a la manipulación de la materia a escala nanométrica, es decir, a nivel de átomos y moléculas. A esta escala, los materiales pueden exhibir propiedades muy diferentes a las que tienen a escala macroscópica. Esto abre posibilidades revolucionarias en numerosos campos. En medicina, por ejemplo, los nanomateriales pueden utilizarse para la administración dirigida de fármacos, mejorando la eficacia y reduciendo los efectos secundarios. En electrónica, permiten el desarrollo de componentes más pequeños, rápidos y eficientes. En energía, podrían mejorar la eficiencia de las células solares y las baterías. Sin embargo, la nanotecnología también plantea preocupaciones sobre seguridad y medio ambiente. Las nanopartículas, debido a su pequeño tamaño, pueden penetrar barreras biológicas y acumularse en organismos, con posibles efectos tóxicos. Además, existen lagunas en la regulación de productos nanotecnológicos. A medida que esta tecnología continúa desarrollándose, es fundamental abordar estos desafíos para maximizar sus beneficios mientras se minimizan los riesgos potenciales.',
+            errors: [
+                { index: 160, word: 'Esto', type: 'pronombre', correct: 'Esto', explanation: 'El pronombre "Esto" se refiere correctamente a toda la idea anterior sobre "propiedades diferentes a escala nanométrica". No hay error aquí.' },
+                { index: 380, word: 'Las', type: 'pronombre', correct: 'Las', explanation: 'El pronombre "Las" se refiere correctamente a "nanopartículas". No hay error aquí.' },
+                { index: 540, word: 'sus', type: 'pronombre', correct: 'sus', explanation: 'El pronombre "sus" se refiere correctamente a "beneficios". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 37
+        const texto37 = {
+            id: 'texto37',
+            title: 'El futuro de la energía geotérmica',
+            text: 'La energía geotérmica aprovecha el calor almacenado en la Tierra para generar electricidad y proporcionar calefacción. A diferencia de otras energías renovables como la solar o la eólica, la energía geotérmica es constante y no depende de las condiciones climáticas. Esto la convierte en una fuente de energía muy fiable y predecible. Además, tiene una huella espacial pequeña en comparación con otras fuentes de energía. Sin embargo, el desarrollo de la energía geotérmica enfrenta desafíos significativos. La exploración y perforación de yacimientos geotérmicos es costosa y técnicamente compleja. Además, su potencial está limitado a ciertas regiones con características geológicas específicas. Por otro lado, están surgiendo tecnologías como la geotermia mejorada, que busca expandir el acceso a la energía geotérmica mediante la creación de reservorios artificiales. A medida que las tecnologías mejoran y los costos disminuyen, la energía geotérmica podría jugar un papel importante en la transición hacia un sistema energético más sostenible y diversificado.',
+            errors: [
+                { index: 160, word: 'Esto', type: 'pronombre', correct: 'Esto', explanation: 'El pronombre "Esto" se refiere correctamente a toda la idea anterior sobre "energía geotérmica constante". No hay error aquí.' },
+                { index: 340, word: 'su', type: 'pronombre', correct: 'su', explanation: 'El pronombre "su" se refiere correctamente a "potencial". No hay error aquí.' },
+                { index: 540, word: 'la', type: 'pronombre', correct: 'la', explanation: 'El pronombre "la" se refiere correctamente a "transición". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 38
+        const texto38 = {
+            id: 'texto38',
+            title: 'El futuro de la agricultura vertical',
+            text: 'La agricultura vertical es un método de cultivo que consiste en cultivar plantas en capas apiladas verticalmente, a menudo en edificios o estructuras controladas. Este enfoque permite producir alimentos en áreas urbanas, reduciendo la distancia entre la producción y el consumo. Además, el uso de técnicas como la hidroponía o la aeroponía, que cultivan plantas sin suelo, reduce significativamente el consumo de agua en comparación con la agricultura tradicional. La agricultura vertical también permite un control preciso de las condiciones de crecimiento, lo que puede aumentar los rendimientos y permitir la producción durante todo el año. Sin embargo, este método enfrenta desafíos importantes. Los costos energéticos para iluminación y control climático pueden ser altos. Además, no todos los cultivos son adecuados para la agricultura vertical, especialmente aquellos que requieren mucho espacio. A pesar de estos desafíos, la agricultura vertical está ganando popularidad como una forma de aumentar la seguridad alimentaria en las ciudades y reducir el impacto ambiental de la agricultura.',
+            errors: [
+                { index: 120, word: 'Este', type: 'pronombre', correct: 'Este', explanation: 'El pronombre "Este" se refiere correctamente a "enfoque". No hay error aquí.' },
+                { index: 340, word: 'Los', type: 'pronombre', correct: 'Los', explanation: 'El pronombre "Los" se refiere correctamente a "costos energéticos". No hay error aquí.' },
+                { index: 520, word: 'la', type: 'pronombre', correct: 'la', explanation: 'El pronombre "la" se refiere correctamente a "agricultura". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 39
+        const texto39 = {
+            id: 'texto39',
+            title: 'El futuro de las baterías',
+            text: 'Las baterías son componentes fundamentales en la transición hacia un sistema energético más sostenible, permitiendo el almacenamiento de energía de fuentes renovables como la solar y la eólica. Los avances en tecnología de baterías están mejorando la densidad energética, la duración y la seguridad de estos dispositivos. Las baterías de ion-litio dominan actualmente el mercado, pero están surgiendo alternativas como las baterías de estado sólido, las de flujo y las de metal-aire, que prometen mayores capacidades y mayor seguridad. Además, la investigación en nuevos materiales como el grafeno y los nanomateriales podría revolucionar el diseño de baterías. Sin embargo, el desarrollo de baterías enfrenta desafíos significativos. La dependencia de materiales raros y costosos, como el litio y el cobalto, plantea preocupaciones sobre la sostenibilidad y la seguridad de la cadena de suministro. Además, el reciclaje de baterías es técnicamente complejo y económicamente desafiante. A medida que la demanda de baterías continúa creciendo, abordar estos desafíos será crucial para maximizar su potencial en la transición energética.',
+            errors: [
+                { index: 200, word: 'Las', type: 'pronombre', correct: 'Las', explanation: 'El pronombre "Las" se refiere correctamente a "baterías de ion-litio". No hay error aquí.' },
+                { index: 380, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "dependencia". No hay error aquí.' },
+                { index: 540, word: 'su', type: 'pronombre', correct: 'su', explanation: 'El pronombre "su" se refiere correctamente a "potencial". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 40
+        const texto40 = {
+            id: 'texto40',
+            title: 'El futuro de la computación cuántica',
+            text: 'La computación cuántica representa un cambio fundamental en el procesamiento de información, con el potencial de resolver problemas que son intratables para las computadoras clásicas. A diferencia de las computadoras tradicionales, que utilizan bits que pueden ser 0 o 1, las computadoras cuánticas utilizan qubits, que pueden existir en superposición de estados simultáneamente. Esto permite realizar ciertos cálculos de manera exponencialmente más rápida. Las aplicaciones potenciales de la computación cuántica son vastas, desde el descubrimiento de nuevos fármacos y materiales hasta la optimización de sistemas complejos y la criptografía. Sin embargo, la computación cuántica enfrenta desafíos técnicos significativos. Los qubits son extremadamente frágiles y pueden perder su estado cuántico debido a la decoherencia, lo que requiere condiciones de operación muy específicas, como temperaturas cercanas al cero absoluto. Además, el desarrollo de algoritmos cuánticos es un campo complejo que requiere conocimientos especializados. A pesar de estos desafíos, grandes empresas y gobiernos están invirtiendo masivamente en esta tecnología, reconociendo su potencial transformador.',
+            errors: [
+                { index: 160, word: 'Esto', type: 'pronombre', correct: 'Esto', explanation: 'El pronombre "Esto" se refiere correctamente a toda la idea anterior sobre "computadoras cuánticas utilizando qubits". No hay error aquí.' },
+                { index: 380, word: 'lo que', type: 'conector', correct: 'lo cual', explanation: 'El conector "lo que" debería ser "lo cual" para referirse a toda la idea anterior de que "los qubits son extremadamente frágiles".' },
+                { index: 540, word: 'su', type: 'pronombre', correct: 'su', explanation: 'El pronombre "su" se refiere correctamente a "potencial". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 41
+        const texto41 = {
+            id: 'texto41',
+            title: 'El futuro de la energía de fusión',
+            text: 'La energía de fusión, el mismo proceso que alimenta el sol, es considerada por muchos como el santo grial de las fuentes de energía limpia. A diferencia de la fisión nuclear, que divide átomos pesados y produce residuos radiactivos de larga duración, la fusión combina núcleos ligeros para liberar enormes cantidades de energía con residuos mínimos. Además, los combustibles para la fusión, como el deuterio y el tritio, son abundantes y pueden extraerse del agua de mar. Sin embargo, lograr una reacción de fusión controlada que produzca más energía de la que consume es extremadamente desafiante. Requiere temperaturas de millones de grados y una contención magnética muy sofisticada. Proyectos como el ITER (International Thermonuclear Experimental Reactor) están trabajando para superar estos desafíos. Si tienen éxito, la energía de fusión podría proporcionar una fuente de energía virtualmente ilimitada, segura y limpia, transformando radicalmente el panorama energético mundial. A pesar de los obstáculos técnicos, el progreso en este campo continúa avanzando, generando optimismo sobre su viabilidad futura.',
+            errors: [
+                { index: 280, word: 'Requiere', type: 'pronombre', correct: 'Requiere', explanation: 'El pronombre "Requiere" se refiere correctamente a "lograr una reacción de fusión controlada". No hay error aquí.' },
+                { index: 420, word: 'Si', type: 'conector', correct: 'Si', explanation: 'El conector "Si" se usa correctamente para expresar una condición. No hay error aquí.' },
+                { index: 540, word: 'su', type: 'pronombre', correct: 'su', explanation: 'El pronombre "su" se refiere correctamente a "viabilidad". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 42
+        const texto42 = {
+            id: 'texto42',
+            title: 'El futuro de la inteligencia artificial',
+            text: 'La inteligencia artificial (IA) está transformando numerosos aspectos de nuestra sociedad, desde la economía y el empleo hasta la atención médica y el transporte. Los avances en aprendizaje automático y redes neuronales han permitido desarrollar sistemas que pueden realizar tareas que antes requerían inteligencia humana, como el reconocimiento de imágenes, la traducción automática y la conducción de vehículos. Sin embargo, el rápido desarrollo de la IA también plantea importantes desafíos éticos y sociales. Existen preocupaciones sobre el sesgo en los algoritmos, que pueden perpetuar o amplificar discriminaciones existentes. Además, la automatización impulsada por la IA podría transformar radicalmente el mercado laboral, eliminando algunos empleos mientras crea otros. Por otro lado, la IA tiene el potencial de abordar algunos de los desafíos más grandes de la humanidad, desde el cambio climático hasta las enfermedades. A medida que esta tecnología continúa evolucionando, es fundamental desarrollar marcos éticos y regulatorios que guíen su desarrollo de manera responsable y beneficiosa para toda la sociedad.',
+            errors: [
+                { index: 260, word: 'Existe', type: 'pronombre', correct: 'Existen', explanation: 'El pronombre "Existe" debería ser "Existen" para concordar con "preocupaciones", que es plural.' },
+                { index: 420, word: 'la', type: 'pronombre', correct: 'la', explanation: 'El pronombre "la" se refiere correctamente a "automatización". No hay error aquí.' },
+                { index: 540, word: 'toda', type: 'pronombre', correct: 'toda', explanation: 'El pronombre "toda" se refiere correctamente a "sociedad". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 43
+        const texto43 = {
+            id: 'texto43',
+            title: 'El futuro de los alimentos cultivados en laboratorio',
+            text: 'Los alimentos cultivados en laboratorio, también conocidos como alimentos celulares, se producen cultivando células animales o vegetales en un entorno controlado. Esta tecnología promete revolucionar la forma en que producimos alimentos, abordando muchos de los problemas ambientales y éticos asociados con la agricultura y la ganadería tradicionales. La carne cultivada, por ejemplo, requiere significativamente menos tierra, agua y energía que la carne producida convencionalmente, y no requiere el sacrificio de animales. Además, permite un control preciso sobre la composición nutricional del producto final. Sin embargo, los alimentos cultivados en laboratorio enfrentan desafíos importantes. Los costos de producción son actualmente altos, aunque se espera que disminuyan a medida que la tecnología madura. Además, existen barreras regulatorias y de aceptación por parte de los consumidores. A pesar de estos desafíos, el interés en los alimentos cultivados en laboratorio está creciendo, con inversiones significativas y avances tecnológicos que podrían hacer que estos productos sean más accesibles y comunes en el futuro.',
+            errors: [
+                { index: 120, word: 'Esta', type: 'pronombre', correct: 'Esta', explanation: 'El pronombre "Esta" se refiere correctamente a "tecnología". No hay error aquí.' },
+                { index: 340, word: 'Los', type: 'pronombre', correct: 'Los', explanation: 'El pronombre "Los" se refiere correctamente a "costos de producción". No hay error aquí.' },
+                { index: 520, word: 'estos', type: 'pronombre', correct: 'estos', explanation: 'El pronombre "estos" se refiere correctamente a "productos". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 44
+        const texto44 = {
+            id: 'texto44',
+            title: 'El futuro de la captura de carbono',
+            text: 'La captura de carbono es un conjunto de tecnologías que buscan capturar dióxido de carbono de la atmósfera o de fuentes de emisión industriales para su almacenamiento o utilización. Estas tecnologías son consideradas por muchos como una herramienta importante en la lucha contra el cambio climático, especialmente para emisiones difíciles de eliminar, como las de la aviación y la industria pesada. Existen diferentes enfoques para la captura de carbono, desde la reforestación y el mejoramiento de suelos hasta tecnologías más avanzadas como la captura directa del aire. Sin embargo, la captura de carbono enfrenta desafíos significativos. Los costos son a menudo altos y la energía requerida para algunos procesos puede ser sustancial. Además, el almacenamiento permanente del dióxido de carbono plantea preocupaciones sobre la seguridad a largo plazo. Por otro lado, la utilización del carbono capturado para crear productos como combustibles, plásticos o materiales de construcción podría crear incentivos económicos para su desarrollo. A medida que las tecnologías mejoran y los costos disminuyen, la captura de carbono podría jugar un papel importante en la transición hacia una economía neutra en carbono.',
+            errors: [
+                { index: 160, word: 'Estas', type: 'pronombre', correct: 'Estas', explanation: 'El pronombre "Estas" se refiere correctamente a "tecnologías". No hay error aquí.' },
+                { index: 380, word: 'Los', type: 'pronombre', correct: 'Los', explanation: 'El pronombre "Los" se refiere correctamente a "costos". No hay error aquí.' },
+                { index: 540, word: 'su', type: 'pronombre', correct: 'su', explanation: 'El pronombre "su" se refiere correctamente a "desarrollo". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 45
+        const texto45 = {
+            id: 'texto45',
+            title: 'El futuro de la economía azul',
+            text: 'La economía azul se refiere a las actividades económicas sostenibles relacionadas con los océanos, mares y recursos costeros. Este concepto abarca sectores tan diversos como la pesca sostenible, el turismo marino, la energía renovable marina y la biotecnología marina. Los océanos cubren más del 70% de la superficie de la Tierra y desempeñan un papel fundamental en la regulación del clima y la provisión de recursos. Sin embargo, están enfrentando presiones sin precedentes debido a la sobreexplotación, la contaminación y el cambio climático. La economía azul busca abordar estos desafíos promoviendo un uso sostenible de los recursos marinos que preserve la salud de los ecosistemas. Además, reconoce el valor económico de servicios ecosistémicos como la captura de carbono, la protección costera y el turismo. A pesar de su potencial, el desarrollo de la economía azul enfrenta obstáculos como la falta de marcos regulatorios adecuados y la necesidad de mayor inversión en investigación y tecnología. A medida que la comunidad internacional reconoce la importancia de los océanos, la economía azul está ganando atención como una vía para el desarrollo sostenible.',
+            errors: [
+                { index: 120, word: 'Este', type: 'pronombre', correct: 'Este', explanation: 'El pronombre "Este" se refiere correctamente a "concepto". No hay error aquí.' },
+                { index: 340, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "economía azul". No hay error aquí.' },
+                { index: 540, word: 'la', type: 'pronombre', correct: 'la', explanation: 'El pronombre "la" se refiere correctamente a "comunidad internacional". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 46
+        const texto46 = {
+            id: 'texto46',
+            title: 'El futuro de los bioplásticos',
+            text: 'Los bioplásticos son plásticos derivados de fuentes renovables como el almidón de maíz, la caña de azúcar o la celulosa, en lugar de derivados del petróleo. Estos materiales prometen reducir la dependencia de los combustibles fósiles y disminuir el impacto ambiental de los plásticos convencionales. Algunos bioplásticos son biodegradables, lo que significa que pueden descomponerse en condiciones específicas, abordando el problema de la contaminación por plásticos. Sin embargo, los bioplásticos también plantean desafíos importantes. La producción de bioplásticos puede competir con la producción de alimentos por el uso de tierras y recursos. Además, no todos los bioplásticos son biodegradables, y aquellos que lo son a menudo requieren condiciones específicas de compostaje industrial que no están ampliamente disponibles. Por otro lado, la investigación en nuevos materiales y procesos de producción está mejorando las propiedades y la sostenibilidad de los bioplásticos. A medida que estas tecnologías maduran y los costos disminuyen, los bioplásticos podrían jugar un papel importante en la transición hacia una economía más circular y sostenible.',
+            errors: [
+                { index: 160, word: 'Estos', type: 'pronombre', correct: 'Estos', explanation: 'El pronombre "Estos" se refiere correctamente a "materiales". No hay error aquí.' },
+                { index: 380, word: 'La', type: 'pronombre', correct: 'La', explanation: 'El pronombre "La" se refiere correctamente a "producción". No hay error aquí.' },
+                { index: 540, word: 'estas', type: 'pronombre', correct: 'estas', explanation: 'El pronombre "estas" se refiere correctamente a "tecnologías". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 47
+        const texto47 = {
+            id: 'texto47',
+            title: 'El futuro de la economía circular',
+            text: 'La economía circular es un modelo económico que busca minimizar el desperdicio y maximizar el uso de recursos a través de la reutilización, reparación, remanufactura y reciclaje. A diferencia del modelo lineal tradicional de "extraer, producir y desechar", la economía circular mantiene los materiales en uso durante el mayor tiempo posible, extrayendo el máximo valor de ellos. Este enfoque no solo tiene beneficios ambientales, sino también económicos, ya que puede crear nuevos empleos y modelos de negocio innovadores. Además, reduce la dependencia de recursos importados y aumenta la resiliencia de la economía frente a la volatilidad de los precios de las materias primas. Sin embargo, la transición hacia una economía circular enfrenta desafíos significativos. Requiere cambios profundos en los modelos de negocio, las cadenas de suministro y los comportamientos de los consumidores. Además, existen barreras técnicas y regulatorias que deben superarse. A pesar de estos obstáculos, el interés en la economía circular está creciendo, con empresas y gobiernos que reconocen su potencial para abordar simultáneamente desafíos ambientales y económicos.',
+            errors: [
+                { index: 180, word: 'Este', type: 'pronombre', correct: 'Este', explanation: 'El pronombre "Este" se refiere correctamente a "enfoque". No hay error aquí.' },
+                { index: 380, word: 'Requiere', type: 'pronombre', correct: 'Requiere', explanation: 'El pronombre "Requiere" se refiere correctamente a "la transición hacia una economía circular". No hay error aquí.' },
+                { index: 540, word: 'su', type: 'pronombre', correct: 'su', explanation: 'El pronombre "su" se refiere correctamente a "potencial". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 48
+        const texto48 = {
+            id: 'texto48',
+            title: 'El futuro de la energía solar',
+            text: 'La energía solar es una de las fuentes de energía renovable con mayor potencial de crecimiento en las próximas décadas. Los avances en tecnología fotovoltaica han reducido significativamente los costos y mejorado la eficiencia de los paneles solares, haciendo que esta energía sea cada vez más competitiva con las fuentes convencionales. Además, la energía solar tiene la ventaja de ser modular, pudiendo instalarse desde pequeñas instalaciones residenciales hasta grandes parques solares. Sin embargo, la energía solar también presenta desafíos importantes. Su naturaleza intermitente, dependiente de la disponibilidad de luz solar, requiere soluciones de almacenamiento energético o fuentes de respaldo. Además, la producción de paneles solares requiere recursos como el silicio y metales raros, cuya extracción puede tener impactos ambientales. Por otro lado, la investigación en nuevas tecnologías como las células solares de perovskita y la energía solar concentrada promete superar algunas de estas limitaciones. A medida que estas tecnologías maduran y los costos continúan disminuyendo, la energía solar está destinada a jugar un papel central en la transición hacia un sistema energético más sostenible.',
+            errors: [
+                { index: 200, word: 'Su', type: 'pronombre', correct: 'Su', explanation: 'El pronombre "Su" se refiere correctamente a "energía solar". No hay error aquí.' },
+                { index: 380, word: 'la', type: 'pronombre', correct: 'la', explanation: 'El pronombre "la" se refiere correctamente a "producción". No hay error aquí.' },
+                { index: 540, word: 'estas', type: 'pronombre', correct: 'estas', explanation: 'El pronombre "estas" se refiere correctamente a "limitaciones". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 49
+        const texto49 = {
+            id: 'texto49',
+            title: 'El futuro de la energía eólica',
+            text: 'La energía eólica es una de las fuentes de energía renovable de más rápido crecimiento en el mundo. Los avances en tecnología de turbinas han mejorado significativamente la eficiencia y reducido los costos de la energía eólica, haciéndola competitiva con las fuentes convencionales en muchas regiones. Además, la energía eólica tiene una de las huellas de carbono más bajas entre todas las fuentes de energía. Sin embargo, la energía eólica también presenta desafíos importantes. Su naturaleza intermitente, dependiente de la velocidad del viento, requiere soluciones de almacenamiento energético o fuentes de respaldo. Además, las turbinas eólicas pueden tener impactos visuales y sonoros en el paisaje, y plantean preocupaciones sobre la seguridad de las aves. Por otro lado, están surgiendo innovaciones como las turbinas eólicas flotantes, que podrían expandir el potencial de la energía eólica a áreas con aguas más profundas. A medida que estas tecnologías continúan desarrollándose, la energía eólica está posicionada para jugar un papel fundamental en la transición hacia un sistema energético más sostenible y diversificado.',
+            errors: [
+                { index: 200, word: 'Su', type: 'pronombre', correct: 'Su', explanation: 'El pronombre "Su" se refiere correctamente a "energía eólica". No hay error aquí.' },
+                { index: 380, word: 'las', type: 'pronombre', correct: 'las', explanation: 'El pronombre "las" se refiere correctamente a "turbinas eólicas". No hay error aquí.' },
+                { index: 540, word: 'estas', type: 'pronombre', correct: 'estas', explanation: 'El pronombre "estas" se refiere correctamente a "tecnologías". No hay error aquí.' }
+            ]
+        };
+
+        // Texto 50
+        const texto50 = {
+            id: 'texto50',
+            title: 'El futuro de la economía verde',
+            text: 'La economía verde es un modelo de desarrollo que busca el crecimiento económico garantizando al mismo tiempo la sostenibilidad ambiental y el bienestar social. Este enfoque reconoce que el crecimiento económico a largo plazo depende de la protección de los recursos naturales y los ecosistemas. La economía verde abarca sectores tan diversos como las energías renovables, la eficiencia energética, la agricultura sostenible, el turismo ecológico y la gestión de residuos. Estos sectores no solo ayudan a mitigar el cambio climático y otros problemas ambientales, sino que también pueden crear empleos y estimular la innovación. Sin embargo, la transición hacia una economía verde enfrenta desafíos significativos. Requiere inversiones sustanciales en nuevas tecnologías e infraestructuras, así como cambios en los marcos regulatorios y los patrones de consumo. Además, existen preocupaciones sobre la distribución justa de los costos y beneficios de esta transición. A pesar de estos desafíos, el interés en la economía verde está creciendo, con cada vez más países y empresas que reconocen su potencial para abordar simultáneamente desafíos ambientales, económicos y sociales.',
+            errors: [
+                { index: 120, word: 'Este', type: 'pronombre', correct: 'Este', explanation: 'El pronombre "Este" se refiere correctamente a "enfoque". No hay error aquí.' },
+                { index: 340, word: 'Requiere', type: 'pronombre', correct: 'Requiere', explanation: 'El pronombre "Requiere" se refiere correctamente a "la transición hacia una economía verde". No hay error aquí.' },
+                { index: 520, word: 'su', type: 'pronombre', correct: 'su', explanation: 'El pronombre "su" se refiere correctamente a "potencial". No hay error aquí.' }
+            ]
+        };
+
+        // Agregar todos los textos al array
+        return [
+            texto1, texto2, texto3, texto4, texto5, texto6, texto7, texto8, texto9, texto10,
+            texto11, texto12, texto13, texto14, texto15, texto16, texto17, texto18, texto19, texto20,
+            texto21, texto22, texto23, texto24, texto25, texto26, texto27, texto28, texto29, texto30,
+            texto31, texto32, texto33, texto34, texto35, texto36, texto37, texto38, texto39, texto40,
+            texto41, texto42, texto43, texto44, texto45, texto46, texto47, texto48, texto49, texto50
+        ];
+    }
+
+    // Cargar todos los textos
+    function loadAllTexts() {
+        allTexts = createTextsWithErrors();
+        populateTextSelector();
+    }
+
+    // Llenar el selector de textos
+    function populateTextSelector() {
+        textSelect.innerHTML = '<option value="">-- Selecciona un texto --</option>';
+        allTexts.forEach(text => {
+            const option = document.createElement('option');
+            option.value = text.id;
+            option.textContent = text.title;
+            textSelect.appendChild(option);
+        });
+    }
+
+    // Manejar la selección de un texto
+    function handleTextSelection() {
+        const selectedId = textSelect.value;
+        if (!selectedId) {
+            challengeArea.style.display = 'none';
+            analyzeBtnContainer.style.display = 'none';
+            resultsBox.classList.remove('active');
+            return;
+        }
+
+        currentText = allTexts.find(t => t.id === selectedId);
+        if (currentText) {
+            currentErrors = [...currentText.errors];
+            correctedErrors = [];
+            displayTextWithErrors();
+            resultsBox.classList.remove('active');
+            
+            challengeArea.style.display = 'grid';
+            analyzeBtnContainer.style.display = 'block';
+        }
+    }
+
+    // Mostrar el texto con errores marcados
+    function displayTextWithErrors() {
+        let textWithErrors = currentText.text;
+        
+        // Ordenar errores por posición (de mayor a menor para no afectar los índices al marcar)
+        currentErrors.sort((a, b) => b.index - a.index);
+        
+        // Marcar los errores en el texto
+        currentErrors.forEach((error, index) => {
+            const startIndex = error.index;
+            const endIndex = startIndex + error.word.length;
+            
+            const beforeError = textWithErrors.substring(0, startIndex);
+            const errorWord = textWithErrors.substring(startIndex, endIndex);
+            const afterError = textWithErrors.substring(endIndex);
+            
+            textWithErrors = beforeError + `<span class="error" data-index="${index}">${errorWord}</span>` + afterError;
+        });
+        
+        originalTextEl.innerHTML = textWithErrors;
+        
+        // Agregar evento click a los errores
+        document.querySelectorAll('.error').forEach(errorElement => {
+            errorElement.addEventListener('click', function() {
+                const errorIndex = parseInt(this.getAttribute('data-index'));
+                selectError(errorIndex);
+            });
+        });
+    }
+
+    // Seleccionar un error para corregir
+    function selectError(errorIndex) {
+        selectedErrorIndex = errorIndex;
+        const error = currentErrors[errorIndex];
+        
+        // Mostrar el área de corrección
+        correctionArea.classList.add('active');
+        correctionInput.value = '';
+        correctionInput.focus();
+        
+        // Resaltar el error seleccionado
+        document.querySelectorAll('.error').forEach((el, index) => {
+            if (index === errorIndex) {
+                el.style.backgroundColor = 'rgba(255, 150, 150, 0.7)';
+            } else {
+                el.style.backgroundColor = 'rgba(255, 200, 200, 0.5)';
+            }
+        });
+    }
+
+    // Aceptar la corrección
+    function acceptCorrection() {
+        if (selectedErrorIndex === -1) return;
+        
+        const correction = correctionInput.value.trim();
+        if (!correction) {
+            showToast('Por favor, introduce una corrección');
+            return;
+        }
+        
+        // Guardar la corrección
+        correctedErrors.push({
+            index: selectedErrorIndex,
+            original: currentErrors[selectedErrorIndex].word,
+            corrected: correction,
+            correct: currentErrors[selectedErrorIndex].correct
+        });
+        
+        // Marcar el error como corregido
+        const errorElements = document.querySelectorAll('.error');
+        errorElements[selectedErrorIndex].classList.add('corrected');
+        errorElements[selectedErrorIndex].textContent = correction;
+        errorElements[selectedErrorIndex].style.backgroundColor = 'rgba(200, 255, 200, 0.7)';
+        
+        // Ocultar el área de corrección
+        correctionArea.classList.remove('active');
+        selectedErrorIndex = -1;
+        
+        showToast('Corrección guardada');
+    }
+
+    // Cancelar la corrección
+    function cancelCorrection() {
+        correctionArea.classList.remove('active');
+        selectedErrorIndex = -1;
+        
+        // Restaurar el color de todos los errores
+        document.querySelectorAll('.error').forEach(el => {
+            el.style.backgroundColor = 'rgba(255, 200, 200, 0.5)';
+        });
+    }
+
+    // Analizar las correcciones del usuario
+    function analyzeCorrections() {
+        if (correctedErrors.length === 0) {
+            showToast('Por favor, corrige al menos un error antes de evaluar');
+            return;
+        }
+
+        // Calcular la puntuación
+        let correctCount = 0;
+        let totalErrors = currentErrors.length;
+        
+        correctedErrors.forEach(correction => {
+            if (correction.corrected.toLowerCase() === correction.correct.toLowerCase()) {
+                correctCount++;
+            }
+        });
+        
+        const score = Math.round((correctCount / totalErrors) * 100);
+        
+        // Generar retroalimentación
+        let feedback = '';
+        if (score < 50) {
+            feedback = `<strong>Puntuación: ${score}%</strong>. Has identificado correctamente ${correctCount} de ${totalErrors} errores. Para mejorar, presta más atención a los pronombres y conectores que no concuerdan con el sustantivo o idea al que se refieren. Recuerda que los pronombres deben concordar en género y número con su referente.`;
+        } else if (score < 80) {
+            feedback = `<strong>Puntuación: ${score}%</strong>. Has identificado correctamente ${correctCount} de ${totalErrors} errores. ¡Buen trabajo! Para alcanzar una puntuación más alta, revisa detenidamente las explicaciones de los errores que no has corregido correctamente.`;
+        } else {
+            feedback = `<strong>¡Excelente trabajo!</strong> Has identificado correctamente ${correctCount} de ${totalErrors} errores (${score}% de acierto). Demuestras una gran comprensión de la cohesión textual.`;
+        }
+
+        // Mostrar detalles de las correcciones
+        let errorsDetails = '<h3>Detalles de tus correcciones:</h3>';
+        correctedErrors.forEach(correction => {
+            const isCorrect = correction.corrected.toLowerCase() === correction.correct.toLowerCase();
+            errorsDetails += `
+                <div class="error-item ${isCorrect ? 'correct' : 'incorrect'}">
+                    <strong>Original:</strong> "${correction.original}" → <strong>Tu corrección:</strong> "${correction.corrected}"
+                    ${isCorrect ? ' ✓' : ` ✗ (Correcto: "${correction.correct}")`}
+                    <p><em>${currentErrors[correction.index].explanation}</em></p>
+                </div>
+            `;
+        });
+
+        // Mostrar los errores no corregidos
+        const uncorrectedErrors = totalErrors - correctedErrors.length;
+        if (uncorrectedErrors > 0) {
+            errorsDetails += `<p><strong>Errores no corregidos:</strong> ${uncorrectedErrors}</p>`;
+        }
+
+        // Mostrar resultados
+        scoreDisplay.textContent = `${score}%`;
+        scoreDisplay.className = `score-display ${score < 50 ? 'low' : score < 80 ? 'medium' : 'high'}`;
+        feedbackMessage.innerHTML = feedback;
+        errorsFound.innerHTML = errorsDetails;
+        resultsBox.classList.add('active');
+    }
+
+    // --- EVENT LISTENERS ---
+    hamburgerMenu.addEventListener('click', () => userDropdown.classList.toggle('active'));
+    logoutBtn.addEventListener('click', () => {
+        import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
+            signOut(window.auth).then(() => window.location.href = 'index.html');
+        });
+    });
+    window.addEventListener('click', (event) => { if (!event.target.closest('.navbar')) userDropdown.classList.remove('active'); });
+
+    textSelect.addEventListener('change', handleTextSelection);
+    acceptBtn.addEventListener('click', acceptCorrection);
+    cancelBtn.addEventListener('click', cancelCorrection);
+    analyzeBtn.addEventListener('click', analyzeCorrections);
+
+    document.getElementById('btn-misiones').addEventListener('click', () => showToast('🎯 Misiones próximamente...'));
+    document.getElementById('btn-nivel').addEventListener('click', () => showToast('⭐ Nivel actual: Aprendiz'));
+    document.getElementById('btn-progreso').addEventListener('click', () => showToast('📊 Progreso general: 45%'));
+    
+    // --- MANEJO DE NAVEGACIÓN MÓVIL ---
+    const navItems = document.querySelectorAll('.main-navigation > ul > li');
+    navItems.forEach(item => {
+        const link = item.querySelector('span');
+        if (link && item.querySelector('.dropdown')) {
+            link.addEventListener('click', (e) => {
+                if (window.innerWidth <= 768) {
+                    e.preventDefault();
+                    item.classList.toggle('active');
+                }
+            });
+        }
+        // JS for nested dropdowns on mobile
+        const subItems = item.querySelectorAll('.dropdown > li');
+        subItems.forEach(subItem => {
+            const subLink = subItem.querySelector('span');
+            if(subLink && subItem.querySelector('.sub-dropdown')) {
+                subLink.addEventListener('click', (e) => {
+                    if (window.innerWidth <= 768) {
+                        e.preventDefault();
+                        subItem.classList.toggle('active');
+                    }
+                });
+            }
+        });
+    });
+    
+    // Mostrar notificación toast
+    function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+    
+    // --- INICIALIZACIÓN ---
+    loadAllTexts();
+});
+</script>
+</body>
+</html>
