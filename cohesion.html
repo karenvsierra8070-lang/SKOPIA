@@ -320,7 +320,6 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     .action-btn { width: 100%; }
     .challenge-modal-content { padding: 20px; }
     .text-content { font-size: 1rem; padding: 15px; }
-    .context-tabs { flex-wrap: wrap; }
 }
 </style>
 </head>
@@ -686,7 +685,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentLevel = 1;
     let perErrorTimers = {};
     let chainItems = [];
-    let currentContext = 0;
     let detectedErrors = [];
     let currentTextId = null;
     let currentText = null; // Para guardar el texto actual
@@ -1195,7 +1193,6 @@ document.addEventListener('DOMContentLoaded', () => {
         currentLevel = 1;
         perErrorTimers = {};
         chainItems = [];
-        currentContext = 0;
         detectedErrors = [];
         currentTextId = null;
         currentText = null;
@@ -1217,9 +1214,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'quick-detect':
                 setupQuickDetectMode();
-                break;
-            case 'multi-context':
-                setupMultiContextMode();
                 break;
         }
 
@@ -1317,9 +1311,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'quick-detect':
                 loadQuickDetectContent();
-                break;
-            case 'multi-context':
-                loadMultiContextContent();
                 break;
         }
     }
@@ -1675,102 +1666,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-        
-        // Seleccionar contextos según el nivel
-        const selectedContexts = contexts.slice(0, currentLevel);
-        
-        // Crear pestañas de contexto
-        let tabsHtml = '<div class="context-tabs">';
-        selectedContexts.forEach((context, index) => {
-            const activeClass = index === 0 ? 'active' : '';
-            tabsHtml += `<div class="context-tab ${activeClass}" onclick="switchContext(${index})">${context.name}</div>`;
-        });
-        tabsHtml += '</div>';
-        
-        // Crear contenido del primer contexto
-        const firstContext = selectedContexts[0];
-        let contentHtml = '<div class="context-content">';
-        const parts = baseText.split('__________');
-        let gapIndex = 0;
-        
-        for (let i = 0; i < parts.length; i++) {
-            contentHtml += parts[i];
-            
-            if (gapIndex < firstContext.gaps.length) {
-                const gap = firstContext.gaps[gapIndex];
-                contentHtml += `<span class="word-gap">`;
-                contentHtml += `<select data-gap-index="${gapIndex}">`;
-                contentHtml += `<option value="">-- Selecciona --</option>`;
-                
-                // Asegurar que la respuesta correcta esté en las opciones
-                const allOptions = [...new Set([...gap.options, gap.correct])];
-                for (const option of allOptions) {
-                    const selected = option === gap.wrong ? 'selected' : '';
-                    contentHtml += `<option value="${option}" ${selected}>${option}</option>`;
-                }
-                
-                contentHtml += `</select>`;
-                contentHtml += `</span>`;
-                gapIndex++;
-            }
-        }
-        contentHtml += '</div>';
-        
-        textWorkspace.innerHTML = tabsHtml + contentHtml;
-        
-        // Guardar referencia al texto actual
-        window.currentMultiContextText = {
-            baseContent: baseText,
-            contexts: selectedContexts
-        };
-    }
-
-    // Cambiar de contexto
-    window.switchContext = function(contextIndex) {
-        currentContext = contextIndex;
-        const currentText = window.currentMultiContextText;
-        const context = currentText.contexts[contextIndex];
-        
-        // Actualizar pestañas
-        document.querySelectorAll('.context-tab').forEach((tab, index) => {
-            if (index === contextIndex) {
-                tab.classList.add('active');
-            } else {
-                tab.classList.remove('active');
-            }
-        });
-        
-        // Actualizar contenido
-        const parts = currentText.baseContent.split('__________');
-        let contentHtml = '';
-        let gapIndex = 0;
-        
-        for (let i = 0; i < parts.length; i++) {
-            contentHtml += parts[i];
-            
-            if (gapIndex < context.gaps.length) {
-                const gap = context.gaps[gapIndex];
-                contentHtml += `<span class="word-gap">`;
-                contentHtml += `<select data-gap-index="${gapIndex}">`;
-                contentHtml += `<option value="">-- Selecciona --</option>`;
-                
-                // Asegurar que la respuesta correcta esté en las opciones
-                const allOptions = [...new Set([...gap.options, gap.correct])];
-                for (const option of allOptions) {
-                    const selected = option === gap.wrong ? 'selected' : '';
-                    contentHtml += `<option value="${option}" ${selected}>${option}</option>`;
-                }
-                
-                contentHtml += `</select>`;
-                contentHtml += `</span>`;
-                gapIndex++;
-            }
-        }
-        
-        document.querySelector('.context-content').innerHTML = contentHtml;
-        showToast(`Cambiado a: ${context.name}`);
-    }
-
     // Verificar respuestas (genérico)
     function checkAnswers() {
         let correctInThisRound = 0;
@@ -1835,28 +1730,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 
                 feedback = generateQuickDetectFeedback(correctInThisRound, totalGaps);
-                break;
-                
-            case 'multi-context':
-                // Implementar verificación para modo multi-context
-                const multiSelects = document.querySelectorAll('.word-gap select');
-                totalGaps = multiSelects.length;
-                
-                multiSelects.forEach(select => {
-                    const gapIndex = parseInt(select.dataset.gapIndex);
-                    const userAnswer = select.value;
-                    const context = window.currentMultiContextText.contexts[currentContext];
-                    const correctAnswer = context.gaps[gapIndex].correct;
-                    
-                    if (userAnswer === correctAnswer) {
-                        select.closest('.word-gap').classList.add('correct');
-                        correctInThisRound++;
-                    } else if (userAnswer) {
-                        select.closest('.word-gap').classList.add('incorrect');
-                    }
-                });
-                
-                feedback = generateMultiContextFeedback(correctInThisRound, totalGaps);
                 break;
         }
         
@@ -1940,25 +1813,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return feedback;
     }
 
-    function generateMultiContextFeedback(correct, total) {
-        let feedback = `<strong>Has respondido correctamente ${correct} de ${total} preguntas (${Math.round((correct / total) * 100)}%) en el contexto "${window.currentMultiContextText.contexts[currentContext].name}".</strong><br><br>`;
-        
-        if (correct === total) {
-            feedback += '¡Perfecto! Adaptaste tus respuestas al contexto correctamente.';
-        } else if (correct >= total * 0.7) {
-            feedback += '¡Buen trabajo! Considera más el contexto específico.';
-        } else {
-            feedback += 'Sigue practicando. El contexto es clave en la cohesión.';
-        }
-        
-        feedback += '<br><br><strong>Consejos:</strong><br>';
-        feedback += '• Adapta el lenguaje al contexto<br>';
-        feedback += '• Considera el público objetivo<br>';
-        feedback += '• Piensa en el propósito del texto';
-        
-        return feedback;
-    }
-
     // Mostrar resultados
     function showResults(score, feedback) {
         scoreDisplay.textContent = `${score}%`;
@@ -1991,9 +1845,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'quick-detect':
                     loadQuickDetectContentWithText(currentText);
-                    break;
-                case 'multi-context':
-                    loadMultiContextContentWithText(currentText);
                     break;
             }
         }
@@ -2083,50 +1934,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Guardar referencia a los errores
         window.currentErrors = text.errors;
     }
-    
-    function loadMultiContextContentWithText(text) {
-        // Crear pestañas de contexto
-        let tabsHtml = '<div class="context-tabs">';
-        text.contexts.slice(0, currentLevel).forEach((context, index) => {
-            const activeClass = index === 0 ? 'active' : '';
-            tabsHtml += `<div class="context-tab ${activeClass}" onclick="switchContext(${index})">${context.name}</div>`;
-        });
-        tabsHtml += '</div>';
-        
-        // Crear contenido del primer contexto
-        const firstContext = text.contexts[0];
-        let contentHtml = '<div class="context-content">';
-        const parts = text.baseContent.split('__________');
-        let gapIndex = 0;
-        
-        for (let i = 0; i < parts.length; i++) {
-            contentHtml += parts[i];
-            
-            if (gapIndex < firstContext.gaps.length) {
-                const gap = firstContext.gaps[gapIndex];
-                contentHtml += `<span class="word-gap">`;
-                contentHtml += `<select data-gap-index="${gapIndex}">`;
-                contentHtml += `<option value="">-- Selecciona --</option>`;
-                
-                // Asegurar que la respuesta correcta esté en las opciones
-                const allOptions = [...new Set([...gap.options, gap.correct])];
-                for (const option of allOptions) {
-                    const selected = option === gap.wrong ? 'selected' : '';
-                    contentHtml += `<option value="${option}" ${selected}>${option}</option>`;
-                }
-                
-                contentHtml += `</select>`;
-                contentHtml += `</span>`;
-                gapIndex++;
-            }
-        }
-        contentHtml += '</div>';
-        
-        textWorkspace.innerHTML = tabsHtml + contentHtml;
-        
-        // Guardar referencia al texto actual
-        window.currentMultiContextText = text;
-    }
 
     // Mostrar pista
     function showHint() {
@@ -2141,9 +1948,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'quick-detect':
                 hintText = 'Presta atención a palabras que se vean "extrañas" o que no sigan las reglas ortográficas básicas. Los errores suelen ser evidentes al leer con atención.';
-                break;
-            case 'multi-context':
-                hintText = 'Piensa en quién sería el público de este contexto y qué lenguaje sería más apropiado para él.';
                 break;
         }
         
@@ -2213,7 +2017,6 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'per-error': return 'Tiempo por Error';
             case 'chain': return 'Cadena de Conexiones';
             case 'quick-detect': return 'Detección Rápida';
-            case 'multi-context': return 'Contexto Múltiple';
             default: return 'Desafío de Cohesión';
         }
     }
