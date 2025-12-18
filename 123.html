@@ -337,14 +337,15 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 
 .phrase {
     display: inline-block;
-    padding: 5px 10px;
-    margin: 5px;
+    padding: 8px 12px;
+    margin: 6px;
     background-color: white;
     border-radius: 8px;
-    cursor: pointer;
+    cursor: move;
     transition: all 0.3s ease;
     user-select: none;
     border: 2px solid transparent;
+    position: relative;
 }
 
 .phrase:hover {
@@ -367,6 +368,11 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     background-color: rgba(244, 67, 54, 0.1);
 }
 
+.phrase.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+}
+
 .categories-container {
     flex: 1;
     min-width: 300px;
@@ -381,11 +387,17 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     padding: 20px;
     box-shadow: 0 8px 25px var(--color-sombra);
     transition: all 0.3s ease;
+    min-height: 120px;
 }
 
 .category:hover {
     transform: translateY(-3px);
     box-shadow: 0 12px 30px var(--color-sombra);
+}
+
+.category.drag-over {
+    background-color: rgba(190, 192, 146, 0.1);
+    border: 2px dashed var(--color-oliva-medio);
 }
 
 .category-header {
@@ -445,6 +457,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    position: relative;
 }
 
 .category-placeholder {
@@ -916,7 +929,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                     <div class="mission-number" id="mission-badge">1</div>
                 </div>
                 <div class="mission-description" id="mission-text">
-                    Lee el siguiente texto y selecciona las frases que corresponden a cada categoría. Haz clic en una frase para seleccionarla y luego haz clic en la categoría donde quieres colocarla.
+                    Lee el siguiente texto y arrastra o haz clic en las frases para clasificarlas en las categorías correspondientes. ¡Usa tanto el arrastre como el clic para mayor comodidad!
                 </div>
             </div>
             
@@ -929,7 +942,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                 </div>
                 
                 <div class="categories-container">
-                    <div class="category main-idea" id="main-idea">
+                    <div class="category main-idea" id="main-idea" data-category="mainIdea">
                         <div class="category-header">
                             <div class="category-icon">
                                 <i class="fas fa-lightbulb"></i>
@@ -942,7 +955,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                         </div>
                     </div>
                     
-                    <div class="category secondary-ideas" id="secondary-ideas">
+                    <div class="category secondary-ideas" id="secondary-ideas" data-category="secondaryIdeas">
                         <div class="category-header">
                             <div class="category-icon">
                                 <i class="fas fa-brain"></i>
@@ -955,7 +968,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                         </div>
                     </div>
                     
-                    <div class="category data" id="data">
+                    <div class="category data" id="data" data-category="data">
                         <div class="category-header">
                             <div class="category-icon">
                                 <i class="fas fa-chart-bar"></i>
@@ -1048,53 +1061,84 @@ document.addEventListener('DOMContentLoaded', () => {
     let score = 0;
     let streak = 0;
     let selectedPhrase = null;
-    let gameData = null;
     let currentText = null;
     let userAnswers = {
         mainIdea: [],
         secondaryIdeas: [],
         data: []
     };
+    let draggedElement = null;
 
-    // --- DATOS DEL JUEGO ---
+    // --- DATOS DEL JUEGO CON TEXTOS MÁS DIFÍCILES ---
     const missions = [
         {
             id: 1,
-            title: "El cambio climático",
-            text: "El cambio climático es uno de los mayores desafíos que enfrenta la humanidad en el siglo XXI. Las temperaturas globales han aumentado aproximadamente 1.1°C desde la época preindustrial. Este aumento se debe principalmente a las emisiones de gases de efecto invernadero derivadas de actividades humanas. Los científicos predicen que si no se toman medidas drásticas, las temperaturas podrían aumentar entre 2.5°C y 4.5°C para finales de este siglo. El cambio climático ya está causando impactos significativos como el aumento del nivel del mar, eventos climáticos extremos y pérdida de biodiversidad. Los países más vulnerables son aquellos con menores recursos para adaptarse a estos cambios.",
+            title: "La economía circular",
+            text: "La economía circular representa un paradigma fundamental en la sostenibilidad contemporánea, transformando radicalmente nuestra concepción del consumo y los recursos. Este modelo económico se basa en el principio de cerrar el ciclo de vida de los productos, minimizando el desperdicio y maximizando la reutilización. Según el Ellen MacArthur Foundation, la transición hacia una economía circular podría generar beneficios económicos anuales de 4.5 billones de dólares para 2030. Los pilares fundamentales incluyen el diseño ecológico, la economía de la funcionalidad y los sistemas de recuperación de materiales. Las empresas que adoptan estos principios reportan reducciones de costos operativos entre 15-25% en los primeros tres años. El modelo se opone directamente a la economía lineal tradicional de 'extraer-producir-desechar', que ha dominado la producción industrial desde la Revolución Industrial. Para 2050, se estima que el 65% de la población mundial vivirá en ciudades, aumentando la urgencia de implementar sistemas circulares urbanos.",
             phrases: [
-                { id: 1, text: "El cambio climático es uno de los mayores desafíos que enfrenta la humanidad en el siglo XXI", category: "mainIdea" },
-                { id: 2, text: "Las temperaturas globales han aumentado aproximadamente 1.1°C desde la época preindustrial", category: "data" },
-                { id: 3, text: "Este aumento se debe principalmente a las emisiones de gases de efecto invernadero derivadas de actividades humanas", category: "secondaryIdea" },
-                { id: 4, text: "Los científicos predicen que si no se toman medidas drásticas, las temperaturas podrían aumentar entre 2.5°C y 4.5°C para finales de este siglo", category: "data" },
-                { id: 5, text: "El cambio climático ya está causando impactos significativos como el aumento del nivel del mar, eventos climáticos extremos y pérdida de biodiversidad", category: "secondaryIdea" },
-                { id: 6, text: "Los países más vulnerables son aquellos con menores recursos para adaptarse a estos cambios", category: "data" }
+                { id: 1, text: "La economía circular representa un paradigma fundamental en la sostenibilidad contemporánea", category: "mainIdea" },
+                { id: 2, text: "Según el Ellen MacArthur Foundation, la transición podría generar beneficios de 4.5 billones de dólares para 2030", category: "data" },
+                { id: 3, text: "Este modelo económico se basa en cerrar el ciclo de vida de los productos", category: "secondaryIdea" },
+                { id: 4, text: "Las empresas que adoptan estos principios reportan reducciones de costos entre 15-25% en tres años", category: "data" },
+                { id: 5, text: "Los pilares fundamentales incluyen el diseño ecológico, la economía de la funcionalidad y los sistemas de recuperación", category: "secondaryIdea" },
+                { id: 6, text: "Para 2050, se estima que el 65% de la población mundial vivirá en ciudades", category: "data" },
+                { id: 7, text: "El modelo se opone directamente a la economía lineal tradicional", category: "distractor" }
             ]
         },
         {
             id: 2,
-            title: "La inteligencia artificial",
-            text: "La inteligencia artificial está transformando radicalmente la forma en que vivimos y trabajamos. Esta tecnología permite a las máquinas aprender de la experiencia y realizar tareas que normalmente requieren inteligencia humana. El mercado global de IA se valoró en 62.35 mil millones de dólares en 2020 y se espera que alcance los 733.7 mil millones para 2027. Las aplicaciones de la IA abarcan desde asistentes virtuales y vehículos autónomos hasta diagnósticos médicos y análisis financiero. Sin embargo, también plantea importantes desafíos éticos y sociales, como la privacidad de datos y el desplazamiento laboral. Expertos estiman que la IA podría automatizar hasta el 40% de los trabajos actuales en los próximos 15 años.",
+            title: "La epigenética del comportamiento",
+            text: "La epigenética del comportamiento ha revolucionado nuestra comprensión sobre la interacción entre genes y entorno en la determinación de rasgos psicológicos. Este campo emergente demuestra que factores ambientales pueden modificar la expresión génica sin alterar la secuencia de ADN, influenciando directamente el comportamiento humano. Estudios longitudinales han demostrado que el estrés crónico puede modificar hasta 1,200 genes relacionados con la respuesta inmune y el metabolismo. Los mecanismos epigenéticos principales incluyen la metilación del ADN, la modificación de histonas y los ARN no codificantes, cada uno con roles específicos en la regulación génica. La investigación actual sugiere que estas modificaciones pueden transmitirse intergeneracionalmente, afectando hasta tres generaciones descendientes. Los traumatismos infantiles severos correlacionan con patrones de metilación específicos que persisten hasta la edad adulta. Se ha identificado que aproximadamente el 40% de las diferencias individuales en rasgos de personalidad pueden atribuirse a factores epigenéticos.",
             phrases: [
-                { id: 1, text: "La inteligencia artificial está transformando radicalmente la forma en que vivimos y trabajamos", category: "mainIdea" },
-                { id: 2, text: "Esta tecnología permite a las máquinas aprender de la experiencia y realizar tareas que normalmente requieren inteligencia humana", category: "secondaryIdea" },
-                { id: 3, text: "El mercado global de IA se valoró en 62.35 mil millones de dólares en 2020 y se espera que alcance los 733.7 mil millones para 2027", category: "data" },
-                { id: 4, text: "Las aplicaciones de la IA abarcan desde asistentes virtuales y vehículos autónomos hasta diagnósticos médicos y análisis financiero", category: "secondaryIdea" },
-                { id: 5, text: "Expertos estiman que la IA podría automatizar hasta el 40% de los trabajos actuales en los próximos 15 años", category: "data" },
-                { id: 6, text: "Sin embargo, también plantea importantes desafíos éticos y sociales, como la privacidad de datos y el desplazamiento laboral", category: "data" }
+                { id: 1, text: "La epigenética del comportamiento ha revolucionado nuestra comprensión sobre genes y entorno", category: "mainIdea" },
+                { id: 2, text: "Estudios demuestran que el estrés crónico puede modificar hasta 1,200 genes relacionados con la inmunidad", category: "data" },
+                { id: 3, text: "Este campo demuestra que factores ambientales pueden modificar la expresión génica sin alterar el ADN", category: "secondaryIdea" },
+                { id: 4, text: "Estas modificaciones pueden transmitirse intergeneracionalmente, afectando hasta tres generaciones", category: "data" },
+                { id: 5, text: "Los mecanismos principales incluyen metilación del ADN, modificación de histonas y ARN no codificantes", category: "secondaryIdea" },
+                { id: 6, text: "Aproximadamente el 40% de las diferencias en rasgos de personalidad pueden atribuirse a factores epigenéticos", category: "data" },
+                { id: 7, text: "Los traumatismos infantiles severos correlacionan con patrones de metilación específicos", category: "distractor" }
             ]
         },
         {
             id: 3,
-            title: "La educación online",
-            text: "La educación online ha experimentado un crecimiento exponencial en la última década, transformando el panorama educativo global. Esta modalidad de aprendizaje ofrece flexibilidad y accesibilidad, permitiendo a estudiantes de todo el mundo acceder a formación de calidad sin barreras geográficas. Antes de la pandemia, ya más del 30% de los estudiantes de educación superior en todo el mundo habían tomado al menos un curso online. Durante la pandemia de COVID-19, este número se disparó al 90% de los estudiantes a nivel mundial. Las plataformas educativas digitales han mejorado significativamente, incorporando tecnologías como la inteligencia artificial para personalizar el aprendizaje. Sin embargo, persisten desafíos como la brecha digital y la falta de interacción cara a cara. Se estima que el mercado de la educación online alcanzará los 350 mil millones de dólares para 2025.",
+            title: "La convergencia tecnológica",
+            text: "La convergencia tecnológica representa la fusión acelerada de diversas tecnologías digitales, creando ecosistemas interconectados que transforman fundamentalmente la interacción humana. Este fenómeno se manifiesta en la integración de inteligencia artificial, internet de las cosas, blockchain y realidad extendida, generando sinergias exponenciales. Para 2025, se proyecta que más de 75 mil millones de dispositivos estarán conectados globalmente, procesando más de 175 zettabytes de datos anualmente. Los beneficios incluyen la optimización de procesos industriales con eficiencias del 40-60% y la personalización masiva de servicios. La convergencia también presenta desafíos significativos en ciberseguridad, con ataques aumentando 300% en infraestructuras críticas durante la última década. Las ciudades inteligentes implementan estas tecnologías para reducir el consumo energético en 30% y mejorar la calidad de vida urbana. Se estima que el mercado global de convergencia tecnológica alcanzará los 2.3 billones de dólares para 2028.",
             phrases: [
-                { id: 1, text: "La educación online ha experimentado un crecimiento exponencial en la última década, transformando el panorama educativo global", category: "mainIdea" },
-                { id: 2, text: "Esta modalidad de aprendizaje ofrece flexibilidad y accesibilidad, permitiendo a estudiantes de todo el mundo acceder a formación de calidad sin barreras geográficas", category: "secondaryIdea" },
-                { id: 3, text: "Antes de la pandemia, ya más del 30% de los estudiantes de educación superior en todo el mundo habían tomado al menos un curso online", category: "data" },
-                { id: 4, text: "Durante la pandemia de COVID-19, este número se disparó al 90% de los estudiantes a nivel mundial", category: "data" },
-                { id: 5, text: "Sin embargo, persisten desafíos como la brecha digital y la falta de interacción cara a cara", category: "secondaryIdea" },
-                { id: 6, text: "Se estima que el mercado de la educación online alcanzará los 350 mil millones de dólares para 2025", category: "data" }
+                { id: 1, text: "La convergencia tecnológica representa la fusión acelerada de diversas tecnologías digitales", category: "mainIdea" },
+                { id: 2, text: "Para 2025, se proyectan más de 75 mil millones de dispositivos conectados globalmente", category: "data" },
+                { id: 3, text: "Este fenómeno se manifiesta en la integración de IA, IoT, blockchain y realidad extendida", category: "secondaryIdea" },
+                { id: 4, text: "Las optimizaciones de procesos industriales alcanzan eficiencias del 40-60%", category: "data" },
+                { id: 5, text: "Los ataques cibernéticos han aumentado 300% en infraestructuras críticas en la última década", category: "data" },
+                { id: 6, text: "Las ciudades inteligentes implementan estas tecnologías para reducir el consumo energético en 30%", category: "secondaryIdea" },
+                { id: 7, text: "El mercado global alcanzará los 2.3 billones de dólares para 2028", category: "distractor" }
+            ]
+        },
+        {
+            id: 4,
+            title: "La neuroplasticidad en adultos",
+            text: "La neuroplasticidad adulta desafía el dogma histórico sobre la inmutabilidad del cerebro maduro, demostrando una capacidad continua de reorganización funcional y estructural. Este fenómeno permite la formación de nuevas conexiones neuronales y la modificación de circuitos existentes en respuesta a experiencias y aprendizajes. Investigaciones con neuroimagen funcional han revelado que el aprendizaje de nuevas habilidades puede aumentar la densidad de materia gris hasta 8% en regiones cerebrales específicas. Los factores que potencian la neuroplasticidad incluyen el ejercicio físico regular, que aumenta el factor neurotrófico derivado del cerebro en 200-300%. La meditación mindfulness induce cambios estructurales mensurables después de solo ocho semanas de práctica consistente. El bilingüismo retrasa la aparición de demencia en promedio 4.5 años comparado con monolingües. Se estima que el 15% de las personas mayores de 65 años podrían prevenir el deterioro cognitivo mediante intervenciones neuroplásticas.",
+            phrases: [
+                { id: 1, text: "La neuroplasticidad adulta desafía el dogma sobre la inmutabilidad del cerebro maduro", category: "mainIdea" },
+                { id: 2, text: "El aprendizaje de nuevas habilidades puede aumentar la densidad de materia gris hasta 8%", category: "data" },
+                { id: 3, text: "Este fenómeno permite la formación de nuevas conexiones neuronales en respuesta a experiencias", category: "secondaryIdea" },
+                { id: 4, text: "El ejercicio físico aumenta el factor neurotrófico en 200-300%", category: "data" },
+                { id: 5, text: "La meditación mindfulness induce cambios estructurales después de ocho semanas", category: "secondaryIdea" },
+                { id: 6, text: "El bilingüismo retrasa la aparición de demencia en promedio 4.5 años", category: "data" },
+                { id: 7, text: "El 15% de mayores de 65 podrían prevenir deterioro cognitivo mediante intervenciones", category: "distractor" }
+            ]
+        },
+        {
+            id: 5,
+            title: "La economía del conocimiento",
+            text: "La economía del conocimiento ha redefinido los paradigmas de producción y valor en el siglo XXI, posicionando el capital intangible como el principal motor del crecimiento económico. Este modelo económico se fundamenta en la creación, distribución y utilización del conocimiento como recurso estratégico, superando la dependencia tradicional de factores físicos. Según el Banco Mundial, más del 60% del PIB global actual corresponde a sectores basados en conocimiento e información. Las inversiones en I+D representan el 2.4% del PIB mundial, con países líderes como Corea del Sur alcanzando el 4.8%. El capital humano calificado genera retornos económicos 3-4 veces superiores al capital físico tradicional. Las patentes digitales han crecido exponencialmente, con más de 3.5 millones solicitadas anualmente a nivel global. Se proyecta que para 2030, el 85% de los empleos requerirán competencias digitales avanzadas.",
+            phrases: [
+                { id: 1, text: "La economía del conocimiento ha redefinido los paradigmas de producción en el siglo XXI", category: "mainIdea" },
+                { id: 2, text: "Más del 60% del PIB global corresponde a sectores basados en conocimiento", category: "data" },
+                { id: 3, text: "Este modelo se fundamenta en la creación y utilización del conocimiento como recurso estratégico", category: "secondaryIdea" },
+                { id: 4, text: "Las inversiones en I+D representan el 2.4% del PIB mundial", category: "data" },
+                { id: 5, text: "El capital humano calificado genera retornos 3-4 veces superiores al capital físico", category: "secondaryIdea" },
+                { id: 6, text: "Se proyecta que para 2030, el 85% de los empleos requerirán competencias digitales", category: "data" },
+                { id: 7, text: "Las patentes digitales superan las 3.5 millones solicitadas anualmente", category: "distractor" }
             ]
         }
     ];
@@ -1119,7 +1163,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentText = mission;
         missionNumberEl.textContent = mission.id;
         missionBadgeEl.textContent = mission.id;
-        missionTextEl.textContent = `Lee el siguiente texto y selecciona las frases que corresponden a cada categoría. Haz clic en una frase para seleccionarla y luego haz clic en la categoría donde quieres colocarla.`;
+        missionTextEl.textContent = `Lee el siguiente texto y arrastra o haz clic en las frases para clasificarlas. ¡Cuidado con los distractores!`;
         
         // Limpiar contenido anterior
         textContentEl.innerHTML = '';
@@ -1143,15 +1187,151 @@ document.addEventListener('DOMContentLoaded', () => {
             phraseEl.className = 'phrase';
             phraseEl.textContent = phrase.text;
             phraseEl.dataset.id = phrase.id;
+            phraseEl.dataset.category = phrase.category;
+            phraseEl.draggable = true;
+            
+            // Event listeners para drag and drop
+            phraseEl.addEventListener('dragstart', handleDragStart);
+            phraseEl.addEventListener('dragend', handleDragEnd);
+            
+            // Event listener para clic
             phraseEl.addEventListener('click', () => selectPhrase(phraseEl, phrase));
+            
             textContentEl.appendChild(phraseEl);
         });
+        
+        // Configurar drop zones
+        setupDropZones();
         
         // Actualizar contadores
         updateCounters();
         
         // Ocultar botón siguiente
         nextBtn.classList.remove('show');
+    }
+
+    // Configurar zonas de drop
+    function setupDropZones() {
+        const categories = document.querySelectorAll('.category');
+        
+        categories.forEach(category => {
+            category.addEventListener('dragover', handleDragOver);
+            category.addEventListener('drop', handleDrop);
+            category.addEventListener('dragleave', handleDragLeave);
+            category.addEventListener('click', (e) => {
+                if (e.target.classList.contains('category-content') || e.target.classList.contains('category-placeholder')) {
+                    const categoryName = category.dataset.category;
+                    if (selectedPhrase) {
+                        addToCategory(categoryName);
+                    }
+                }
+            });
+        });
+    }
+
+    // Manejar inicio de arrastre
+    function handleDragStart(e) {
+        draggedElement = e.target;
+        e.target.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', e.target.innerHTML);
+    }
+
+    // Manejar fin de arrastre
+    function handleDragEnd(e) {
+        e.target.classList.remove('dragging');
+        
+        // Limpiar todas las clases drag-over
+        document.querySelectorAll('.category').forEach(cat => {
+            cat.classList.remove('drag-over');
+        });
+    }
+
+    // Manejar arrastre sobre zona
+    function handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault();
+        }
+        
+        e.dataTransfer.dropEffect = 'move';
+        e.currentTarget.classList.add('drag-over');
+        
+        return false;
+    }
+
+    // Manejar salida de arrastre
+    function handleDragLeave(e) {
+        if (e.target.classList.contains('category')) {
+            e.target.classList.remove('drag-over');
+        }
+    }
+
+    // Manejar soltado
+    function handleDrop(e) {
+        if (e.stopPropagation) {
+            e.stopPropagation();
+        }
+        
+        e.preventDefault();
+        
+        const category = e.currentTarget;
+        const categoryName = category.dataset.category;
+        
+        category.classList.remove('drag-over');
+        
+        if (draggedElement && draggedElement.classList.contains('phrase')) {
+            const phraseId = parseInt(draggedElement.dataset.id);
+            const phrase = currentText.phrases.find(p => p.id === phraseId);
+            
+            if (phrase) {
+                // Verificar si ya está en alguna categoría
+                const isInMainIdea = userAnswers.mainIdea.some(p => p.id === phraseId);
+                const isInSecondaryIdeas = userAnswers.secondaryIdeas.some(p => p.id === phraseId);
+                const isInData = userAnswers.data.some(p => p.id === phraseId);
+                
+                if (isInMainIdea || isInSecondaryIdeas || isInData) {
+                    showToast("Esta frase ya está en una categoría");
+                    return;
+                }
+                
+                // Verificar si la categoría está llena
+                if (categoryName === 'mainIdea' && userAnswers.mainIdea.length >= 1) {
+                    showToast("La categoría 'Idea Principal' ya está completa");
+                    return;
+                }
+                
+                if (categoryName === 'secondaryIdeas' && userAnswers.secondaryIdeas.length >= 2) {
+                    showToast("La categoría 'Ideas Secundarias' ya está completa");
+                    return;
+                }
+                
+                if (categoryName === 'data' && userAnswers.data.length >= 3) {
+                    showToast("La categoría 'Datos' ya está completa");
+                    return;
+                }
+                
+                // Agregar a la categoría
+                userAnswers[categoryName].push(phrase);
+                
+                // Mover el elemento visualmente
+                const categoryContent = category.querySelector('.category-content');
+                const placeholder = categoryContent.querySelector('.category-placeholder');
+                if (placeholder) {
+                    placeholder.remove();
+                }
+                
+                draggedElement.style.display = 'inline-block';
+                categoryContent.appendChild(draggedElement);
+                
+                // Agregar event listener para eliminar
+                draggedElement.addEventListener('click', () => removeFromCategory(categoryName, draggedElement));
+                
+                // Actualizar contadores
+                updateCounters();
+            }
+        }
+        
+        return false;
     }
 
     // Seleccionar una frase
@@ -1180,7 +1360,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('#data .category-count').textContent = `${userAnswers.data.length}/3`;
     }
 
-    // Agregar frase a categoría
+    // Agregar frase a categoría (por clic)
     function addToCategory(category) {
         if (!selectedPhrase) {
             showToast("Por favor, selecciona una frase primero");
@@ -1218,10 +1398,7 @@ document.addEventListener('DOMContentLoaded', () => {
         userAnswers[category].push(selectedPhrase.phrase);
         
         // Crear elemento para la frase en la categoría
-        const phraseInCategory = document.createElement('span');
-        phraseInCategory.className = 'phrase';
-        phraseInCategory.textContent = selectedPhrase.phrase.text;
-        phraseInCategory.dataset.id = selectedPhrase.phrase.id;
+        const phraseInCategory = selectedPhrase.element.cloneNode(true);
         phraseInCategory.addEventListener('click', () => removeFromCategory(category, phraseInCategory));
         
         // Eliminar placeholder si es la primera frase
@@ -1432,11 +1609,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     window.addEventListener('click', (event) => { if (!event.target.closest('.navbar')) userDropdown.classList.remove('active'); });
-
-    // Event listeners para las categorías
-    document.getElementById('main-idea').addEventListener('click', () => addToCategory('mainIdea'));
-    document.getElementById('secondary-ideas').addEventListener('click', () => addToCategory('secondaryIdeas'));
-    document.getElementById('data').addEventListener('click', () => addToCategory('data'));
 
     // Event listeners para los botones
     checkBtn.addEventListener('click', checkAnswers);
