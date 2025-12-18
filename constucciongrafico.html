@@ -335,10 +335,63 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     overflow: hidden;
 }
 
-#chart-canvas {
+#chart-canvas, #solution-canvas {
     width: 100%;
     height: 100%;
     cursor: crosshair;
+}
+
+.comparison-container {
+    display: none;
+    margin-top: 20px;
+}
+
+.comparison-container.active {
+    display: block;
+}
+
+.comparison-tabs {
+    display: flex;
+    margin-bottom: 15px;
+}
+
+.comparison-tab {
+    padding: 10px 20px;
+    background-color: white;
+    border: 1px solid var(--color-oliva-claro);
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.comparison-tab.active {
+    background-color: var(--color-oliva-medio);
+    color: white;
+    border-color: var(--color-oliva-medio);
+}
+
+.comparison-tab:first-child {
+    border-radius: 8px 0 0 0;
+}
+
+.comparison-tab:last-child {
+    border-radius: 0 8px 0 0;
+}
+
+.comparison-content {
+    background-color: white;
+    border: 1px solid var(--color-oliva-claro);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 15px;
+}
+
+.comparison-panel {
+    display: none;
+}
+
+.comparison-panel.active {
+    display: block;
 }
 
 .chart-tools {
@@ -430,6 +483,10 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     background-color: #4CAF50;
 }
 
+.solution .analysis-icon {
+    background-color: #9C27B0;
+}
+
 .analysis-title {
     font-family: 'Patrick Hand', cursive;
     font-size: 1.4rem;
@@ -515,6 +572,22 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     background-color: #1976D2;
     transform: translateY(-3px);
     box-shadow: 0 6px 15px rgba(25, 118, 210, 0.2);
+}
+
+.solution-btn {
+    background-color: #9C27B0;
+    color: white;
+    display: none;
+}
+
+.solution-btn.show {
+    display: flex;
+}
+
+.solution-btn:hover {
+    background-color: #7B1FA2;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(123, 31, 162, 0.2);
 }
 
 .new-btn {
@@ -951,6 +1024,25 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                         <canvas id="chart-canvas"></canvas>
                     </div>
                     
+                    <div class="comparison-container" id="comparison-container">
+                        <div class="comparison-tabs">
+                            <div class="comparison-tab active" id="user-tab">Tu gráfico</div>
+                            <div class="comparison-tab" id="solution-tab">Solución correcta</div>
+                            <div class="comparison-tab" id="comparison-tab">Comparación</div>
+                        </div>
+                        <div class="comparison-content">
+                            <div class="comparison-panel active" id="user-panel">
+                                <canvas id="user-canvas"></canvas>
+                            </div>
+                            <div class="comparison-panel" id="solution-panel">
+                                <canvas id="solution-canvas"></canvas>
+                            </div>
+                            <div class="comparison-panel" id="comparison-panel">
+                                <canvas id="comparison-canvas"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="chart-tools">
                         <button class="tool-btn active" id="line-tool" data-tool="line">
                             <i class="fas fa-chart-line"></i> Línea
@@ -995,6 +1087,18 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                         </div>
                     </div>
                     
+                    <div class="analysis-card solution">
+                        <div class="analysis-header">
+                            <div class="analysis-icon">
+                                <i class="fas fa-check-double"></i>
+                            </div>
+                            <h3 class="analysis-title">Análisis de Solución</h3>
+                        </div>
+                        <div class="analysis-content" id="solution-content">
+                            <p>Verifica tu respuesta y haz clic en "Mostrar solución" para ver el gráfico correcto y compararlo con el tuyo.</p>
+                        </div>
+                    </div>
+                    
                     <div class="analysis-card score">
                         <div class="analysis-header">
                             <div class="analysis-icon">
@@ -1015,6 +1119,9 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                 </button>
                 <button class="game-btn hint-btn" id="hint-btn">
                     <i class="fas fa-lightbulb"></i> Pista
+                </button>
+                <button class="game-btn solution-btn" id="solution-btn">
+                    <i class="fas fa-eye"></i> Mostrar solución
                 </button>
                 <button class="game-btn reset-btn" id="reset-btn">
                     <i class="fas fa-redo"></i> Reiniciar
@@ -1071,13 +1178,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const exerciseTextEl = document.getElementById('exercise-text');
     const chartCanvas = document.getElementById('chart-canvas');
     const ctx = chartCanvas.getContext('2d');
+    const userCanvas = document.getElementById('user-canvas');
+    const userCtx = userCanvas.getContext('2d');
+    const solutionCanvas = document.getElementById('solution-canvas');
+    const solutionCtx = solutionCanvas.getContext('2d');
+    const comparisonCanvas = document.getElementById('comparison-canvas');
+    const comparisonCtx = comparisonCanvas.getContext('2d');
     const hintContentEl = document.getElementById('hint-content');
     const feedbackContentEl = document.getElementById('feedback-content');
+    const solutionContentEl = document.getElementById('solution-content');
     const scoreContentEl = document.getElementById('score-content');
     const checkBtn = document.getElementById('check-btn');
     const hintBtn = document.getElementById('hint-btn');
+    const solutionBtn = document.getElementById('solution-btn');
     const resetBtn = document.getElementById('reset-btn');
     const newBtn = document.getElementById('new-btn');
+    const comparisonContainer = document.getElementById('comparison-container');
+    const userTab = document.getElementById('user-tab');
+    const solutionTab = document.getElementById('solution-tab');
+    const comparisonTab = document.getElementById('comparison-tab');
+    const userPanel = document.getElementById('user-panel');
+    const solutionPanel = document.getElementById('solution-panel');
+    const comparisonPanelDiv = document.getElementById('comparison-panel');
     const resultModal = document.getElementById('result-modal');
     const resultTitleEl = document.getElementById('result-title');
     const resultIconEl = document.getElementById('result-icon');
@@ -1099,6 +1221,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let usedExercises = [];
     let hintUsed = false;
     let currentExerciseData = null;
+    let hasChecked = false;
 
     // --- DATOS DE EJERCICIOS (50 EJERCICIOS) ---
     const exercises = [
@@ -2062,64 +2185,64 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Configurar el canvas
-    function setupCanvas() {
-        const rect = chartCanvas.getBoundingClientRect();
-        chartCanvas.width = rect.width;
-        chartCanvas.height = rect.height;
-        drawGrid();
+    function setupCanvas(canvas, context) {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        drawGrid(context);
     }
 
     // Dibujar la cuadrícula
-    function drawGrid() {
-        ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+    function drawGrid(context) {
+        context.clearRect(0, 0, context.canvas.width, context.canvas.height);
         
         // Dibujar ejes
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(50, chartCanvas.height - 50);
-        ctx.lineTo(chartCanvas.width - 50, chartCanvas.height - 50);
-        ctx.moveTo(50, 50);
-        ctx.lineTo(50, chartCanvas.height - 50);
-        ctx.stroke();
+        context.strokeStyle = '#333';
+        context.lineWidth = 2;
+        context.beginPath();
+        context.moveTo(50, context.canvas.height - 50);
+        context.lineTo(context.canvas.width - 50, context.canvas.height - 50);
+        context.moveTo(50, 50);
+        context.lineTo(50, context.canvas.height - 50);
+        context.stroke();
         
         // Dibujar líneas de cuadrícula
-        ctx.strokeStyle = '#e0e0e0';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([5, 5]);
+        context.strokeStyle = '#e0e0e0';
+        context.lineWidth = 1;
+        context.setLineDash([5, 5]);
         
         // Líneas horizontales
         for (let i = 1; i <= 5; i++) {
-            ctx.beginPath();
-            ctx.moveTo(50, 50 + (i * (chartCanvas.height - 100) / 6));
-            ctx.lineTo(chartCanvas.width - 50, 50 + (i * (chartCanvas.height - 100) / 6));
-            ctx.stroke();
+            context.beginPath();
+            context.moveTo(50, 50 + (i * (context.canvas.height - 100) / 6));
+            context.lineTo(context.canvas.width - 50, 50 + (i * (context.canvas.height - 100) / 6));
+            context.stroke();
         }
         
         // Líneas verticales
         for (let i = 1; i <= 10; i++) {
-            ctx.beginPath();
-            ctx.moveTo(50 + (i * (chartCanvas.width - 100) / 11), 50);
-            ctx.lineTo(50 + (i * (chartCanvas.width - 100) / 11), chartCanvas.height - 50);
-            ctx.stroke();
+            context.beginPath();
+            context.moveTo(50 + (i * (context.canvas.width - 100) / 11), 50);
+            context.lineTo(50 + (i * (context.canvas.width - 100) / 11), context.canvas.height - 50);
+            context.stroke();
         }
         
-        ctx.setLineDash([]);
+        context.setLineDash([]);
         
         // Etiquetas de ejes
-        ctx.fillStyle = '#333';
-        ctx.font = '12px Roboto';
-        ctx.textAlign = 'center';
+        context.fillStyle = '#333';
+        context.font = '12px Roboto';
+        context.textAlign = 'center';
         
         // Etiquetas del eje Y
         for (let i = 0; i <= 5; i++) {
             const value = 100 - (i * 20);
-            ctx.fillText(value.toString(), 30, 55 + (i * (chartCanvas.height - 100) / 6));
+            context.fillText(value.toString(), 30, 55 + (i * (context.canvas.height - 100) / 6));
         }
         
         // Etiquetas del eje X
         for (let i = 0; i <= 10; i++) {
-            ctx.fillText(i.toString(), 50 + (i * (chartCanvas.width - 100) / 11), chartCanvas.height - 30);
+            context.fillText(i.toString(), 50 + (i * (context.canvas.width - 100) / 11), context.canvas.height - 30);
         }
     }
 
@@ -2146,10 +2269,15 @@ document.addEventListener('DOMContentLoaded', () => {
         exerciseTextEl.textContent = currentExerciseData.conclusion;
         
         // Limpiar canvas
-        setupCanvas();
+        setupCanvas(chartCanvas, ctx);
         chartData = [];
         chartType = currentExerciseData.type;
         hintUsed = false;
+        hasChecked = false;
+        
+        // Ocultar botón de solución y contenedor de comparación
+        solutionBtn.classList.remove('show');
+        comparisonContainer.classList.remove('active');
         
         // Actualizar herramientas
         document.querySelectorAll('.tool-btn').forEach(btn => {
@@ -2162,51 +2290,52 @@ document.addEventListener('DOMContentLoaded', () => {
         // Limpiar análisis
         hintContentEl.innerHTML = '<p>Haz clic en el botón "Pista" para obtener ayuda sobre cómo construir el gráfico correcto.</p>';
         feedbackContentEl.innerHTML = '<p>Construye tu gráfico y haz clic en "Verificar" para recibir retroalimentación sobre tu respuesta.</p>';
+        solutionContentEl.innerHTML = '<p>Verifica tu respuesta y haz clic en "Mostrar solución" para ver el gráfico correcto y compararlo con el tuyo.</p>';
         scoreContentEl.innerHTML = '<p>Tu puntuación se mostrará aquí después de verificar tu respuesta.</p>';
     }
 
     // Dibujar en el canvas
-    function drawOnCanvas(x, y) {
+    function drawOnCanvas(x, y, context) {
         if (currentTool === 'line') {
             // Dibujar línea
-            ctx.strokeStyle = '#5a6133';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
+            context.strokeStyle = '#5a6133';
+            context.lineWidth = 3;
+            context.beginPath();
             
             if (chartData.length > 0) {
                 const lastPoint = chartData[chartData.length - 1];
-                ctx.moveTo(lastPoint.x, lastPoint.y);
-                ctx.lineTo(x, y);
+                context.moveTo(lastPoint.x, lastPoint.y);
+                context.lineTo(x, y);
             } else {
-                ctx.moveTo(x, y);
+                context.moveTo(x, y);
             }
             
-            ctx.stroke();
+            context.stroke();
             
             // Dibujar punto
-            ctx.fillStyle = '#5a6133';
-            ctx.beginPath();
-            ctx.arc(x, y, 5, 0, 2 * Math.PI);
-            ctx.fill();
+            context.fillStyle = '#5a6133';
+            context.beginPath();
+            context.arc(x, y, 5, 0, 2 * Math.PI);
+            context.fill();
             
             // Guardar punto
             chartData.push({ x, y });
         } else if (currentTool === 'bar') {
             // Dibujar barra
-            const barWidth = (chartCanvas.width - 100) / 12;
-            const barHeight = chartCanvas.height - 50 - y;
+            const barWidth = (context.canvas.width - 100) / 12;
+            const barHeight = context.canvas.height - 50 - y;
             
-            ctx.fillStyle = '#5a6133';
-            ctx.fillRect(x - barWidth / 2, y, barWidth, barHeight);
+            context.fillStyle = '#5a6133';
+            context.fillRect(x - barWidth / 2, y, barWidth, barHeight);
             
             // Guardar barra
             chartData.push({ x, y, width: barWidth, height: barHeight });
         } else if (currentTool === 'scatter') {
             // Dibujar punto de dispersión
-            ctx.fillStyle = '#5a6133';
-            ctx.beginPath();
-            ctx.arc(x, y, 5, 0, 2 * Math.PI);
-            ctx.fill();
+            context.fillStyle = '#5a6133';
+            context.beginPath();
+            context.arc(x, y, 5, 0, 2 * Math.PI);
+            context.fill();
             
             // Guardar punto
             chartData.push({ x, y });
@@ -2217,10 +2346,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Añadir etiqueta
             const label = prompt("Introduce el texto de la etiqueta:");
             if (label) {
-                ctx.fillStyle = '#333';
-                ctx.font = '12px Roboto';
-                ctx.textAlign = 'center';
-                ctx.fillText(label, x, y);
+                context.fillStyle = '#333';
+                context.font = '12px Roboto';
+                context.textAlign = 'center';
+                context.fillText(label, x, y);
                 
                 // Guardar etiqueta
                 chartData.push({ x, y, text: label });
@@ -2235,6 +2364,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        hasChecked = true;
         let score = 0;
         let feedback = '';
         
@@ -2274,8 +2404,28 @@ document.addEventListener('DOMContentLoaded', () => {
         feedbackContentEl.innerHTML = `<p>${feedback}</p>`;
         scoreContentEl.innerHTML = `<p>Tu puntuación en este ejercicio: <span class="highlight">${score}/100</span></p>`;
         
-        // Mostrar modal de resultados
+        // Mostrar botón de solución
+        solutionBtn.classList.add('show');
+        
+        // Copiar el gráfico del usuario al canvas de usuario
+        setupCanvas(userCanvas, userCtx);
+        copyChart(ctx, userCtx);
+        
+        // Mostrar resultados
         showResults(score);
+    }
+
+    // Copiar un gráfico de un canvas a otro
+    function copyChart(sourceContext, targetContext) {
+        const sourceCanvas = sourceContext.canvas;
+        const targetCanvas = targetContext.canvas;
+        
+        // Configurar el canvas de destino
+        targetCanvas.width = sourceCanvas.width;
+        targetCanvas.height = sourceCanvas.height;
+        
+        // Copiar la imagen del canvas de origen al de destino
+        targetContext.drawImage(sourceCanvas, 0, 0);
     }
 
     // Verificar gráfico de líneas
@@ -2408,11 +2558,192 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Mostrar solución
+    function showSolution() {
+        if (!hasChecked) {
+            showToast("Por favor, verifica tu respuesta primero.");
+            return;
+        }
+        
+        // Mostrar contenedor de comparación
+        comparisonContainer.classList.add('active');
+        
+        // Configurar canvas de solución
+        setupCanvas(solutionCanvas, solutionCtx);
+        setupCanvas(comparisonCanvas, comparisonCtx);
+        
+        // Dibujar la solución correcta
+        drawCorrectSolution(solutionCtx);
+        
+        // Dibujar la comparación
+        drawComparison(comparisonCtx);
+        
+        // Actualizar contenido de análisis de solución
+        let analysisHTML = '<p>La solución correcta muestra ';
+        
+        if (chartType === 'line') {
+            analysisHTML += 'una línea con la tendencia adecuada y los puntos clave en las posiciones correctas.';
+        } else if (chartType === 'bar') {
+            analysisHTML += 'barras con las alturas relativas correctas según los porcentajes mencionados.';
+        } else if (chartType === 'pie') {
+            analysisHTML += 'un círculo dividido en secciones con las proporciones correctas.';
+        } else if (chartType === 'scatter') {
+            analysisHTML += 'puntos distribuidos mostrando la correlación adecuada.';
+        }
+        
+        analysisHTML += '</p><p>Usa las pestañas para comparar tu gráfico con la solución correcta y ver las diferencias.</p>';
+        
+        solutionContentEl.innerHTML = analysisHTML;
+        
+        // Cambiar a la pestaña de comparación
+        switchTab('comparison-tab');
+        
+        showToast("Solución mostrada. Usa las pestañas para comparar los gráficos.");
+    }
+
+    // Dibujar la solución correcta
+    function drawCorrectSolution(context) {
+        const expectedData = currentExerciseData.expectedData;
+        
+        if (chartType === 'line') {
+            // Dibujar línea
+            context.strokeStyle = '#4CAF50';
+            context.lineWidth = 3;
+            context.beginPath();
+            
+            expectedData.forEach((point, index) => {
+                const x = 50 + (point.x * (context.canvas.width - 100) / 10);
+                const y = 50 + ((100 - point.y) * (context.canvas.height - 100) / 100);
+                
+                if (index === 0) {
+                    context.moveTo(x, y);
+                } else {
+                    context.lineTo(x, y);
+                }
+            });
+            
+            context.stroke();
+            
+            // Dibujar puntos
+            context.fillStyle = '#4CAF50';
+            expectedData.forEach(point => {
+                const x = 50 + (point.x * (context.canvas.width - 100) / 10);
+                const y = 50 + ((100 - point.y) * (context.canvas.height - 100) / 100);
+                
+                context.beginPath();
+                context.arc(x, y, 5, 0, 2 * Math.PI);
+                context.fill();
+            });
+        } else if (chartType === 'bar') {
+            // Dibujar barras
+            context.fillStyle = '#4CAF50';
+            expectedData.forEach(point => {
+                const x = 50 + (point.x * (context.canvas.width - 100) / 10);
+                const y = 50 + ((100 - point.y) * (context.canvas.height - 100) / 100);
+                const barWidth = (context.canvas.width - 100) / 12;
+                const barHeight = context.canvas.height - 50 - y;
+                
+                context.fillRect(x - barWidth / 2, y, barWidth, barHeight);
+            });
+        } else if (chartType === 'pie') {
+            // Dibujar gráfico circular
+            const centerX = context.canvas.width / 2;
+            const centerY = context.canvas.height / 2;
+            const radius = Math.min(centerX, centerY) - 50;
+            
+            // Colores para las secciones
+            const colors = ['#4CAF50', '#2196F3', '#FF9800', '#F44336', '#9C27B0', '#607D8B'];
+            
+            expectedData.forEach((section, index) => {
+                context.fillStyle = colors[index % colors.length];
+                context.beginPath();
+                context.moveTo(centerX, centerY);
+                context.arc(centerX, centerY, radius, section.startAngle * Math.PI / 180, section.endAngle * Math.PI / 180);
+                context.closePath();
+                context.fill();
+                
+                // Etiqueta
+                const labelAngle = (section.startAngle + section.endAngle) / 2 * Math.PI / 180;
+                const labelX = centerX + Math.cos(labelAngle) * (radius * 0.7);
+                const labelY = centerY + Math.sin(labelAngle) * (radius * 0.7);
+                
+                context.fillStyle = '#fff';
+                context.font = 'bold 14px Roboto';
+                context.textAlign = 'center';
+                context.fillText(section.label, labelX, labelY);
+            });
+        } else if (chartType === 'scatter') {
+            // Dibujar puntos de dispersión
+            context.fillStyle = '#4CAF50';
+            expectedData.forEach(point => {
+                const x = 50 + (point.x * (context.canvas.width - 100) / 10);
+                const y = 50 + ((100 - point.y) * (context.canvas.height - 100) / 100);
+                
+                context.beginPath();
+                context.arc(x, y, 5, 0, 2 * Math.PI);
+                context.fill();
+            });
+        }
+    }
+
+    // Dibujar la comparación
+    function drawComparison(context) {
+        // Copiar el gráfico del usuario
+        context.drawImage(userCanvas, 0, 0);
+        
+        // Superponer la solución con transparencia
+        context.globalAlpha = 0.5;
+        drawCorrectSolution(context);
+        context.globalAlpha = 1.0;
+        
+        // Añadir leyenda
+        context.fillStyle = '#333';
+        context.font = '14px Roboto';
+        context.textAlign = 'left';
+        
+        // Leyenda para el gráfico del usuario
+        context.fillStyle = '#5a6133';
+        context.fillRect(20, 20, 15, 15);
+        context.fillStyle = '#333';
+        context.fillText('Tu gráfico', 45, 32);
+        
+        // Leyenda para la solución correcta
+        context.fillStyle = '#4CAF50';
+        context.fillRect(20, 45, 15, 15);
+        context.fillStyle = '#333';
+        context.fillText('Solución correcta', 45, 57);
+    }
+
+    // Cambiar de pestaña
+    function switchTab(tabId) {
+        // Desactivar todas las pestañas y paneles
+        document.querySelectorAll('.comparison-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelectorAll('.comparison-panel').forEach(panel => {
+            panel.classList.remove('active');
+        });
+        
+        // Activar la pestaña y panel seleccionados
+        document.getElementById(tabId).classList.add('active');
+        
+        if (tabId === 'user-tab') {
+            userPanel.classList.add('active');
+        } else if (tabId === 'solution-tab') {
+            solutionPanel.classList.add('active');
+        } else if (tabId === 'comparison-tab') {
+            comparisonPanelDiv.classList.add('active');
+        }
+    }
+
     // Reiniciar el canvas
     function resetCanvas() {
-        setupCanvas();
+        setupCanvas(chartCanvas, ctx);
         chartData = [];
         hintUsed = false;
+        hasChecked = false;
+        solutionBtn.classList.remove('show');
+        comparisonContainer.classList.remove('active');
         showToast("Canvas reiniciado. Puedes empezar de nuevo.");
     }
 
@@ -2454,7 +2785,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Actualizar estrellas
         resultStarsEl.innerHTML = '';
-        for (let i = 0; i < 3; i++) {
+        for (let i =0; i < 3; i++) {
             const star = document.createElement('i');
             star.className = `fas fa-star star ${i < stars ? '' : 'empty'}`;
             resultStarsEl.appendChild(star);
@@ -2499,7 +2830,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Para herramientas de línea, dispersión y etiqueta, dibujar continuamente
         if (currentTool === 'line' || currentTool === 'scatter' || currentTool === 'label') {
-            drawOnCanvas(x, y);
+            drawOnCanvas(x, y, ctx);
         }
     });
 
@@ -2514,18 +2845,24 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Para herramientas de barra, dibujar solo al soltar
         if (currentTool === 'bar') {
-            drawOnCanvas(x, y);
+            drawOnCanvas(x, y, ctx);
         }
     });
 
     // Event listeners para botones
     checkBtn.addEventListener('click', checkChart);
     hintBtn.addEventListener('click', showHint);
+    solutionBtn.addEventListener('click', showSolution);
     resetBtn.addEventListener('click', resetCanvas);
     newBtn.addEventListener('click', generateNewExercise);
     resultBtn.addEventListener('click', () => {
         resultModal.classList.remove('active');
     });
+
+    // Event listeners para pestañas de comparación
+    userTab.addEventListener('click', () => switchTab('user-tab'));
+    solutionTab.addEventListener('click', () => switchTab('solution-tab'));
+    comparisonTab.addEventListener('click', () => switchTab('comparison-tab'));
 
     // Event listeners para los iconos flotantes
     document.getElementById('btn-misiones').addEventListener('click', () => {
@@ -2569,12 +2906,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- INICIALIZACIÓN ---
     window.addEventListener('load', () => {
-        setupCanvas();
+        setupCanvas(chartCanvas, ctx);
         loadRandomExercise();
     });
 
     window.addEventListener('resize', () => {
-        setupCanvas();
+        setupCanvas(chartCanvas, ctx);
     });
 });
 </script>
