@@ -899,6 +899,97 @@
             }
         }
 
+        /* Estilos para la advertencia de respuesta no seleccionada */
+        .warning-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .warning-modal.active {
+            display: flex;
+        }
+
+        .warning-content {
+            background: linear-gradient(135deg, rgba(15, 31, 15, 0.98), rgba(26, 47, 26, 0.98));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 25px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            border: 2px solid var(--color-neon);
+            box-shadow: 0 20px 60px rgba(0, 255, 136, 0.3);
+            animation: scaleIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .warning-panda {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: pandaShake 0.5s ease infinite alternate;
+        }
+
+        @keyframes pandaShake {
+            from {
+                transform: rotate(-5deg);
+            }
+            to {
+                transform: rotate(5deg);
+            }
+        }
+
+        .warning-title {
+            font-family: 'Bebas Neue', cursive;
+            font-size: 2rem;
+            color: var(--color-neon);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .warning-text {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .warning-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
         /* Responsive Design */
         @media (max-width: 768px) {
             .exam-container {
@@ -1467,6 +1558,22 @@
         </div>
     </div>
 
+    <!-- Modal de advertencia de respuesta no seleccionada -->
+    <div class="warning-modal" id="warning-modal">
+        <div class="warning-content">
+            <div class="warning-panda">🐼</div>
+            <div class="warning-title">¡Oops! No has seleccionado una respuesta</div>
+            <div class="warning-text">
+                El pequeño panda te recuerda que debes seleccionar una respuesta antes de continuar. 
+                ¡No te preocupes, toma tu tiempo para elegir la opción correcta!
+            </div>
+            <div class="warning-buttons">
+                <button class="btn" id="warning-cancel">Volver a la pregunta</button>
+                <button class="btn btn-secondary" id="warning-continue">Continuar sin responder</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Crear partículas de fondo
         function createParticles() {
@@ -1660,12 +1767,30 @@
         const retryExamBtn = document.getElementById('retry-exam-btn');
         const backToStartBtn = document.getElementById('back-to-start-btn');
         
+        // Elementos del modal de advertencia
+        const warningModal = document.getElementById('warning-modal');
+        const warningCancel = document.getElementById('warning-cancel');
+        const warningContinue = document.getElementById('warning-continue');
+        
         // Iniciar examen
         startExamBtn.addEventListener('click', startExam);
-        nextQuestionBtn.addEventListener('click', nextQuestion);
+        nextQuestionBtn.addEventListener('click', checkAndNextQuestion);
         stopExamBtn.addEventListener('click', stopExam);
         retryExamBtn.addEventListener('click', resetExam);
         backToStartBtn.addEventListener('click', backToStart);
+        
+        // Eventos del modal de advertencia
+        warningCancel.addEventListener('click', () => {
+            warningModal.classList.remove('active');
+        });
+        
+        warningContinue.addEventListener('click', () => {
+            warningModal.classList.remove('active');
+            // Marcar como no respondida y continuar
+            userAnswers[currentQuestionIndex] = null;
+            unansweredQuestions++;
+            proceedToNextQuestion();
+        });
         
         function startExam() {
             // Ocultar sección de inicio y mostrar área de examen
@@ -1759,13 +1884,24 @@
             resetTimer();
         }
         
-        function nextQuestion() {
+        function checkAndNextQuestion() {
             // Guardar la respuesta actual si no se ha guardado
             const selectedOption = document.querySelector('input[name="answer"]:checked');
             if (selectedOption) {
                 userAnswers[currentQuestionIndex] = parseInt(selectedOption.value);
             }
             
+            // Verificar si no hay respuesta seleccionada
+            if (userAnswers[currentQuestionIndex] === null) {
+                // Mostrar modal de advertencia
+                warningModal.classList.add('active');
+            } else {
+                // Continuar a la siguiente pregunta
+                proceedToNextQuestion();
+            }
+        }
+        
+        function proceedToNextQuestion() {
             // Pasar a la siguiente pregunta o mostrar resultados
             if (currentQuestionIndex < selectedQuestions.length - 1) {
                 currentQuestionIndex++;
@@ -1950,9 +2086,9 @@
                 if (timeRemaining <= 0) {
                     clearInterval(timer);
                     unansweredQuestions++;
-                    nextQuestion();
+                    proceedToNextQuestion();
                 }
-            }, 1000);
+            }, 1000); // CORREGIDO: Intervalo de 1 segundo
         }
         
         function resetTimer() {
