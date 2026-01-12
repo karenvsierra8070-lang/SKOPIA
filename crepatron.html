@@ -306,23 +306,13 @@ gap: 25px;
 }
 
 .exercise-context {
-background-color: var(--color-crema);
-border-radius: 12px;
-padding: 20px;
-margin-bottom: 20px;
-}
-
-.context-title {
-font-size: 1.2rem;
-font-weight: 600;
-color: var(--color-oliva-oscuro);
-margin-bottom: 10px;
-}
-
-.context-text {
-font-size: 1rem;
+font-size: 1.1rem;
 line-height: 1.6;
 color: var(--color-oliva-oscuro);
+background-color: var(--color-crema);
+padding: 20px;
+border-radius: 12px;
+border-left: 4px solid var(--color-oliva-medio);
 }
 
 .exercise-question {
@@ -332,52 +322,43 @@ color: var(--color-oliva-oscuro);
 margin-bottom: 15px;
 }
 
-.pattern-container {
-display: flex;
-justify-content: center;
-align-items: center;
-gap: 20px;
+.exercise-image {
+text-align: center;
 margin: 20px 0;
-flex-wrap: wrap;
 }
 
-.pattern-item {
-display: flex;
-flex-direction: column;
-align-items: center;
-gap: 10px;
+.exercise-image img {
+max-width: 100%;
+height: auto;
+border-radius: 12px;
+box-shadow: 0 4px 15px var(--color-sombra);
 }
 
-.pattern-image {
-width: 80px;
-height: 80px;
+.exercise-table {
+width: 100%;
+border-collapse: collapse;
+margin: 20px 0;
+background-color: white;
+border-radius: 12px;
+overflow: hidden;
+box-shadow: 0 4px 15px var(--color-sombra);
+}
+
+.exercise-table th,
+.exercise-table td {
+padding: 12px 15px;
+text-align: center;
+border: 1px solid var(--color-oliva-claro);
+}
+
+.exercise-table th {
+background-color: var(--color-oliva-medio);
+color: white;
+font-weight: 600;
+}
+
+.exercise-table tr:nth-child(even) {
 background-color: var(--color-crema);
-border: 2px solid var(--color-oliva-claro);
-border-radius: 8px;
-display: flex;
-justify-content: center;
-align-items: center;
-font-size: 2rem;
-font-weight: bold;
-color: var(--color-oliva-oscuro);
-}
-
-.pattern-arrow {
-font-size: 1.5rem;
-color: var(--color-oliva-medio);
-}
-
-.pattern-question {
-width: 80px;
-height: 80px;
-background-color: var(--color-oliva-claro);
-border: 2px dashed var(--color-oliva-medio);
-border-radius: 8px;
-display: flex;
-justify-content: center;
-align-items: center;
-font-size: 2rem;
-color: var(--color-oliva-oscuro);
 }
 
 .options-container {
@@ -398,12 +379,9 @@ color: var(--color-oliva-oscuro);
 cursor: pointer;
 transition: all 0.3s ease;
 display: flex;
-flex-direction: column;
 align-items: center;
 gap: 10px;
-text-align: center;
-min-height: 100px;
-justify-content: center;
+text-align: left;
 }
 
 .option-btn:hover {
@@ -427,17 +405,10 @@ background-color: rgba(244, 67, 54, 0.2);
 border-color: #F44336;
 }
 
-.option-image {
-width: 60px;
-height: 60px;
-display: flex;
-justify-content: center;
-align-items: center;
-}
-
-.option-text {
-font-size: 1rem;
-font-weight: 500;
+.option-letter {
+font-weight: 700;
+color: var(--color-oliva-medio);
+font-size: 1.1rem;
 }
 
 .feedback-container {
@@ -590,22 +561,21 @@ display: block;
 .main-navigation > ul > li > a, .main-navigation > ul > li > span {
 padding: 15px;
 }
-.pattern-container {
-flex-wrap: wrap;
-}
 }
 
 @media (max-width: 768px) {
 .game-title {
 font-size: 2.2rem;
 }
-.pattern-image, .pattern-question {
-width: 60px;
-height: 60px;
-font-size: 1.5rem;
-}
 .options-container {
-grid-template-columns: repeat(2, 1fr);
+grid-template-columns: 1fr;
+}
+.exercise-table {
+font-size: 0.9rem;
+}
+.exercise-table th,
+.exercise-table td {
+padding: 8px 10px;
 }
 }
 </style>
@@ -844,20 +814,10 @@ grid-template-columns: repeat(2, 1fr);
 </div>
 
 <div class="exercise-content">
-<div class="exercise-context" id="exercise-context">
-<div class="context-title" id="context-title"></div>
-<div class="context-text" id="context-text"></div>
-</div>
-
+<div class="exercise-context" id="exercise-context"></div>
 <div class="exercise-question" id="exercise-question"></div>
-
-<div class="pattern-container" id="pattern-container">
-<!-- El patrón se generará dinámicamente -->
-</div>
-
-<div class="options-container" id="options-container">
-<!-- Las opciones se generarán dinámicamente -->
-</div>
+<div class="exercise-image" id="exercise-image"></div>
+<div class="options-container" id="options-container"></div>
 
 <div class="feedback-container" id="feedback-container">
 <div class="feedback-title" id="feedback-title"></div>
@@ -904,10 +864,9 @@ const resultsSection = document.getElementById('results-section');
 const startBtn = document.getElementById('start-btn');
 const exerciseNumber = document.getElementById('exercise-number');
 const exerciseScore = document.getElementById('exercise-score');
-const contextTitle = document.getElementById('context-title');
-const contextText = document.getElementById('context-text');
+const exerciseContext = document.getElementById('exercise-context');
 const exerciseQuestion = document.getElementById('exercise-question');
-const patternContainer = document.getElementById('pattern-container');
+const exerciseImage = document.getElementById('exercise-image');
 const optionsContainer = document.getElementById('options-container');
 const feedbackContainer = document.getElementById('feedback-container');
 const feedbackTitle = document.getElementById('feedback-title');
@@ -927,105 +886,221 @@ let isAnswered = false;
 // --- BASE DE DATOS DE EJERCICIOS ---
 const exercises = [
 {
-contextTitle: "Análisis de Crecimiento Bacteriano",
-contextText: "Un laboratorio de microbiología está estudiando el crecimiento de una cepa de bacterias en condiciones controladas. Los investigadores registran la población cada hora y observan un patrón de crecimiento exponencial. La siguiente secuencia representa el número de bacterias (en miles) en cada medición:",
-question: "¿Cuál será la población aproximada de bacterias en la sexta hora?",
-pattern: [
-{ type: "number", value: "2K" },
-{ type: "number", value: "6K" },
-{ type: "number", value: "18K" },
-{ type: "number", value: "54K" },
-{ type: "number", value: "162K" },
-],
+context: "Una empresa de tecnología está analizando el crecimiento de sus usuarios en los últimos trimestres. El departamento de marketing ha registrado el siguiente patrón en la adquisición de nuevos usuarios, donde cada trimestre el número de usuarios crece siguiendo una progresión específica.",
+question: "Si la empresa continúa con esta tendencia, ¿cuántos usuarios nuevos debería esperar en el quinto trimestre?",
+image: `
+<table class="exercise-table">
+<thead>
+<tr>
+<th>Trimestre</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+<th>5</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Usuarios nuevos (miles)</td>
+<td>120</td>
+<td>180</td>
+<td>270</td>
+<td>405</td>
+<td>?</td>
+</tr>
+</tbody>
+</table>
+`,
 options: [
-{ type: "text", value: "486K" },
-{ type: "text", value: "324K" },
-{ type: "text", value: "594K" },
-{ type: "text", value: "432K" },
-],
-correctAnswer: 0,
-strategy: "Analiza la relación entre cada par de números consecutivos. Calcula el factor de multiplicación entre cada medición. Identifica si es una progresión aritmética (suma constante) o geométrica (multiplicación constante). Una vez identificado el patrón, aplícalo para encontrar el siguiente término.",
-solution: "La secuencia sigue una progresión geométrica donde cada término es 3 veces el anterior: 2K × 3 = 6K, 6K × 3 = 18K, 18K × 3 = 54K, 54K × 3 = 162K. Por lo tanto, el siguiente término es 162K × 3 = 486K bacterias, que corresponde a la opción A."
-},
-{
-contextTitle: "Secuencia de Estructuras Moleculares",
-contextText: "En química orgánica, un investigador está sintetizando una serie de compuestos donde cada molécula tiene un grupo funcional adicional. La siguiente secuencia representa el número de átomos de carbono en cada compuesto de la serie:",
-question: "¿Cuántos átomos de carbono tendrá el quinto compuesto de la serie?",
-pattern: [
-{ type: "image", src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ccircle cx='30' cy='30' r='25' fill='%235a6133'/%3E%3Ctext x='30' y='35' text-anchor='middle' fill='white' font-size='14' font-weight='bold'%3EC3%3C/text%3E%3C/svg%3E" },
-{ type: "image", src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ccircle cx='30' cy='30' r='25' fill='%235a6133'/%3E%3Ctext x='30' y='35' text-anchor='middle' fill='white' font-size='14' font-weight='bold'%3EC7%3C/text%3E%3C/svg%3E" },
-{ type: "image", src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ccircle cx='30' cy='30' r='25' fill='%235a6133'/%3E%3Ctext x='30' y='35' text-anchor='middle' fill='white' font-size='14' font-weight='bold'%3EC13%3C/text%3E%3C/svg%3E" },
-{ type: "image", src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ccircle cx='30' cy='30' r='25' fill='%235a6133'/%3E%3Ctext x='30' y='35' text-anchor='middle' fill='white' font-size='14' font-weight='bold'%3EC21%3C/text%3E%3C/svg%3E" },
-],
-options: [
-{ type: "text", value: "C31" },
-{ type: "text", value: "C29" },
-{ type: "text", value: "C33" },
-{ type: "text", value: "C27" },
-],
-correctAnswer: 0,
-strategy: "Analiza las diferencias entre los números consecutivos: 7-3=4, 13-7=6, 21-13=8. Observa que las diferencias aumentan en 2 cada vez. Este es un patrón de segundo orden. Para encontrar el siguiente término, suma la siguiente diferencia (10) al último término.",
-solution: "La secuencia de diferencias es: 4, 6, 8, ... que aumenta en 2 cada vez. La siguiente diferencia será 10. Por lo tanto, el siguiente término es 21 + 10 = 31 átomos de carbono, que corresponde a la opción A."
-},
-{
-contextTitle: "Patrón de Inversión Financiera",
-contextText: "Un analista financiero está modelando el crecimiento de una inversión que sigue un patrón compuesto. La inversión inicial es de $1,000 y cada período crece según una regla específica. Los valores acumulados después de cada período se muestran en la siguiente tabla:",
-question: "¿Cuál será el valor de la inversión después del quinto período?",
-pattern: [
-{ type: "number", value: "$1,000" },
-{ type: "number", value: "$1,500" },
-{ type: "number", value: "$2,250" },
-{ type: "number", value: "$3,375" },
-],
-options: [
-{ type: "text", value: "$5,062.50" },
-{ type: "text", value: "$4,500" },
-{ type: "text", value: "$5,500" },
-{ type: "text", value: "$4,875" },
-],
-correctAnswer: 0,
-strategy: "Identifica el patrón de crecimiento. Calcula la razón entre cada valor consecutivo para determinar si es un crecimiento porcentual constante. También puedes calcular las diferencias absolutas para ver si siguen un patrón. Una vez identificado el patrón, aplícalo para encontrar el siguiente valor.",
-solution: "La inversión crece un 50% cada período: $1,000 × 1.5 = $1,500, $1,500 × 1.5 = $2,250, $2,250 × 1.5 = $3,375. Por lo tanto, el siguiente valor es $3,375 × 1.5 = $5,062.50, que corresponde a la opción A."
-},
-{
-contextTitle: "Secuencia de Figuras Geométricas Complejas",
-contextText: "Un arquitecto está diseñando una serie de estructuras donde cada una tiene un número creciente de elementos geométricos. La siguiente secuencia muestra el número total de vértices en cada estructura:",
-question: "¿Cuántos vértices tendrá la quinta estructura?",
-pattern: [
-{ type: "image", src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpolygon points='30,10 50,50 10,50' fill='%235a6133'/%3E%3Ctext x='30' y='35' text-anchor='middle' fill='white' font-size='12' font-weight='bold'%3E3%3C/text%3E%3C/svg%3E" },
-{ type: "image", src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect x='15' y='15' width='30' height='30' fill='%235a6133'/%3E%3Ctext x='30' y='35' text-anchor='middle' fill='white' font-size='12' font-weight='bold'%3E4%3C/text%3E%3C/svg%3E" },
-{ type: "image", src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpolygon points='30,10 45,25 45,45 15,45 15,25' fill='%235a6133'/%3E%3Ctext x='30' y='35' text-anchor='middle' fill='white' font-size='12' font-weight='bold'%3E5%3C/text%3E%3C/svg%3E" },
-{ type: "image", src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpolygon points='30,10 45,20 50,35 40,50 20,50 10,35 15,20' fill='%235a6133'/%3E%3Ctext x='30' y='35' text-anchor='middle' fill='white' font-size='10' font-weight='bold'%3E7%3C/text%3E%3C/svg%3E" },
-],
-options: [
-{ type: "text", value: "8 vértices" },
-{ type: "text", value: "9 vértices" },
-{ type: "text", value: "10 vértices" },
-{ type: "text", value: "11 vértices" },
+{ letter: "A", text: "540.5 miles de usuarios" },
+{ letter: "B", text: "607.5 miles de usuarios" },
+{ letter: "C", text: "567.75 miles de usuarios" },
+{ letter: "D", text: "486 miles de usuarios" }
 ],
 correctAnswer: 1,
-strategy: "Observa la secuencia de números: 3, 4, 5, 7. Analiza las diferencias entre términos consecutivos: 4-3=1, 5-4=1, 7-5=2. Busca un patrón en estas diferencias o considera secuencias conocidas como números primos, Fibonacci, etc.",
-solution: "La secuencia 3, 4, 5, 7 corresponde a los números primos consecutivos excepto por el 4. Sin embargo, el patrón real es que cada término es el número de vértices de polígonos con un número creciente de lados: triángulo (3), cuadrado (4), pentágono (5), heptágono (7). El siguiente sería un octógono con 8 vértices, pero wait... Revisando el patrón de saltos: +1, +1, +2, el siguiente salto podría ser +2, dando 7+2=9 vértices (nonágono), que corresponde a la opción B."
+strategy: "Para resolver este problema, primero identifica el patrón de crecimiento. Calcula la razón entre trimestres consecutivos: 180/120 = 1.5, 270/180 = 1.5, 405/270 = 1.5. Esto indica una progresión geométrica con razón 1.5. Aplica esta misma razón para calcular el valor del quinto trimestre multiplicando el valor del cuarto trimestre por 1.5.",
+solution: "La secuencia sigue una progresión geométrica con razón 1.5. Cada trimestre el número de usuarios nuevos es 1.5 veces el trimestre anterior: 120 × 1.5 = 180, 180 × 1.5 = 270, 270 × 1.5 = 405. Por lo tanto, para el quinto trimestre: 405 × 1.5 = 607.5 miles de usuarios. La respuesta correcta es la opción B."
 },
 {
-contextTitle: "Progresión Algorítmica",
-contextText: "Un programador está desarrollando un algoritmo donde cada paso ejecuta un número creciente de operaciones. La complejidad temporal del algoritmo sigue un patrón específico. El número de operaciones en cada iteración se muestra a continuación:",
-question: "¿Cuántas operaciones ejecutará el algoritmo en la quinta iteración?",
-pattern: [
-{ type: "image", src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect x='10' y='10' width='40' height='40' fill='%235a6133' rx='5'/%3E%3Ctext x='30' y='35' text-anchor='middle' fill='white' font-size='12' font-weight='bold'%3E1%3C/text%3E%3C/svg%3E" },
-{ type: "image", src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect x='10' y='10' width='40' height='40' fill='%235a6133' rx='5'/%3E%3Ctext x='30' y='35' text-anchor='middle' fill='white' font-size='12' font-weight='bold'%3E4%3C/text%3E%3C/svg%3E" },
-{ type: "image", src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect x='10' y='10' width='40' height='40' fill='%235a6133' rx='5'/%3E%3Ctext x='30' y='35' text-anchor='middle' fill='white' font-size='12' font-weight='bold'%3E9%3C/text%3E%3C/svg%3E" },
-{ type: "image", src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect x='10' y='10' width='40' height='40' fill='%235a6133' rx='5'/%3E%3Ctext x='30' y='35' text-anchor='middle' fill='white' font-size='12' font-weight='bold'%3E16%3C/text%3E%3C/svg%3E" },
-],
+context: "Un investigador está estudiando el patrón de crecimiento de una población bacteriana en condiciones de laboratorio controladas. La bacteria duplica su población cada hora, pero presenta una variación interesante en las mediciones tomadas a intervalos específicos.",
+question: "Según el patrón observado, ¿cuál sería la población bacteriana después de 5 horas si la población inicial es de 1000 bacterias?",
+image: `
+<table class="exercise-table">
+<thead>
+<tr>
+<th>Hora</th>
+<th>0</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+<th>5</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Población</td>
+<td>1000</td>
+<td>2000</td>
+<td>4000</td>
+<td>8000</td>
+<td>16000</td>
+<td>?</td>
+</tr>
+</tbody>
+</table>
+`,
 options: [
-{ type: "text", value: "20 operaciones" },
-{ type: "text", value: "24 operaciones" },
-{ type: "text", value: "25 operaciones" },
-{ type: "text", value: "36 operaciones" },
+{ letter: "A", text: "24,000 bacterias" },
+{ letter: "B", text: "30,000 bacterias" },
+{ letter: "C", text: "32,000 bacterias" },
+{ letter: "D", text: "28,000 bacterias" }
 ],
 correctAnswer: 2,
-strategy: "Analiza la secuencia numérica: 1, 4, 9, 16. Identifica si estos números siguen un patrón conocido como cuadrados perfectos, cubos, factoriales, etc. Calcula las raíces o logaritmos si es necesario para descubrir la relación subyacente.",
-solution: "La secuencia corresponde a los cuadrados perfectos: 1² = 1, 2² = 4, 3² = 9, 4² = 16. Por lo tanto, el siguiente término es 5² = 25 operaciones, que corresponde a la opción C."
+strategy: "Analiza el patrón de crecimiento. Observa que cada hora la población se duplica. Esto es una progresión geométrica con razón 2. Para encontrar la población después de 5 horas, multiplica la población inicial por 2 elevado a 5, o simplemente duplica el valor de la hora 4.",
+solution: "La población duplica cada hora: 1000 → 2000 → 4000 → 8000 → 16000 → 32000. Este es un crecimiento exponencial con fórmula P = P₀ × 2^n, donde P₀ = 1000 y n = 5. Por lo tanto, P = 1000 × 2^5 = 1000 × 32 = 32,000 bacterias. La respuesta correcta es la opción C."
+},
+{
+context: "Una empresa de construcción está analizando el costo creciente de materiales para un proyecto de infraestructura. El costo sigue un patrón donde cada mes incrementa en un porcentaje constante sobre el costo acumulado anterior.",
+question: "Si el costo del primer mes fue de $50,000 y el patrón continúa, ¿cuál será el costo total acumulado después de 6 meses?",
+image: `
+<table class="exercise-table">
+<thead>
+<tr>
+<th>Mes</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+<th>5</th>
+<th>6</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Costo mensual ($)</td>
+<td>50,000</td>
+<td>60,000</td>
+<td>72,000</td>
+<td>86,400</td>
+<td>103,680</td>
+<td>?</td>
+</tr>
+<tr>
+<td>Costo acumulado ($)</td>
+<td>50,000</td>
+<td>110,000</td>
+<td>182,000</td>
+<td>268,400</td>
+<td>372,080</td>
+<td>?</td>
+</tr>
+</tbody>
+</table>
+`,
+options: [
+{ letter: "A", text: "$496,496" },
+{ letter: "B", text: "$511,584" },
+{ letter: "C", text: "$485,376" },
+{ letter: "D", text: "$524,288" }
+],
+correctAnswer: 0,
+strategy: "Identifica el patrón de crecimiento mensual. Calcula la razón: 60,000/50,000 = 1.2, 72,000/60,000 = 1.2, etc. Cada mes el costo aumenta en un 20%. Calcula el costo del mes 6 y luego suma al acumulado anterior.",
+solution: "El costo mensual sigue una progresión geométrica con razón 1.2 (20% de aumento). Mes 6: 103,680 × 1.2 = 124,416. El costo acumulado después de 6 meses es: 372,080 + 124,416 = 496,496. La respuesta correcta es la opción A."
+},
+{
+context: "Un economista está analizando el crecimiento del PIB de un país en desarrollo. Los datos muestran un patrón de crecimiento acelerado donde cada año el incremento es mayor que el anterior en una cantidad constante.",
+question: "Si el PIB inicial fue de $100 mil millones y el patrón observado continúa, ¿cuál será el PIB después de 5 años?",
+image: `
+<table class="exercise-table">
+<thead>
+<tr>
+<th>Año</th>
+<th>0</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+<th>5</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PIB ($ miles de millones)</td>
+<td>100</td>
+<td>115</td>
+<td>135</td>
+<td>160</td>
+<td>190</td>
+<td>?</td>
+</tr>
+<tr>
+<td>Incremento anual</td>
+<td>-</td>
+<td>15</td>
+<td>20</td>
+<td>25</td>
+<td>30</td>
+<td>?</td>
+</tr>
+</tbody>
+</table>
+`,
+options: [
+{ letter: "A", text: "$220 mil millones" },
+{ letter: "B", text: "$225 mil millones" },
+{ letter: "C", text: "$215 mil millones" },
+{ letter: "D", text: "$230 mil millones" }
+],
+correctAnswer: 1,
+strategy: "Analiza el patrón de los incrementos anuales: 15, 20, 25, 30. Esto es una progresión aritmética con diferencia 5. El siguiente incremento será 35. Suma este incremento al PIB del año 4 para obtener el PIB del año 5.",
+solution: "Los incrementos anuales siguen una progresión aritmética: 15, 20, 25, 30, 35 (aumentando en 5 cada año). El PIB del año 5 será: 190 + 35 = 225 mil millones. La respuesta correcta es la opción B."
+},
+{
+context: "Una compañía de seguros está modelando el crecimiento de sus primas anuales. El modelo muestra que las primas crecen siguiendo un patrón combinado: un incremento base más un porcentaje del valor acumulado.",
+question: "Si la prima inicial fue de $1,200 y el patrón continúa, ¿cuál será la prima en el quinto año?",
+image: `
+<table class="exercise-table">
+<thead>
+<tr>
+<th>Año</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+<th>5</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Prima ($)</td>
+<td>1,200</td>
+<td>1,560</td>
+<td>2,028</td>
+<td>2,636.40</td>
+<td>?</td>
+</tr>
+<tr>
+<td>Incremento ($)</td>
+<td>-</td>
+<td>360</td>
+<td>468</td>
+<td>608.40</td>
+<td>?</td>
+</tr>
+</tbody>
+</table>
+`,
+options: [
+{ letter: "A", text: "$3,227.32" },
+{ letter: "B", text: "$3,426.92" },
+{ letter: "C", text: "$3,127.12" },
+{ letter: "D", text: "$3,527.28" }
+],
+correctAnswer: 1,
+strategy: "Analiza el patrón de crecimiento. Observa que cada año la prima aumenta en un 30% sobre el valor del año anterior. Verifica: 1,200 × 1.3 = 1,560, 1,560 × 1.3 = 2,028, etc. Aplica esta misma tasa de crecimiento para calcular la prima del quinto año.",
+solution: "Las primas siguen una progresión geométrica con razón 1.3 (30% de crecimiento anual). Prima año 5: 2,636.40 × 1.3 = 3,426.92. El incremento es de $790.52. La respuesta correcta es la opción B."
 }
 ];
 
@@ -1065,82 +1140,30 @@ feedbackContainer.style.display = 'none';
 exerciseNumber.textContent = `Ejercicio ${currentExerciseIndex + 1} de ${exercises.length}`;
 exerciseScore.textContent = `Puntuación: ${score}/${exercises.length}`;
 
-// Cargar contexto
-contextTitle.textContent = exercises[currentExerciseIndex].contextTitle;
-contextText.textContent = exercises[currentExerciseIndex].contextText;
-
-// Cargar pregunta
+// Cargar contexto y pregunta
+exerciseContext.textContent = exercises[currentExerciseIndex].context;
 exerciseQuestion.textContent = exercises[currentExerciseIndex].question;
 
-// Limpiar contenedores
-patternContainer.innerHTML = '';
+// Cargar imagen/tabla
+exerciseImage.innerHTML = exercises[currentExerciseIndex].image;
+
+// Limpiar y cargar opciones
 optionsContainer.innerHTML = '';
-
-// Cargar patrón
-const pattern = exercises[currentExerciseIndex].pattern;
-pattern.forEach(item => {
-const patternItem = document.createElement('div');
-patternItem.className = 'pattern-item';
-
-const patternImage = document.createElement('div');
-patternImage.className = 'pattern-image';
-
-if (item.type === 'number') {
-patternImage.textContent = item.value;
-} else if (item.type === 'image') {
-const img = document.createElement('img');
-img.src = item.src;
-img.alt = 'Pattern element';
-img.style.width = '60px';
-img.style.height = '60px';
-patternImage.appendChild(img);
-}
-
-patternItem.appendChild(patternImage);
-
-// Añadir flecha excepto en el último elemento
-if (pattern.indexOf(item) < pattern.length - 1) {
-const arrow = document.createElement('div');
-arrow.className = 'pattern-arrow';
-arrow.textContent = '→';
-patternItem.appendChild(arrow);
-}
-
-patternContainer.appendChild(patternItem);
-});
-
-// Añadir signo de interrogación
-const questionItem = document.createElement('div');
-questionItem.className = 'pattern-item';
-const questionMark = document.createElement('div');
-questionMark.className = 'pattern-question';
-questionMark.textContent = '?';
-questionItem.appendChild(questionMark);
-patternContainer.appendChild(questionItem);
-
-// Cargar opciones
 const options = exercises[currentExerciseIndex].options;
 options.forEach((option, index) => {
 const optionBtn = document.createElement('button');
 optionBtn.className = 'option-btn';
 optionBtn.dataset.index = index;
 
-if (option.type === 'text') {
-const optionText = document.createElement('div');
-optionText.className = 'option-text';
-optionText.textContent = option.value;
+const optionLetter = document.createElement('span');
+optionLetter.className = 'option-letter';
+optionLetter.textContent = option.letter;
+
+const optionText = document.createElement('span');
+optionText.textContent = option.text;
+
+optionBtn.appendChild(optionLetter);
 optionBtn.appendChild(optionText);
-} else if (option.type === 'image') {
-const optionImage = document.createElement('div');
-optionImage.className = 'option-image';
-const img = document.createElement('img');
-img.src = option.src;
-img.alt = 'Option';
-img.style.width = '50px';
-img.style.height = '50px';
-optionImage.appendChild(img);
-optionBtn.appendChild(optionImage);
-}
 
 optionBtn.addEventListener('click', () => selectOption(index));
 optionsContainer.appendChild(optionBtn);
