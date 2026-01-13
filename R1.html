@@ -370,17 +370,23 @@
             text-align: center;
             position: relative;
             box-shadow: 0 6px 16px var(--color-sombra);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: all 0.3s ease;
             overflow: hidden;
             height: 300px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            cursor: pointer;
         }
 
-        .bamboo-sector:hover {
+        .bamboo-sector:hover:not(.locked) {
             transform: translateY(-5px);
             box-shadow: 0 12px 24px var(--color-sombra);
+        }
+
+        .bamboo-sector.locked {
+            cursor: not-allowed;
+            opacity: 0.8;
         }
 
         .bamboo-sector::before {
@@ -428,11 +434,13 @@
             height: 30px;
             background-color: var(--color-bambu);
             border-radius: 4px;
+            transition: all 0.3s ease;
         }
 
         .bamboo-stalk.collected {
             background-color: var(--color-bambu-oscuro);
             box-shadow: 0 0 10px rgba(124, 179, 66, 0.5);
+            transform: scale(1.1);
         }
 
         .sector-button {
@@ -450,7 +458,7 @@
             gap: 10px;
         }
 
-        .sector-button:hover {
+        .sector-button:hover:not(:disabled) {
             background-color: var(--color-oliva-oscuro);
             transform: translateY(-3px);
             box-shadow: 0 6px 15px var(--color-sombra);
@@ -698,6 +706,17 @@
             color: var(--color-oliva-oscuro);
             box-shadow: 0 2px 8px var(--color-sombra);
             flex-grow: 1;
+        }
+
+        /* --- Animación de desbloqueo --- */
+        @keyframes unlock {
+            0% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(5deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        .unlocking {
+            animation: unlock 0.6s ease;
         }
 
         /* --- Responsive --- */
@@ -969,7 +988,7 @@
 
             <div class="bamboo-path-map">
                 <div class="bamboo-forest">
-                    <div class="bamboo-sector" id="sector-interpretacion">
+                    <div class="bamboo-sector" id="sector-interpretacion" data-sector="interpretacion">
                         <div class="sector-icon">📊</div>
                         <h2 class="sector-title">Aldea de las Gráficas</h2>
                         <p class="sector-description">Interpretación y Representación. Aprende a leer y comprender datos en diferentes formatos visuales.</p>
@@ -983,7 +1002,7 @@
                         </button>
                     </div>
 
-                    <div class="bamboo-sector locked" id="sector-logica">
+                    <div class="bamboo-sector locked" id="sector-logica" data-sector="logica">
                         <div class="lock-icon"><i class="fas fa-lock"></i></div>
                         <div class="sector-icon">🌉</div>
                         <h2 class="sector-title">Puente de la Lógica</h2>
@@ -998,7 +1017,7 @@
                         </button>
                     </div>
 
-                    <div class="bamboo-sector locked" id="sector-argumentacion">
+                    <div class="bamboo-sector locked" id="sector-argumentacion" data-sector="argumentacion">
                         <div class="lock-icon"><i class="fas fa-lock"></i></div>
                         <div class="sector-icon">🏛️</div>
                         <h2 class="sector-title">Templo de la Argumentación</h2>
@@ -1143,7 +1162,7 @@
             
             // Sectores
             const sectorInterpretacion = document.getElementById('sector-interpretacion');
-            const sectorLogica = document('sector-logica');
+            const sectorLogica = document.getElementById('sector-logica');
             const sectorArgumentacion = document.getElementById('sector-argumentacion');
             
             // Barras de progreso
@@ -1186,10 +1205,10 @@
             // --- FUNCIONES PRINCIPALES ---
             
             // Mostrar notificación toast
-            function showToast(message) {
+            function showToast(message, duration = 3000) {
                 toast.textContent = message;
                 toast.classList.add('show');
-                setTimeout(() => toast.classList.remove('show'), 3000);
+                setTimeout(() => toast.classList.remove('show'), duration);
             }
             
             // Guardar progreso en localStorage
@@ -1207,17 +1226,11 @@
                 
                 // Desbloquear sectores si corresponde
                 if (bambooPathProgress.logica.unlocked) {
-                    sectorLogica.classList.remove('locked');
-                    btnLogica.disabled = false;
-                    btnLogica.innerHTML = '<i class="fas fa-play"></i> Explorar';
-                    sectorLogica.querySelector('.lock-icon').style.display = 'none';
+                    unlockSector('logica');
                 }
                 
                 if (bambooPathProgress.argumentacion.unlocked) {
-                    sectorArgumentacion.classList.remove('locked');
-                    btnArgumentacion.disabled = false;
-                    btnArgumentacion.innerHTML = '<i class="fas fa-play"></i> Explorar';
-                    sectorArgumentacion.querySelector('.lock-icon').style.display = 'none';
+                    unlockSector('argumentacion');
                 }
                 
                 // Actualizar barra de progreso general
@@ -1229,6 +1242,35 @@
                 
                 progressFill.style.width = `${percentage}%`;
                 progressText.textContent = `Progreso: ${percentage}%`;
+            }
+            
+            // Desbloquear un sector
+            function unlockSector(sectorName) {
+                const sectorElement = document.getElementById(`sector-${sectorName}`);
+                const buttonElement = document.getElementById(`btn-${sectorName}`);
+                const lockIcon = sectorElement.querySelector('.lock-icon');
+                
+                if (sectorElement && buttonElement) {
+                    sectorElement.classList.remove('locked');
+                    sectorElement.classList.add('unlocking');
+                    buttonElement.disabled = false;
+                    
+                    if (sectorName === 'logica') {
+                        buttonElement.innerHTML = '<i class="fas fa-play"></i> Explorar';
+                    } else if (sectorName === 'argumentacion') {
+                        buttonElement.innerHTML = '<i class="fas fa-play"></i> Explorar';
+                    }
+                    
+                    if (lockIcon) {
+                        lockIcon.style.display = 'none';
+                    }
+                    
+                    setTimeout(() => {
+                        sectorElement.classList.remove('unlocking');
+                    }, 600);
+                    
+                    showToast(`¡Has desbloqueado el ${sectorElement.querySelector('.sector-title').textContent}!`);
+                }
             }
             
             // Actualizar tallos de bambú de un sector
@@ -1245,44 +1287,23 @@
                 }
             }
             
-            // Simular completado de ejercicios (solo para demostración)
-            function simulateExerciseCompletion(sector, correct) {
-                if (correct) {
-                    bambooPathProgress[sector].consecutiveCorrect++;
-                    
-                    // Si ha completado 3 ejercicios seguidos correctamente
-                    if (bambooPathProgress[sector].consecutiveCorrect >= 3) {
-                        // Añadir un tallo de bambú
-                        if (bambooPathProgress[sector].bambooStalks < 3) {
-                            bambooPathProgress[sector].bambooStalks++;
-                            showToast(`¡Has recolectado un tallo de bambú! (${bambooPathProgress[sector].bambooStalks}/3)`);
-                            
-                            // Si ha recolectado los 3 tallos
-                            if (bambooPathProgress[sector].bambooStalks >= 3) {
-                                bambooPathProgress[sector].completed = true;
-                                showToast(`¡Has completado el sector ${sector}!`);
-                                
-                                // Desbloquear el siguiente sector
-                                if (sector === 'interpretacion' && !bambooPathProgress.logica.unlocked) {
-                                    bambooPathProgress.logica.unlocked = true;
-                                    showToast('¡Has desbloqueado el Puente de la Lógica!');
-                                } else if (sector === 'logica' && !bambooPathProgress.argumentacion.unlocked) {
-                                    bambooPathProgress.argumentacion.unlocked = true;
-                                    showToast('¡Has desbloqueado el Templo de la Argumentación!');
-                                }
-                            }
-                        }
-                        
-                        // Reiniciar contador de ejercicios correctos seguidos
-                        bambooPathProgress[sector].consecutiveCorrect = 0;
+            // Navegar a un sector
+            function navigateToSector(sectorName) {
+                if (sectorName === 'interpretacion') {
+                    window.location.href = 'R1A.html';
+                } else if (sectorName === 'logica') {
+                    if (bambooPathProgress.logica.unlocked) {
+                        window.location.href = 'R1B.html';
+                    } else {
+                        showToast('Debes completar la Aldea de las Gráficas primero');
                     }
-                } else {
-                    // Reiniciar contador si el ejercicio es incorrecto
-                    bambooPathProgress[sector].consecutiveCorrect = 0;
-                    showToast('Ejercicio incorrecto. ¡Sigue intentando!');
+                } else if (sectorName === 'argumentacion') {
+                    if (bambooPathProgress.argumentacion.unlocked) {
+                        window.location.href = 'R1C.html';
+                    } else {
+                        showToast('Debes completar el Puente de la Lógica primero');
+                    }
                 }
-                
-                saveProgress();
             }
             
             // --- EVENT LISTENERS ---
@@ -1296,24 +1317,38 @@
                 if (!event.target.closest('.navbar')) userDropdown.classList.remove('active'); 
             });
             
-            // Navegación a los sectores
-            btnInterpretacion.addEventListener('click', () => {
-                window.location.href = 'R1A.html';
+            // Navegación a los sectores - CORREGIDO
+            btnInterpretacion.addEventListener('click', (e) => {
+                e.stopPropagation();
+                navigateToSector('interpretacion');
             });
             
-            btnLogica.addEventListener('click', () => {
-                if (bambooPathProgress.logica.unlocked) {
-                    window.location.href = 'R1B.html';
-                } else {
-                    showToast('Debes completar la Aldea de las Gráficas primero');
+            btnLogica.addEventListener('click', (e) => {
+                e.stopPropagation();
+                navigateToSector('logica');
+            });
+            
+            btnArgumentacion.addEventListener('click', (e) => {
+                e.stopPropagation();
+                navigateToSector('argumentacion');
+            });
+            
+            // Click en toda la tarjeta del sector
+            sectorInterpretacion.addEventListener('click', (e) => {
+                if (!e.target.closest('.sector-button')) {
+                    navigateToSector('interpretacion');
                 }
             });
             
-            btnArgumentacion.addEventListener('click', () => {
-                if (bambooPathProgress.argumentacion.unlocked) {
-                    window.location.href = 'R1C.html';
-                } else {
-                    showToast('Debes completar el Puente de la Lógica primero');
+            sectorLogica.addEventListener('click', (e) => {
+                if (!e.target.closest('.sector-button')) {
+                    navigateToSector('logica');
+                }
+            });
+            
+            sectorArgumentacion.addEventListener('click', (e) => {
+                if (!e.target.closest('.sector-button')) {
+                    navigateToSector('argumentacion');
                 }
             });
             
@@ -1381,8 +1416,19 @@
                 });
             });
             
-            // Inicializar la interfaz
-            updateUI();
+            // Verificar si hay mensajes de éxito al cargar la página
+            const urlParams = new URLSearchParams(window.location.search);
+            const success = urlParams.get('success');
+            const unlocked = urlParams.get('unlocked');
+            
+            if (success && unlocked) {
+                setTimeout(() => {
+                    showToast(`¡Felicidades! Has desbloqueado ${unlocked === 'logica' ? 'el Puente de la Lógica' : 'el Templo de la Argumentación'}`, 5000);
+                    
+                    // Limpiar la URL
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }, 500);
+            }
             
             // Para pruebas: simular completado de ejercicios con teclas
             document.addEventListener('keydown', (e) => {
@@ -1394,31 +1440,76 @@
                     simulateExerciseCompletion('argumentacion', true);
                 } else if (e.key === 'r' || e.key === 'R') {
                     // Resetear progreso
-                    bambooPathProgress = {
-                        interpretacion: {
-                            completed: false,
-                            bambooStalks: 0,
-                            consecutiveCorrect: 0
-                        },
-                        logica: {
-                            unlocked: false,
-                            completed: false,
-                            bambooStalks: 0,
-                            consecutiveCorrect: 0
-                        },
-                        argumentacion: {
-                            unlocked: false,
-                            completed: false,
-                            bambooStalks: 0,
-                            consecutiveCorrect: 0
-                        },
-                        totalProgress: 0
-                    };
-                    saveProgress();
-                    showToast('Progreso reiniciado');
+                    if (confirm('¿Estás seguro de que quieres reiniciar todo el progreso?')) {
+                        bambooPathProgress = {
+                            interpretacion: {
+                                completed: false,
+                                bambooStalks: 0,
+                                consecutiveCorrect: 0
+                            },
+                            logica: {
+                                unlocked: false,
+                                completed: false,
+                                bambooStalks: 0,
+                                consecutiveCorrect: 0
+                            },
+                            argumentacion: {
+                                unlocked: false,
+                                completed: false,
+                                bambooStalks: 0,
+                                consecutiveCorrect: 0
+                            },
+                            totalProgress: 0
+                        };
+                        saveProgress();
+                        showToast('Progreso reiniciado');
+                    }
                 }
             });
+            
+            // Simular completado de ejercicios (solo para demostración)
+            function simulateExerciseCompletion(sector, correct) {
+                if (correct) {
+                    bambooPathProgress[sector].consecutiveCorrect++;
+                    
+                    // Si ha completado 3 ejercicios seguidos correctamente
+                    if (bambooPathProgress[sector].consecutiveCorrect >= 3) {
+                        // Añadir un tallo de bambú
+                        if (bambooPathProgress[sector].bambooStalks < 3) {
+                            bambooPathProgress[sector].bambooStalks++;
+                            showToast(`¡Has recolectado un tallo de bambú! (${bambooPathProgress[sector].bambooStalks}/3)`);
+                            
+                            // Si ha recolectado los 3 tallos
+                            if (bambooPathProgress[sector].bambooStalks >= 3) {
+                                bambooPathProgress[sector].completed = true;
+                                showToast(`¡Has completado el sector ${sector}!`);
+                                
+                                // Desbloquear el siguiente sector
+                                if (sector === 'interpretacion' && !bambooPathProgress.logica.unlocked) {
+                                    bambooPathProgress.logica.unlocked = true;
+                                    showToast('¡Has desbloqueado el Puente de la Lógica!');
+                                } else if (sector === 'logica' && !bambooPathProgress.argumentacion.unlocked) {
+                                    bambooPathProgress.argumentacion.unlocked = true;
+                                    showToast('¡Has desbloqueado el Templo de la Argumentación!');
+                                }
+                            }
+                        }
+                        
+                        // Reiniciar contador de ejercicios correctos seguidos
+                        bambooPathProgress[sector].consecutiveCorrect = 0;
+                    }
+                } else {
+                    // Reiniciar contador si el ejercicio es incorrecto
+                    bambooPathProgress[sector].consecutiveCorrect = 0;
+                    showToast('Ejercicio incorrecto. ¡Sigue intentando!');
+                }
+                
+                saveProgress();
+            }
+            
+            // Inicializar la interfaz
+            updateUI();
         });
     </script>
 </body>
-</html>    
+</html>
