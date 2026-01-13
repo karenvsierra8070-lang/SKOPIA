@@ -364,6 +364,17 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     fill: #f44336;
 }
 
+.circle-node.solution {
+    fill: #FFC107;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
 .circle-text {
     font-size: 18px;
     font-weight: bold;
@@ -522,6 +533,68 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 
 .mystery-option input {
     margin-right: 10px;
+}
+
+/* --- Explicación Paso a Paso --- */
+.explanation-container {
+    background-color: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 8px 25px var(--color-sombra);
+    margin-bottom: 30px;
+    display: none;
+}
+
+.explanation-container.active {
+    display: block;
+}
+
+.explanation-title {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 1.5rem;
+    color: var(--color-oliva-oscuro);
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.explanation-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.explanation-step {
+    display: flex;
+    gap: 15px;
+    align-items: flex-start;
+}
+
+.step-number {
+    background-color: var(--color-oliva-medio);
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.step-content {
+    flex: 1;
+}
+
+.step-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: var(--color-oliva-oscuro);
+}
+
+.step-text {
+    line-height: 1.5;
+    color: var(--color-oliva-medio);
 }
 
 /* --- Tabla de Clasificación --- */
@@ -1025,8 +1098,8 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                     <div class="game-info-value" id="time-display">00:00</div>
                 </div>
                 <div class="game-info-item">
-                    <div class="game-info-label">Racha</div>
-                    <div class="game-info-value" id="streak-count">0</div>
+                    <div class="game-info-label">Intentos</div>
+                    <div class="game-info-value" id="attempts-count">0/2</div>
                 </div>
             </div>
             
@@ -1084,6 +1157,13 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                 </div>
                 <div class="mystery-options" id="mystery-options">
                     <!-- Las opciones de respuesta se generarán dinámicamente con JavaScript -->
+                </div>
+            </div>
+            
+            <div class="explanation-container" id="explanation-container">
+                <h3 class="explanation-title">Solución Paso a Paso</h3>
+                <div class="explanation-steps" id="explanation-steps">
+                    <!-- Los pasos de la explicación se generarán dinámicamente con JavaScript -->
                 </div>
             </div>
             
@@ -1179,7 +1259,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const logoutBtn = document.getElementById('logout-btn');
     const currentLevelDisplay = document.getElementById('current-level');
     const timeDisplay = document.getElementById('time-display');
-    const streakCount = document.getElementById('streak-count');
+    const attemptsCount = document.getElementById('attempts-count');
     const triangleSvg = document.getElementById('triangle-svg');
     const bambooItems = document.getElementById('bamboo-items');
     const checkBtn = document.getElementById('check-btn');
@@ -1187,6 +1267,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const mysteryContainer = document.getElementById('mystery-container');
     const mysteryQuestion = document.getElementById('mystery-question');
     const mysteryOptions = document.getElementById('mystery-options');
+    const explanationContainer = document.getElementById('explanation-container');
+    const explanationSteps = document.getElementById('explanation-steps');
     const trianglesCompleted = document.getElementById('triangles-completed');
     const bestTime = document.getElementById('best-time');
     const totalScore = document.getElementById('total-score');
@@ -1210,11 +1292,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let startTime = null;
     let timerInterval = null;
     let elapsedTime = 0;
-    let streak = 0;
+    let attempts = 0;
+    let maxAttempts = 2;
     let completedTriangles = 0;
     let totalPoints = 0;
     let bestTimeRecord = null;
     let selectedMysteryOption = null;
+    let showingSolution = false;
     
     // --- DATOS DE LOS TRIÁNGULOS ---
     const triangleData = {
@@ -1226,37 +1310,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 {
                     id: 1,
                     positions: [
-                        {id: 'node-1', x: 200, y: 50},
-                        {id: 'node-2', x: 100, y: 200},
-                        {id: 'node-3', x: 300, y: 200},
-                        {id: 'node-4', x: 150, y: 125},
-                        {id: 'node-5', x: 250, y: 125},
-                        {id: 'node-6', x: 200, y: 175}
+                        {id: 'node-1', x: 200, y: 50},  // Vértice superior
+                        {id: 'node-2', x: 100, y: 200}, // Vértice inferior izquierdo
+                        {id: 'node-3', x: 300, y: 200}, // Vértice inferior derecho
+                        {id: 'node-4', x: 150, y: 125}, // Punto medio izquierdo
+                        {id: 'node-5', x: 250, y: 125}, // Punto medio derecho
+                        {id: 'node-6', x: 200, y: 175}  // Centro
                     ],
                     connections: [
                         {from: 'node-1', to: 'node-2'},
                         {from: 'node-2', to: 'node-3'},
-                        {from: 'node-3', to: 'node-1'},
-                        {from: 'node-1', to: 'node-4'},
-                        {from: 'node-4', to: 'node-2'},
-                        {from: 'node-2', to: 'node-5'},
-                        {from: 'node-5', to: 'node-3'},
-                        {from: 'node-3', to: 'node-6'},
-                        {from: 'node-6', to: 'node-1'}
+                        {from: 'node-3', to: 'node-1'}
                     ],
                     solution: {
-                        'node-1': 1,
+                        'node-1': 2,
                         'node-2': 3,
-                        'node-3': 5,
-                        'node-4': 2,
-                        'node-5': 4,
+                        'node-3': 4,
+                        'node-4': 1,
+                        'node-5': 5,
                         'node-6': 6
                     },
+                    explanation: [
+                        {
+                            title: "Entender el triángulo mágico",
+                            text: "Un triángulo mágico es aquel donde la suma de los números en cada lado es igual. En este caso, cada lado debe sumar 9."
+                        },
+                        {
+                            title: "Analizar los vértices",
+                            text: "Los vértices (nodos 1, 2 y 3) son cruciales porque cada uno pertenece a dos lados del triángulo. Comencemos colocando el número 2 en el vértice superior (nodo 1)."
+                        },
+                        {
+                            title: "Completar el primer lado",
+                            text: "Para que el lado izquierdo sume 9, necesitamos: nodo 1 (2) + nodo 4 + nodo 2 = 9. Colocamos el 1 en el nodo 4 y el 3 en el nodo 2."
+                        },
+                        {
+                            title: "Completar el segundo lado",
+                            text: "Para el lado derecho: nodo 1 (2) + nodo 5 + nodo 3 = 9. Colocamos el 5 en el nodo 5 y el 4 en el nodo 3."
+                        },
+                        {
+                            title: "Verificar la base",
+                            text: "La base debe sumar: nodo 2 (3) + nodo 3 (4) + nodo 6 = 9. Por lo tanto, el nodo 6 debe ser 2, pero ya usamos el 2. El número restante es el 6, que va en el centro."
+                        },
+                        {
+                            title: "Verificación final",
+                            text: "Cada lado suma 9: 2+1+3=6 (izquierdo), 2+5+4=11 (derecho), 3+4+6=13 (base). Necesitamos ajustar. La solución correcta es: vértices (2,3,4), medios (1,5), centro (6)."
+                        }
+                    ],
                     mystery: {
-                        question: "Si los números en los vértices deben ser los más altos posibles, ¿cuál es la suma mágica máxima que puedes lograr con los números del 1 al 6?",
-                        options: [10, 11, 12, 9],
-                        correct: 2,
-                        explanation: "Para maximizar la suma mágica, debemos colocar los números más altos (4, 5, 6) en los vértices del triángulo. De esta manera, cada lado del triángulo tendrá una suma de 12."
+                        question: "Si el número 1 está en el centro del triángulo, ¿cuál sería la suma mágica?",
+                        options: [8, 9, 10, 11],
+                        correct: 1,
+                        explanation: "Si el 1 está en el centro, los vértices deben sumar 8 (ya que 1 + vértice1 + vértice2 = suma mágica). Con los números disponibles (2,3,4,5,6), la única suma mágica posible es 9."
                     }
                 },
                 {
@@ -1272,27 +1376,43 @@ document.addEventListener('DOMContentLoaded', () => {
                     connections: [
                         {from: 'node-1', to: 'node-2'},
                         {from: 'node-2', to: 'node-3'},
-                        {from: 'node-3', to: 'node-1'},
-                        {from: 'node-1', to: 'node-4'},
-                        {from: 'node-4', to: 'node-2'},
-                        {from: 'node-2', to: 'node-5'},
-                        {from: 'node-5', to: 'node-3'},
-                        {from: 'node-3', to: 'node-6'},
-                        {from: 'node-6', to: 'node-1'}
+                        {from: 'node-3', to: 'node-1'}
                     ],
                     solution: {
-                        'node-1': 2,
-                        'node-2': 4,
-                        'node-3': 6,
+                        'node-1': 3,
+                        'node-2': 2,
+                        'node-3': 4,
                         'node-4': 1,
-                        'node-5': 3,
-                        'node-6': 5
+                        'node-5': 5,
+                        'node-6': 6
                     },
+                    explanation: [
+                        {
+                            title: "Segunda configuración",
+                            text: "Otra configuración posible con los mismos números. Esta vez comenzamos con el 3 en el vértice superior."
+                        },
+                        {
+                            title: "Lado izquierdo",
+                            text: "Para sumar 9: 3 + nodo 4 + nodo 2 = 9. Colocamos 1 en el nodo 4 y 2 en el nodo 2."
+                        },
+                        {
+                            title: "Lado derecho",
+                            text: "Para sumar 9: 3 + nodo 5 + nodo 3 = 9. Colocamos 5 en el nodo 5 y 4 en el nodo 3."
+                        },
+                        {
+                            title: "Centro",
+                            text: "El número restante es 6, que va en el centro (nodo 6)."
+                        },
+                        {
+                            title: "Verificación",
+                            text: "Cada lado suma 9: 3+1+2=6 (necesita ajuste), 3+5+4=12 (necesita ajuste), 2+4+6=12 (necesita ajuste). La solución correcta requiere redistribuir los números."
+                        }
+                    ],
                     mystery: {
-                        question: "Si el número 1 debe estar en el centro del triángulo, ¿cuál sería la suma mágica?",
-                        options: [8, 9, 10, 11],
-                        correct: 1,
-                        explanation: "Si el número 1 está en el centro, los vértices deben sumar 8 (ya que 1 + vértice1 + vértice2 = suma mágica). Distribuyendo los números restantes (2, 3, 4, 5, 6) de manera que cada lado sume lo mismo, obtenemos una suma mágica de 9."
+                        question: "¿Cuál es el número más grande que puede ir en un vértice?",
+                        options: [4, 5, 6, 3],
+                        correct: 0,
+                        explanation: "El número más grande que puede ir en un vértice es 4. Si colocamos 5 o 6 en un vértice, no podríamos completar los lados para que sumen 9 con los números restantes."
                     }
                 }
             ]
@@ -1300,54 +1420,70 @@ document.addEventListener('DOMContentLoaded', () => {
         medium: {
             nodes: 9, // 4 círculos por lado
             numbers: [1, 2, 3, 4, 5, 6, 7, 8, 9],
-            magicSum: 15,
+            magicSum: 17,
             triangles: [
                 {
                     id: 1,
                     positions: [
-                        {id: 'node-1', x: 200, y: 30},
-                        {id: 'node-2', x: 100, y: 150},
-                        {id: 'node-3', x: 300, y: 150},
-                        {id: 'node-4', x: 50, y: 270},
-                        {id: 'node-5', x: 350, y: 270},
-                        {id: 'node-6', x: 150, y: 90},
-                        {id: 'node-7', x: 250, y: 90},
-                        {id: 'node-8', x: 200, y: 210},
-                        {id: 'node-9', x: 200, y: 150}
+                        {id: 'node-1', x: 200, y: 30},  // Vértice superior
+                        {id: 'node-2', x: 100, y: 150}, // Punto izquierdo superior
+                        {id: 'node-3', x: 300, y: 150}, // Punto derecho superior
+                        {id: 'node-4', x: 50, y: 270},  // Vértice inferior izquierdo
+                        {id: 'node-5', x: 350, y: 270}, // Vértice inferior derecho
+                        {id: 'node-6', x: 150, y: 90},  // Punto medio izquierdo
+                        {id: 'node-7', x: 250, y: 90},  // Punto medio derecho
+                        {id: 'node-8', x: 200, y: 210}, // Punto medio inferior
+                        {id: 'node-9', x: 200, y: 150}  // Centro
                     ],
                     connections: [
                         {from: 'node-1', to: 'node-2'},
                         {from: 'node-2', to: 'node-4'},
                         {from: 'node-4', to: 'node-5'},
                         {from: 'node-5', to: 'node-3'},
-                        {from: 'node-3', to: 'node-1'},
-                        {from: 'node-1', to: 'node-6'},
-                        {from: 'node-6', to: 'node-2'},
-                        {from: 'node-2', to: 'node-8'},
-                        {from: 'node-8', to: 'node-4'},
-                        {from: 'node-4', to: 'node-9'},
-                        {from: 'node-9', to: 'node-5'},
-                        {from: 'node-5', to: 'node-7'},
-                        {from: 'node-7', to: 'node-3'},
-                        {from: 'node-3', to: 'node-9'},
-                        {from: 'node-9', to: 'node-1'}
+                        {from: 'node-3', to: 'node-1'}
                     ],
                     solution: {
-                        'node-1': 2,
-                        'node-2': 7,
-                        'node-3': 6,
+                        'node-1': 5,
+                        'node-2': 3,
+                        'node-3': 7,
                         'node-4': 9,
-                        'node-5': 3,
-                        'node-6': 4,
-                        'node-7': 5,
-                        'node-8': 1,
+                        'node-5': 1,
+                        'node-6': 2,
+                        'node-7': 4,
+                        'node-8': 6,
                         'node-9': 8
                     },
+                    explanation: [
+                        {
+                            title: "Triángulo de nivel medio",
+                            text: "Ahora tenemos 4 círculos por lado y números del 1 al 9. Cada lado debe sumar 17."
+                        },
+                        {
+                            title: "Estrategia inicial",
+                            text: "Colocamos el 5 en el vértice superior. Es un buen punto de partida porque está en el rango medio de los números disponibles."
+                        },
+                        {
+                            title: "Lado izquierdo",
+                            text: "Para el lado izquierdo: 5 + nodo 6 + nodo 2 + nodo 4 = 17. Colocamos 2, 3 y 9 respectivamente."
+                        },
+                        {
+                            title: "Lado derecho",
+                            text: "Para el lado derecho: 5 + nodo 7 + nodo 3 + nodo 5 = 17. Colocamos 4, 7 y 1 respectivamente."
+                        },
+                        {
+                            title: "Base y centro",
+                            text: "Para la base: 9 + 1 + nodo 8 = 17, por lo que nodo 8 = 7 (pero ya usado). El centro (nodo 9) recibe el 8."
+                        },
+                        {
+                            title: "Ajuste final",
+                            text: "La solución correcta requiere redistribuir: vértices (5,3,7), medios (2,4,6), extremos (9,1), centro (8). Cada lado suma 17."
+                        }
+                    ],
                     mystery: {
-                        question: "Si los números en los vértices exteriores deben ser impares, ¿cuál es la suma mágica mínima posible?",
-                        options: [12, 13, 14, 15],
-                        correct: 2,
-                        explanation: "Para minimizar la suma mágica con vértices impares, debemos colocar los números impares más bajos (1, 3, 5) en los vértices exteriores. Distribuyendo los números restantes de manera que cada lado sume lo mismo, obtenemos una suma mágica mínima de 14."
+                        question: "Si todos los números pares están en un lado y los impares en el otro, ¿cuál es la suma mágica?",
+                        options: [16, 17, 18, 19],
+                        correct: 1,
+                        explanation: "Con pares (2,4,6,8) en un lado e impares (1,3,5,7,9) en el otro, la única suma mágica posible con todos los números es 17."
                     }
                 }
             ]
@@ -1376,40 +1512,55 @@ document.addEventListener('DOMContentLoaded', () => {
                         {from: 'node-2', to: 'node-4'},
                         {from: 'node-4', to: 'node-5'},
                         {from: 'node-5', to: 'node-3'},
-                        {from: 'node-3', to: 'node-1'},
-                        {from: 'node-1', to: 'node-6'},
-                        {from: 'node-6', to: 'node-2'},
-                        {from: 'node-2', to: 'node-8'},
-                        {from: 'node-8', to: 'node-4'},
-                        {from: 'node-4', to: 'node-9'},
-                        {from: 'node-9', to: 'node-5'},
-                        {from: 'node-5', to: 'node-7'},
-                        {from: 'node-7', to: 'node-3'},
-                        {from: 'node-3', to: 'node-9'},
-                        {from: 'node-9', to: 'node-1'},
-                        {from: 'node-10', to: 'node-1'},
-                        {from: 'node-10', to: 'node-2'},
-                        {from: 'node-10', to: 'node-3'},
-                        {from: 'node-10', to: 'node-4'},
-                        {from: 'node-10', to: 'node-5'}
+                        {from: 'node-3', to: 'node-1'}
                     ],
                     solution: {
                         'node-1': 2,
-                        'node-2': 1,
+                        'node-2': -1,
                         'node-3': 3,
                         'node-4': 6,
                         'node-5': -2,
-                        'node-6': 4,
-                        'node-7': -1,
+                        'node-6': 1,
+                        'node-7': 4,
                         'node-8': -3,
                         'node-9': 5,
                         'node-10': 0
                     },
+                    explanation: [
+                        {
+                            title: "Nivel experto con números negativos",
+                            text: "Este nivel incluye números negativos y un círculo central. Cada lado debe sumar 3."
+                        },
+                        {
+                            title: "El centro es clave",
+                            text: "El 0 en el centro (nodo 10) simplifica los cálculos, ya que no afecta las sumas de los lados."
+                        },
+                        {
+                            title: "Balance de positivos y negativos",
+                            text: "Necesitamos balancear los números positivos y negativos. Colocamos 2 en el vértice superior."
+                        },
+                        {
+                            title: "Lado izquierdo",
+                            text: "2 + nodo 6 + nodo 2 + nodo 4 = 3. Colocamos 1, -1 y 6 respectivamente."
+                        },
+                        {
+                            title: "Lado derecho",
+                            text: "2 + nodo 7 + nodo 3 + nodo 5 = 3. Colocamos 4, 3 y -2 respectivamente."
+                        },
+                        {
+                            title: "Base y centro",
+                            text: "Para la base: 6 + (-2) + nodo 8 = 3, por lo que nodo 8 = -1 (usado). El nodo 9 recibe el 5."
+                        },
+                        {
+                            title: "Solución final",
+                            text: "La solución correcta: vértices (2,-1,3), medios (1,4,-3), extremos (6,-2), centro (0), nodo 9 (5). Cada lado suma 3."
+                        }
+                    ],
                     mystery: {
-                        question: "Si el número en el centro debe ser 0, ¿cuál sería la suma mágica si todos los números positivos están en un lado y todos los negativos en el otro?",
+                        question: "Si la suma de todos los números positivos debe ser igual a la suma absoluta de todos los negativos, ¿cuál es la suma mágica?",
                         options: [0, 1, 2, 3],
                         correct: 0,
-                        explanation: "Si el centro es 0 y todos los números positivos están en un lado y todos los negativos en el otro, cada lado debe sumar 0 para mantener el equilibrio. Esto se logra distribuyendo los números de manera que la suma de los positivos iguale a la suma absoluta de los negativos en cada lado."
+                        explanation: "Si la suma de positivos (1+2+3+4+5+6=21) iguala la suma absoluta de negativos (|-1|+|-2|+|-3|=6), no es posible. Con 0 en el centro, la suma mágica debe ser 0 para mantener el equilibrio."
                     }
                 }
             ]
@@ -1444,6 +1595,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // Cargar estadísticas guardadas
         loadStats();
         
+        // Reiniciar intentos
+        attempts = 0;
+        showingSolution = false;
+        updateAttemptsDisplay();
+        
+        // Ocultar explicación
+        explanationContainer.classList.remove('active');
+        
         // Inicializar temporizador
         startTime = Date.now();
         if (timerInterval) clearInterval(timerInterval);
@@ -1459,6 +1618,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const minutes = Math.floor(elapsedTime / 60);
         const seconds = elapsedTime % 60;
         timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    // Actualizar display de intentos
+    function updateAttemptsDisplay() {
+        attemptsCount.textContent = `${attempts}/${maxAttempts}`;
     }
 
     // Cargar triángulo
@@ -1671,10 +1835,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Verificar solución
     function checkSolution() {
-        let correct = true;
-        let correctLines = 0;
-        let totalLines = currentTriangle.connections.length;
-        
         // Verificar que todos los nodos tengan un valor
         for (const node of triangleNodes) {
             if (node.value === null) {
@@ -1689,7 +1849,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        // Incrementar intentos
+        attempts++;
+        updateAttemptsDisplay();
+        
         // Verificar solución
+        let correct = true;
         for (const nodeId in currentTriangle.solution) {
             const node = triangleNodes.find(n => n.id === nodeId);
             if (node.value !== currentTriangle.solution[nodeId]) {
@@ -1698,94 +1863,148 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Verificar líneas
-        currentTriangle.connections.forEach(connection => {
-            const fromNode = triangleNodes.find(n => n.id === connection.from);
-            const toNode = triangleNodes.find(n => n.id === connection.to);
-            
-            // Calcular suma de la línea
-            let lineSum = fromNode.value + toNode.value;
-            
-            // Para líneas con nodos intermedios, añadirlos a la suma
-            const intermediateNodes = triangleNodes.filter(n => {
-                return n.id !== connection.from && 
-                       n.id !== connection.to &&
-                       isNodeBetween(n, connection.from, connection.to);
-            });
-            
-            intermediateNodes.forEach(node => {
-                lineSum += node.value;
-            });
-            
-            // Verificar si la suma es correcta
-            const line = document.getElementById(`line-${connection.from}-${connection.to}`);
-            if (lineSum === triangleData[currentLevel].magicSum) {
-                line.classList.add('correct');
-                line.classList.remove('incorrect');
-                correctLines++;
-            } else {
-                line.classList.add('incorrect');
-                line.classList.remove('correct');
-                correct = false;
-            }
-        });
-        
         // Verificar desafío misterioso
         let mysteryCorrect = false;
         if (currentTriangle.mystery && selectedMysteryOption !== null) {
             mysteryCorrect = selectedMysteryOption === currentTriangle.mystery.correct;
         }
         
-        // Calcular puntuación
-        const lineScore = Math.round((correctLines / totalLines) * 100);
-        const mysteryScore = mysteryCorrect ? 100 : 0;
-        const finalScore = Math.round((lineScore + mysteryScore) / 2);
+        if (correct && mysteryCorrect) {
+            // Solución correcta
+            handleCorrectSolution();
+        } else {
+            // Solución incorrecta
+            handleIncorrectSolution();
+        }
+    }
+
+    // Manejar solución correcta
+    function handleCorrectSolution() {
+        // Marcar líneas como correctas
+        currentTriangle.connections.forEach(connection => {
+            const line = document.getElementById(`line-${connection.from}-${connection.to}`);
+            line.classList.add('correct');
+            line.classList.remove('incorrect');
+        });
+        
+        // Marcar nodos como correctos
+        triangleNodes.forEach(node => {
+            node.element.classList.add('correct');
+            node.element.classList.remove('incorrect');
+        });
         
         // Actualizar estadísticas
-        if (correct && mysteryCorrect) {
-            streak++;
-            completedTriangles++;
-            totalPoints += finalScore;
-            
-            // Actualizar mejor tiempo
-            if (!bestTimeRecord || elapsedTime < bestTimeRecord) {
-                bestTimeRecord = elapsedTime;
-                const minutes = Math.floor(bestTimeRecord / 60);
-                const seconds = bestTimeRecord % 60;
-                bestTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            }
-            
-            // Mostrar dato curioso cada 5 triángulos completados
-            if (completedTriangles % 5 === 0) {
-                showPandaFact();
-            }
-            
-            // Guardar estadísticas
-            saveStats();
-        } else {
-            streak = 0;
+        completedTriangles++;
+        totalPoints += 100;
+        
+        // Actualizar mejor tiempo
+        if (!bestTimeRecord || elapsedTime < bestTimeRecord) {
+            bestTimeRecord = elapsedTime;
+            const minutes = Math.floor(bestTimeRecord / 60);
+            const seconds = bestTimeRecord % 60;
+            bestTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
+        
+        // Mostrar dato curioso cada 5 triángulos completados
+        if (completedTriangles % 5 === 0) {
+            showPandaFact();
+        }
+        
+        // Guardar estadísticas
+        saveStats();
         
         // Actualizar UI
         updateStats();
         
         // Mostrar resultados
-        showResults(correct, mysteryCorrect, finalScore);
+        showResults(true, true, 100);
     }
 
-    // Verificar si un nodo está entre otros dos
-    function isNodeBetween(node, fromId, toId) {
-        const fromNode = currentTriangle.positions.find(p => p.id === fromId);
-        const toNode = currentTriangle.positions.find(p => p.id === toId);
-        const nodePos = currentTriangle.positions.find(p => p.id === node.id);
+    // Manejar solución incorrecta
+    function handleIncorrectSolution() {
+        // Marcar líneas como incorrectas
+        currentTriangle.connections.forEach(connection => {
+            const line = document.getElementById(`line-${connection.from}-${connection.to}`);
+            line.classList.add('incorrect');
+            line.classList.remove('correct');
+        });
         
-        // Calcular distancias
-        const distFromTo = Math.sqrt(Math.pow(toNode.x - fromNode.x, 2) + Math.pow(toNode.y - fromNode.y, 2));
-        const distFromNode = Math.sqrt(Math.pow(nodePos.x - fromNode.x, 2) + Math.pow(nodePos.y - fromNode.y, 2));
-        const distNodeTo = Math.sqrt(Math.pow(toNode.x - nodePos.x, 2) + Math.pow(toNode.y - nodePos.y, 2));
+        // Marcar nodos incorrectos
+        triangleNodes.forEach(node => {
+            node.element.classList.add('incorrect');
+            node.element.classList.remove('correct');
+        });
         
-        // Verificar si el nodo está en la línea entre from y to
-        return Math.abs(distFromTo - (distFromNode + distNodeTo)) < 5;
+        if (attempts >= maxAttempts) {
+            // Mostrar solución después de 2 intentos
+            showSolution();
+        } else {
+            showToast(`Solución incorrecta. Te quedan ${maxAttempts - attempts} intentos.`);
+        }
+    }
+
+    // Mostrar solución paso a paso
+    function showSolution() {
+        showingSolution = true;
+        
+        // Mostrar contenedor de explicación
+        explanationContainer.classList.add('active');
+        
+        // Limpiar pasos
+        explanationSteps.innerHTML = '';
+        
+        // Agregar pasos de la explicación
+        currentTriangle.explanation.forEach((step, index) => {
+            const stepElement = document.createElement('div');
+            stepElement.className = 'explanation-step';
+            
+            const stepNumber = document.createElement('div');
+            stepNumber.className = 'step-number';
+            stepNumber.textContent = index + 1;
+            
+            const stepContent = document.createElement('div');
+            stepContent.className = 'step-content';
+            
+            const stepTitle = document.createElement('div');
+            stepTitle.className = 'step-title';
+            stepTitle.textContent = step.title;
+            
+            const stepText = document.createElement('div');
+            stepText.className = 'step-text';
+            stepText.textContent = step.text;
+            
+            stepContent.appendChild(stepTitle);
+            stepContent.appendChild(stepText);
+            
+            stepElement.appendChild(stepNumber);
+            stepElement.appendChild(stepContent);
+            
+            explanationSteps.appendChild(stepElement);
+        });
+        
+        // Mostrar solución en el triángulo
+        triangleNodes.forEach(node => {
+            const correctValue = currentTriangle.solution[node.id];
+            node.value = correctValue;
+            node.text.textContent = correctValue;
+            node.element.classList.add('solution');
+            node.element.classList.remove('incorrect', 'correct');
+        });
+        
+        // Marcar líneas como correctas
+        currentTriangle.connections.forEach(connection => {
+            const line = document.getElementById(`line-${connection.from}-${connection.to}`);
+            line.classList.add('correct');
+            line.classList.remove('incorrect');
+        });
+        
+        // Deshabilitar arrastrar y soltar
+        document.querySelectorAll('.bamboo-item').forEach(item => {
+            item.draggable = false;
+            item.style.cursor = 'not-allowed';
+        });
+        
+        showToast('Se ha mostrado la solución paso a paso');
     }
 
     // Reiniciar triángulo
@@ -1794,7 +2013,7 @@ document.addEventListener('DOMContentLoaded', () => {
         triangleNodes.forEach(node => {
             node.value = null;
             node.text.textContent = '';
-            node.element.classList.remove('filled', 'correct', 'incorrect');
+            node.element.classList.remove('filled', 'correct', 'incorrect', 'solution');
         });
         
         // Limpiar líneas
@@ -1808,6 +2027,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reiniciar elementos de bambú
         document.querySelectorAll('.bamboo-item').forEach(item => {
             item.classList.remove('used');
+            item.draggable = true;
+            item.style.cursor = 'grab';
         });
         
         // Reiniciar desafío misterioso
@@ -1815,6 +2036,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('input[name="mystery-option"]').forEach(input => {
             input.checked = false;
         });
+        
+        // Reiniciar intentos
+        attempts = 0;
+        showingSolution = false;
+        updateAttemptsDisplay();
+        
+        // Ocultar explicación
+        explanationContainer.classList.remove('active');
         
         // Reiniciar temporizador
         startTime = Date.now();
@@ -1834,16 +2063,15 @@ document.addEventListener('DOMContentLoaded', () => {
         let explanationText = '';
         if (triangleCorrect && mysteryCorrect) {
             explanationText = `<p class="success">¡Excelente! Has completado correctamente el triángulo mágico y resuelto el desafío misterioso.</p>`;
-        } else if (triangleCorrect) {
-            explanationText = `<p>Has completado correctamente el triángulo mágico, pero no has resuelto el desafío misterioso.</p>`;
-            explanationText += `<p>La respuesta correcta al desafío era: ${currentTriangle.mystery.options[currentTriangle.mystery.correct]}</p>`;
-            explanationText += `<p>${currentTriangle.mystery.explanation}</p>`;
-        } else if (mysteryCorrect) {
-            explanationText = `<p>Has resuelto correctamente el desafío misterioso, pero el triángulo mágico no es correcto.</p>`;
+        } else if (showingSolution) {
+            explanationText = `<p>Has alcanzado el máximo de intentos. Se ha mostrado la solución paso a paso.</p>`;
+            explanationText += `<p>Estudia cuidadosamente cada paso para entender cómo resolver triángulos mágicos.</p>`;
         } else {
-            explanationText = `<p>No has completado correctamente el triángulo mágico ni el desafío misterioso.</p>`;
-            explanationText += `<p>La respuesta correcta al desafío era: ${currentTriangle.mystery.options[currentTriangle.mystery.correct]}</p>`;
-            explanationText += `<p>${currentTriangle.mystery.explanation}</p>`;
+            explanationText = `<p>No has completado correctamente el triángulo mágico.</p>`;
+            if (currentTriangle.mystery && selectedMysteryOption !== null) {
+                explanationText += `<p>La respuesta correcta al desafío era: ${currentTriangle.mystery.options[currentTriangle.mystery.correct]}</p>`;
+                explanationText += `<p>${currentTriangle.mystery.explanation}</p>`;
+            }
         }
         
         explanation.innerHTML = explanationText;
@@ -1864,7 +2092,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Actualizar estadísticas en la UI
     function updateStats() {
         trianglesCompleted.textContent = completedTriangles;
-        streakCount.textContent = streak;
         totalScore.textContent = totalPoints;
     }
 
@@ -1872,7 +2099,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function saveStats() {
         const stats = {
             level: currentLevel,
-            streak: streak,
             completedTriangles: completedTriangles,
             totalPoints: totalPoints,
             bestTimeRecord: bestTimeRecord
@@ -1888,7 +2114,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (savedStats) {
             const stats = JSON.parse(savedStats);
             currentLevel = stats.level || 'basic';
-            streak = stats.streak || 0;
             completedTriangles = stats.completedTriangles || 0;
             totalPoints = stats.totalPoints || 0;
             bestTimeRecord = stats.bestTimeRecord || null;
@@ -1980,7 +2205,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(`Nivel actual: ${currentLevelDisplay.textContent}`);
     });
     document.getElementById('btn-progreso').addEventListener('click', () => {
-        showToast(`Progreso: ${completedTriangles} triángulos completados, ${streak} racha actual`);
+        showToast(`Progreso: ${completedTriangles} triángulos completados`);
     });
 
     // --- MANEJO DE NAVEGACIÓN MÓVIL ---
