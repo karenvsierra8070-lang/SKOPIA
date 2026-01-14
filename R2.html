@@ -389,6 +389,44 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     pointer-events: none;
 }
 
+.circle-input {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    border: 2px solid var(--color-oliva-oscuro);
+    border-radius: 50%;
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    background-color: white;
+    color: var(--color-oliva-oscuro);
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.circle-input:focus {
+    border-color: var(--color-bambu-verde);
+    box-shadow: 0 0 10px rgba(139, 195, 74, 0.3);
+}
+
+.circle-input.predefined {
+    background-color: #e0e0e0;
+    cursor: not-allowed;
+    border-color: #999;
+}
+
+.circle-input.correct {
+    background-color: #4CAF50;
+    color: white;
+    border-color: #4CAF50;
+}
+
+.circle-input.incorrect {
+    background-color: #f44336;
+    color: white;
+    border-color: #f44336;
+}
+
 .triangle-line {
     stroke: #ccc;
     stroke-width: 3;
@@ -405,8 +443,8 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     stroke-width: 5;
 }
 
-/* --- Contenedor de Bambú (Números) --- */
-.bamboo-container {
+/* --- Contenedor de Números Disponibles --- */
+.numbers-container {
     background-color: white;
     border-radius: 16px;
     padding: 20px;
@@ -414,7 +452,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     margin-bottom: 30px;
 }
 
-.bamboo-title {
+.numbers-title {
     font-family: 'Patrick Hand', cursive;
     font-size: 1.5rem;
     color: var(--color-oliva-oscuro);
@@ -422,67 +460,17 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     text-align: center;
 }
 
-.bamboo-items {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 15px;
+.numbers-info {
+    text-align: center;
+    color: var(--color-oliva-medio);
+    margin-bottom: 10px;
 }
 
-.bamboo-item {
-    width: 60px;
-    height: 100px;
-    background-color: var(--color-bambu-verde);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
+.numbers-range {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem;
+    color: var(--color-oliva-oscuro);
     font-weight: bold;
-    color: white;
-    cursor: grab;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    position: relative;
-}
-
-.bamboo-item:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-}
-
-.bamboo-item.dragging {
-    cursor: grabbing;
-    opacity: 0.7;
-    transform: scale(1.1);
-}
-
-.bamboo-item::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 50%;
-    width: 10px;
-    height: 20px;
-    background-color: var(--color-bambu-oscuro);
-    transform: translateX(-50%);
-    border-radius: 5px 5px 0 0;
-}
-
-.bamboo-item::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    width: 10px;
-    height: 20px;
-    background-color: var(--color-bambu-oscuro);
-    transform: translateX(-50%);
-    border-radius: 0 0 5px 5px;
-}
-
-.bamboo-item.used {
-    opacity: 0.4;
-    cursor: not-allowed;
 }
 
 /* --- Desafío de Suma Misteriosa --- */
@@ -1136,6 +1124,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                     <svg class="triangle-svg" id="triangle-svg">
                         <!-- El triángulo se generará dinámicamente con JavaScript -->
                     </svg>
+                    <!-- Los inputs se generarán dinámicamente con JavaScript -->
                 </div>
                 
                 <div class="game-controls">
@@ -1148,10 +1137,11 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                 </div>
             </div>
             
-            <div class="bamboo-container">
-                <h3 class="bamboo-title">Arrastra el Bambú</h3>
-                <div class="bamboo-items" id="bamboo-items">
-                    <!-- Los números de bambú se generarán dinámicamente con JavaScript -->
+            <div class="numbers-container">
+                <h3 class="numbers-title">Números Disponibles</h3>
+                <div class="numbers-info">
+                    <p>Puedes usar cualquier número en el rango:</p>
+                    <div class="numbers-range" id="numbers-range">1 - 6</div>
                 </div>
             </div>
             
@@ -1266,7 +1256,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const timeDisplay = document.getElementById('time-display');
     const attemptsCount = document.getElementById('attempts-count');
     const triangleSvg = document.getElementById('triangle-svg');
-    const bambooItems = document.getElementById('bamboo-items');
+    const triangleWrapper = document.querySelector('.triangle-wrapper');
+    const numbersRange = document.getElementById('numbers-range');
     const checkBtn = document.getElementById('check-btn');
     const resetBtn = document.getElementById('reset-btn');
     const mysteryContainer = document.getElementById('mystery-container');
@@ -1292,9 +1283,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentLevel = 'basic';
     let currentTriangle = null;
     let triangleNodes = [];
-    let bambooNumbers = [];
-    let usedNumbers = [];
-    let predefinedNumbers = [];
     let startTime = null;
     let timerInterval = null;
     let elapsedTime = 0;
@@ -1310,7 +1298,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const triangleData = {
         basic: {
             nodes: 6, // 3 círculos por lado
-            numbers: [1, 2, 3, 4, 5, 6],
+            minNumber: 1,
+            maxNumber: 6,
             magicSum: 9,
             triangles: [
                 {
@@ -1338,7 +1327,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     solution: {
                         'node-1': 4,
                         'node-2': 3,
-                        'node-3': 4, // Error en la solución original - debería ser 2 para que funcione
+                        'node-3': 4,
                         'node-4': 2,
                         'node-5': 1,
                         'node-6': 2
@@ -1366,7 +1355,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         },
                         {
                             title: "Resolver el sistema",
-                            text: "De las ecuaciones: nodo 2 + nodo 3 = 7, nodo 4 + nodo 2 = 5, nodo 5 + nodo 3 = 5. Los números disponibles son 1, 3, 5, 6. La solución es: nodo 2=3, nodo 3=4, nodo 4=2, nodo 5=1."
+                            text: "De las ecuaciones: nodo 2 + nodo 3 = 7, nodo 4 + nodo 2 = 5, nodo 5 + nodo 3 = 5. Con números del 1 al 6, la solución es: nodo 2=3, nodo 3=4, nodo 4=2, nodo 5=1."
                         }
                     ],
                     mystery: {
@@ -1380,7 +1369,8 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         medium: {
             nodes: 9, // 4 círculos por lado
-            numbers: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+            minNumber: 1,
+            maxNumber: 9,
             magicSum: 17,
             triangles: [
                 {
@@ -1458,7 +1448,8 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         expert: {
             nodes: 10, // 4 círculos por lado + 1 en el centro
-            numbers: [-3, -2, -1, 0, 1, 2, 3, 4, 5, 6],
+            minNumber: -3,
+            maxNumber: 6,
             magicSum: 3,
             triangles: [
                 {
@@ -1602,8 +1593,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const triangles = levelData.triangles;
         currentTriangle = triangles[Math.floor(Math.random() * triangles.length)];
         
-        // Limpiar SVG
+        // Actualizar rango de números
+        numbersRange.textContent = `${levelData.minNumber} - ${levelData.maxNumber}`;
+        
+        // Limpiar SVG y contenedor
         triangleSvg.innerHTML = '';
+        
+        // Eliminar inputs anteriores
+        document.querySelectorAll('.circle-input').forEach(input => input.remove());
         
         // Dibujar conexiones
         currentTriangle.connections.forEach(connection => {
@@ -1620,9 +1617,8 @@ document.addEventListener('DOMContentLoaded', () => {
             triangleSvg.appendChild(line);
         });
         
-        // Dibujar nodos
+        // Dibujar nodos y crear inputs
         triangleNodes = [];
-        predefinedNumbers = [];
         
         currentTriangle.positions.forEach(position => {
             const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -1649,63 +1645,72 @@ document.addEventListener('DOMContentLoaded', () => {
                 predefinedValue = currentTriangle.predefined[position.id];
                 circle.classList.add('predefined');
                 text.textContent = predefinedValue;
-                predefinedNumbers.push(predefinedValue);
             }
             
             g.appendChild(circle);
             g.appendChild(text);
             triangleSvg.appendChild(g);
             
+            // Crear input para el usuario
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.className = 'circle-input';
+            input.id = `input-${position.id}`;
+            input.style.left = `${position.x - 25}px`;
+            input.style.top = `${position.y - 25}px`;
+            
+            if (isPredefined) {
+                input.value = predefinedValue;
+                input.readOnly = true;
+                input.classList.add('predefined');
+            } else {
+                input.min = levelData.minNumber;
+                input.max = levelData.maxNumber;
+                input.addEventListener('input', handleInputChange);
+            }
+            
+            triangleWrapper.appendChild(input);
+            
             triangleNodes.push({
                 id: position.id,
                 element: circle,
                 text: text,
+                input: input,
                 value: predefinedValue,
                 isPredefined: isPredefined
             });
-            
-            // Añadir eventos de arrastrar y soltar solo si no es predefinido
-            if (!isPredefined) {
-                setupDragAndDrop(circle, position.id);
-            }
         });
-        
-        // Generar números de bambú (excluyendo los predefinidos)
-        generateBambooNumbers();
         
         // Configurar desafío misterioso
         setupMysteryChallenge();
     }
 
-    // Generar números de bambú
-    function generateBambooNumbers() {
+    // Manejar cambios en los inputs
+    function handleInputChange(e) {
+        const input = e.target;
+        const value = parseInt(input.value);
+        const nodeId = input.id.replace('input-', '');
+        
+        // Validar rango
         const levelData = triangleData[currentLevel];
+        if (value < levelData.minNumber || value > levelData.maxNumber) {
+            input.value = '';
+            showToast(`El número debe estar entre ${levelData.minNumber} y ${levelData.maxNumber}`);
+            return;
+        }
         
-        // Filtrar los números predefinidos
-        bambooNumbers = levelData.numbers.filter(num => !predefinedNumbers.includes(num));
-        usedNumbers = [...predefinedNumbers];
-        
-        // Mezclar números
-        bambooNumbers.sort(() => Math.random() - 0.5);
-        
-        // Limpiar contenedor de bambú
-        bambooItems.innerHTML = '';
-        
-        // Crear elementos de bambú
-        bambooNumbers.forEach((number, index) => {
-            const bambooItem = document.createElement('div');
-            bambooItem.className = 'bamboo-item';
-            bambooItem.textContent = number;
-            bambooItem.setAttribute('data-number', number);
-            bambooItem.setAttribute('data-index', index);
-            bambooItem.draggable = true;
-            
-            // Añadir eventos de arrastrar
-            bambooItem.addEventListener('dragstart', handleDragStart);
-            bambooItem.addEventListener('dragend', handleDragEnd);
-            
-            bambooItems.appendChild(bambooItem);
-        });
+        // Actualizar valor en el nodo
+        const node = triangleNodes.find(n => n.id === nodeId);
+        if (node) {
+            node.value = value;
+            if (value) {
+                node.text.textContent = value;
+                node.element.classList.add('filled');
+            } else {
+                node.text.textContent = '';
+                node.element.classList.remove('filled');
+            }
+        }
     }
 
     // Configurar desafío misterioso
@@ -1744,102 +1749,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Configurar arrastrar y soltar
-    function setupDragAndDrop(element, nodeId) {
-        element.addEventListener('dragover', handleDragOver);
-        element.addEventListener('drop', handleDrop.bind(null, nodeId));
-    }
-
-    // Manejar inicio de arrastre
-    function handleDragStart(e) {
-        e.target.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/html', e.target.innerHTML);
-        e.dataTransfer.setData('number', e.target.getAttribute('data-number'));
-        e.dataTransfer.setData('index', e.target.getAttribute('data-index'));
-    }
-
-    // Manejar fin de arrastre
-    function handleDragEnd(e) {
-        e.target.classList.remove('dragging');
-    }
-
-    // Manejar arrastre sobre un elemento
-    function handleDragOver(e) {
-        if (e.preventDefault) {
-            e.preventDefault();
-        }
-        e.dataTransfer.dropEffect = 'move';
-        return false;
-    }
-
-    // Manejar soltar en un nodo
-    function handleDrop(nodeId, e) {
-        if (e.stopPropagation) {
-            e.stopPropagation();
-        }
-        
-        const number = parseInt(e.dataTransfer.getData('number'));
-        const index = parseInt(e.dataTransfer.getData('index'));
-        
-        // Verificar si el nodo es predefinido
-        const node = triangleNodes.find(n => n.id === nodeId);
-        if (node.isPredefined) {
-            showToast('Este nodo tiene un valor predefinido');
-            return false;
-        }
-        
-        // Verificar si el número ya fue usado
-        if (usedNumbers.includes(number)) {
-            showToast('Este número ya ha sido usado');
-            return false;
-        }
-        
-        // Si el nodo ya tiene un valor, devolver el número anterior al bambú
-        if (node.value !== null) {
-            const previousIndex = usedNumbers.indexOf(node.value);
-            if (previousIndex !== -1) {
-                usedNumbers.splice(previousIndex, 1);
-                
-                // Actualizar elemento de bambú
-                const bambooItem = document.querySelector(`.bamboo-item[data-number="${node.value}"]`);
-                if (bambooItem) {
-                    bambooItem.classList.remove('used');
-                }
-            }
-        }
-        
-        // Asignar nuevo valor al nodo
-        node.value = number;
-        node.text.textContent = number;
-        node.element.classList.add('filled');
-        
-        // Marcar número como usado
-        usedNumbers.push(number);
-        
-        // Actualizar elemento de bambú
-        const bambooItem = document.querySelector(`.bamboo-item[data-number="${number}"]`);
-        if (bambooItem) {
-            bambooItem.classList.add('used');
-        }
-        
-        return false;
-    }
-
     // Verificar solución
     function checkSolution() {
         // Verificar que todos los nodos tengan un valor
         for (const node of triangleNodes) {
-            if (node.value === null) {
+            if (node.value === null || node.value === '') {
                 showToast('Por favor, completa todos los nodos del triángulo');
                 return;
             }
-        }
-        
-        // Verificar que todos los números hayan sido usados
-        if (usedNumbers.length !== triangleData[currentLevel].numbers.length) {
-            showToast('Por favor, usa todos los números disponibles');
-            return;
         }
         
         // Incrementar intentos
@@ -1884,6 +1801,8 @@ document.addEventListener('DOMContentLoaded', () => {
         triangleNodes.forEach(node => {
             node.element.classList.add('correct');
             node.element.classList.remove('incorrect');
+            node.input.classList.add('correct');
+            node.input.classList.remove('incorrect');
         });
         
         // Actualizar estadísticas
@@ -1926,6 +1845,8 @@ document.addEventListener('DOMContentLoaded', () => {
         triangleNodes.forEach(node => {
             node.element.classList.add('incorrect');
             node.element.classList.remove('correct');
+            node.input.classList.add('incorrect');
+            node.input.classList.remove('correct');
         });
         
         if (attempts >= maxAttempts) {
@@ -1980,8 +1901,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const correctValue = currentTriangle.solution[node.id];
             node.value = correctValue;
             node.text.textContent = correctValue;
+            node.input.value = correctValue;
             node.element.classList.add('solution');
             node.element.classList.remove('incorrect', 'correct');
+            node.input.classList.add('solution');
+            node.input.classList.remove('incorrect', 'correct');
         });
         
         // Marcar líneas como correctas
@@ -1989,12 +1913,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const line = document.getElementById(`line-${connection.from}-${connection.to}`);
             line.classList.add('correct');
             line.classList.remove('incorrect');
-        });
-        
-        // Deshabilitar arrastrar y soltar
-        document.querySelectorAll('.bamboo-item').forEach(item => {
-            item.draggable = false;
-            item.style.cursor = 'not-allowed';
         });
         
         showToast('Se ha mostrado la solución paso a paso');
@@ -2007,28 +1925,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!node.isPredefined) {
                 node.value = null;
                 node.text.textContent = '';
+                node.input.value = '';
                 node.element.classList.remove('filled', 'correct', 'incorrect', 'solution');
+                node.input.classList.remove('correct', 'incorrect', 'solution');
             } else {
                 // Restaurar valores predefinidos
                 node.value = currentTriangle.predefined[node.id];
                 node.text.textContent = node.value;
                 node.element.classList.remove('correct', 'incorrect', 'solution');
+                node.input.classList.remove('correct', 'incorrect', 'solution');
             }
         });
         
         // Limpiar líneas
         document.querySelectorAll('.triangle-line').forEach(line => {
             line.classList.remove('correct', 'incorrect');
-        });
-        
-        // Reiniciar números usados (mantener predefinidos)
-        usedNumbers = [...predefinedNumbers];
-        
-        // Reiniciar elementos de bambú
-        document.querySelectorAll('.bamboo-item').forEach(item => {
-            item.classList.remove('used');
-            item.draggable = true;
-            item.style.cursor = 'grab';
         });
         
         // Reiniciar desafío misterioso
