@@ -1161,6 +1161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let usedNumbers = [];
     let completedTriangles = 0;
     let draggedNumber = null;
+    let usedTriangleIds = []; // Para evitar repetir el mismo triángulo
     
     // --- DATOS DE LOS TRIÁNGULOS ---
     const trianglesData = {
@@ -1185,38 +1186,80 @@ document.addEventListener('DOMContentLoaded', () => {
                 preFilled: { node3: 8, node6: 3 },
                 availableNumbers: [1, 2, 4, 5, 6, 7, 9],
                 hint: "Para sumar 18, necesitas números más grandes. Por ejemplo: 8+9+1=18, 8+7+3=18, 3+6+9=18."
+            },
+            {
+                id: 4,
+                magicSum: 20,
+                preFilled: { node1: 9, node5: 3 },
+                availableNumbers: [1, 2, 4, 5, 6, 7, 8],
+                hint: "Para sumar 20, busca combinaciones como 9+3+8=20, 9+6+5=20, o 8+7+5=20."
+            },
+            {
+                id: 5,
+                magicSum: 16,
+                preFilled: { node2: 7, node4: 2 },
+                availableNumbers: [1, 3, 4, 5, 6, 8, 9],
+                hint: "Para sumar 16, busca combinaciones como 7+2+7=16 (no puedes repetir), 7+6+3=16, o 2+9+5=16."
+            },
+            {
+                id: 6,
+                magicSum: 14,
+                preFilled: { node3: 6, node6: 2 },
+                availableNumbers: [1, 3, 4, 5, 7, 8, 9],
+                hint: "Para sumar 14, busca combinaciones como 6+2+6=14 (no puedes repetir), 6+5+3=14, o 2+9+3=14."
             }
         ],
         medium: [
             {
-                id: 4,
+                id: 7,
                 magicSum: 30,
                 preFilled: { node1: 12, node4: 8 },
                 availableNumbers: [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19],
                 hint: "Con números más grandes, busca combinaciones que sumen 30. Por ejemplo: 12+8+10=30, 12+9+9=30 (pero no puedes repetir), o 10+15+5=30."
             },
             {
-                id: 5,
+                id: 8,
                 magicSum: 40,
                 preFilled: { node2: 15, node5: 10 },
                 availableNumbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19],
                 hint: "Para 40, necesitas combinar números grandes. Por ejemplo: 15+10+15=40 (no puedes repetir), 15+12+13=40, o 10+19+11=40."
+            },
+            {
+                id: 9,
+                magicSum: 35,
+                preFilled: { node1: 14, node6: 8 },
+                availableNumbers: [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19],
+                hint: "Para 35, busca combinaciones como 14+8+13=35, 14+12+9=35, o 8+19+8=35 (no puedes repetir)."
+            },
+            {
+                id: 10,
+                magicSum: 45,
+                preFilled: { node2: 18, node4: 12 },
+                availableNumbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 19],
+                hint: "Para 45, necesitas combinar números grandes. Por ejemplo: 18+12+15=45, 18+13+14=45, o 12+19+14=45."
             }
         ],
         expert: [
             {
-                id: 6,
+                id: 11,
                 magicSum: 20,
                 preFilled: { node1: 8, node4: -2 },
                 availableNumbers: [-5, -3, -1, 0, 2, 4, 6, 10, 12],
                 hint: "Con números negativos, las combinaciones pueden incluir positivos y negativos. Por ejemplo: 8+(-2)+14=20, 8+6+6=20 (no puedes repetir), o -2+12+10=20."
             },
             {
-                id: 7,
+                id: 12,
                 magicSum: 15,
                 preFilled: { node2: 5.5, node5: 2.5 },
                 availableNumbers: [0.5, 1, 1.5, 2, 3, 3.5, 4, 4.5, 6, 6.5, 7],
                 hint: "Con fracciones, necesitas precisión. Por ejemplo: 5.5+2.5+7=15, 5.5+4.5+5=15 (no puedes repetir 5.5), o 2.5+6+6.5=15."
+            },
+            {
+                id: 13,
+                magicSum: 10,
+                preFilled: { node1: 4, node6: -1 },
+                availableNumbers: [-8, -6, -4, -2, 0, 2, 4, 6, 8],
+                hint: "Con números negativos y positivos, busca combinaciones como 4+(-1)+7=10, 4+2+4=10 (no puedes repetir), o -1+6+5=10."
             }
         ]
     };
@@ -1248,6 +1291,7 @@ document.addEventListener('DOMContentLoaded', () => {
         score = 0;
         streak = 0;
         completedTriangles = 0;
+        usedTriangleIds = [];
         updateScore();
         updateStreak();
         
@@ -1275,10 +1319,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cargar un triángulo
     function loadTriangle() {
-        // Obtener un triángulo aleatorio del nivel actual
+        // Obtener triángulos disponibles del nivel actual
         const levelTriangles = trianglesData[currentLevel];
-        const randomIndex = Math.floor(Math.random() * levelTriangles.length);
-        currentTriangle = levelTriangles[randomIndex];
+        
+        // Filtrar triángulos que no se han usado
+        const availableTriangles = levelTriangles.filter(triangle => !usedTriangleIds.includes(triangle.id));
+        
+        // Si no hay triángulos disponibles, reiniciar la lista de usados
+        if (availableTriangles.length === 0) {
+            usedTriangleIds = [];
+            showToast("¡Has completado todos los triángulos de este nivel! Comenzando de nuevo.");
+        }
+        
+        // Seleccionar un triángulo aleatorio de los disponibles
+        const randomIndex = Math.floor(Math.random() * availableTriangles.length);
+        currentTriangle = availableTriangles[randomIndex];
+        
+        // Marcar este triángulo como usado
+        usedTriangleIds.push(currentTriangle.id);
         
         // Reiniciar variables del triángulo
         triangleNodes = {};
@@ -1443,7 +1501,7 @@ document.addEventListener('DOMContentLoaded', () => {
         draggedNumber = null;
     }
 
-    // Verificar la respuesta - CORREGIDA PARA DETECTAR AUTOMÁTICAMENTE LAS SUMAS
+    // Verificar la respuesta
     function checkAnswer() {
         // Comprobar si todos los nodos están llenos
         if (Object.keys(triangleNodes).length < 6) {
@@ -1462,16 +1520,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const node5 = parseFloat(triangleNodes.node5) || 0;
         const node6 = parseFloat(triangleNodes.node6) || 0;
         
-        // CORRECCIÓN: Calcular las sumas basándonos en la posición visual de los nodos
-        // Usando las coordenadas de los nodos para determinar qué nodos forman cada lado
-        
-        // Lado 1: Nodo 1 (arriba) - Nodo 4 (medio-derecha) - Nodo 2 (derecha)
+        // Calcular las sumas basándonos en la posición visual de los nodos
         const side1Sum = node1 + node4 + node2;
-        
-        // Lado 2: Nodo 2 (derecha) - Nodo 6 (centro-base) - Nodo 3 (izquierda)
         const side2Sum = node2 + node6 + node3;
-        
-        // Lado 3: Nodo 3 (izquierda) - Nodo 5 (medio-izquierda) - Nodo 1 (arriba)
         const side3Sum = node3 + node5 + node1;
         
         // Verificar que no haya números repetidos
@@ -1553,7 +1604,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const node5 = solution.node5 || preFilled.node5;
             const node6 = solution.node6 || preFilled.node6;
             
-            // CORRECCIÓN: Usar la misma lógica que en checkAnswer
             const side1 = node1 + node4 + node2;
             const side2 = node2 + node6 + node3;
             const side3 = node3 + node5 + node1;
@@ -1764,6 +1814,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         document.querySelector(`.level-card[data-level="${level}"]`).classList.add('active');
         
+        // Reiniciar la lista de triángulos usados al cambiar de nivel
+        usedTriangleIds = [];
+        
         // Cargar un nuevo triángulo
         loadTriangle();
         
@@ -1839,10 +1892,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     continueBtn.addEventListener('click', () => {
         resultsModal.style.display = 'none';
-        if (nextBtn.style.display === 'flex') {
-            loadTriangle();
-            startTimer();
-        }
+        // Siempre cargar un nuevo triángulo al continuar
+        loadTriangle();
+        startTimer();
     });
     
     window.addEventListener('click', (event) => {
