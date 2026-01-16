@@ -796,6 +796,7 @@
             color: white;
             cursor: pointer;
             transition: all 0.3s ease;
+            position: relative;
         }
 
         .symbol-gate:hover {
@@ -803,11 +804,28 @@
         }
 
         .symbol-gate.correct {
-            background-color: var(--color-bambu);
+            animation: correctGate 0.5s ease;
+            background-color: var(--color-bambu) !important;
+            box-shadow: 0 0 20px rgba(124, 179, 66, 0.8);
         }
 
         .symbol-gate.incorrect {
-            background-color: var(--color-rojo-panda);
+            animation: incorrectGate 0.5s ease;
+            background-color: var(--color-rojo-panda) !important;
+            box-shadow: 0 0 20px rgba(255, 82, 82, 0.8);
+        }
+
+        @keyframes correctGate {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes incorrectGate {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+            100% { transform: translateX(0); }
         }
 
         .phrase-prompt {
@@ -1081,8 +1099,8 @@
             background-color: white;
             border-radius: 20px;
             padding: 30px;
-            max-width: 90vw;
-            max-height: 90vh;
+            max-width: 95vw;
+            max-height: 95vh;
             overflow-y: auto;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             position: relative;
@@ -1109,7 +1127,7 @@
 
         .pdf-viewer, .video-player {
             width: 100%;
-            height: 70vh;
+            height: 80vh;
             border: none;
             border-radius: 10px;
         }
@@ -1620,11 +1638,11 @@
                         </div>
                     </div>
                     <div class="game-controls">
-                        <button class="game-button" id="btn-start-bridge">
-                            <i class="fas fa-play"></i> Iniciar Carrera
+                        <button class="game-button" id="btn-new-phrase">
+                            <i class="fas fa-file-alt"></i> Generar Nuevo Texto
                         </button>
                         <button class="game-button secondary" id="btn-reset-bridge">
-                            <i class="fas fa-redo"></i> Reiniciar
+                            <i class="fas fa-redo"></i> Reiniciar Intentos
                         </button>
                     </div>
                 </div>
@@ -1756,7 +1774,7 @@
             const pandaRunner = document.getElementById('panda-runner');
             const symbolGates = document.querySelectorAll('.symbol-gate');
             const phrasePrompt = document.getElementById('phrase-prompt');
-            const btnStartBridge = document.getElementById('btn-start-bridge');
+            const btnNewPhrase = document.getElementById('btn-new-phrase');
             const btnResetBridge = document.getElementById('btn-reset-bridge');
             
             // Salón de Tautologías
@@ -1775,10 +1793,6 @@
             
             // --- VARIABLES DE ESTADO ---
             let currentGameMode = 'connection';
-            let bridgeGameActive = false;
-            let currentBridgePosition = 10;
-            let currentPhrase = '';
-            let correctSymbol = '';
             let unlockedStatues = ['modus-ponens', 'modus-tollens'];
             let gameProgress = {
                 connection: 0,
@@ -1792,6 +1806,9 @@
             let selectedTableRow = null;
             let selectedFood = null;
             let currentPropositionIndex = 0;
+            let currentPhraseIndex = 0;
+            let bridgeAttempts = 0;
+            let selectedGate = null;
             
             // --- BASE DE DATOS DEL JUEGO ---
             const premises = [
@@ -1875,8 +1892,155 @@
                     text: "El panda está feliz si y solo si come bambú",
                     symbol: "biconditional",
                     explanation: "Esta frase requiere el símbolo de bicondicional (↔) porque expresa una equivalencia."
+                },
+                {
+                    text: "O el panda está jugando o está durmiendo",
+                    symbol: "disjunction",
+                    explanation: "Esta frase requiere el símbolo de disyunción (∨) porque presenta una alternativa."
+                },
+                {
+                    text: "Es falso que el panda pueda volar y nadar",
+                    symbol: "negation",
+                    explanation: "Esta frase requiere el símbolo de negación (¬) porque niega una proposición compuesta."
+                },
+                {
+                    text: "El panda estudia lógica y medita",
+                    symbol: "conjunction",
+                    explanation: "Esta frase requiere el símbolo de conjunción (∧) porque une dos actividades simultáneas."
                 }
             ];
+            
+            // Preguntas variadas para el Salón de Tautologías
+            const logicChallenges = {
+                'modus-ponens': [
+                    {
+                        question: "Si el panda come bambú (p), entonces está feliz (q). El panda está comiendo bambú (p). ¿Qué podemos concluir?",
+                        options: [
+                            "El panda está feliz.",
+                            "El panda no está feliz.",
+                            "El panda está durmiendo."
+                        ],
+                        correct: 0,
+                        explanation: "Aplicando Modus Ponens: Si p → q y p, entonces q."
+                    },
+                    {
+                        question: "Si hace sol (p), los pandas salen a jugar (q). Hoy hace sol (p). ¿Qué podemos concluir?",
+                        options: [
+                            "Los pandas están durmiendo.",
+                            "Los pandas están jugando.",
+                            "Los pandas están comiendo."
+                        ],
+                        correct: 1,
+                        explanation: "Aplicando Modus Ponens: Si p → q y p, entonces q."
+                    },
+                    {
+                        question: "Si el panda estudia (p), entonces aprende (q). El panda está estudiando (p). ¿Qué podemos concluir?",
+                        options: [
+                            "El panda está aprendiendo.",
+                            "El panda no está aprendiendo.",
+                            "El panda está aburrido."
+                        ],
+                        correct: 0,
+                        explanation: "Aplicando Modus Ponens: Si p → q y p, entonces q."
+                    }
+                ],
+                'modus-tollens': [
+                    {
+                        question: "Si el panda come bambú (p), entonces está feliz (q). El panda no está feliz (¬q). ¿Qué podemos concluir?",
+                        options: [
+                            "El panda comió bambú.",
+                            "El panda no comió bambú.",
+                            "El panda está durmiendo."
+                        ],
+                        correct: 1,
+                        explanation: "Aplicando Modus Tollens: Si p → q y ¬q, entonces ¬p."
+                    },
+                    {
+                        question: "Si llueve (p), los pandas buscan refugio (q). Los pandas no buscan refugio (¬q). ¿Qué podemos concluir?",
+                        options: [
+                            "Está lloviendo.",
+                            "No está lloviendo.",
+                            "Los pandas están jugando."
+                        ],
+                        correct: 1,
+                        explanation: "Aplicando Modus Tollens: Si p → q y ¬q, entonces ¬p."
+                    },
+                    {
+                        question: "Si el panda medita (p), entonces está en paz (q). El panda no está en paz (¬q). ¿Qué podemos concluir?",
+                        options: [
+                            "El panda está meditando.",
+                            "El panda no está meditando.",
+                            "El panda está comiendo."
+                        ],
+                        correct: 1,
+                        explanation: "Aplicando Modus Tollens: Si p → q y ¬q, entonces ¬p."
+                    }
+                ],
+                'silogismo': [
+                    {
+                        question: "Todos los pandas que comen bambú (P) son fuertes (Q). Todos los pandas fuertes (Q) pueden trepar árboles (R). Koko es un panda que come bambú (P). ¿Qué podemos concluir?",
+                        options: [
+                            "Koko puede trepar árboles.",
+                            "Koko no puede trepar árboles.",
+                            "Koko no come bambú."
+                        ],
+                        correct: 0,
+                        explanation: "Aplicando Silogismo: Si todo P es Q y todo Q es R, entonces todo P es R."
+                    },
+                    {
+                        question: "Todos los pandas sabios (P) estudian lógica (Q). Todos los que estudian lógica (Q) resuelven acertijos (R). Ling Ling es un panda sabio (P). ¿Qué podemos concluir?",
+                        options: [
+                            "Ling Ling resuelve acertijos.",
+                            "Ling Ling no resuelve acertijos.",
+                            "Ling Ling no es sabia."
+                        ],
+                        correct: 0,
+                        explanation: "Aplicando Silogismo: Si todo P es Q y todo Q es R, entonces todo P es R."
+                    },
+                    {
+                        question: "Todos los pandas jóvenes (P) son curiosos (Q). Todos los pandas curiosos (Q) exploran el bosque (R). Momo es un panda joven (P). ¿Qué podemos concluir?",
+                        options: [
+                            "Momo explora el bosque.",
+                            "Momo no explora el bosque.",
+                            "Momo no es joven."
+                        ],
+                        correct: 0,
+                        explanation: "Aplicando Silogismo: Si todo P es Q y todo Q es R, entonces todo P es R."
+                    }
+                ],
+                'de-morgan': [
+                    {
+                        question: "¿Cuál es la negación de 'El panda está feliz y comiendo bambú'?",
+                        options: [
+                            "El panda no está feliz o no está comiendo bambú.",
+                            "El panda no está feliz y no está comiendo bambú.",
+                            "El panda está feliz o no está comiendo bambú."
+                        ],
+                        correct: 0,
+                        explanation: "Aplicando Ley de De Morgan: ¬(p ∧ q) ≡ (¬p ∨ ¬q)."
+                    },
+                    {
+                        question: "¿Cuál es la negación de 'El panda duerme o come'?",
+                        options: [
+                            "El panda no duerme y no come.",
+                            "El panda no duerme o no come.",
+                            "El panda duerme y no come."
+                        ],
+                        correct: 0,
+                        explanation: "Aplicando Ley de De Morgan: ¬(p ∨ q) ≡ (¬p ∧ ¬q)."
+                    },
+                    {
+                        question: "¿Cuál es equivalente a 'No es cierto que el panda esté triste y hambriento'?",
+                        options: [
+                            "El panda no está triste o no está hambriento.",
+                            "El panda no está triste y no está hambriento.",
+                            "El panda está triste o no está hambriento."
+                        ],
+                        correct: 0,
+                        explanation: "Aplicando Ley de De Morgan: ¬(p ∧ q) ≡ (¬p ∨ ¬q)."
+                    }
+                ]
+            };
             
             const logicalLaws = {
                 'modus-ponens': {
@@ -2172,49 +2336,54 @@
             
             // Reiniciar juego del puente
             function resetBridgeGame() {
-                bridgeGameActive = false;
-                currentBridgePosition = 10;
-                pandaRunner.style.left = '10%';
+                bridgeAttempts = 0;
+                selectedGate = null;
                 
                 // Resetear puertas
                 symbolGates.forEach(gate => {
                     gate.classList.remove('correct', 'incorrect');
                     gate.style.pointerEvents = 'auto';
                 });
-                
-                // Cargar nueva frase
-                loadNewPhrase();
             }
             
             // Cargar nueva frase
             function loadNewPhrase() {
-                const randomIndex = Math.floor(Math.random() * phrases.length);
-                const phrase = phrases[randomIndex];
+                currentPhraseIndex = Math.floor(Math.random() * phrases.length);
+                const phrase = phrases[currentPhraseIndex];
                 
                 phrasePrompt.textContent = phrase.text;
                 correctSymbol = phrase.symbol;
+                
+                // Resetear intentos
+                bridgeAttempts = 0;
+                selectedGate = null;
+                
+                // Resetear puertas
+                symbolGates.forEach(gate => {
+                    gate.classList.remove('correct', 'incorrect');
+                    gate.style.pointerEvents = 'auto';
+                });
             }
             
-            // Iniciar carrera en el puente
-            function startBridgeGame() {
-                if (bridgeGameActive) return;
+            // Verificar puerta seleccionada
+            function checkSymbolGate(selectedSymbol) {
+                if (bridgeAttempts >= maxAttempts) {
+                    showToast('Ya has alcanzado el máximo de intentos. Reinicia para continuar.');
+                    return;
+                }
                 
-                bridgeGameActive = true;
-                movePanda();
-            }
-            
-            // Mover panda en el puente
-            function movePanda() {
-                if (!bridgeGameActive) return;
+                if (selectedGate) {
+                    showToast('Ya has seleccionado una puerta para esta frase.');
+                    return;
+                }
                 
-                // Incrementar posición
-                currentBridgePosition += 10;
-                pandaRunner.style.left = `${currentBridgePosition}%`;
+                bridgeAttempts++;
+                selectedGate = event.target;
                 
-                // Verificar si llegó al final
-                if (currentBridgePosition >= 90) {
-                    bridgeGameActive = false;
-                    showToast('¡Felicidades! Has completado el Puente de Símbolos.');
+                if (selectedSymbol === correctSymbol) {
+                    // Respuesta correcta
+                    selectedGate.classList.add('correct');
+                    showToast('¡Correcto! Has pasado por la puerta adecuada.');
                     gameProgress.symbolBridge++;
                     
                     // Desbloquear accesorio
@@ -2228,25 +2397,9 @@
                         document.getElementById('staff').classList.add('unlocked');
                         showToast('¡Has desbloqueado el Bastón de Bambú!');
                     }
-                    
-                    return;
-                }
-                
-                // Continuar moviendo
-                setTimeout(movePanda, 500);
-            }
-            
-            // Verificar puerta seleccionada
-            function checkSymbolGate(selectedSymbol) {
-                if (!bridgeGameActive) return;
-                
-                if (selectedSymbol === correctSymbol) {
-                    // Respuesta correcta
-                    event.target.classList.add('correct');
-                    showToast('¡Correcto! Has pasado por la puerta adecuada.');
                 } else {
                     // Respuesta incorrecta
-                    event.target.classList.add('incorrect');
+                    selectedGate.classList.add('incorrect');
                     showToast('Incorrecto. El panda tropieza y debe reintentar.');
                     
                     // Animación de tropiezo
@@ -2254,10 +2407,22 @@
                     setTimeout(() => {
                         pandaRunner.style.animation = '';
                     }, 500);
+                    
+                    if (bridgeAttempts >= maxAttempts) {
+                        setTimeout(() => {
+                            const correctGateElement = Array.from(symbolGates).find(
+                                gate => gate.dataset.symbol === correctSymbol
+                            );
+                            if (correctGateElement) {
+                                correctGateElement.classList.add('correct');
+                            }
+                            showToast(`La respuesta correcta era el símbolo ${correctSymbol}.`);
+                        }, 2000);
+                    }
                 }
                 
                 // Deshabilitar esta puerta
-                event.target.style.pointerEvents = 'none';
+                selectedGate.style.pointerEvents = 'none';
             }
             
             // Inicializar modo Salón de Tautologías
@@ -2290,14 +2455,16 @@
             
             // Desafío de lógica
             function startLogicChallenge() {
-                // Ejemplo de pregunta integrada
-                const challengeQuestion = "Si el panda come bambú (p), entonces está feliz (q). Se sabe que el panda no está feliz (¬q). ¿Qué podemos concluir?";
-                const options = [
-                    "El panda comió bambú.",
-                    "El panda no comió bambú.",
-                    "El panda está durmiendo."
-                ];
-                const correctAnswer = 1; // El panda no comió bambú (Modus Tollens)
+                // Seleccionar una ley aleatoria desbloqueada
+                const availableLaws = unlockedStatues.filter(law => logicChallenges[law]);
+                if (availableLaws.length === 0) {
+                    showToast('No hay desafíos disponibles. Desbloquea más estatuas primero.');
+                    return;
+                }
+                
+                const randomLaw = availableLaws[Math.floor(Math.random() * availableLaws.length)];
+                const challenges = logicChallenges[randomLaw];
+                const challenge = challenges[Math.floor(Math.random() * challenges.length)];
                 
                 // Crear modal de desafío
                 const challengeModal = document.createElement('div');
@@ -2305,12 +2472,12 @@
                 challengeModal.innerHTML = `
                     <div class="modal-content">
                         <button class="modal-close challenge-close">&times;</button>
-                        <h2 class="modal-title">Desafío de Lógica</h2>
+                        <h2 class="modal-title">Desafío de Lógica - ${logicalLaws[randomLaw].title}</h2>
                         <div class="challenge-question">
-                            <p>${challengeQuestion}</p>
+                            <p>${challenge.question}</p>
                         </div>
                         <div class="challenge-options">
-                            ${options.map((option, index) => `
+                            ${challenge.options.map((option, index) => `
                                 <div class="challenge-option" data-answer="${index}">
                                     ${String.fromCharCode(65 + index)}. ${option}
                                 </div>
@@ -2331,25 +2498,18 @@
                     option.addEventListener('click', () => {
                         const answer = parseInt(option.dataset.answer);
                         
-                        if (answer === correctAnswer) {
+                        if (answer === challenge.correct) {
                             challengeResult.innerHTML = `
                                 <div class="panda-animation">🐼✨</div>
-                                <p>¡Correcto! Esta es una aplicación del Modus Tollens: Si p → q y ¬q, entonces ¬p.</p>
+                                <p>¡Correcto! ${challenge.explanation}</p>
                             `;
                             option.style.backgroundColor = '#e8f5e9';
-                            
-                            // Desbloquear nueva estatua
-                            if (!unlockedStatues.includes('silogismo')) {
-                                unlockedStatues.push('silogismo');
-                                showToast('¡Has desbloqueado la estatua del Silogismo!');
-                                initTautologyHallMode();
-                            }
                             
                             gameProgress.tautologyHall++;
                         } else {
                             challengeResult.innerHTML = `
                                 <div class="panda-animation">🐼🤔</div>
-                                <p>Incorrecto. Recuerda el Modus Tollens: Si p → q y ¬q, entonces ¬p.</p>
+                                <p>Incorrecto. ${challenge.explanation}</p>
                             `;
                             option.style.backgroundColor = '#ffebee';
                         }
@@ -2461,7 +2621,7 @@
                 });
             });
             
-            btnStartBridge.addEventListener('click', startBridgeGame);
+            btnNewPhrase.addEventListener('click', loadNewPhrase);
             btnResetBridge.addEventListener('click', resetBridgeGame);
             
             // Salón de Tautologías
