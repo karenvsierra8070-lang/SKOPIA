@@ -286,6 +286,35 @@
             color: white;
         }
 
+        /* Filtros por módulo */
+        .module-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .module-filter {
+            padding: 8px 16px;
+            background-color: var(--color-beige);
+            border: 2px solid var(--color-oliva-claro);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .module-filter:hover {
+            background-color: var(--color-oliva-claro);
+        }
+
+        .module-filter.active {
+            background-color: var(--color-oliva-oscuro);
+            color: var(--color-crema);
+            border-color: var(--color-oliva-oscuro);
+        }
+
         /* Estilos para la sección de revisión */
         .review-questions {
             display: grid;
@@ -376,6 +405,16 @@
         .review-explanation h4 i {
             margin-right: 8px;
             color: var(--color-acento);
+        }
+
+        .module-tag {
+            display: inline-block;
+            padding: 4px 8px;
+            background-color: var(--color-oliva-oscuro);
+            color: var(--color-crema);
+            border-radius: 10px;
+            font-size: 0.8rem;
+            margin-left: 10px;
         }
 
         /* Estilos para el quiz de reintento */
@@ -815,6 +854,16 @@
                 <h2>Revisión de Errores</h2>
             </div>
             
+            <!-- Filtros por módulo -->
+            <div class="module-filters" id="module-filters">
+                <div class="module-filter active" data-module="all">Todos</div>
+                <div class="module-filter" data-module="diagnostico">Diagnóstico</div>
+                <div class="module-filter" data-module="lectura">Lectura Crítica</div>
+                <div class="module-filter" data-module="cuantitativo">Razonamiento Cuantitativo</div>
+                <div class="module-filter" data-module="ciudadanas">Competencias Ciudadanas</div>
+                <div class="module-filter" data-module="ingles">Inglés</div>
+            </div>
+            
             <div id="review-dynamic-content" class="review-questions">
                 <!-- El contenido de revisión se generará aquí dinámicamente -->
             </div>
@@ -902,7 +951,7 @@
         const motivationalQuotes = [
             "El error no es tu enemigo, es tu maestro. Cada respuesta incorrecta es una oportunidad para crecer.",
             "No temas equivocarte, teme no intentarlo. Cada error te acerca más a la respuesta correcta.",
-            "Los errores son las puertas del descubrimiento. Atrévete a abrirlos.",
+            "Los errores son las puertas del descubrimiento. Atrévete a abrirlas.",
             "El éxito es la suma de pequeños esfuerzos repetidos día tras día, incluyendo aprender de los errores.",
             "No hay fracaso, solo retroalimentación. Cada respuesta incorrecta te dice qué necesitas mejorar.",
             "El experto en cualquier cosa fue una vez un principiante que no tuvo miedo a equivocarse.",
@@ -922,7 +971,37 @@
         setInterval(showRandomMotivationalQuote, 30000);
 
         document.addEventListener('DOMContentLoaded', () => {
-            const incorrectQuestions = JSON.parse(localStorage.getItem("preguntasIncorrectasDiagnostico")) || [];
+            // Obtener todas las preguntas incorrectas de todos los módulos
+            function getAllIncorrectQuestions() {
+                const allIncorrectQuestions = [];
+                
+                // Obtener preguntas incorrectas de cada módulo
+                const modules = ['Diagnostico', 'Lectura', 'Cuantitativo', 'Ciudadanas', 'Ingles'];
+                
+                modules.forEach(module => {
+                    const moduleQuestions = JSON.parse(localStorage.getItem(`preguntasIncorrectas${module}`) || '[]');
+                    moduleQuestions.forEach(question => {
+                        // Asegurarse de que cada pregunta tenga el módulo asignado
+                        if (!question.modulo) {
+                            question.modulo = module.toLowerCase();
+                        }
+                        allIncorrectQuestions.push(question);
+                    });
+                });
+                
+                // También obtener del array general si existe
+                const generalQuestions = JSON.parse(localStorage.getItem('preguntasIncorrectasGeneral') || '[]');
+                generalQuestions.forEach(question => {
+                    // Evitar duplicados
+                    if (!allIncorrectQuestions.some(q => q.pregunta === question.pregunta)) {
+                        allIncorrectQuestions.push(question);
+                    }
+                });
+                
+                return allIncorrectQuestions;
+            }
+            
+            const incorrectQuestions = getAllIncorrectQuestions();
             
             const initialOptions = document.getElementById('initial-options');
             const reviewContent = document.getElementById('review-content');
@@ -930,6 +1009,10 @@
             const reviewDynamicContent = document.getElementById('review-dynamic-content');
             const retakeQuiz = document.getElementById('retake-quiz');
             const resultsContainer = document.getElementById('results-container');
+            const moduleFilters = document.getElementById('module-filters');
+            
+            let currentFilter = 'all';
+            let filteredQuestions = [...incorrectQuestions];
 
             function showSection(sectionToShow) {
                 initialOptions.style.display = 'none';
@@ -945,6 +1028,33 @@
                 }
             }
 
+            // Event listeners para los filtros de módulo
+            moduleFilters.addEventListener('click', (e) => {
+                if (e.target.classList.contains('module-filter')) {
+                    // Actualizar filtro activo
+                    document.querySelectorAll('.module-filter').forEach(filter => {
+                        filter.classList.remove('active');
+                    });
+                    e.target.classList.add('active');
+                    
+                    // Filtrar preguntas
+                    currentFilter = e.target.dataset.module;
+                    if (currentFilter === 'all') {
+                        filteredQuestions = [...incorrectQuestions];
+                    } else {
+                        filteredQuestions = incorrectQuestions.filter(q => 
+                            q.modulo === currentFilter || 
+                            (q.tags && q.tags.includes(currentFilter))
+                        );
+                    }
+                    
+                    // Actualizar vista de revisión si está activa
+                    if (reviewContent.classList.contains('active')) {
+                        displayReviewQuestions();
+                    }
+                }
+            });
+
             document.getElementById('back-from-review').addEventListener('click', () => {
                 showSection('initial');
             });
@@ -953,22 +1063,24 @@
                 showSection('initial');
             });
 
-            document.getElementById('review-card').addEventListener('click', () => {
+            // Función para mostrar las preguntas de revisión
+            function displayReviewQuestions() {
                 reviewDynamicContent.innerHTML = '';
 
-                if (incorrectQuestions.length === 0) {
+                if (filteredQuestions.length === 0) {
                     reviewDynamicContent.innerHTML = `
                         <div class="review-question">
                             <h3>¡Felicidades!</h3>
-                            <p>No tienes preguntas incorrectas para revisar. ¡Sigue así!</p>
+                            <p>No tienes preguntas incorrectas para revisar en este módulo. ¡Sigue así!</p>
                         </div>
                     `;
                 } else {
                     let html = '';
-                    incorrectQuestions.forEach((q, index) => {
+                    filteredQuestions.forEach((q, index) => {
+                        const moduleTag = q.modulo || (q.tags && q.tags[1]) || 'desconocido';
                         html += `
                             <div class="review-question" data-aos="fade-up" data-aos-delay="${index * 100}">
-                                <h3>${q.pregunta}</h3>
+                                <h3>${q.pregunta} <span class="module-tag">${moduleTag}</span></h3>
                                 <ul class="review-options">
                                     ${q.opciones.map((option, i) => {
                                         let className = '';
@@ -996,6 +1108,12 @@
                     // Reinicializar AOS para los nuevos elementos
                     AOS.refresh();
                 }
+            }
+
+            document.getElementById('review-card').addEventListener('click', () => {
+                filteredQuestions = currentFilter === 'all' ? [...incorrectQuestions] : 
+                    incorrectQuestions.filter(q => q.modulo === currentFilter || (q.tags && q.tags.includes(currentFilter)));
+                displayReviewQuestions();
                 showSection('review');
             });
 
@@ -1135,7 +1253,8 @@
                 
                 if (percentage === 100) {
                     message = '¡Perfecto! Has respondido correctamente todas las preguntas. ¡Felicidades por tu excelente trabajo!';
-                    localStorage.removeItem('preguntasIncorrectasDiagnostico');
+                    // Eliminar las preguntas respondidas correctamente del almacenamiento
+                    removeCorrectlyAnsweredQuestions();
                 } else if (percentage >= 80) {
                     message = '¡Excelente trabajo! Has respondido correctamente la mayoría de las preguntas. ¡Sigue así!';
                 } else if (percentage >= 60) {
@@ -1145,6 +1264,53 @@
                 }
                 
                 document.getElementById('results-message').textContent = message;
+            }
+            
+            // Función para eliminar las preguntas respondidas correctamente del almacenamiento
+            function removeCorrectlyAnsweredQuestions() {
+                // Obtener todas las preguntas incorrectas actuales
+                const allIncorrectQuestions = getAllIncorrectQuestions();
+                
+                // Filtrar las preguntas que se respondieron correctamente en el reintento
+                const remainingIncorrectQuestions = allIncorrectQuestions.filter(originalQuestion => {
+                    // Verificar si esta pregunta fue respondida correctamente en el reintento
+                    const wasAnsweredCorrectly = retakeQuestions.some(retakeQuestion => {
+                        if (retakeQuestion.pregunta === originalQuestion.pregunta) {
+                            const index = retakeQuestions.indexOf(retakeQuestion);
+                            return retakeUserAnswers[index] === retakeQuestion.respuestaCorrecta;
+                        }
+                        return false;
+                    });
+                    
+                    // Mantener la pregunta solo si no fue respondida correctamente
+                    return !wasAnsweredCorrectly;
+                });
+                
+                // Agrupar las preguntas restantes por módulo
+                const questionsByModule = {
+                    'Diagnostico': [],
+                    'Lectura': [],
+                    'Cuantitativo': [],
+                    'Ciudadanas': [],
+                    'Ingles': []
+                };
+                
+                remainingIncorrectQuestions.forEach(question => {
+                    const module = question.modulo || 'Diagnostico';
+                    const moduleName = module.charAt(0).toUpperCase() + module.slice(1);
+                    if (questionsByModule[moduleName]) {
+                        questionsByModule[moduleName].push(question);
+                    }
+                });
+                
+                // Actualizar el almacenamiento para cada módulo
+                Object.keys(questionsByModule).forEach(moduleName => {
+                    const storageKey = `preguntasIncorrectas${moduleName}`;
+                    localStorage.setItem(storageKey, JSON.stringify(questionsByModule[moduleName]));
+                });
+                
+                // También actualizar el array general
+                localStorage.setItem('preguntasIncorrectasGeneral', JSON.stringify(remainingIncorrectQuestions));
             }
 
             document.getElementById('restart-quiz-btn').addEventListener('click', () => {
