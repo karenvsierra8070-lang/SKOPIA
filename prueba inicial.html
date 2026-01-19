@@ -392,6 +392,7 @@
             let allDiagnosticQuestions = [];
             let currentQuestionIndex = 0;
             let userAnswers = [];
+            let currentModule = 'diagnostico'; // Módulo actual
 
             welcomeOverlay.classList.remove('hidden');
 
@@ -560,13 +561,28 @@
                     };
                 });
 
+                // Guardar preguntas incorrectas para el módulo actual
                 const incorrectQuestions = [];
                 questions.forEach((question, index) => {
                     if (userAnswers[index] !== question.respuestaCorrecta) {
-                        incorrectQuestions.push(question);
+                        // Añadir información del módulo a la pregunta
+                        const questionWithModule = {
+                            ...question,
+                            modulo: currentModule,
+                            respuestaUsuario: userAnswers[index]
+                        };
+                        incorrectQuestions.push(questionWithModule);
                     }
                 });
-                localStorage.setItem('preguntasIncorrectasDiagnostico', JSON.stringify(incorrectQuestions));
+                
+                // Guardar las preguntas incorrectas del módulo actual
+                const storageKey = `preguntasIncorrectas${currentModule.charAt(0).toUpperCase() + currentModule.slice(1)}`;
+                localStorage.setItem(storageKey, JSON.stringify(incorrectQuestions));
+                
+                // También guardar en el array general de preguntas incorrectas
+                const allIncorrectQuestions = JSON.parse(localStorage.getItem('preguntasIncorrectasGeneral') || '[]');
+                allIncorrectQuestions.push(...incorrectQuestions);
+                localStorage.setItem('preguntasIncorrectasGeneral', JSON.stringify(allIncorrectQuestions));
 
                 const result = {
                     type: 'diagnostico',
@@ -598,7 +614,4 @@
         });
     </script>
 </body>
-
 </html>
-
-
