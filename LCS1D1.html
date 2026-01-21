@@ -452,6 +452,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
         }
 
         .action-btn:hover {
@@ -462,6 +463,39 @@
         .action-btn.active {
             background: var(--color-amarillo);
             color: var(--color-oliva-oscuro);
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--color-oliva-oscuro);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: var(--color-oliva-oscuro);
+        }
+
+        .action-btn:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
         }
 
         .question-body {
@@ -1298,11 +1332,27 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
         }
 
         .float-btn:hover {
             transform: scale(1.1);
             background: var(--color-oliva-medio);
+        }
+
+        .float-btn .tooltip {
+            bottom: 70px;
+            right: 0;
+            left: auto;
+            transform: none;
+        }
+
+        .float-btn .tooltip::after {
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: var(--color-oliva-oscuro);
         }
 
         /* Notificaciones */
@@ -1519,9 +1569,11 @@
                 <div class="question-actions">
                     <button class="action-btn" id="difficult-btn" title="Marcar como difícil">
                         <i class="fas fa-seedling"></i>
+                        <span class="tooltip">Marcar como pregunta difícil</span>
                     </button>
                     <button class="action-btn" id="defer-btn" title="Responder más tarde">
                         <i class="fas fa-paw"></i>
+                        <span class="tooltip">Guardar para responder más tarde</span>
                     </button>
                 </div>
                 
@@ -1655,6 +1707,10 @@
                         <i class="fas fa-redo"></i>
                         <span>Revisar incorrectas</span>
                     </button>
+                    <button class="btn" id="retry-btn">
+                        <i class="fas fa-sync"></i>
+                        <span>Hacer otro cuestionario</span>
+                    </button>
                     <button class="btn" id="finish-btn">
                         <span>Finalizar</span>
                         <i class="fas fa-check-circle"></i>
@@ -1703,10 +1759,6 @@
                     <div class="exercise-text">Respira profundamente</div>
                 </div>
             </div>
-            <button class="btn btn-secondary" id="skip-break-btn">
-                <span>Omitir descanso</span>
-                <i class="fas fa-forward"></i>
-            </button>
         </div>
     </div>
     
@@ -1730,12 +1782,15 @@
     <div class="floating-buttons">
         <button class="float-btn" id="btn-misiones" title="Misiones">
             <i class="fas fa-bullseye"></i>
+            <span class="tooltip">Ver misiones disponibles</span>
         </button>
         <button class="float-btn" id="btn-nivel" title="Nivel">
             <i class="fas fa-star"></i>
+            <span class="tooltip">Tu nivel actual</span>
         </button>
         <button class="float-btn" id="btn-progreso" title="Progreso">
             <i class="fas fa-chart-line"></i>
+            <span class="tooltip">Ver progreso general</span>
         </button>
     </div>
 
@@ -1761,6 +1816,7 @@
             let currentView = 'quiz'; // quiz, tip, theory, results
             let currentStreak = 0; // Racha actual de respuestas correctas
             let maxStreak = 0; // Mejor racha en este cuestionario
+            let totalTimeSpent = 0; // Tiempo total empleado
             
             // Sistema de desafíos
             let challengeMode = false; // false: normal, true: desafío
@@ -2149,12 +2205,12 @@
             const continueQuizBtn = document.getElementById('continue-quiz-btn');
             const finishBtn = document.getElementById('finish-btn');
             const reviewIncorrectBtn = document.getElementById('review-incorrect-btn');
+            const retryBtn = document.getElementById('retry-btn');
             const userAvatar = document.getElementById('user-avatar');
             const userDropdown = document.getElementById('user-dropdown');
             const difficultBtn = document.getElementById('difficult-btn');
             const deferBtn = document.getElementById('defer-btn');
             const startChallengeBtn = document.getElementById('start-challenge-btn');
-            const skipBreakBtn = document.getElementById('skip-break-btn');
             const submitDeferredBtn = document.getElementById('submit-deferred-btn');
             
             const currentScore = document.getElementById('current-score');
@@ -2191,7 +2247,17 @@
                 try {
                     const response = await fetch('preguntas.json');
                     const data = await response.json();
-                    questions = data;
+                    
+                    // Filtrar preguntas por tags "ideas principales" y "basico"
+                    questions = data.filter(question => 
+                        question.tags && 
+                        question.tags.includes("ideas principales") && 
+                        question.tags.includes("basico")
+                    );
+                    
+                    // Mezclar preguntas aleatoriamente
+                    questions = shuffleArray(questions).slice(0, 30);
+                    
                     totalQuestions.textContent = questions.length;
                     totalQuestionsHeader.textContent = questions.length;
                     
@@ -2206,6 +2272,16 @@
                     console.error('Error al cargar las preguntas:', error);
                     showNotification('Error al cargar las preguntas. Por favor, recarga la página.');
                 }
+            }
+            
+            // Función para mezclar array
+            function shuffleArray(array) {
+                const newArray = [...array];
+                for (let i = newArray.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+                }
+                return newArray;
             }
             
             // Inicializar bloque de preguntas
@@ -2240,6 +2316,7 @@
                     deferredQuestions = progress.deferredQuestions || [];
                     difficultQuestions = progress.difficultQuestions || [];
                     breakTaken = progress.breakTaken || false;
+                    totalTimeSpent = progress.totalTimeSpent || 0;
                     
                     // Si el cuestionario ya fue completado, ir directamente a resultados
                     if (progress.completed) {
@@ -2463,7 +2540,7 @@
                 
                 if (isCorrect) {
                     // Respuesta correcta
-                    score += 30; // 30 puntos por respuesta correcta
+                    score += 10; // 10 puntos por respuesta correcta
                     currentScore.textContent = score;
                     currentStreak++; // Incrementar racha
                     
@@ -3121,7 +3198,7 @@
                         
                         if (isCorrect) {
                             // Respuesta correcta
-                            score += 30;
+                            score += 10;
                             currentStreak++;
                             
                             if (currentStreak > maxStreak) {
@@ -3172,16 +3249,18 @@
                 questionCard.style.display = 'none';
                 resultsContainer.style.display = 'block';
                 
-                const percentage = Math.round((score / (questions.length * 30)) * 100); // 30 puntos por pregunta
-                scoreDisplay.textContent = `${score}/${questions.length * 30}`;
-                correctAnswers.textContent = Math.round(score / 30); // Convertir puntos a respuestas correctas
-                
-                // Calcular tiempo empleado
+                // Calcular tiempo total empleado
                 const endTime = Date.now();
-                const timeDiff = Math.floor((endTime - startTime) / 1000);
-                const minutes = Math.floor(timeDiff / 60);
-                const seconds = timeDiff % 60;
-                timeSpent.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                totalTimeSpent += Math.floor((endTime - startTime) / 1000);
+                
+                const percentage = Math.round((score / (questions.length * 10)) * 100); // 10 puntos por pregunta
+                scoreDisplay.textContent = `${score}/${questions.length * 10}`;
+                correctAnswers.textContent = Math.round(score / 10); // Convertir puntos a respuestas correctas
+                
+                // Calcular tiempo total en formato minutos:segundos
+                const totalMinutes = Math.floor(totalTimeSpent / 60);
+                const totalSeconds = totalTimeSpent % 60;
+                timeSpent.textContent = `${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}`;
                 
                 // Mostrar racha actual y mejor racha
                 currentStreakStat.textContent = currentStreak;
@@ -3198,8 +3277,8 @@
                     starsRating.innerHTML = '⭐';
                 }
                 
-                // Guardar progreso
-                saveProgress(true); // true indica que el cuestionario está completado
+                // Guardar progreso como completado
+                saveProgress(true);
             }
             
             // Actualizar progreso
@@ -3218,8 +3297,8 @@
                     quiz: 'LCS1D1',
                     currentQuestionIndex: currentQuestionIndex,
                     score: score,
-                    points: score, // Puntos totales (30 por respuesta correcta)
-                    percentage: Math.round((score / (questions.length * 30)) * 100),
+                    points: score, // Puntos totales (10 por respuesta correcta)
+                    percentage: Math.round((score / (questions.length * 10)) * 100),
                     hintsUsed: hintsUsed,
                     currentStreak: currentStreak,
                     maxStreak: maxStreak,
@@ -3228,12 +3307,18 @@
                     deferredQuestions: deferredQuestions,
                     difficultQuestions: difficultQuestions,
                     breakTaken: breakTaken,
+                    totalTimeSpent: totalTimeSpent,
                     completed: completed,
                     timestamp: new Date().toISOString()
                 };
                 
                 // Guardar progreso individual del cuestionario
                 localStorage.setItem('skopia_quiz_progress_LCS1D1', JSON.stringify(progress));
+                
+                // Si está completado, guardar en historial
+                if (completed) {
+                    saveToHistory(progress);
+                }
                 
                 // Actualizar progreso global en la biblioteca
                 updateGlobalProgress(progress);
@@ -3245,6 +3330,32 @@
                         completeMission(2); // Misión de buen puntaje
                     }
                 }
+            }
+            
+            // Guardar en historial
+            function saveToHistory(progress) {
+                let history = JSON.parse(localStorage.getItem('skopia_quiz_history') || '[]');
+                
+                // Agregar entrada al historial
+                history.push({
+                    quizId: 'LCS1D1',
+                    quizName: 'Ideas Principales - Básico',
+                    score: progress.score,
+                    points: progress.points,
+                    percentage: progress.percentage,
+                    timeSpent: progress.totalTimeSpent,
+                    completedAt: progress.timestamp,
+                    hintsUsed: progress.hintsUsed,
+                    maxStreak: progress.maxStreak
+                });
+                
+                // Mantener solo las últimas 50 entradas
+                if (history.length > 50) {
+                    history = history.slice(-50);
+                }
+                
+                // Guardar historial actualizado
+                localStorage.setItem('skopia_quiz_history', JSON.stringify(history));
             }
             
             // Actualizar progreso global en la biblioteca
@@ -3307,6 +3418,35 @@
                 }, duration);
             }
             
+            // Reiniciar cuestionario con preguntas aleatorias
+            function retryQuiz() {
+                // Resetear estado
+                currentQuestionIndex = 0;
+                score = 0;
+                attempts = 0;
+                selectedOption = null;
+                hintsUsed = 0;
+                currentStreak = 0;
+                maxStreak = 0;
+                totalTimeSpent = 0;
+                startTime = Date.now();
+                currentView = 'quiz';
+                challengeMode = false;
+                challengeLevel = 0;
+                deferredQuestions = [];
+                difficultQuestions = [];
+                breakTaken = false;
+                
+                // Cargar nuevas preguntas aleatorias
+                loadQuestions();
+                
+                // Ocultar resultados y mostrar cuestionario
+                resultsContainer.style.display = 'none';
+                questionCard.style.display = 'block';
+                
+                showNotification('Nuevo cuestionario cargado con preguntas aleatorias');
+            }
+            
             // Event listeners
             hintBtn.addEventListener('click', showHint);
             checkBtn.addEventListener('click', checkAnswer);
@@ -3319,8 +3459,8 @@
                 challengeModal.classList.remove('active');
                 loadQuestion();
             });
-            skipBreakBtn.addEventListener('click', closeBreakModal);
             submitDeferredBtn.addEventListener('click', submitDeferredAnswers);
+            retryBtn.addEventListener('click', retryQuiz);
             
             backBtn.addEventListener('click', () => {
                 if (currentView === 'quiz') {
