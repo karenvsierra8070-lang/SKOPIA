@@ -423,11 +423,6 @@
             color: white;
         }
 
-        .badge.deferred {
-            background: var(--color-azul);
-            color: white;
-        }
-
         .question-text {
             font-family: 'Patrick Hand', cursive;
             font-size: 1.6rem;
@@ -923,6 +918,69 @@
         .exercise-text {
             font-size: 0.9rem;
             color: var(--color-oliva-oscuro);
+        }
+
+        /* Modal de preguntas diferidas */
+        .deferred-questions-list {
+            max-height: 60vh;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .deferred-question-card {
+            background: var(--color-crema);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 5px solid var(--color-azul);
+        }
+
+        .deferred-question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .deferred-question-number {
+            font-weight: 600;
+            color: var(--color-oliva-oscuro);
+        }
+
+        .deferred-timer {
+            font-family: 'Fredoka', cursive;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--color-azul);
+        }
+
+        .deferred-question-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .deferred-options {
+            display: grid;
+            gap: 10px;
+        }
+
+        .deferred-option {
+            background: white;
+            border: 2px solid var(--color-oliva-claro);
+            border-radius: 15px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .deferred-option:hover {
+            border-color: var(--color-oliva-medio);
+        }
+
+        .deferred-option.selected {
+            border-color: var(--color-azul);
+            background: rgba(33, 150, 243, 0.1);
         }
 
         /* Contenedor de consejos */
@@ -1506,10 +1564,6 @@
                         <i class="fas fa-clock"></i>
                         <span id="timer-display">5:30</span>
                     </div>
-                    <div class="badge deferred" id="deferred-badge" style="display: none;">
-                        <i class="fas fa-paw"></i>
-                        <span>Guardada</span>
-                    </div>
                 </div>
                 
                 <div class="question-actions">
@@ -1533,6 +1587,7 @@
                     <span class="attempts-label">Intentos:</span>
                     <div class="attempts-dots">
                         <div class="attempt-dot" id="attempt-1"></div>
+                        <div class="attempt-dot" id="attempt-2" style="display: none;"></div>
                     </div>
                 </div>
                 
@@ -1592,6 +1647,10 @@
                     <button class="btn" id="continue-to-theory-btn">
                         <span>Ver teoría</span>
                         <i class="fas fa-book"></i>
+                    </button>
+                    <button class="btn btn-secondary" id="skip-theory-btn">
+                        <span>Omitir y continuar</span>
+                        <i class="fas fa-arrow-right"></i>
                     </button>
                 </div>
             </div>
@@ -1706,6 +1765,22 @@
             </div>
         </div>
     </div>
+    
+    <!-- Modal de preguntas diferidas -->
+    <div class="modal" id="deferred-modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-icon">🐾</div>
+            <h2 class="modal-title">Preguntas para Responder</h2>
+            <p class="modal-text">
+                Tienes 1 minuto y 30 segundos para responder cada una de estas preguntas que dejaste para más tarde.
+            </p>
+            <div class="deferred-questions-list" id="deferred-questions-list"></div>
+            <button class="btn" id="submit-deferred-btn" style="display: none;">
+                <span>Enviar respuestas</span>
+                <i class="fas fa-check"></i>
+            </button>
+        </div>
+    </div>
 
     <!-- Botones flotantes -->
     <div class="floating-buttons">
@@ -1764,7 +1839,7 @@
             let deferredTimeLimit = 90; // Límite de tiempo en segundos (1:30)
             let deferredTimeRemaining = 0; // Tiempo restante para la pregunta diferida actual
             let currentDeferredQuestionIndex = 0; // Índice de la pregunta diferida actual
-            let showingDeferredQuestions = false; // Indica si se están mostrando preguntas diferidas
+            let showingDeferredQuestions = false; // Indica si estamos mostrando preguntas diferidas
             
             // Preguntas difíciles
             let difficultQuestions = []; // Preguntas marcadas como difíciles
@@ -1777,6 +1852,9 @@
             
             // Descanso programado
             let breakTaken = false; // Si ya se tomó el descanso programado
+            
+            // Control de consejos y teoría
+            let tipTheoryShown = false; // Para evitar bucles infinitos
             
             // Consejos y teorías para cada pregunta
             const tips = [
@@ -2112,6 +2190,7 @@
             const resultsContainer = document.getElementById('results-container');
             const challengeModal = document.getElementById('challenge-modal');
             const breakModal = document.getElementById('break-modal');
+            const deferredModal = document.getElementById('deferred-modal');
             
             const questionNumber = document.getElementById('question-number');
             const totalQuestionsHeader = document.getElementById('total-questions-header');
@@ -2131,6 +2210,7 @@
             const nextBtn = document.getElementById('next-btn');
             const backBtn = document.getElementById('back-btn');
             const continueToTheoryBtn = document.getElementById('continue-to-theory-btn');
+            const skipTheoryBtn = document.getElementById('skip-theory-btn');
             const continueQuizBtn = document.getElementById('continue-quiz-btn');
             const finishBtn = document.getElementById('finish-btn');
             const reviewIncorrectBtn = document.getElementById('review-incorrect-btn');
@@ -2140,6 +2220,7 @@
             const difficultBtn = document.getElementById('difficult-btn');
             const deferBtn = document.getElementById('defer-btn');
             const startChallengeBtn = document.getElementById('start-challenge-btn');
+            const submitDeferredBtn = document.getElementById('submit-deferred-btn');
             
             const currentScore = document.getElementById('current-score');
             const questionsAnswered = document.getElementById('questions-answered');
@@ -2147,11 +2228,12 @@
             const progressCircle = document.getElementById('progress-circle');
             const progressPercentage = document.getElementById('progress-percentage');
             const attempt1 = document.getElementById('attempt-1');
+            const attempt2 = document.getElementById('attempt-2');
             const challengeBadge = document.getElementById('challenge-badge');
             const timerBadge = document.getElementById('timer-badge');
             const timerDisplay = document.getElementById('timer-display');
             const breakTimer = document.getElementById('break-timer');
-            const deferredBadge = document.getElementById('deferred-badge');
+            const deferredQuestionsList = document.getElementById('deferred-questions-list');
             
             const tipContent = document.getElementById('tip-content');
             const tipExample = document.getElementById('tip-example');
@@ -2220,6 +2302,7 @@
                 blockQuestions = [];
                 blockCorrectAnswers = 0;
                 blockIncorrectQuestions = [];
+                tipTheoryShown = false; // Resetear el control de consejos/teoría
                 
                 // Obtener las siguientes 3 preguntas (o las que queden)
                 for (let i = 0; i < questionsPerChallenge && currentQuestionIndex + i < questions.length; i++) {
@@ -2248,7 +2331,6 @@
                     difficultQuestions = progress.difficultQuestions || [];
                     breakTaken = progress.breakTaken || false;
                     totalTimeSpent = progress.totalTimeSpent || 0;
-                    showingDeferredQuestions = progress.showingDeferredQuestions || false;
                     
                     // Si el cuestionario ya fue completado, ir directamente a resultados
                     if (progress.completed) {
@@ -2261,20 +2343,29 @@
             // Cargar pregunta actual
             function loadQuestion() {
                 // Verificar si estamos mostrando preguntas diferidas
-                if (showingDeferredQuestions && deferredQuestions.length > 0) {
+                if (showingDeferredQuestions) {
+                    if (currentDeferredQuestionIndex >= deferredQuestions.length) {
+                        // Si hemos terminado las preguntas diferidas, mostrar resultados
+                        showingDeferredQuestions = false;
+                        showResults();
+                        return;
+                    }
+                    
+                    // Cargar la pregunta diferida actual
                     loadDeferredQuestion();
                     return;
                 }
                 
-                // Si hemos terminado todas las preguntas normales y hay preguntas diferidas
-                if (currentQuestionIndex >= questions.length && deferredQuestions.length > 0) {
-                    showingDeferredQuestions = true;
-                    loadDeferredQuestion();
-                    return;
-                }
-                
-                // Si hemos terminado todas las preguntas
+                // Si hemos terminado todas las preguntas principales
                 if (currentQuestionIndex >= questions.length) {
+                    // Si hay preguntas diferidas, mostrarlas
+                    if (deferredQuestions.length > 0) {
+                        showingDeferredQuestions = true;
+                        currentDeferredQuestionIndex = 0;
+                        loadDeferredQuestion();
+                        return;
+                    }
+                    // Si no, mostrar resultados
                     showResults();
                     return;
                 }
@@ -2350,20 +2441,11 @@
             
             // Cargar pregunta diferida
             function loadDeferredQuestion() {
-                if (currentDeferredQuestionIndex >= deferredQuestions.length) {
-                    // Si hemos terminado todas las preguntas diferidas, mostrar resultados
-                    showResults();
-                    return;
-                }
-                
                 const deferredQuestion = deferredQuestions[currentDeferredQuestionIndex];
                 const question = deferredQuestion.question;
                 
                 // Actualizar número de pregunta
                 questionNumber.textContent = `Diferida ${currentDeferredQuestionIndex + 1}`;
-                
-                // Mostrar badge de pregunta diferida
-                deferredBadge.style.display = 'flex';
                 
                 // Separar correctamente el texto de la pregunta
                 const parts = question.pregunta.split('\n\n');
@@ -2401,6 +2483,13 @@
                 checkBtn.style.display = 'block';
                 checkBtn.disabled = true;
                 hintBtn.disabled = false;
+                
+                // Desactivar botón de diferir (ya está diferida)
+                deferBtn.classList.add('active');
+                deferBtn.disabled = true;
+                
+                // Iniciar temporizador para pregunta diferida
+                startDeferredTimer();
                 
                 // Actualizar progreso
                 updateProgress();
@@ -2440,6 +2529,32 @@
                 }, 1000);
             }
             
+            // Iniciar temporizador para pregunta diferida
+            function startDeferredTimer() {
+                // Detener temporizador anterior si existe
+                if (deferredTimer) {
+                    clearInterval(deferredTimer);
+                }
+                
+                // Reiniciar variables del temporizador
+                deferredTimeRemaining = deferredTimeLimit;
+                
+                // Actualizar visualización
+                updateDeferredTimerDisplay();
+                
+                // Iniciar cuenta regresiva
+                deferredTimer = setInterval(() => {
+                    deferredTimeRemaining--;
+                    updateDeferredTimerDisplay();
+                    
+                    // Si el tiempo se acaba
+                    if (deferredTimeRemaining <= 0) {
+                        clearInterval(deferredTimer);
+                        handleDeferredTimeUp();
+                    }
+                }, 1000);
+            }
+            
             // Actualizar visualización del temporizador
             function updateTimerDisplay() {
                 const minutes = Math.floor(challengeTimeRemaining / 60);
@@ -2456,12 +2571,39 @@
                 }
             }
             
+            // Actualizar visualización del temporizador diferido
+            function updateDeferredTimerDisplay() {
+                // Mostrar tiempo en el badge de temporizador
+                const minutes = Math.floor(deferredTimeRemaining / 60);
+                const seconds = deferredTimeRemaining % 60;
+                
+                // Crear o actualizar badge de temporizador diferido
+                let deferredTimerBadge = document.getElementById('deferred-timer-badge');
+                if (!deferredTimerBadge) {
+                    deferredTimerBadge = document.createElement('div');
+                    deferredTimerBadge.id = 'deferred-timer-badge';
+                    deferredTimerBadge.className = 'badge timer';
+                    deferredTimerBadge.innerHTML = `<i class="fas fa-clock"></i><span id="deferred-timer-display">1:30</span>`;
+                    document.querySelector('.question-badges').appendChild(deferredTimerBadge);
+                }
+                
+                const deferredTimerDisplay = document.getElementById('deferred-timer-display');
+                deferredTimerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Añadir clase de advertencia si quedan menos de 10 segundos
+                if (deferredTimeRemaining <= 10) {
+                    deferredTimerBadge.style.background = '#f44336';
+                    deferredTimerBadge.style.color = 'white';
+                } else {
+                    deferredTimerBadge.style.background = '';
+                    deferredTimerBadge.style.color = '';
+                }
+            }
+            
             // Manejar tiempo agotado
             function handleTimeUp() {
                 // Marcar pregunta como incorrecta
-                const question = showingDeferredQuestions 
-                    ? deferredQuestions[currentDeferredQuestionIndex].question
-                    : questions[currentQuestionIndex];
+                const question = questions[currentQuestionIndex];
                 const options = document.querySelectorAll('.option-card');
                 
                 // Mostrar respuesta correcta
@@ -2474,7 +2616,7 @@
                 });
                 
                 // Actualizar estadísticas
-                attempts = 1; // Solo un intento
+                attempts = 1; // Solo hay un intento ahora
                 attempt1.classList.add('used');
                 
                 // Reiniciar racha
@@ -2489,9 +2631,53 @@
                 feedbackSection.style.display = 'block';
                 
                 // Actualizar bloque actual
-                if (!showingDeferredQuestions) {
-                    updateBlockQuestion(currentQuestionIndex, false, true);
-                }
+                updateBlockQuestion(currentQuestionIndex, false, true);
+                
+                // Deshabilitar botón de pista
+                hintBtn.disabled = true;
+                
+                // Mostrar botón de siguiente
+                nextBtn.style.display = 'block';
+                checkBtn.style.display = 'none';
+                
+                // Guardar pregunta incorrecta
+                saveIncorrectQuestion(question);
+                
+                // Actualizar progreso
+                updateProgress();
+                saveProgress();
+            }
+            
+            // Manejar tiempo agotado en pregunta diferida
+            function handleDeferredTimeUp() {
+                // Marcar pregunta como incorrecta
+                const deferredQuestion = deferredQuestions[currentDeferredQuestionIndex];
+                const question = deferredQuestion.question;
+                const options = document.querySelectorAll('.option-card');
+                
+                // Mostrar respuesta correcta
+                options.forEach((opt, i) => {
+                    if (i === question.respuestaCorrecta) {
+                        opt.classList.add('correct');
+                        opt.innerHTML += '<div class="option-icon correct">✓</div>';
+                    }
+                    opt.onclick = null; // Deshabilitar clics
+                });
+                
+                // Actualizar estadísticas
+                attempts = 1; // Solo hay un intento ahora
+                attempt1.classList.add('used');
+                
+                // Reiniciar racha
+                currentStreak = 0;
+                
+                // Mostrar retroalimentación
+                feedbackSection.className = 'feedback-section incorrect';
+                feedbackIcon.className = 'feedback-icon fas fa-times-circle';
+                feedbackTitle.textContent = 'Tiempo agotado';
+                feedbackText.textContent = 'Se acabó el tiempo. La respuesta correcta ha sido resaltada.';
+                trickBox.style.display = 'none';
+                feedbackSection.style.display = 'block';
                 
                 // Deshabilitar botón de pista
                 hintBtn.disabled = true;
@@ -2523,15 +2709,24 @@
                 if (selectedOption === null) return;
                 
                 attempts++;
-                const question = showingDeferredQuestions 
-                    ? deferredQuestions[currentDeferredQuestionIndex].question
-                    : questions[currentQuestionIndex];
+                let question;
+                
+                // Determinar si estamos en una pregunta normal o diferida
+                if (showingDeferredQuestions) {
+                    question = deferredQuestions[currentDeferredQuestionIndex].question;
+                } else {
+                    question = questions[currentQuestionIndex];
+                }
+                
                 const isCorrect = selectedOption === question.respuestaCorrecta;
                 const options = document.querySelectorAll('.option-card');
                 
                 // Detener temporizador si está activo
                 if (challengeTimer) {
                     clearInterval(challengeTimer);
+                }
+                if (deferredTimer) {
+                    clearInterval(deferredTimer);
                 }
                 
                 // Actualizar indicador de intentos
@@ -2579,18 +2774,16 @@
                     updateProgress();
                     saveProgress();
                 } else {
-                    // Respuesta incorrecta - Solo un intento
+                    // Respuesta incorrecta - solo un intento, así que mostramos la solución directamente
                     feedbackSection.className = 'feedback-section incorrect';
                     feedbackIcon.className = 'feedback-icon fas fa-times-circle';
                     feedbackTitle.textContent = 'Incorrecto';
-                    
-                    // Reiniciar racha actual
-                    currentStreak = 0;
-                    
-                    // Mostrar explicación y truco
                     feedbackText.textContent = question.explicacion;
                     trickBox.style.display = 'block';
                     trickText.textContent = question.truco;
+                    
+                    // Reiniciar racha actual
+                    currentStreak = 0;
                     
                     // Actualizar bloque actual
                     if (!showingDeferredQuestions) {
@@ -2698,6 +2891,11 @@
             
             // Diferir pregunta
             function toggleDeferred() {
+                // No permitir diferir si ya estamos mostrando preguntas diferidas
+                if (showingDeferredQuestions) {
+                    return;
+                }
+                
                 const isDeferred = deferBtn.classList.toggle('active');
                 
                 if (isDeferred) {
@@ -2728,19 +2926,19 @@
                 questionCard.style.display = 'none';
                 tipContainer.style.display = 'block';
                 
-                // Mostrar solo consejos de preguntas incorrectas del bloque
-                if (blockIncorrectQuestions.length > 0) {
-                    const tipIndex = blockIncorrectQuestions[0].index % tips.length;
-                    const tip = tips[tipIndex];
-                    tipContent.textContent = tip.content;
-                    tipExample.textContent = tip.example;
+                // Obtener el índice de la pregunta actual para mostrar el consejo correspondiente
+                let questionIndex;
+                if (showingDeferredQuestions) {
+                    questionIndex = deferredQuestions[currentDeferredQuestionIndex].index;
                 } else {
-                    // Si no hay preguntas incorrectas, mostrar un consejo aleatorio
-                    const tipIndex = Math.floor(Math.random() * tips.length);
-                    const tip = tips[tipIndex];
-                    tipContent.textContent = tip.content;
-                    tipExample.textContent = tip.example;
+                    questionIndex = currentQuestionIndex;
                 }
+                
+                // Mostrar el consejo correspondiente a la pregunta actual
+                const tipIndex = questionIndex % tips.length;
+                const tip = tips[tipIndex];
+                tipContent.textContent = tip.content;
+                tipExample.textContent = tip.example;
             }
             
             // Mostrar teoría
@@ -2749,139 +2947,79 @@
                 tipContainer.style.display = 'none';
                 theoryContainer.style.display = 'block';
                 
-                // Mostrar solo teoría de preguntas incorrectas del bloque
-                if (blockIncorrectQuestions.length > 0) {
-                    const theoryIndex = blockIncorrectQuestions[0].index % theories.length;
-                    const theory = theories[theoryIndex];
-                    theoryContent.textContent = theory.content;
-                    
-                    // Crear contenido adicional
-                    const extraContent = document.getElementById('theory-extra-content');
-                    extraContent.innerHTML = '';
-                    
-                    // Añadir estrategia visual
-                    if (theory.visualTip) {
-                        const strategySection = document.createElement('div');
-                        strategySection.className = 'visual-strategy';
-                        strategySection.innerHTML = `
-                            <div class="strategy-header">
-                                <div class="strategy-icon">${theory.visualTip.title.split(' ')[0]}</div>
-                                <div class="strategy-title">${theory.visualTip.title.substring(2)}</div>
-                            </div>
-                            <div class="strategy-content">${theory.visualTip.content}</div>
-                            <div class="strategy-steps">
-                                ${theory.visualTip.steps.map((step, index) => `
-                                    <div class="step-item">
-                                        <div class="step-number">${index + 1}</div>
-                                        <div class="step-text">${step}</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        `;
-                        extraContent.appendChild(strategySection);
-                    }
-                    
-                    // Añadir ejemplos
-                    if (theory.examples) {
-                        const examplesSection = document.createElement('div');
-                        examplesSection.className = 'examples-section';
-                        examplesSection.innerHTML = `
-                            <h3 class="examples-title">📚 Ejemplos Prácticos</h3>
-                            ${theory.examples.map(example => `
-                                <div class="example-card">
-                                    <div class="example-text">${example.text}</div>
-                                    <div class="example-analysis">
-                                        <div class="analysis-title">Análisis:</div>
-                                        <div class="analysis-text">${example.analysis}</div>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        `;
-                        extraContent.appendChild(examplesSection);
-                    }
-                    
-                    // Añadir puntos clave
-                    const pointsSection = document.createElement('div');
-                    pointsSection.className = 'key-points';
-                    pointsSection.innerHTML = `
-                        <h3 class="key-points-title">🔑 Puntos Clave</h3>
-                        <div class="points-list">
-                            ${theory.points.map(point => `
-                                <div class="point-item">
-                                    <div class="point-bullet">•</div>
-                                    <div class="point-text">${point}</div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
-                    extraContent.appendChild(pointsSection);
+                // Obtener el índice de la pregunta actual para mostrar la teoría correspondiente
+                let questionIndex;
+                if (showingDeferredQuestions) {
+                    questionIndex = deferredQuestions[currentDeferredQuestionIndex].index;
                 } else {
-                    // Si no hay preguntas incorrectas, mostrar una teoría aleatoria
-                    const theoryIndex = Math.floor(Math.random() * theories.length);
-                    const theory = theories[theoryIndex];
-                    theoryContent.textContent = theory.content;
-                    
-                    // Crear contenido adicional
-                    const extraContent = document.getElementById('theory-extra-content');
-                    extraContent.innerHTML = '';
-                    
-                    // Añadir estrategia visual
-                    if (theory.visualTip) {
-                        const strategySection = document.createElement('div');
-                        strategySection.className = 'visual-strategy';
-                        strategySection.innerHTML = `
-                            <div class="strategy-header">
-                                <div class="strategy-icon">${theory.visualTip.title.split(' ')[0]}</div>
-                                <div class="strategy-title">${theory.visualTip.title.substring(2)}</div>
-                            </div>
-                            <div class="strategy-content">${theory.visualTip.content}</div>
-                            <div class="strategy-steps">
-                                ${theory.visualTip.steps.map((step, index) => `
-                                    <div class="step-item">
-                                        <div class="step-number">${index + 1}</div>
-                                        <div class="step-text">${step}</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        `;
-                        extraContent.appendChild(strategySection);
-                    }
-                    
-                    // Añadir ejemplos
-                    if (theory.examples) {
-                        const examplesSection = document.createElement('div');
-                        examplesSection.className = 'examples-section';
-                        examplesSection.innerHTML = `
-                            <h3 class="examples-title">📚 Ejemplos Prácticos</h3>
-                            ${theory.examples.map(example => `
-                                <div class="example-card">
-                                    <div class="example-text">${example.text}</div>
-                                    <div class="example-analysis">
-                                        <div class="analysis-title">Análisis:</div>
-                                        <div class="analysis-text">${example.analysis}</div>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        `;
-                        extraContent.appendChild(examplesSection);
-                    }
-                    
-                    // Añadir puntos clave
-                    const pointsSection = document.createElement('div');
-                    pointsSection.className = 'key-points';
-                    pointsSection.innerHTML = `
-                        <h3 class="key-points-title">🔑 Puntos Clave</h3>
-                        <div class="points-list">
-                            ${theory.points.map(point => `
-                                <div class="point-item">
-                                    <div class="point-bullet">•</div>
-                                    <div class="point-text">${point}</div>
+                    questionIndex = currentQuestionIndex;
+                }
+                
+                // Mostrar la teoría correspondiente a la pregunta actual
+                const theoryIndex = questionIndex % theories.length;
+                const theory = theories[theoryIndex];
+                theoryContent.textContent = theory.content;
+                
+                // Crear contenido adicional
+                const extraContent = document.getElementById('theory-extra-content');
+                extraContent.innerHTML = '';
+                
+                // Añadir estrategia visual
+                if (theory.visualTip) {
+                    const strategySection = document.createElement('div');
+                    strategySection.className = 'visual-strategy';
+                    strategySection.innerHTML = `
+                        <div class="strategy-header">
+                            <div class="strategy-icon">${theory.visualTip.title.split(' ')[0]}</div>
+                            <div class="strategy-title">${theory.visualTip.title.substring(2)}</div>
+                        </div>
+                        <div class="strategy-content">${theory.visualTip.content}</div>
+                        <div class="strategy-steps">
+                            ${theory.visualTip.steps.map((step, index) => `
+                                <div class="step-item">
+                                    <div class="step-number">${index + 1}</div>
+                                    <div class="step-text">${step}</div>
                                 </div>
                             `).join('')}
                         </div>
                     `;
-                    extraContent.appendChild(pointsSection);
+                    extraContent.appendChild(strategySection);
                 }
+                
+                // Añadir ejemplos
+                if (theory.examples) {
+                    const examplesSection = document.createElement('div');
+                    examplesSection.className = 'examples-section';
+                    examplesSection.innerHTML = `
+                        <h3 class="examples-title">📚 Ejemplos Prácticos</h3>
+                        ${theory.examples.map(example => `
+                            <div class="example-card">
+                                <div class="example-text">${example.text}</div>
+                                <div class="example-analysis">
+                                    <div class="analysis-title">Análisis:</div>
+                                    <div class="analysis-text">${example.analysis}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    `;
+                    extraContent.appendChild(examplesSection);
+                }
+                
+                // Añadir puntos clave
+                const pointsSection = document.createElement('div');
+                pointsSection.className = 'key-points';
+                pointsSection.innerHTML = `
+                    <h3 class="key-points-title">🔑 Puntos Clave</h3>
+                    <div class="points-list">
+                        ${theory.points.map(point => `
+                            <div class="point-item">
+                                <div class="point-bullet">•</div>
+                                <div class="point-text">${point}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                extraContent.appendChild(pointsSection);
             }
             
             // Continuar con el cuestionario
@@ -2891,23 +3029,28 @@
                 questionCard.style.display = 'block';
                 
                 // Verificar si hemos completado el bloque actual
-                if (!showingDeferredQuestions && currentQuestionIndex >= blockQuestions[blockQuestions.length - 1].index) {
-                    // Verificar si debemos mostrar consejos y teoría
-                    if (blockIncorrectQuestions.length > 0) {
-                        showTip();
-                        return;
-                    } else {
-                        // Verificar si debemos activar el modo desafío
-                        checkChallengeStatus();
-                    }
+                if (currentQuestionIndex >= blockQuestions[blockQuestions.length - 1].index) {
+                    // Verificar si debemos activar el modo desafío
+                    checkChallengeStatus();
                 }
                 
-                if (showingDeferredQuestions) {
-                    currentDeferredQuestionIndex++;
-                } else {
-                    currentQuestionIndex++;
+                currentQuestionIndex++;
+                loadQuestion();
+            }
+            
+            // Omitir teoría y continuar
+            function skipTheoryAndContinue() {
+                currentView = 'quiz';
+                tipContainer.style.display = 'none';
+                questionCard.style.display = 'block';
+                
+                // Verificar si hemos completado el bloque actual
+                if (currentQuestionIndex >= blockQuestions[blockQuestions.length - 1].index) {
+                    // Verificar si debemos activar el modo desafío
+                    checkChallengeStatus();
                 }
                 
+                currentQuestionIndex++;
                 loadQuestion();
             }
             
@@ -3030,10 +3173,18 @@
             
             // Siguiente pregunta
             function nextQuestion() {
+                // Si estamos mostrando preguntas diferidas
+                if (showingDeferredQuestions) {
+                    currentDeferredQuestionIndex++;
+                    loadQuestion();
+                    return;
+                }
+                
                 // Verificar si hemos completado el bloque actual
-                if (!showingDeferredQuestions && currentQuestionIndex >= blockQuestions[blockQuestions.length - 1].index) {
-                    // Verificar si debemos mostrar consejos y teoría
-                    if (blockIncorrectQuestions.length > 0) {
+                if (currentQuestionIndex >= blockQuestions[blockQuestions.length - 1].index) {
+                    // Verificar si debemos mostrar consejos y teoría (solo si hay preguntas incorrectas y no se han mostrado antes)
+                    if (blockIncorrectQuestions.length > 0 && !tipTheoryShown) {
+                        tipTheoryShown = true; // Marcar que ya se mostraron
                         showTip();
                         return;
                     } else {
@@ -3042,12 +3193,7 @@
                     }
                 }
                 
-                if (showingDeferredQuestions) {
-                    currentDeferredQuestionIndex++;
-                } else {
-                    currentQuestionIndex++;
-                }
-                
+                currentQuestionIndex++;
                 loadQuestion();
             }
             
@@ -3091,17 +3237,19 @@
             
             // Actualizar progreso
             function updateProgress() {
-                let totalAnswered;
+                let totalAnswered = currentQuestionIndex;
                 
+                // Si estamos en preguntas diferidas, contar las preguntas principales respondidas más las diferidas respondidas
                 if (showingDeferredQuestions) {
-                    // Si estamos mostrando preguntas diferidas, contar las preguntas normales respondidas más las diferidas respondidas
-                    totalAnswered = currentQuestionIndex + currentDeferredQuestionIndex;
-                } else {
-                    // Si estamos en preguntas normales, contar solo las preguntas respondidas
-                    totalAnswered = currentQuestionIndex + (attempts > 0 ? 1 : 0);
+                    totalAnswered = questions.length;
+                    totalAnswered += currentDeferredQuestionIndex;
+                }
+                // Si hemos respondido a la pregunta actual
+                else if (attempts > 0) {
+                    totalAnswered = currentQuestionIndex + 1;
                 }
                 
-                const progress = (totalAnswered / questions.length) * 100;
+                const progress = (totalAnswered / (questions.length + deferredQuestions.length)) * 100;
                 const circumference = 2 * Math.PI * 54;
                 const offset = circumference - (progress / 100) * circumference;
                 progressCircle.style.strokeDashoffset = offset;
@@ -3127,8 +3275,6 @@
                     breakTaken: breakTaken,
                     totalTimeSpent: totalTimeSpent,
                     completed: completed,
-                    showingDeferredQuestions: showingDeferredQuestions,
-                    currentDeferredQuestionIndex: currentDeferredQuestionIndex,
                     timestamp: new Date().toISOString()
                 };
                 
@@ -3258,6 +3404,7 @@
                 breakTaken = false;
                 showingDeferredQuestions = false;
                 currentDeferredQuestionIndex = 0;
+                tipTheoryShown = false;
                 
                 // Limpiar progreso guardado
                 localStorage.removeItem('skopia_quiz_progress_LCS1D1');
@@ -3277,12 +3424,16 @@
             checkBtn.addEventListener('click', checkAnswer);
             nextBtn.addEventListener('click', nextQuestion);
             continueToTheoryBtn.addEventListener('click', showTheory);
+            skipTheoryBtn.addEventListener('click', skipTheoryAndContinue);
             continueQuizBtn.addEventListener('click', continueQuiz);
             difficultBtn.addEventListener('click', toggleDifficult);
             deferBtn.addEventListener('click', toggleDeferred);
             startChallengeBtn.addEventListener('click', () => {
                 challengeModal.classList.remove('active');
                 loadQuestion();
+            });
+            submitDeferredBtn.addEventListener('click', () => {
+                // Este botón ya no se usa, pero lo dejamos por si se necesita en el futuro
             });
             retryBtn.addEventListener('click', retryQuiz);
             
@@ -3299,6 +3450,21 @@
                     currentView = 'tip';
                     theoryContainer.style.display = 'none';
                     tipContainer.style.display = 'block';
+                } else if (currentView === 'deferred') {
+                    if (confirm('¿Estás seguro de que quieres salir? Las preguntas diferidas se contarán como incorrectas.')) {
+                        // Marcar todas las preguntas diferidas como incorrectas
+                        deferredQuestions.forEach(deferredQuestion => {
+                            saveIncorrectQuestion(deferredQuestion.question);
+                        });
+                        
+                        // Limpiar preguntas diferidas
+                        deferredQuestions = [];
+                        showingDeferredQuestions = false;
+                        saveProgress();
+                        
+                        // Mostrar resultados
+                        showResults();
+                    }
                 }
             });
             
