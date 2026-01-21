@@ -1587,7 +1587,7 @@
                     <span class="attempts-label">Intentos:</span>
                     <div class="attempts-dots">
                         <div class="attempt-dot" id="attempt-1"></div>
-                        <div class="attempt-dot" id="attempt-2"></div>
+                        <div class="attempt-dot" id="attempt-2" style="display: none;"></div>
                     </div>
                 </div>
                 
@@ -1835,6 +1835,7 @@
             let deferredTimeLimit = 90; // Límite de tiempo en segundos (1:30)
             let deferredTimeRemaining = 0; // Tiempo restante para la pregunta diferida actual
             let currentDeferredQuestionIndex = 0; // Índice de la pregunta diferida actual
+            let showingDeferredQuestions = false; // Indica si estamos mostrando preguntas diferidas
             
             // Preguntas difíciles
             let difficultQuestions = []; // Preguntas marcadas como difíciles
@@ -2332,10 +2333,27 @@
             
             // Cargar pregunta actual
             function loadQuestion() {
+                // Verificar si estamos mostrando preguntas diferidas
+                if (showingDeferredQuestions) {
+                    if (currentDeferredQuestionIndex >= deferredQuestions.length) {
+                        // Si hemos terminado las preguntas diferidas, mostrar resultados
+                        showingDeferredQuestions = false;
+                        showResults();
+                        return;
+                    }
+                    
+                    // Cargar la pregunta diferida actual
+                    loadDeferredQuestion();
+                    return;
+                }
+                
+                // Si hemos terminado todas las preguntas principales
                 if (currentQuestionIndex >= questions.length) {
                     // Si hay preguntas diferidas, mostrarlas
                     if (deferredQuestions.length > 0) {
-                        showDeferredQuestions();
+                        showingDeferredQuestions = true;
+                        currentDeferredQuestionIndex = 0;
+                        loadDeferredQuestion();
                         return;
                     }
                     // Si no, mostrar resultados
@@ -2382,7 +2400,6 @@
                 selectedOption = null;
                 attempts = 0;
                 attempt1.classList.remove('used');
-                attempt2.classList.remove('used');
                 hintBox.style.display = 'none';
                 feedbackSection.style.display = 'none';
                 nextBtn.style.display = 'none';
@@ -2407,6 +2424,63 @@
                     challengeBadge.style.display = 'none';
                     timerBadge.style.display = 'none';
                 }
+                
+                // Actualizar progreso
+                updateProgress();
+                saveProgress();
+            }
+            
+            // Cargar pregunta diferida
+            function loadDeferredQuestion() {
+                const deferredQuestion = deferredQuestions[currentDeferredQuestionIndex];
+                const question = deferredQuestion.question;
+                
+                // Actualizar número de pregunta
+                questionNumber.textContent = `Diferida ${currentDeferredQuestionIndex + 1}`;
+                
+                // Separar correctamente el texto de la pregunta
+                const parts = question.pregunta.split('\n\n');
+                const textContent = parts[0]; // El texto principal
+                const actualQuestion = parts[1] || question.pregunta; // La pregunta real
+                
+                // Mostrar el texto en el contenedor beige
+                textPassage.textContent = textContent;
+                
+                // Mostrar solo la pregunta en el header
+                questionText.textContent = actualQuestion;
+                
+                // Cargar opciones
+                optionsContainer.innerHTML = '';
+                question.opciones.forEach((option, index) => {
+                    const optionCard = document.createElement('div');
+                    optionCard.className = 'option-card';
+                    optionCard.innerHTML = `
+                        <div class="option-content">
+                            <div class="option-letter">${String.fromCharCode(65 + index)}</div>
+                            <div class="option-text">${option}</div>
+                        </div>
+                    `;
+                    optionCard.onclick = () => selectOption(index);
+                    optionsContainer.appendChild(optionCard);
+                });
+                
+                // Resetear estado
+                selectedOption = null;
+                attempts = 0;
+                attempt1.classList.remove('used');
+                hintBox.style.display = 'none';
+                feedbackSection.style.display = 'none';
+                nextBtn.style.display = 'none';
+                checkBtn.style.display = 'block';
+                checkBtn.disabled = true;
+                hintBtn.disabled = false;
+                
+                // Desactivar botón de diferir (ya está diferida)
+                deferBtn.classList.add('active');
+                deferBtn.disabled = true;
+                
+                // Iniciar temporizador para pregunta diferida
+                startDeferredTimer();
                 
                 // Actualizar progreso
                 updateProgress();
@@ -2446,6 +2520,32 @@
                 }, 1000);
             }
             
+            // Iniciar temporizador para pregunta diferida
+            function startDeferredTimer() {
+                // Detener temporizador anterior si existe
+                if (deferredTimer) {
+                    clearInterval(deferredTimer);
+                }
+                
+                // Reiniciar variables del temporizador
+                deferredTimeRemaining = deferredTimeLimit;
+                
+                // Actualizar visualización
+                updateDeferredTimerDisplay();
+                
+                // Iniciar cuenta regresiva
+                deferredTimer = setInterval(() => {
+                    deferredTimeRemaining--;
+                    updateDeferredTimerDisplay();
+                    
+                    // Si el tiempo se acaba
+                    if (deferredTimeRemaining <= 0) {
+                        clearInterval(deferredTimer);
+                        handleDeferredTimeUp();
+                    }
+                }, 1000);
+            }
+            
             // Actualizar visualización del temporizador
             function updateTimerDisplay() {
                 const minutes = Math.floor(challengeTimeRemaining / 60);
@@ -2459,6 +2559,35 @@
                 } else {
                     timerBadge.style.background = '';
                     timerBadge.style.color = '';
+                }
+            }
+            
+            // Actualizar visualización del temporizador diferido
+            function updateDeferredTimerDisplay() {
+                // Mostrar tiempo en el badge de temporizador
+                const minutes = Math.floor(deferredTimeRemaining / 60);
+                const seconds = deferredTimeRemaining % 60;
+                
+                // Crear o actualizar badge de temporizador diferido
+                let deferredTimerBadge = document.getElementById('deferred-timer-badge');
+                if (!deferredTimerBadge) {
+                    deferredTimerBadge = document.createElement('div');
+                    deferredTimerBadge.id = 'deferred-timer-badge';
+                    deferredTimerBadge.className = 'badge timer';
+                    deferredTimerBadge.innerHTML = `<i class="fas fa-clock"></i><span id="deferred-timer-display">1:30</span>`;
+                    document.querySelector('.question-badges').appendChild(deferredTimerBadge);
+                }
+                
+                const deferredTimerDisplay = document.getElementById('deferred-timer-display');
+                deferredTimerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Añadir clase de advertencia si quedan menos de 10 segundos
+                if (deferredTimeRemaining <= 10) {
+                    deferredTimerBadge.style.background = '#f44336';
+                    deferredTimerBadge.style.color = 'white';
+                } else {
+                    deferredTimerBadge.style.background = '';
+                    deferredTimerBadge.style.color = '';
                 }
             }
             
@@ -2478,9 +2607,8 @@
                 });
                 
                 // Actualizar estadísticas
-                attempts = 2; // Considerar como segundo intento
+                attempts = 1; // Solo hay un intento ahora
                 attempt1.classList.add('used');
-                attempt2.classList.add('used');
                 
                 // Reiniciar racha
                 currentStreak = 0;
@@ -2495,6 +2623,52 @@
                 
                 // Actualizar bloque actual
                 updateBlockQuestion(currentQuestionIndex, false, true);
+                
+                // Deshabilitar botón de pista
+                hintBtn.disabled = true;
+                
+                // Mostrar botón de siguiente
+                nextBtn.style.display = 'block';
+                checkBtn.style.display = 'none';
+                
+                // Guardar pregunta incorrecta
+                saveIncorrectQuestion(question);
+                
+                // Actualizar progreso
+                updateProgress();
+                saveProgress();
+            }
+            
+            // Manejar tiempo agotado en pregunta diferida
+            function handleDeferredTimeUp() {
+                // Marcar pregunta como incorrecta
+                const deferredQuestion = deferredQuestions[currentDeferredQuestionIndex];
+                const question = deferredQuestion.question;
+                const options = document.querySelectorAll('.option-card');
+                
+                // Mostrar respuesta correcta
+                options.forEach((opt, i) => {
+                    if (i === question.respuestaCorrecta) {
+                        opt.classList.add('correct');
+                        opt.innerHTML += '<div class="option-icon correct">✓</div>';
+                    }
+                    opt.onclick = null; // Deshabilitar clics
+                });
+                
+                // Actualizar estadísticas
+                attempts = 1; // Solo hay un intento ahora
+                attempt1.classList.add('used');
+                
+                // Reiniciar racha
+                currentStreak = 0;
+                
+                // Mostrar retroalimentación
+                feedbackSection.className = 'feedback-section incorrect';
+                feedbackIcon.className = 'feedback-icon fas fa-times-circle';
+                feedbackTitle.textContent = 'Tiempo agotado';
+                feedbackText.textContent = 'Se acabó el tiempo. La respuesta correcta ha sido resaltada.';
+                trickBox.style.display = 'none';
+                feedbackSection.style.display = 'block';
                 
                 // Deshabilitar botón de pista
                 hintBtn.disabled = true;
@@ -2526,7 +2700,15 @@
                 if (selectedOption === null) return;
                 
                 attempts++;
-                const question = questions[currentQuestionIndex];
+                let question;
+                
+                // Determinar si estamos en una pregunta normal o diferida
+                if (showingDeferredQuestions) {
+                    question = deferredQuestions[currentDeferredQuestionIndex].question;
+                } else {
+                    question = questions[currentQuestionIndex];
+                }
+                
                 const isCorrect = selectedOption === question.respuestaCorrecta;
                 const options = document.querySelectorAll('.option-card');
                 
@@ -2534,13 +2716,12 @@
                 if (challengeTimer) {
                     clearInterval(challengeTimer);
                 }
+                if (deferredTimer) {
+                    clearInterval(deferredTimer);
+                }
                 
                 // Actualizar indicador de intentos
-                if (attempts === 1) {
-                    attempt1.classList.add('used');
-                } else if (attempts === 2) {
-                    attempt2.classList.add('used');
-                }
+                attempt1.classList.add('used');
                 
                 if (isCorrect) {
                     // Respuesta correcta
@@ -2554,7 +2735,9 @@
                     }
                     
                     // Actualizar bloque actual
-                    updateBlockQuestion(currentQuestionIndex, true, false);
+                    if (!showingDeferredQuestions) {
+                        updateBlockQuestion(currentQuestionIndex, true, false);
+                    }
                     
                     feedbackSection.className = 'feedback-section correct';
                     feedbackIcon.className = 'feedback-icon fas fa-check-circle';
@@ -2582,68 +2765,45 @@
                     updateProgress();
                     saveProgress();
                 } else {
-                    // Respuesta incorrecta
+                    // Respuesta incorrecta - solo un intento, así que mostramos la solución directamente
                     feedbackSection.className = 'feedback-section incorrect';
                     feedbackIcon.className = 'feedback-icon fas fa-times-circle';
                     feedbackTitle.textContent = 'Incorrecto';
+                    feedbackText.textContent = question.explicacion;
+                    trickBox.style.display = 'block';
+                    trickText.textContent = question.truco;
                     
                     // Reiniciar racha actual
                     currentStreak = 0;
                     
-                    if (attempts === 1) {
-                        // Primer intento incorrecto, permitir volver a intentar
-                        feedbackText.textContent = 'Inténtalo de nuevo. Puedes usar una pista si lo necesitas.';
-                        trickBox.style.display = 'none';
-                        
-                        // Rehabilitar opciones para volver a intentar
-                        options.forEach((opt, i) => {
-                            if (i === selectedOption) {
-                                opt.classList.remove('incorrect');
-                                opt.querySelector('.option-icon')?.remove();
-                            }
-                            opt.onclick = () => selectOption(i);
-                        });
-                        
-                        selectedOption = null;
-                        checkBtn.disabled = true;
-                        
-                        // Reanudar temporizador si está en modo desafío
-                        if (challengeMode) {
-                            startChallengeTimer();
-                        }
-                    } else {
-                        // Segundo intento incorrecto, mostrar explicación y truco
-                        feedbackText.textContent = question.explicacion;
-                        trickBox.style.display = 'block';
-                        trickText.textContent = question.truco;
-                        
-                        // Actualizar bloque actual
+                    // Actualizar bloque actual
+                    if (!showingDeferredQuestions) {
                         updateBlockQuestion(currentQuestionIndex, false, true);
-                        
-                        // Guardar pregunta incorrecta
-                        saveIncorrectQuestion(question);
-                        
-                        // Mostrar todas las opciones con sus estados
-                        options.forEach((opt, i) => {
-                            if (i === question.respuestaCorrecta) {
-                                opt.classList.add('correct');
-                                opt.innerHTML += '<div class="option-icon correct">✓</div>';
-                            } else if (i === selectedOption && !opt.classList.contains('correct')) {
-                                opt.classList.add('incorrect');
-                                if (!opt.querySelector('.option-icon')) {
-                                    opt.innerHTML += '<div class="option-icon incorrect">✗</div>';
-                                }
-                            }
-                            opt.onclick = null; // Deshabilitar clics
-                        });
-                        
-                        // Deshabilitar botón de pista
-                        hintBtn.disabled = true;
-                        
-                        // Mostrar botón de siguiente
-                        nextBtn.style.display = 'block';
-                        checkBtn.style.display = 'none';
                     }
+                    
+                    // Guardar pregunta incorrecta
+                    saveIncorrectQuestion(question);
+                    
+                    // Mostrar todas las opciones con sus estados
+                    options.forEach((opt, i) => {
+                        if (i === question.respuestaCorrecta) {
+                            opt.classList.add('correct');
+                            opt.innerHTML += '<div class="option-icon correct">✓</div>';
+                        } else if (i === selectedOption && !opt.classList.contains('correct')) {
+                            opt.classList.add('incorrect');
+                            if (!opt.querySelector('.option-icon')) {
+                                opt.innerHTML += '<div class="option-icon incorrect">✗</div>';
+                            }
+                        }
+                        opt.onclick = null; // Deshabilitar clics
+                    });
+                    
+                    // Deshabilitar botón de pista
+                    hintBtn.disabled = true;
+                    
+                    // Mostrar botón de siguiente
+                    nextBtn.style.display = 'block';
+                    checkBtn.style.display = 'none';
                 }
                 
                 feedbackSection.style.display = 'block';
@@ -2722,6 +2882,11 @@
             
             // Diferir pregunta
             function toggleDeferred() {
+                // No permitir diferir si ya estamos mostrando preguntas diferidas
+                if (showingDeferredQuestions) {
+                    return;
+                }
+                
                 const isDeferred = deferBtn.classList.toggle('active');
                 
                 if (isDeferred) {
@@ -2916,8 +3081,14 @@
                 
                 // Verificar si hemos completado el bloque actual
                 if (currentQuestionIndex >= blockQuestions[blockQuestions.length - 1].index) {
-                    // Verificar si debemos activar el modo desafío
-                    checkChallengeStatus();
+                    // Verificar si debemos mostrar consejos y teoría
+                    if (blockIncorrectQuestions.length > 0) {
+                        showTip();
+                        return;
+                    } else {
+                        // Verificar si debemos activar el modo desafío
+                        checkChallengeStatus();
+                    }
                 }
                 
                 currentQuestionIndex++;
@@ -3041,196 +3212,15 @@
                 loadQuestion();
             }
             
-            // Mostrar preguntas diferidas
-            function showDeferredQuestions() {
-                currentView = 'deferred';
-                questionCard.style.display = 'none';
-                deferredModal.classList.add('active');
-                
-                // Limpiar lista de preguntas diferidas
-                deferredQuestionsList.innerHTML = '';
-                
-                // Mostrar cada pregunta diferida
-                deferredQuestions.forEach((deferredQuestion, index) => {
-                    const question = deferredQuestion.question;
-                    
-                    // Separar correctamente el texto de la pregunta
-                    const parts = question.pregunta.split('\n\n');
-                    const textContent = parts[0]; // El texto principal
-                    const actualQuestion = parts[1] || question.pregunta; // La pregunta real
-                    
-                    // Crear elemento de pregunta
-                    const questionElement = document.createElement('div');
-                    questionElement.className = 'deferred-question-card';
-                    questionElement.innerHTML = `
-                        <div class="deferred-question-header">
-                            <div class="deferred-question-number">Pregunta ${deferredQuestion.index + 1}</div>
-                            <div class="deferred-timer" id="deferred-timer-${index}">1:30</div>
-                        </div>
-                        <div class="deferred-question-text">${actualQuestion}</div>
-                        <div class="deferred-options" id="deferred-options-${index}"></div>
-                    `;
-                    
-                    // Agregar a la lista
-                    deferredQuestionsList.appendChild(questionElement);
-                    
-                    // Cargar opciones
-                    const optionsContainer = document.getElementById(`deferred-options-${index}`);
-                    question.opciones.forEach((option, optionIndex) => {
-                        const optionBtn = document.createElement('div');
-                        optionBtn.className = 'deferred-option';
-                        optionBtn.textContent = option;
-                        optionBtn.onclick = () => selectDeferredOption(index, optionIndex);
-                        optionsContainer.appendChild(optionBtn);
-                    });
-                    
-                    // Inicializar estado de la pregunta
-                    deferredQuestion.selectedOption = deferredQuestion.selectedOption !== undefined ? deferredQuestion.selectedOption : null;
-                    deferredQuestion.answered = false;
-                    
-                    // Si ya había una opción seleccionada, marcarla
-                    if (deferredQuestion.selectedOption !== null) {
-                        const options = optionsContainer.querySelectorAll('.deferred-option');
-                        options[deferredQuestion.selectedOption].classList.add('selected');
-                    }
-                });
-                
-                // Iniciar temporizador para la primera pregunta
-                startDeferredTimer(0);
-            }
-            
-            // Seleccionar opción de pregunta diferida
-            function selectDeferredOption(questionIndex, optionIndex) {
-                const deferredQuestion = deferredQuestions[questionIndex];
-                deferredQuestion.selectedOption = optionIndex;
-                
-                // Actualizar visualización
-                const optionsContainer = document.getElementById(`deferred-options-${questionIndex}`);
-                const options = optionsContainer.querySelectorAll('.deferred-option');
-                options.forEach((opt, i) => {
-                    opt.classList.toggle('selected', i === optionIndex);
-                });
-                
-                saveProgress();
-            }
-            
-            // Iniciar temporizador para pregunta diferida
-            function startDeferredTimer(questionIndex) {
-                // Detener temporizador anterior si existe
-                if (deferredTimer) {
-                    clearInterval(deferredTimer);
-                }
-                
-                // Reiniciar variables del temporizador
-                deferredTimeRemaining = deferredTimeLimit;
-                currentDeferredQuestionIndex = questionIndex;
-                
-                // Actualizar visualización
-                updateDeferredTimerDisplay(questionIndex);
-                
-                // Iniciar cuenta regresiva
-                deferredTimer = setInterval(() => {
-                    deferredTimeRemaining--;
-                    updateDeferredTimerDisplay(questionIndex);
-                    
-                    // Si el tiempo se acaba
-                    if (deferredTimeRemaining <= 0) {
-                        clearInterval(deferredTimer);
-                        
-                        // Marcar pregunta como respondida (incorrecta)
-                        handleDeferredTimeUp(questionIndex);
-                    }
-                }, 1000);
-            }
-            
-            // Actualizar visualización del temporizador diferido
-            function updateDeferredTimerDisplay(questionIndex) {
-                const timerElement = document.getElementById(`deferred-timer-${questionIndex}`);
-                if (timerElement) {
-                    const minutes = Math.floor(deferredTimeRemaining / 60);
-                    const seconds = deferredTimeRemaining % 60;
-                    timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                    
-                    // Añadir clase de advertencia si quedan menos de 10 segundos
-                    if (deferredTimeRemaining <= 10) {
-                        timerElement.style.color = '#f44336';
-                    } else {
-                        timerElement.style.color = '';
-                    }
-                }
-            }
-            
-            // Manejar tiempo agotado en pregunta diferida
-            function handleDeferredTimeUp(questionIndex) {
-                const deferredQuestion = deferredQuestions[questionIndex];
-                deferredQuestion.answered = true;
-                deferredQuestion.timeUp = true;
-                
-                // Deshabilitar opciones
-                const optionsContainer = document.getElementById(`deferred-options-${questionIndex}`);
-                const options = optionsContainer.querySelectorAll('.deferred-option');
-                options.forEach(opt => {
-                    opt.onclick = null;
-                });
-                
-                // Marcar respuesta correcta
-                const question = deferredQuestion.question;
-                options[question.respuestaCorrecta].style.backgroundColor = 'rgba(76, 175, 80, 0.1)';
-                options[question.respuestaCorrecta].style.borderColor = '#4caf50';
-                
-                // Guardar pregunta incorrecta
-                saveIncorrectQuestion(question);
-                
-                // Pasar a la siguiente pregunta o finalizar
-                if (questionIndex < deferredQuestions.length - 1) {
-                    startDeferredTimer(questionIndex + 1);
-                } else {
-                    // Mostrar botón de enviar
-                    submitDeferredBtn.style.display = 'block';
-                }
-                
-                saveProgress();
-            }
-            
-            // Enviar respuestas diferidas
-            function submitDeferredAnswers() {
-                // Procesar cada pregunta diferida
-                deferredQuestions.forEach(deferredQuestion => {
-                    if (!deferredQuestion.answered) {
-                        const question = deferredQuestion.question;
-                        const isCorrect = deferredQuestion.selectedOption === question.respuestaCorrecta;
-                        
-                        if (isCorrect) {
-                            // Respuesta correcta
-                            score += 10;
-                            currentStreak++;
-                            
-                            if (currentStreak > maxStreak) {
-                                maxStreak = currentStreak;
-                            }
-                        } else {
-                            // Respuesta incorrecta
-                            currentStreak = 0;
-                            
-                            // Guardar pregunta incorrecta
-                            saveIncorrectQuestion(question);
-                        }
-                    }
-                });
-                
-                // Actualizar puntuación
-                currentScore.textContent = score;
-                
-                // Limpiar preguntas diferidas
-                deferredQuestions = [];
-                saveProgress();
-                
-                // Mostrar resultados
-                showResults();
-            }
-            
             // Siguiente pregunta
             function nextQuestion() {
+                // Si estamos mostrando preguntas diferidas
+                if (showingDeferredQuestions) {
+                    currentDeferredQuestionIndex++;
+                    loadQuestion();
+                    return;
+                }
+                
                 // Verificar si hemos completado el bloque actual
                 if (currentQuestionIndex >= blockQuestions[blockQuestions.length - 1].index) {
                     // Verificar si debemos mostrar consejos y teoría
@@ -3287,12 +3277,24 @@
             
             // Actualizar progreso
             function updateProgress() {
-                const progress = ((currentQuestionIndex + (attempts > 0 ? 1 : 0)) / questions.length) * 100;
+                let totalAnswered = currentQuestionIndex;
+                
+                // Si estamos en preguntas diferidas, contar las preguntas principales respondidas más las diferidas respondidas
+                if (showingDeferredQuestions) {
+                    totalAnswered = questions.length;
+                    totalAnswered += currentDeferredQuestionIndex;
+                }
+                // Si hemos respondido a la pregunta actual
+                else if (attempts > 0) {
+                    totalAnswered = currentQuestionIndex + 1;
+                }
+                
+                const progress = (totalAnswered / (questions.length + deferredQuestions.length)) * 100;
                 const circumference = 2 * Math.PI * 54;
                 const offset = circumference - (progress / 100) * circumference;
                 progressCircle.style.strokeDashoffset = offset;
                 progressPercentage.textContent = Math.round(progress) + '%';
-                questionsAnswered.textContent = currentQuestionIndex + (attempts > 0 ? 1 : 0);
+                questionsAnswered.textContent = totalAnswered;
             }
             
             // Guardar progreso
@@ -3440,6 +3442,8 @@
                 deferredQuestions = [];
                 difficultQuestions = [];
                 breakTaken = false;
+                showingDeferredQuestions = false;
+                currentDeferredQuestionIndex = 0;
                 
                 // Limpiar progreso guardado
                 localStorage.removeItem('skopia_quiz_progress_LCS1D1');
@@ -3466,7 +3470,9 @@
                 challengeModal.classList.remove('active');
                 loadQuestion();
             });
-            submitDeferredBtn.addEventListener('click', submitDeferredAnswers);
+            submitDeferredBtn.addEventListener('click', () => {
+                // Este botón ya no se usa, pero lo dejamos por si se necesita en el futuro
+            });
             retryBtn.addEventListener('click', retryQuiz);
             
             backBtn.addEventListener('click', () => {
@@ -3491,6 +3497,7 @@
                         
                         // Limpiar preguntas diferidas
                         deferredQuestions = [];
+                        showingDeferredQuestions = false;
                         saveProgress();
                         
                         // Mostrar resultados
