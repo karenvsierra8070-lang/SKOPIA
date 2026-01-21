@@ -780,6 +780,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- VARIABLES DE ESTADO ---
     let allData = null; // Almacenará los textos y el diccionario del JSON
+    let quizData = null; // Almacenará los cuestionarios del JSON separado
     let currentReading = null;
     let currentDifficulty = 'facil';
     let speechSynthesis = window.speechSynthesis;
@@ -790,11 +791,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Cargar datos desde el archivo JSON
     async function loadData() {
         try {
+            // Cargar el JSON principal
             const response = await fetch('textos_biblioteca.json');
             if (!response.ok) {
                 throw new Error(`Error HTTP: ${response.status}`);
             }
             allData = await response.json();
+            
+            // Cargar el JSON de cuestionarios
+            const quizResponse = await fetch('cuestionariobiblioteca.json');
+            if (!quizResponse.ok) {
+                throw new Error(`Error HTTP: ${quizResponse.status}`);
+            }
+            quizData = await quizResponse.json();
+            
             console.log("Datos cargados correctamente.");
         } catch (error) {
             console.error("No se pudo cargar el archivo JSON:", error);
@@ -846,7 +856,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsCount.textContent = `${readings.length} resultados encontrados`;
     }
 
-    // Abrir el modal con el texto seleccionado (ACTUALIZADO)
+    // Abrir el modal con el texto seleccionado
     function openModal(reading) {
         if (!allData) { showToast("Los datos aún no se han cargado."); return; }
         currentReading = reading;
@@ -866,8 +876,6 @@ document.addEventListener('DOMContentLoaded', () => {
         modalMedia.style.display = 'block';
 
         updateModalText();
-        // Preparar el cuestionario pero no mostrarlo automáticamente
-        prepareQuiz();
         // Ocultar el cuestionario al abrir un nuevo texto
         quizContainer.classList.remove('active');
         quizToggleBtn.classList.remove('active');
@@ -876,7 +884,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.style.overflow = 'hidden';
     }
 
-    // Actualizar el texto del modal según la dificultad (MANEJO DE PÁRRAFOS)
+    // Actualizar el texto del modal según la dificultad
     function updateModalText() {
         if (!currentReading) return;
         
@@ -908,19 +916,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Preparar el cuestionario según el nivel de dificultad
     function prepareQuiz() {
-        if (!currentReading) return;
+        if (!currentReading || !quizData) {
+            quizQuestions.innerHTML = '<p style="text-align: center; color: var(--color-oliva-medio);">No hay cuestionario disponible para este texto.</p>';
+            return;
+        }
         
         quizQuestions.innerHTML = '';
         quizResult.style.display = 'none';
         
-        // Generar preguntas dinámicamente basadas en el texto
-        const quiz = generateQuizFromText(currentReading.levels[currentDifficulty]);
+        // Obtener las preguntas del texto actual
+        const allQuestions = quizData.cuestionarios[currentReading.id];
         
-        quiz.forEach((question, index) => {
+        if (!allQuestions || allQuestions.length === 0) {
+            quizQuestions.innerHTML = '<p style="text-align: center; color: var(--color-oliva-medio);">No hay preguntas disponibles para este texto.</p>';
+            return;
+        }
+        
+        // Seleccionar aleatoriamente 5 preguntas de las disponibles
+        const selectedQuestions = getRandomQuestions(allQuestions, 5);
+        
+        selectedQuestions.forEach((question, index) => {
             const questionContainer = document.createElement('div');
             questionContainer.className = 'question-container';
             
-            const optionsHTML = question.options.map((option, optionIndex) => {
+            const optionsHTML = question.opciones.map((option, optionIndex) => {
                 return `
                     <label class="option-label">
                         <input type="radio" name="question-${index}" value="${optionIndex}" class="option-input">
@@ -930,7 +949,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }).join('');
             
             questionContainer.innerHTML = `
-                <div class="question-text">${index + 1}. ${question.question}</div>
+                <div class="question-text">${index + 1}. ${question.pregunta}</div>
                 <div class="options-container">
                     ${optionsHTML}
                 </div>
@@ -940,102 +959,44 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Generar preguntas de opción múltiple basadas en el texto
-    function generateQuizFromText(text) {
-        // Extraer palabras clave del texto
-        const words = text.toLowerCase().replace(/[.,!?;:]/g, '').split(/\s+/);
-        const uniqueWords = [...new Set(words)];
+    // Función para seleccionar preguntas aleatorias
+    function getRandomQuestions(allQuestions, count) {
+        // Crear una copia del array para no modificar el original
+        const questionsCopy = [...allQuestions];
+        const selectedQuestions = [];
         
-        // Seleccionar palabras aleatorias para las preguntas
-        const selectedWords = [];
-        const numQuestions = 5;
-        
-        for (let i = 0; i < numQuestions && i < uniqueWords.length; i++) {
-            const randomIndex = Math.floor(Math.random() * uniqueWords.length);
-            selectedWords.push(uniqueWords[randomIndex]);
-            uniqueWords.splice(randomIndex, 1); // Evitar duplicados
+        // Seleccionar preguntas aleatoriamente
+        for (let i = 0; i < count && questionsCopy.length > 0; i++) {
+            const randomIndex = Math.floor(Math.random() * questionsCopy.length);
+            selectedQuestions.push(questionsCopy[randomIndex]);
+            // Eliminar la pregunta seleccionada para evitar duplicados
+            questionsCopy.splice(randomIndex, 1);
         }
         
-        // Crear preguntas basadas en las palabras seleccionadas
-        const questions = selectedWords.map(word => {
-            // Buscar la definición de la palabra en el diccionario
-            const definition = allData.diccionario[word] ? 
-                allData.diccionario[word].definicion : 
-                `Significado relacionado con ${word}`;
-            
-            // Generar opciones (la correcta y 3 incorrectas)
-            const correctOption = definition;
-            const incorrectOptions = generateIncorrectOptions(word, definition);
-            
-            // Mezclar opciones
-            const allOptions = [correctOption, ...incorrectOptions];
-            const shuffledOptions = shuffleArray(allOptions);
-            
-            // Encontrar el índice de la respuesta correcta después de mezclar
-            const correctIndex = shuffledOptions.indexOf(correctOption);
-            
-            return {
-                question: `¿Cuál es el significado de "${word}" en el contexto del texto?`,
-                options: shuffledOptions,
-                correctAnswer: correctIndex
-            };
-        });
-        
-        return questions;
-    }
-
-    // Generar opciones incorrectas para las preguntas
-    function generateIncorrectOptions(correctWord, correctDefinition) {
-        const incorrectOptions = [];
-        const allWords = Object.keys(allData.diccionario);
-        
-        // Intentar obtener definiciones de palabras relacionadas
-        while (incorrectOptions.length < 3) {
-            const randomIndex = Math.floor(Math.random() * allWords.length);
-            const randomWord = allWords[randomIndex];
-            
-            // Evitar usar la palabra correcta o definiciones similares
-            if (randomWord !== correctWord && 
-                !incorrectOptions.includes(allData.diccionario[randomWord].definicion)) {
-                incorrectOptions.push(allData.diccionario[randomWord].definicion);
-            }
-        }
-        
-        // Si no hay suficientes opciones incorrectas, crear algunas genéricas
-        while (incorrectOptions.length < 3) {
-            incorrectOptions.push(`Definición alternativa para ${correctWord}`);
-        }
-        
-        return incorrectOptions.slice(0, 3);
-    }
-
-    // Mezclar un array (Fisher-Yates shuffle)
-    function shuffleArray(array) {
-        const newArray = [...array];
-        for (let i = newArray.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-        }
-        return newArray;
+        return selectedQuestions;
     }
 
     // Evaluar las respuestas del cuestionario
     function evaluateQuiz() {
-        if (!currentReading) return;
+        if (!currentReading || !quizData) return;
         
-        const quiz = generateQuizFromText(currentReading.levels[currentDifficulty]);
+        const allQuestions = quizData.cuestionarios[currentReading.id];
+        if (!allQuestions || allQuestions.length === 0) return;
+        
+        // Obtener las mismas preguntas que se mostraron
+        const selectedQuestions = getRandomQuestions(allQuestions, 5);
         let correctAnswers = 0;
         
-        quiz.forEach((question, index) => {
+        selectedQuestions.forEach((question, index) => {
             const selectedOption = document.querySelector(`input[name="question-${index}"]:checked`);
-            if (selectedOption && parseInt(selectedOption.value) === question.correctAnswer) {
+            if (selectedOption && parseInt(selectedOption.value) === question.respuestaCorrecta) {
                 correctAnswers++;
             }
         });
         
-        const percentage = Math.round((correctAnswers / quiz.length) * 100);
+        const percentage = Math.round((correctAnswers / selectedQuestions.length) * 100);
         
-        quizResult.textContent = `Has respondido correctamente ${correctAnswers} de ${quiz.length} preguntas (${percentage}%)`;
+        quizResult.textContent = `Has respondido correctamente ${correctAnswers} de ${selectedQuestions.length} preguntas (${percentage}%)`;
         quizResult.className = 'quiz-result ' + (percentage >= 60 ? 'correct' : 'incorrect');
         quizResult.style.display = 'block';
         
@@ -1103,7 +1064,10 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.add('active');
             currentDifficulty = btn.dataset.level;
             updateModalText();
-            prepareQuiz(); // Preparar el cuestionario al cambiar de nivel
+            // Si el cuestionario está visible, actualizarlo
+            if (quizContainer.classList.contains('active')) {
+                prepareQuiz();
+            }
         });
     });
 
@@ -1126,9 +1090,13 @@ document.addEventListener('DOMContentLoaded', () => {
         quizContainer.classList.toggle('active');
         quizToggleBtn.classList.toggle('active');
         
-        // Si se está mostrando el cuestionario, preparar las preguntas
+        // Si se está mostrando el cuestionario, preparar las preguntas y desplazarse hacia abajo
         if (quizContainer.classList.contains('active')) {
             prepareQuiz();
+            // Pequeña demora para asegurar que el contenedor sea visible antes de desplazarse
+            setTimeout(() => {
+                quizContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
         }
     });
 
