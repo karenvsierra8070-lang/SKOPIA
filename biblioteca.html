@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -300,6 +300,87 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .floating-icons button:hover { transform: scale(1.08); background: var(--float-color-hover); }
 .toast { position: fixed; right: 20px; bottom: 20px; background: #fff7e6; border-left: 6px solid var(--color-oliva-medio); padding: 16px 20px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); z-index: 3001; display: none; font-size: 1rem; max-width: 350px; }
 .toast.show { display: block; }
+
+/* --- Estilos para el cuestionario --- */
+.quiz-container {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: rgba(190, 192, 146, 0.1);
+    border-radius: 12px;
+    border: 1px solid var(--color-oliva-claro);
+}
+.quiz-title {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 1.5rem;
+    color: var(--color-oliva-oscuro);
+    margin-bottom: 20px;
+    text-align: center;
+}
+.question-container {
+    margin-bottom: 25px;
+    padding: 15px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.question-text {
+    font-weight: 500;
+    margin-bottom: 15px;
+    color: var(--color-oliva-oscuro);
+}
+.options-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.option-label {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.option-label:hover {
+    background-color: rgba(190, 192, 146, 0.2);
+}
+.option-input {
+    margin-right: 10px;
+}
+.quiz-submit {
+    display: block;
+    margin: 20px auto 0;
+    padding: 12px 30px;
+    background-color: var(--color-oliva-oscuro);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+.quiz-submit:hover {
+    background-color: var(--color-oliva-medio);
+}
+.quiz-result {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 500;
+    display: none;
+}
+.quiz-result.correct {
+    background-color: rgba(76, 175, 80, 0.2);
+    color: #2e7d32;
+    border: 1px solid #4caf50;
+}
+.quiz-result.incorrect {
+    background-color: rgba(244, 67, 54, 0.2);
+    color: #c62828;
+    border: 1px solid #f44336;
+}
 
 /* --- Responsive --- */
 @media (max-width: 1024px) {
@@ -609,6 +690,16 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                     <span class="audio-speed" id="audio-speed">Velocidad: 1x</span>
                 </div>
             </div>
+            
+            <!-- Contenedor para el cuestionario -->
+            <div class="quiz-container" id="quiz-container">
+                <h3 class="quiz-title">Cuestionario de Comprensión</h3>
+                <div id="quiz-questions">
+                    <!-- Las preguntas se insertarán aquí dinámicamente -->
+                </div>
+                <button class="quiz-submit" id="quiz-submit">Enviar respuestas</button>
+                <div class="quiz-result" id="quiz-result"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -650,6 +741,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const tooltipDefinition = document.getElementById('tooltip-definition');
     const tooltipSynonyms = document.getElementById('tooltip-synonyms');
     const toast = document.getElementById('toast');
+    
+    // Elementos del cuestionario
+    const quizContainer = document.getElementById('quiz-container');
+    const quizQuestions = document.getElementById('quiz-questions');
+    const quizSubmit = document.getElementById('quiz-submit');
+    const quizResult = document.getElementById('quiz-result');
 
     // --- VARIABLES DE ESTADO ---
     let allData = null; // Almacenará los textos y el diccionario del JSON
@@ -692,9 +789,18 @@ document.addEventListener('DOMContentLoaded', () => {
         readings.forEach(reading => {
             const card = document.createElement('div');
             card.className = 'reading-card';
+            
+            // Aseguramos que cada lectura tenga una imagen asociada
+            // Si no tiene imagen, usamos una imagen por defecto basada en el tipo de texto
+            let imageUrl = reading.image;
+            if (!imageUrl) {
+                const type = typeFilter.value;
+                imageUrl = `https://picsum.photos/seed/${type}-${reading.title}/400/300.jpg`;
+            }
+            
             card.innerHTML = `
                 <div class="reading-image">
-                    <img src="${reading.image}" alt="${reading.title}">
+                    <img src="${imageUrl}" alt="${reading.title}">
                 </div>
                 <div class="reading-content">
                     <h3 class="reading-title">${reading.title}</h3>
@@ -719,17 +825,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- MANEJO DE LA IMAGEN DEL MODAL ---
         const modalMedia = document.getElementById('modal-media');
-        const imageToLoad = reading.modalImageUrl || reading.chartImage; // Usa modalImageUrl o chartImage como fallback
-
-        if (imageToLoad) {
-            modalMedia.innerHTML = `<img src="${imageToLoad}" alt="Imagen para ${reading.title}">`;
-            modalMedia.style.display = 'block'; // Muestra el contenedor
-        } else {
-            modalMedia.innerHTML = ''; // Limpia el contenido
-            modalMedia.style.display = 'none'; // Oculta el contenedor si no hay imagen
+        let imageUrl = reading.modalImageUrl || reading.chartImage || reading.image;
+        
+        // Si no hay una imagen específica para el modal, generamos una basada en el título
+        if (!imageUrl) {
+            imageUrl = `https://picsum.photos/seed/${reading.title}/800/400.jpg`;
         }
+        
+        modalMedia.innerHTML = `<img src="${imageUrl}" alt="Imagen para ${reading.title}">`;
+        modalMedia.style.display = 'block';
 
         updateModalText();
+        updateQuiz(); // Cargar el cuestionario para el nivel actual
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
     }
@@ -762,6 +869,147 @@ document.addEventListener('DOMContentLoaded', () => {
         modalText.querySelectorAll('.word').forEach(wordSpan => {
             wordSpan.addEventListener('click', handleWordClick);
         });
+    }
+
+    // Actualizar el cuestionario según el nivel de dificultad
+    function updateQuiz() {
+        if (!currentReading || !currentReading.quizzes || !currentReading.quizzes[currentDifficulty]) {
+            quizContainer.style.display = 'none';
+            return;
+        }
+        
+        quizContainer.style.display = 'block';
+        quizQuestions.innerHTML = '';
+        quizResult.style.display = 'none';
+        
+        // Generar preguntas dinámicamente basadas en el texto
+        const quiz = generateQuizFromText(currentReading.levels[currentDifficulty]);
+        
+        quiz.forEach((question, index) => {
+            const questionContainer = document.createElement('div');
+            questionContainer.className = 'question-container';
+            
+            const optionsHTML = question.options.map((option, optionIndex) => {
+                return `
+                    <label class="option-label">
+                        <input type="radio" name="question-${index}" value="${optionIndex}" class="option-input">
+                        <span>${option}</span>
+                    </label>
+                `;
+            }).join('');
+            
+            questionContainer.innerHTML = `
+                <div class="question-text">${index + 1}. ${question.question}</div>
+                <div class="options-container">
+                    ${optionsHTML}
+                </div>
+            `;
+            
+            quizQuestions.appendChild(questionContainer);
+        });
+    }
+
+    // Generar preguntas de opción múltiple basadas en el texto
+    function generateQuizFromText(text) {
+        // Extraer palabras clave del texto
+        const words = text.toLowerCase().replace(/[.,!?;:]/g, '').split(/\s+/);
+        const uniqueWords = [...new Set(words)];
+        
+        // Seleccionar palabras aleatorias para las preguntas
+        const selectedWords = [];
+        const numQuestions = 5;
+        
+        for (let i = 0; i < numQuestions && i < uniqueWords.length; i++) {
+            const randomIndex = Math.floor(Math.random() * uniqueWords.length);
+            selectedWords.push(uniqueWords[randomIndex]);
+            uniqueWords.splice(randomIndex, 1); // Evitar duplicados
+        }
+        
+        // Crear preguntas basadas en las palabras seleccionadas
+        const questions = selectedWords.map(word => {
+            // Buscar la definición de la palabra en el diccionario
+            const definition = allData.diccionario[word] ? 
+                allData.diccionario[word].definicion : 
+                `Significado relacionado con ${word}`;
+            
+            // Generar opciones (la correcta y 3 incorrectas)
+            const correctOption = definition;
+            const incorrectOptions = generateIncorrectOptions(word, definition);
+            
+            // Mezclar opciones
+            const allOptions = [correctOption, ...incorrectOptions];
+            const shuffledOptions = shuffleArray(allOptions);
+            
+            // Encontrar el índice de la respuesta correcta después de mezclar
+            const correctIndex = shuffledOptions.indexOf(correctOption);
+            
+            return {
+                question: `¿Cuál es el significado de "${word}" en el contexto del texto?`,
+                options: shuffledOptions,
+                correctAnswer: correctIndex
+            };
+        });
+        
+        return questions;
+    }
+
+    // Generar opciones incorrectas para las preguntas
+    function generateIncorrectOptions(correctWord, correctDefinition) {
+        const incorrectOptions = [];
+        const allWords = Object.keys(allData.diccionario);
+        
+        // Intentar obtener definiciones de palabras relacionadas
+        while (incorrectOptions.length < 3) {
+            const randomIndex = Math.floor(Math.random() * allWords.length);
+            const randomWord = allWords[randomIndex];
+            
+            // Evitar usar la palabra correcta o definiciones similares
+            if (randomWord !== correctWord && 
+                !incorrectOptions.includes(allData.diccionario[randomWord].definicion)) {
+                incorrectOptions.push(allData.diccionario[randomWord].definicion);
+            }
+        }
+        
+        // Si no hay suficientes opciones incorrectas, crear algunas genéricas
+        while (incorrectOptions.length < 3) {
+            incorrectOptions.push(`Definición alternativa para ${correctWord}`);
+        }
+        
+        return incorrectOptions.slice(0, 3);
+    }
+
+    // Mezclar un array (Fisher-Yates shuffle)
+    function shuffleArray(array) {
+        const newArray = [...array];
+        for (let i = newArray.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+        }
+        return newArray;
+    }
+
+    // Evaluar las respuestas del cuestionario
+    function evaluateQuiz() {
+        if (!currentReading) return;
+        
+        const quiz = generateQuizFromText(currentReading.levels[currentDifficulty]);
+        let correctAnswers = 0;
+        
+        quiz.forEach((question, index) => {
+            const selectedOption = document.querySelector(`input[name="question-${index}"]:checked`);
+            if (selectedOption && parseInt(selectedOption.value) === question.correctAnswer) {
+                correctAnswers++;
+            }
+        });
+        
+        const percentage = Math.round((correctAnswers / quiz.length) * 100);
+        
+        quizResult.textContent = `Has respondido correctamente ${correctAnswers} de ${quiz.length} preguntas (${percentage}%)`;
+        quizResult.className = 'quiz-result ' + (percentage >= 60 ? 'correct' : 'incorrect');
+        quizResult.style.display = 'block';
+        
+        // Desplazarse hacia el resultado
+        quizResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     // Manejar el clic en una palabra para mostrar el tooltip
@@ -824,6 +1072,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.add('active');
             currentDifficulty = btn.dataset.level;
             updateModalText();
+            updateQuiz(); // Actualizar el cuestionario al cambiar de nivel
         });
     });
 
@@ -840,6 +1089,9 @@ document.addEventListener('DOMContentLoaded', () => {
         speechSynthesis.speak(speechUtterance);
         playBtn.innerHTML = '<i class="fas fa-pause"></i>';
     });
+
+    // Event listener para el botón de enviar respuestas del cuestionario
+    quizSubmit.addEventListener('click', evaluateQuiz);
 
     document.addEventListener('click', (event) => {
         if (!event.target.classList.contains('word')) {
