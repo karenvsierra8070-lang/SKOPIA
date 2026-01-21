@@ -302,12 +302,37 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .toast.show { display: block; }
 
 /* --- Estilos para el cuestionario --- */
+.quiz-toggle-btn {
+    padding: 8px 15px;
+    border: 2px solid var(--color-oliva-claro);
+    background-color: white;
+    color: var(--color-oliva-oscuro);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.quiz-toggle-btn:hover {
+    background-color: rgba(190, 192, 146, 0.2);
+}
+.quiz-toggle-btn.active {
+    background-color: var(--color-oliva-medio);
+    color: white;
+    border-color: var(--color-oliva-medio);
+}
+
 .quiz-container {
-    margin-top: 30px;
+    margin-top: 20px;
     padding: 20px;
     background-color: rgba(190, 192, 146, 0.1);
     border-radius: 12px;
     border: 1px solid var(--color-oliva-claro);
+    display: none;
+}
+.quiz-container.active {
+    display: block;
 }
 .quiz-title {
     font-family: 'Patrick Hand', cursive;
@@ -689,6 +714,10 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                     <button class="audio-btn" id="play-btn"><i class="fas fa-play"></i></button>
                     <span class="audio-speed" id="audio-speed">Velocidad: 1x</span>
                 </div>
+                <!-- Botón para mostrar/ocultar el cuestionario -->
+                <button class="quiz-toggle-btn" id="quiz-toggle-btn">
+                    <i class="fas fa-question-circle"></i> Cuestionario
+                </button>
             </div>
             
             <!-- Contenedor para el cuestionario -->
@@ -743,6 +772,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const toast = document.getElementById('toast');
     
     // Elementos del cuestionario
+    const quizToggleBtn = document.getElementById('quiz-toggle-btn');
     const quizContainer = document.getElementById('quiz-container');
     const quizQuestions = document.getElementById('quiz-questions');
     const quizSubmit = document.getElementById('quiz-submit');
@@ -836,7 +866,12 @@ document.addEventListener('DOMContentLoaded', () => {
         modalMedia.style.display = 'block';
 
         updateModalText();
-        updateQuiz(); // Cargar el cuestionario para el nivel actual
+        // Preparar el cuestionario pero no mostrarlo automáticamente
+        prepareQuiz();
+        // Ocultar el cuestionario al abrir un nuevo texto
+        quizContainer.classList.remove('active');
+        quizToggleBtn.classList.remove('active');
+        
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
     }
@@ -871,14 +906,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Actualizar el cuestionario según el nivel de dificultad
-    function updateQuiz() {
-        if (!currentReading || !currentReading.quizzes || !currentReading.quizzes[currentDifficulty]) {
-            quizContainer.style.display = 'none';
-            return;
-        }
+    // Preparar el cuestionario según el nivel de dificultad
+    function prepareQuiz() {
+        if (!currentReading) return;
         
-        quizContainer.style.display = 'block';
         quizQuestions.innerHTML = '';
         quizResult.style.display = 'none';
         
@@ -1072,7 +1103,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.add('active');
             currentDifficulty = btn.dataset.level;
             updateModalText();
-            updateQuiz(); // Actualizar el cuestionario al cambiar de nivel
+            prepareQuiz(); // Preparar el cuestionario al cambiar de nivel
         });
     });
 
@@ -1088,6 +1119,17 @@ document.addEventListener('DOMContentLoaded', () => {
         speechUtterance.onend = () => { playBtn.innerHTML = '<i class="fas fa-play"></i>'; };
         speechSynthesis.speak(speechUtterance);
         playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+    });
+
+    // Event listener para el botón de mostrar/ocultar cuestionario
+    quizToggleBtn.addEventListener('click', () => {
+        quizContainer.classList.toggle('active');
+        quizToggleBtn.classList.toggle('active');
+        
+        // Si se está mostrando el cuestionario, preparar las preguntas
+        if (quizContainer.classList.contains('active')) {
+            prepareQuiz();
+        }
     });
 
     // Event listener para el botón de enviar respuestas del cuestionario
