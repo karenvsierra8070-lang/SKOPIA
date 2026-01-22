@@ -316,7 +316,7 @@ border-radius: 12px;
 border-left: 4px solid var(--color-oliva-medio);
 }
 
-/* --- Estilos para las tablas y preguntas --- */
+/* --- Estilos para las tablas --- */
 .table-container {
 margin: 20px 0;
 position: relative;
@@ -357,10 +357,21 @@ color: #999;
 font-style: italic;
 cursor: pointer;
 transition: all 0.3s ease;
+position: relative;
 }
 
 .empty-cell:hover {
 background-color: #e0e0e0;
+transform: scale(1.05);
+}
+
+.empty-cell::after {
+content: "🔍";
+position: absolute;
+top: 2px;
+right: 2px;
+font-size: 12px;
+opacity: 0.5;
 }
 
 /* Celda con valor temporal (al seleccionar opción) */
@@ -375,26 +386,40 @@ font-weight: 500;
 background-color: var(--color-beige);
 color: var(--color-oliva-oscuro);
 font-weight: 600;
+animation: correctPulse 0.5s ease;
 }
 
-/* Sección de preguntas */
-.questions-section {
-margin-top: 30px;
+@keyframes correctPulse {
+0% { transform: scale(1); }
+50% { transform: scale(1.1); }
+100% { transform: scale(1); }
 }
 
-.question-item {
+/* Sección de pregunta individual */
+.question-popup {
+display: none;
 background-color: var(--color-crema);
 border-radius: 12px;
 padding: 20px;
-margin-bottom: 20px;
+margin: 20px 0;
 border-left: 4px solid var(--color-oliva-medio);
-transition: all 0.3s ease;
+box-shadow: 0 4px 15px var(--color-sombra);
+animation: slideIn 0.3s ease;
 }
 
-.question-item.highlighted {
-border-left: 4px solid var(--color-oliva-oscuro);
-background-color: #f0f0e6;
-box-shadow: 0 4px 15px var(--color-sombra);
+.question-popup.show {
+display: block;
+}
+
+@keyframes slideIn {
+from {
+opacity: 0;
+transform: translateY(-20px);
+}
+to {
+opacity: 1;
+transform: translateY(0);
+}
 }
 
 .question-text {
@@ -836,7 +861,7 @@ padding: 8px 10px;
 <div class="game-container">
 <div class="game-header">
 <h1 class="game-title">Completar Tablas</h1>
-<p class="game-subtitle">Analiza los datos y completa las tablas correctamente</p>
+<p class="game-subtitle">Haz clic en los huecos de la tabla para responder las preguntas</p>
 </div>
 
 <!-- Sección del video -->
@@ -846,14 +871,14 @@ padding: 8px 10px;
 <iframe width="560" height="315" src="https://www.youtube.com/embed/mVDZHXSAjo0?si=DZCsAhSI60V0IjXn" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 </div>
 <button class="start-btn" id="start-btn">
-<i class="fas fa-play"></i> Comenzar a aprender
+<i class="fas fa-play"></i> Comenzar ejercicio
 </button>
 </div>
 
 <!-- Sección de ejercicios -->
 <div class="exercise-section" id="exercise-section">
 <div class="exercise-header">
-<div class="exercise-number" id="exercise-number">Tabla 1 de 5</div>
+<div class="exercise-number" id="exercise-number">Ejercicio de Tabla</div>
 <div class="exercise-score" id="exercise-score">Puntuación: 0/5</div>
 </div>
 
@@ -862,7 +887,11 @@ padding: 8px 10px;
 
 <div class="table-container" id="table-container"></div>
 
-<div class="questions-section" id="questions-section"></div>
+<!-- Popup de pregunta individual -->
+<div class="question-popup" id="question-popup">
+<div class="question-text" id="question-text"></div>
+<div class="options-container" id="options-container"></div>
+</div>
 
 <div class="progress-section">
 <div class="panda-container" id="panda-container">
@@ -873,10 +902,10 @@ padding: 8px 10px;
 
 <div class="exercise-actions">
 <button class="confirm-btn" id="confirm-btn" disabled>
-Confirmar respuestas <i class="fas fa-check"></i>
+Confirmar todas las respuestas <i class="fas fa-check"></i>
 </button>
 <button class="next-btn" id="next-btn" disabled>
-Siguiente tabla <i class="fas fa-arrow-right"></i>
+Ver resultados <i class="fas fa-arrow-right"></i>
 </button>
 </div>
 </div>
@@ -884,8 +913,8 @@ Siguiente tabla <i class="fas fa-arrow-right"></i>
 
 <!-- Sección de resultados -->
 <div class="results-section" id="results-section">
-<h2 class="results-title">¡Has completado todas las tablas!</h2>
-<div class="results-score" id="results-score">Tu puntuación final: 0/25</div>
+<h2 class="results-title">¡Has completado la tabla!</h2>
+<div class="results-score" id="results-score">Tu puntuación final: 0/5</div>
 <div>
 <button class="restart-btn" id="restart-btn">
 <i class="fas fa-redo"></i> Volver a intentar
@@ -921,7 +950,9 @@ const exerciseNumber = document.getElementById('exercise-number');
 const exerciseScore = document.getElementById('exercise-score');
 const exerciseContext = document.getElementById('exercise-context');
 const tableContainer = document.getElementById('table-container');
-const questionsSection = document.getElementById('questions-section');
+const questionPopup = document.getElementById('question-popup');
+const questionText = document.getElementById('question-text');
+const optionsContainer = document.getElementById('options-container');
 const confirmBtn = document.getElementById('confirm-btn');
 const nextBtn = document.getElementById('next-btn');
 const resultsScore = document.getElementById('results-score');
@@ -931,17 +962,16 @@ const toast = document.getElementById('toast');
 const pandaContainer = document.getElementById('panda-container');
 
 // --- VARIABLES DE ESTADO ---
-let currentTableIndex = 0;
 let score = 0;
 let selectedOptions = {}; // Almacenará las opciones seleccionadas por pregunta
-let confirmedAnswers = {}; // Almacenará las respuestas confirmadas
+let currentQuestionId = null;
 let currentTableData = null;
 
 // --- BASE DE DATOS DE TABLAS (5 tablas con 5 preguntas cada una) ---
 const tablesData = [
 {
-// TABLA 1: Ventas de productos
-context: "Una empresa de tecnología ha registrado sus ventas trimestrales para diferentes productos. Sin embargo, algunos datos se han perdido y necesitan ser completados.",
+// TABLA 1: Ventas trimestrales
+context: "Una empresa de tecnología ha registrado sus ventas trimestrales para diferentes productos. Algunos datos faltan en la tabla y deben ser calculados.",
 table: `
 <table class="exercise-table" id="table-1">
 <thead>
@@ -959,7 +989,7 @@ table: `
 <td>Laptop Pro</td>
 <td>120</td>
 <td>135</td>
-<td>150</td>
+<td class="empty-cell" data-question="q1-1">?</td>
 <td>165</td>
 <td>570</td>
 </tr>
@@ -968,7 +998,7 @@ table: `
 <td>85</td>
 <td>90</td>
 <td>95</td>
-<td>100</td>
+<td class="empty-cell" data-question="q1-2">?</td>
 <td>370</td>
 </tr>
 <tr>
@@ -976,13 +1006,13 @@ table: `
 <td>200</td>
 <td>220</td>
 <td>240</td>
-<td>260</td>
+<td class="empty-cell" data-question="q1-3">?</td>
 <td>920</td>
 </tr>
 <tr>
 <td>Smartwatch</td>
 <td>60</td>
-<td>75</td>
+<td class="empty-cell" data-question="q1-4">?</td>
 <td>90</td>
 <td>105</td>
 <td>330</td>
@@ -991,7 +1021,7 @@ table: `
 <td>Auriculares</td>
 <td>150</td>
 <td>180</td>
-<td>210</td>
+<td class="empty-cell" data-question="q1-5">?</td>
 <td>240</td>
 <td>780</td>
 </tr>
@@ -1006,33 +1036,28 @@ table: `
 </tbody>
 </table>
 `,
-questions: [
-{
-id: "q1-1",
-text: "Si las ventas de Laptop Pro en Q1 2023 fueron 120 unidades y siguen un patrón de crecimiento constante de 15 unidades por trimestre, ¿cuántas unidades se vendieron en Q3 2023?",
+questions: {
+"q1-1": {
+text: "Si las ventas de Laptop Pro siguen un patrón de crecimiento constante de 15 unidades por trimestre, ¿cuántas unidades se vendieron en Q3 2023?",
 options: [
 { letter: "A", text: "140 unidades" },
 { letter: "B", text: "150 unidades" },
 { letter: "C", text: "160 unidades" },
 { letter: "D", text: "170 unidades" }
 ],
-correctAnswer: 1,
-cellId: "cell-1-1" // Identificador de la celda en la tabla
+correctAnswer: 1
 },
-{
-id: "q1-2",
-text: "Si las ventas de Tablet Air en Q4 2023 fueron 100 unidades y representan el 20% del total de ventas de ese trimestre, ¿cuál fue el total de ventas en Q4 2023?",
+"q1-2": {
+text: "Si las ventas de Tablet Air en Q4 2023 representan el 20% del total de ventas de ese trimestre, ¿cuántas unidades se vendieron?",
 options: [
-{ letter: "A", text: "450 unidades" },
-{ letter: "B", text: "500 unidades" },
-{ letter: "C", text: "550 unidades" },
-{ letter: "D", text: "600 unidades" }
+{ letter: "A", text: "90 unidades" },
+{ letter: "B", text: "95 unidades" },
+{ letter: "C", text: "100 unidades" },
+{ letter: "D", text: "105 unidades" }
 ],
-correctAnswer: 1,
-cellId: "cell-1-2"
+correctAnswer: 2
 },
-{
-id: "q1-3",
+"q1-3": {
 text: "Si las ventas de Smartphone X aumentaron un 10% cada trimestre, y en Q1 se vendieron 200 unidades, ¿cuántas unidades se vendieron en Q4 2023?",
 options: [
 { letter: "A", text: "250 unidades" },
@@ -1040,38 +1065,33 @@ options: [
 { letter: "C", text: "270 unidades" },
 { letter: "D", text: "280 unidades" }
 ],
-correctAnswer: 1,
-cellId: "cell-1-3"
+correctAnswer: 1
 },
-{
-id: "q1-4",
-text: "Si las ventas de Smartwatch en Q2 2023 fueron 75 unidades y esto representa el 25% de las ventas totales de ese trimestre, ¿cuál fue el total de ventas en Q2 2023?",
+"q1-4": {
+text: "Si las ventas de Smartwatch en Q2 2023 representan el 25% de las ventas totales de ese trimestre, ¿cuántas unidades se vendieron?",
 options: [
-{ letter: "A", text: "250 unidades" },
-{ letter: "B", text: "300 unidades" },
-{ letter: "C", text: "350 unidades" },
-{ letter: "D", text: "400 unidades" }
+{ letter: "A", text: "65 unidades" },
+{ letter: "B", text: "70 unidades" },
+{ letter: "C", text: "75 unidades" },
+{ letter: "D", text: "80 unidades" }
 ],
-correctAnswer: 1,
-cellId: "cell-1-4"
+correctAnswer: 2
 },
-{
-id: "q1-5",
+"q1-5": {
 text: "Si las ventas de Auriculares en 2023 sumaron 780 unidades y se distribuyeron equitativamente entre los cuatro trimestres, ¿cuántas unidades se vendieron en Q3 2023?",
 options: [
 { letter: "A", text: "190 unidades" },
-{ letter: "B", text: "200 unidades" },
-{ letter: "C", text: "210 unidades" },
-{ letter: "D", text: "220 unidades" }
+{ letter: "B", text: "195 unidades" },
+{ letter: "C", text: "200 unidades" },
+{ letter: "D", text: "205 unidades" }
 ],
-correctAnswer: 2,
-cellId: "cell-1-5"
+correctAnswer: 2
 }
-]
+}
 },
 {
 // TABLA 2: Datos de población
-context: "Un estudio demográfico ha recopilado datos sobre la población de varias ciudades durante los últimos años. Algunos valores faltan en la tabla y deben ser calculados.",
+context: "Un estudio demográfico ha recopilado datos sobre la población de varias ciudades durante los últimos años. Algunos valores faltan en la tabla.",
 table: `
 <table class="exercise-table" id="table-2">
 <thead>
@@ -1089,7 +1109,7 @@ table: `
 <td>Ciudad A</td>
 <td>120,000</td>
 <td>126,000</td>
-<td>132,300</td>
+<td class="empty-cell" data-question="q2-1">?</td>
 <td>138,915</td>
 <td>15.8%</td>
 </tr>
@@ -1098,14 +1118,14 @@ table: `
 <td>85,000</td>
 <td>88,400</td>
 <td>91,932</td>
-<td>95,609</td>
+<td class="empty-cell" data-question="q2-2">?</td>
 <td>12.5%</td>
 </tr>
 <tr>
 <td>Ciudad C</td>
 <td>200,000</td>
 <td>210,000</td>
-<td>220,500</td>
+<td class="empty-cell" data-question="q2-3">?</td>
 <td>231,525</td>
 <td>15.8%</td>
 </tr>
@@ -1113,14 +1133,14 @@ table: `
 <td>Ciudad D</td>
 <td>150,000</td>
 <td>157,500</td>
-<td>165,375</td>
+<td class="empty-cell" data-question="q2-4">?</td>
 <td>173,644</td>
 <td>15.8%</td>
 </tr>
 <tr>
 <td>Ciudad E</td>
 <td>75,000</td>
-<td>78,750</td>
+<td class="empty-cell" data-question="q2-5">?</td>
 <td>82,688</td>
 <td>86,822</td>
 <td>15.8%</td>
@@ -1128,9 +1148,8 @@ table: `
 </tbody>
 </table>
 `,
-questions: [
-{
-id: "q2-1",
+questions: {
+"q2-1": {
 text: "Si la Ciudad A tenía 120,000 habitantes en 2019 y su población creció un 5% cada año, ¿cuántos habitantes tenía en 2021?",
 options: [
 { letter: "A", text: "130,200 habitantes" },
@@ -1138,11 +1157,9 @@ options: [
 { letter: "C", text: "134,400 habitantes" },
 { letter: "D", text: "136,500 habitantes" }
 ],
-correctAnswer: 1,
-cellId: "cell-2-1"
+correctAnswer: 1
 },
-{
-id: "q2-2",
+"q2-2": {
 text: "Si la Ciudad B tenía 85,000 habitantes en 2019 y su población creció un 4% cada año, ¿cuántos habitantes tenía en 2022?",
 options: [
 { letter: "A", text: "93,500 habitantes" },
@@ -1150,35 +1167,29 @@ options: [
 { letter: "C", text: "95,500 habitantes" },
 { letter: "D", text: "95,609 habitantes" }
 ],
-correctAnswer: 3,
-cellId: "cell-2-2"
+correctAnswer: 3
 },
-{
-id: "q2-3",
-text: "Si la Ciudad C tenía 200,000 habitantes en 2019 y su población creció un 5% cada año, ¿cuál fue su tasa de crecimiento total entre 2019 y 2022?",
+"q2-3": {
+text: "Si la Ciudad C tenía 200,000 habitantes en 2019 y su población creció un 5% cada año, ¿cuántos habitantes tenía en 2021?",
 options: [
-{ letter: "A", text: "14.8%" },
-{ letter: "B", text: "15.8%" },
-{ letter: "C", text: "16.8%" },
-{ letter: "D", text: "17.8%" }
+{ letter: "A", text: "210,000 habitantes" },
+{ letter: "B", text: "220,000 habitantes" },
+{ letter: "C", text: "220,500 habitantes" },
+{ letter: "D", text: "230,000 habitantes" }
 ],
-correctAnswer: 1,
-cellId: "cell-2-3"
+correctAnswer: 2
 },
-{
-id: "q2-4",
-text: "Si la Ciudad D tenía 150,000 habitantes en 2019 y su población en 2022 era de 173,644, ¿cuál fue su tasa de crecimiento anual promedio?",
+"q2-4": {
+text: "Si la Ciudad D tenía 150,000 habitantes en 2019 y su población creció un 5% cada año, ¿cuántos habitantes tenía en 2021?",
 options: [
-{ letter: "A", text: "4.5%" },
-{ letter: "B", text: "5.0%" },
-{ letter: "C", text: "5.5%" },
-{ letter: "D", text: "6.0%" }
+{ letter: "A", text: "160,000 habitantes" },
+{ letter: "B", text: "165,000 habitantes" },
+{ letter: "C", text: "165,375 habitantes" },
+{ letter: "D", text: "170,000 habitantes" }
 ],
-correctAnswer: 1,
-cellId: "cell-2-4"
+correctAnswer: 2
 },
-{
-id: "q2-5",
+"q2-5": {
 text: "Si la Ciudad E tenía 75,000 habitantes en 2019 y su población creció un 5% cada año, ¿cuántos habitantes tenía en 2020?",
 options: [
 { letter: "A", text: "77,500 habitantes" },
@@ -1186,10 +1197,9 @@ options: [
 { letter: "C", text: "80,000 habitantes" },
 { letter: "D", text: "81,250 habitantes" }
 ],
-correctAnswer: 1,
-cellId: "cell-2-5"
+correctAnswer: 1
 }
-]
+}
 },
 {
 // TABLA 3: Datos financieros
@@ -1210,7 +1220,7 @@ table: `
 <tr>
 <td>Ingresos</td>
 <td>$120,000</td>
-<td>$135,000</td>
+<td class="empty-cell" data-question="q3-1">?</td>
 <td>$150,000</td>
 <td>$165,000</td>
 <td>$570,000</td>
@@ -1219,7 +1229,7 @@ table: `
 <td>Gastos</td>
 <td>$80,000</td>
 <td>$85,000</td>
-<td>$90,000</td>
+<td class="empty-cell" data-question="q3-2">?</td>
 <td>$95,000</td>
 <td>$350,000</td>
 </tr>
@@ -1227,7 +1237,7 @@ table: `
 <td>Beneficio</td>
 <td>$40,000</td>
 <td>$50,000</td>
-<td>$60,000</td>
+<td class="empty-cell" data-question="q3-3">?</td>
 <td>$70,000</td>
 <td>$220,000</td>
 </tr>
@@ -1235,16 +1245,15 @@ table: `
 <td>Margen %</td>
 <td>33.3%</td>
 <td>37.0%</td>
-<td>40.0%</td>
+<td class="empty-cell" data-question="q3-4">?</td>
 <td>42.4%</td>
 <td>38.6%</td>
 </tr>
 </tbody>
 </table>
 `,
-questions: [
-{
-id: "q3-1",
+questions: {
+"q3-1": {
 text: "Si los ingresos en Q1 fueron de $120,000 y en Q2 aumentaron un 12.5%, ¿cuál fue el monto de los ingresos en Q2?",
 options: [
 { letter: "A", text: "$130,000" },
@@ -1252,23 +1261,19 @@ options: [
 { letter: "C", text: "$140,000" },
 { letter: "D", text: "$145,000" }
 ],
-correctAnswer: 1,
-cellId: "cell-3-1"
+correctAnswer: 1
 },
-{
-id: "q3-2",
-text: "Si los gastos en Q1 fueron de $80,000 y en Q2 aumentaron un 6.25%, ¿cuál fue el monto de los gastos en Q2?",
+"q3-2": {
+text: "Si los gastos en Q1 fueron de $80,000 y en Q2 aumentaron un 6.25%, ¿cuál fue el monto de los gastos en Q3?",
 options: [
-{ letter: "A", text: "$82,000" },
-{ letter: "B", text: "$83,000" },
-{ letter: "C", text: "$84,000" },
-{ letter: "D", text: "$85,000" }
+{ letter: "A", text: "$88,000" },
+{ letter: "B", text: "$89,000" },
+{ letter: "C", text: "$90,000" },
+{ letter: "D", text: "$91,000" }
 ],
-correctAnswer: 3,
-cellId: "cell-3-2"
+correctAnswer: 2
 },
-{
-id: "q3-3",
+"q3-3": {
 text: "Si los ingresos en Q3 fueron de $150,000 y los gastos de $90,000, ¿cuál fue el beneficio en Q3?",
 options: [
 { letter: "A", text: "$50,000" },
@@ -1276,38 +1281,23 @@ options: [
 { letter: "C", text: "$60,000" },
 { letter: "D", text: "$65,000" }
 ],
-correctAnswer: 2,
-cellId: "cell-3-3"
+correctAnswer: 2
 },
-{
-id: "q3-4",
-text: "Si el beneficio en Q4 fue de $70,000 y los ingresos de $165,000, ¿cuál fue el margen de beneficio en Q4?",
+"q3-4": {
+text: "Si el beneficio en Q3 fue de $60,000 y los ingresos de $150,000, ¿cuál fue el margen de beneficio en Q3?",
 options: [
-{ letter: "A", text: "40.4%" },
-{ letter: "B", text: "41.4%" },
-{ letter: "C", text: "42.4%" },
-{ letter: "D", text: "43.4%" }
+{ letter: "A", text: "38.0%" },
+{ letter: "B", text: "39.0%" },
+{ letter: "C", text: "40.0%" },
+{ letter: "D", text: "41.0%" }
 ],
-correctAnswer: 2,
-cellId: "cell-3-4"
-},
-{
-id: "q3-5",
-text: "Si el beneficio total del año fue de $220,000 y los ingresos totales de $570,000, ¿cuál fue el margen de beneficio anual?",
-options: [
-{ letter: "A", text: "36.6%" },
-{ letter: "B", text: "37.6%" },
-{ letter: "C", text: "38.6%" },
-{ letter: "D", text: "39.6%" }
-],
-correctAnswer: 2,
-cellId: "cell-3-5"
+correctAnswer: 2
 }
-]
+}
 },
 {
 // TABLA 4: Datos de producción
-context: "Una fábrica ha registrado su producción mensual de diferentes productos. Algunos datos faltan y deben ser calculados para completar el informe de producción.",
+context: "Una fábrica ha registrado su producción mensual de diferentes productos. Algunos datos faltan y deben ser calculados.",
 table: `
 <table class="exercise-table" id="table-4">
 <thead>
@@ -1325,7 +1315,7 @@ table: `
 <td>Producto A</td>
 <td>120</td>
 <td>135</td>
-<td>150</td>
+<td class="empty-cell" data-question="q4-1">?</td>
 <td>165</td>
 <td>142.5</td>
 </tr>
@@ -1334,14 +1324,14 @@ table: `
 <td>85</td>
 <td>90</td>
 <td>95</td>
-<td>100</td>
+<td class="empty-cell" data-question="q4-2">?</td>
 <td>92.5</td>
 </tr>
 <tr>
 <td>Producto C</td>
 <td>200</td>
 <td>210</td>
-<td>220</td>
+<td class="empty-cell" data-question="q4-3">?</td>
 <td>230</td>
 <td>215</td>
 </tr>
@@ -1349,7 +1339,7 @@ table: `
 <td>Producto D</td>
 <td>150</td>
 <td>160</td>
-<td>170</td>
+<td class="empty-cell" data-question="q4-4">?</td>
 <td>180</td>
 <td>165</td>
 </tr>
@@ -1357,16 +1347,15 @@ table: `
 <td>Total</td>
 <td>555</td>
 <td>595</td>
-<td>635</td>
+<td class="empty-cell" data-question="q4-5">?</td>
 <td>675</td>
 <td>615</td>
 </tr>
 </tbody>
 </table>
 `,
-questions: [
-{
-id: "q4-1",
+questions: {
+"q4-1": {
 text: "Si la producción del Producto A en enero fue de 120 unidades y aumentó 15 unidades cada mes, ¿cuántas unidades se produjeron en marzo?",
 options: [
 { letter: "A", text: "140 unidades" },
@@ -1374,62 +1363,53 @@ options: [
 { letter: "C", text: "150 unidades" },
 { letter: "D", text: "155 unidades" }
 ],
-correctAnswer: 2,
-cellId: "cell-4-1"
+correctAnswer: 2
 },
-{
-id: "q4-2",
-text: "Si la producción del Producto B en abril fue de 100 unidades y esto representa el 14.8% del total de producción de ese mes, ¿cuál fue el total de producción en abril?",
+"q4-2": {
+text: "Si la producción del Producto B en abril fue de 100 unidades y esto representa el 14.8% del total de producción de ese mes, ¿cuántas unidades se produjeron?",
 options: [
-{ letter: "A", text: "650 unidades" },
-{ letter: "B", text: "675 unidades" },
-{ letter: "C", text: "700 unidades" },
-{ letter: "D", text: "725 unidades" }
+{ letter: "A", text: "95 unidades" },
+{ letter: "B", text: "98 unidades" },
+{ letter: "C", text: "100 unidades" },
+{ letter: "D", text: "105 unidades" }
 ],
-correctAnswer: 1,
-cellId: "cell-4-2"
+correctAnswer: 2
 },
-{
-id: "q4-3",
-text: "Si la producción del Producto C aumentó un 5% cada mes, y en enero se produjeron 200 unidades, ¿cuántas unidades se produjeron en abril?",
+"q4-3": {
+text: "Si la producción del Producto C aumentó un 5% cada mes, y en enero se produjeron 200 unidades, ¿cuántas unidades se produjeron en marzo?",
 options: [
-{ letter: "A", text: "220 unidades" },
-{ letter: "B", text: "225 unidades" },
-{ letter: "C", text: "230 unidades" },
-{ letter: "D", text: "235 unidades" }
+{ letter: "A", text: "215 unidades" },
+{ letter: "B", text: "220 unidades" },
+{ letter: "C", text: "225 unidades" },
+{ letter: "D", text: "230 unidades" }
 ],
-correctAnswer: 2,
-cellId: "cell-4-3"
+correctAnswer: 1
 },
-{
-id: "q4-4",
-text: "Si la producción del Producto D en los cuatro meses sumó 660 unidades y la producción en enero fue de 150 unidades, ¿cuál fue la producción promedio mensual?",
+"q4-4": {
+text: "Si la producción del Producto D en los cuatro meses sumó 660 unidades y la producción en enero fue de 150 unidades, ¿cuál fue la producción en marzo?",
 options: [
 { letter: "A", text: "160 unidades" },
 { letter: "B", text: "165 unidades" },
 { letter: "C", text: "170 unidades" },
 { letter: "D", text: "175 unidades" }
 ],
-correctAnswer: 1,
-cellId: "cell-4-4"
+correctAnswer: 2
 },
-{
-id: "q4-5",
-text: "Si la producción total en febrero fue de 595 unidades y el Producto C representó el 35.3% de ese total, ¿cuántas unidades del Producto C se produjeron en febrero?",
+"q4-5": {
+text: "Si la producción total en marzo fue de 635 unidades y el Producto A representó el 23.6% de ese total, ¿cuántas unidades del Producto A se produjeron?",
 options: [
-{ letter: "A", text: "200 unidades" },
-{ letter: "B", text: "205 unidades" },
-{ letter: "C", text: "210 unidades" },
-{ letter: "D", text: "215 unidades" }
+{ letter: "A", text: "145 unidades" },
+{ letter: "B", text: "150 unidades" },
+{ letter: "C", text: "155 unidades" },
+{ letter: "D", text: "160 unidades" }
 ],
-correctAnswer: 2,
-cellId: "cell-4-5"
+correctAnswer: 1
 }
-]
+}
 },
 {
 // TABLA 5: Datos de encuesta
-context: "Se realizó una encuesta sobre preferencias de consumo en diferentes grupos de edad. Algunos datos deben ser calculados para completar el análisis.",
+context: "Se realizó una encuesta sobre preferencias de consumo en diferentes grupos de edad. Algunos datos deben ser calculados.",
 table: `
 <table class="exercise-table" id="table-5">
 <thead>
@@ -1447,7 +1427,7 @@ table: `
 <td>Producto A</td>
 <td>45</td>
 <td>55</td>
-<td>65</td>
+<td class="empty-cell" data-question="q5-1">?</td>
 <td>75</td>
 <td>240</td>
 </tr>
@@ -1455,7 +1435,7 @@ table: `
 <td>Producto B</td>
 <td>30</td>
 <td>40</td>
-<td>50</td>
+<td class="empty-cell" data-question="q5-2">?</td>
 <td>60</td>
 <td>180</td>
 </tr>
@@ -1463,7 +1443,7 @@ table: `
 <td>Producto C</td>
 <td>60</td>
 <td>70</td>
-<td>80</td>
+<td class="empty-cell" data-question="q5-3">?</td>
 <td>90</td>
 <td>300</td>
 </tr>
@@ -1471,7 +1451,7 @@ table: `
 <td>Producto D</td>
 <td>25</td>
 <td>35</td>
-<td>45</td>
+<td class="empty-cell" data-question="q5-4">?</td>
 <td>55</td>
 <td>160</td>
 </tr>
@@ -1479,75 +1459,65 @@ table: `
 <td>Total</td>
 <td>160</td>
 <td>200</td>
-<td>240</td>
+<td class="empty-cell" data-question="q5-5">?</td>
 <td>280</td>
 <td>880</td>
 </tr>
 </tbody>
 </table>
 `,
-questions: [
-{
-id: "q5-1",
-text: "Si 45 personas de 18-25 años prefieren el Producto A y esto representa el 28.1% del total de personas en ese grupo de edad, ¿cuántas personas en total fueron encuestadas en el grupo de 18-25 años?",
+questions: {
+"q5-1": {
+text: "Si 45 personas de 18-25 años prefieren el Producto A y esto representa el 28.1% del total de personas en ese grupo, ¿cuántas personas de 36-45 años prefieren el Producto A?",
 options: [
-{ letter: "A", text: "150 personas" },
-{ letter: "B", text: "160 personas" },
-{ letter: "C", text: "170 personas" },
-{ letter: "D", text: "180 personas" }
+{ letter: "A", text: "60 personas" },
+{ letter: "B", text: "65 personas" },
+{ letter: "C", text: "70 personas" },
+{ letter: "D", text: "75 personas" }
 ],
-correctAnswer: 1,
-cellId: "cell-5-1"
+correctAnswer: 1
 },
-{
-id: "q5-2",
-text: "Si 55 personas de 26-35 años prefieren el Producto A y esto representa el 27.5% del total de personas que prefieren el Producto A, ¿cuántas personas en total prefieren el Producto A?",
+"q5-2": {
+text: "Si 30 personas de 18-25 años prefieren el Producto B y esto representa el 18.75% del total de personas en ese grupo, ¿cuántas personas de 36-45 años prefieren el Producto B?",
 options: [
-{ letter: "A", text: "190 personas" },
-{ letter: "B", text: "200 personas" },
-{ letter: "C", text: "210 personas" },
-{ letter: "D", text: "220 personas" }
+{ letter: "A", text: "45 personas" },
+{ letter: "B", text: "50 personas" },
+{ letter: "C", text: "55 personas" },
+{ letter: "D", text: "60 personas" }
 ],
-correctAnswer: 1,
-cellId: "cell-5-2"
+correctAnswer: 1
 },
-{
-id: "q5-3",
-text: "Si 80 personas de 36-45 años prefieren el Producto C y esto representa el 33.3% del total de personas en ese grupo de edad, ¿cuántas personas en total fueron encuestadas en el grupo de 36-45 años?",
+"q5-3": {
+text: "Si 60 personas de 18-25 años prefieren el Producto C y esto representa el 37.5% del total de personas en ese grupo, ¿cuántas personas de 36-45 años prefieren el Producto C?",
 options: [
-{ letter: "A", text: "220 personas" },
-{ letter: "B", text: "230 personas" },
-{ letter: "C", text: "240 personas" },
-{ letter: "D", text: "250 personas" }
+{ letter: "A", text: "75 personas" },
+{ letter: "B", text: "80 personas" },
+{ letter: "C", text: "85 personas" },
+{ letter: "D", text: "90 personas" }
 ],
-correctAnswer: 2,
-cellId: "cell-5-3"
+correctAnswer: 1
 },
-{
-id: "q5-4",
-text: "Si 55 personas de 46-55 años prefieren el Producto D y esto representa el 19.6% del total de personas en ese grupo de edad, ¿cuántas personas en total fueron encuestadas en el grupo de 46-55 años?",
+"q5-4": {
+text: "Si 25 personas de 18-25 años prefieren el Producto D y esto representa el 15.6% del total de personas en ese grupo, ¿cuántas personas de 36-45 años prefieren el Producto D?",
 options: [
-{ letter: "A", text: "270 personas" },
-{ letter: "B", text: "280 personas" },
-{ letter: "C", text: "290 personas" },
-{ letter: "D", text: "300 personas" }
+{ letter: "A", text: "40 personas" },
+{ letter: "B", text: "45 personas" },
+{ letter: "C", text: "50 personas" },
+{ letter: "D", text: "55 personas" }
 ],
-correctAnswer: 1,
-cellId: "cell-5-4"
+correctAnswer: 1
 },
-{
-id: "q5-5",
-text: "Si el total de personas que prefieren el Producto C es de 300 y esto representa el 34.1% del total de personas encuestadas, ¿cuántas personas en total fueron encuestadas?",
+"q5-5": {
+text: "Si el total de personas de 36-45 años es de 240 y esto representa el 27.3% del total de personas encuestadas, ¿cuál es el total de personas encuestadas?",
 options: [
 { letter: "A", text: "860 personas" },
 { letter: "B", text: "870 personas" },
 { letter: "C", text: "880 personas" },
 { letter: "D", text: "890 personas" }
 ],
-correctAnswer: 2,
-cellId: "cell-5-5"
+correctAnswer: 2
 }
-]
+}
 }
 ];
 
@@ -1564,90 +1534,62 @@ setTimeout(() => toast.classList.remove('show'), 3000);
 function startGame() {
 videoSection.style.display = 'none';
 exerciseSection.style.display = 'block';
-currentTableIndex = Math.floor(Math.random() * tablesData.length); // Seleccionar tabla aleatoria
 score = 0;
 selectedOptions = {};
-confirmedAnswers = {};
+currentQuestionId = null;
+
+// Seleccionar tabla aleatoria
+const randomIndex = Math.floor(Math.random() * tablesData.length);
+currentTableData = tablesData[randomIndex];
+
 loadTable();
 }
 
 // Cargar una tabla
 function loadTable() {
-if (currentTableIndex >= tablesData.length) {
-showResults();
-return;
-}
-
 // Resetear estado
-selectedOptions = {};
-confirmedAnswers = {};
 confirmBtn.disabled = true;
 nextBtn.disabled = true;
 pandaContainer.classList.remove('show');
+questionPopup.classList.remove('show');
 
-// Actualizar información de la tabla
-exerciseNumber.textContent = `Tabla ${currentTableIndex + 1} de ${tablesData.length}`;
-exerciseScore.textContent = `Puntuación: ${score}/25`;
+// Actualizar información
+exerciseScore.textContent = `Puntuación: ${score}/5`;
 
 // Cargar contexto
-exerciseContext.textContent = tablesData[currentTableIndex].context;
+exerciseContext.textContent = currentTableData.context;
 
 // Cargar tabla con celdas vacías
-currentTableData = tablesData[currentTableIndex];
-loadTableWithEmptyCells();
+tableContainer.innerHTML = currentTableData.table;
 
-// Cargar preguntas
-loadQuestions();
-}
-
-// Cargar tabla con celdas vacías
-function loadTableWithEmptyCells() {
-const tableHTML = currentTableData.table;
-tableContainer.innerHTML = tableHTML;
-
-// Identificar las celdas que deben estar vacías
-const questions = currentTableData.questions;
-questions.forEach((question, index) => {
-const cellId = question.cellId;
-const cell = document.getElementById(cellId);
-if (cell) {
-// Guardar el valor original
-const originalValue = cell.textContent;
-cell.dataset.originalValue = originalValue;
-cell.dataset.questionId = question.id;
-cell.dataset.questionIndex = index;
-// Dejar la celda vacía
-cell.textContent = "?";
-cell.classList.add('empty-cell');
-// Añadir evento click para el "Modo Escaneo"
-cell.addEventListener('click', () => highlightQuestion(index));
-}
+// Añadir eventos click a las celdas vacías
+document.querySelectorAll('.empty-cell').forEach(cell => {
+cell.addEventListener('click', () => showQuestion(cell));
 });
 }
 
-// Cargar preguntas
-function loadQuestions() {
-questionsSection.innerHTML = '';
-const questions = currentTableData.questions;
+// Mostrar pregunta al hacer click en una celda vacía
+function showQuestion(cell) {
+const questionId = cell.dataset.question;
+const question = currentTableData.questions[questionId];
 
-questions.forEach((question, index) => {
-const questionItem = document.createElement('div');
-questionItem.className = 'question-item';
-questionItem.id = `question-${index}`;
+if (!question) return;
 
-const questionText = document.createElement('div');
-questionText.className = 'question-text';
-questionText.textContent = `${index + 1}. ${question.text}`;
-questionItem.appendChild(questionText);
+currentQuestionId = questionId;
 
-const optionsContainer = document.createElement('div');
-optionsContainer.className = 'options-container';
+// Ocultar popup anterior si existe
+questionPopup.classList.remove('show');
 
-question.options.forEach((option, optionIndex) => {
+// Mostrar pregunta
+questionText.textContent = question.text;
+
+// Limpiar y cargar opciones
+optionsContainer.innerHTML = '';
+question.options.forEach((option, index) => {
 const optionBtn = document.createElement('button');
 optionBtn.className = 'option-btn';
-optionBtn.dataset.questionIndex = index;
-optionBtn.dataset.optionIndex = optionIndex;
+optionBtn.dataset.questionId = questionId;
+optionBtn.dataset.optionIndex = index;
 
 const optionLetter = document.createElement('span');
 optionLetter.className = 'option-letter';
@@ -1660,110 +1602,92 @@ optionBtn.appendChild(optionLetter);
 optionBtn.appendChild(optionText);
 
 // Añadir evento click para seleccionar opción
-optionBtn.addEventListener('click', () => selectOption(index, optionIndex));
+optionBtn.addEventListener('click', () => selectOption(questionId, index, cell));
 
 optionsContainer.appendChild(optionBtn);
 });
 
-questionItem.appendChild(optionsContainer);
-questionsSection.appendChild(questionItem);
-});
+// Mostrar popup con animación
+setTimeout(() => {
+questionPopup.classList.add('show');
+// Hacer scroll al popup
+questionPopup.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}, 100);
 }
 
 // Seleccionar una opción
-function selectOption(questionIndex, optionIndex) {
-// Guardar la opción seleccionada
-selectedOptions[questionIndex] = optionIndex;
+function selectOption(questionId, optionIndex, cell) {
+const question = currentTableData.questions[questionId];
+const isCorrect = optionIndex === question.correctAnswer;
 
-// Actualizar la UI
-const questionOptions = document.querySelectorAll(`#question-${questionIndex} .option-btn`);
+// Guardar la respuesta
+selectedOptions[questionId] = {
+selected: optionIndex,
+correct: isCorrect,
+cell: cell,
+value: question.options[optionIndex].text
+};
+
+// Mostrar el valor en la celda (Enfoque Visual)
+cell.textContent = question.options[optionIndex].text;
+cell.classList.remove('empty-cell');
+cell.classList.add('temp-value');
+
+// Marcar la opción seleccionada
+const questionOptions = document.querySelectorAll(`.option-btn[data-question-id="${questionId}"]`);
 questionOptions.forEach(btn => btn.classList.remove('selected'));
 questionOptions[optionIndex].classList.add('selected');
 
-// Mostrar el valor en la tabla (Enfoque Visual)
-const question = currentTableData.questions[questionIndex];
-const cellId = question.cellId;
-const cell = document.getElementById(cellId);
-if (cell) {
-// Mostrar el valor temporalmente
-cell.textContent = question.options[optionIndex].text;
-cell.classList.add('temp-value');
-}
+// Ocultar el popup después de un momento
+setTimeout(() => {
+questionPopup.classList.remove('show');
+}, 500);
 
-// Verificar si se han seleccionado todas las opciones
-if (Object.keys(selectedOptions).length === currentTableData.questions.length) {
+// Verificar si se han respondido todas las preguntas
+if (Object.keys(selectedOptions).length === Object.keys(currentTableData.questions).length) {
 confirmBtn.disabled = false;
-}
-}
-
-// Resaltar pregunta (Modo Escaneo)
-function highlightQuestion(questionIndex) {
-// Remover resaltado de todas las preguntas
-document.querySelectorAll('.question-item').forEach(item => {
-item.classList.remove('highlighted');
-});
-
-// Resaltar la pregunta seleccionada
-const questionItem = document.getElementById(`question-${questionIndex}`);
-if (questionItem) {
-questionItem.classList.add('highlighted');
-// Hacer scroll a la pregunta
-questionItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+showToast('¡Todas las preguntas respondidas! Puedes confirmar ahora.');
 }
 }
 
 // Confirmar respuestas
 function confirmAnswers() {
 let correctCount = 0;
-const questions = currentTableData.questions;
 
-questions.forEach((question, index) => {
-const selectedOptionIndex = selectedOptions[index];
-const isCorrect = selectedOptionIndex === question.correctAnswer;
+Object.keys(selectedOptions).forEach(questionId => {
+const answer = selectedOptions[questionId];
+const question = currentTableData.questions[questionId];
 
-if (isCorrect) {
+if (answer.correct) {
 correctCount++;
 score++;
 // Marcar la celda como correcta
-const cellId = question.cellId;
-const cell = document.getElementById(cellId);
-if (cell) {
-cell.textContent = cell.dataset.originalValue;
-cell.classList.remove('empty-cell', 'temp-value');
-cell.classList.add('correct-cell');
-}
-// Marcar la opción como correcta
-const questionOptions = document.querySelectorAll(`#question-${index} .option-btn`);
-questionOptions[selectedOptionIndex].classList.add('correct');
+answer.cell.classList.remove('temp-value');
+answer.cell.classList.add('correct-cell');
 } else {
-// Marcar la opción seleccionada como incorrecta
-const questionOptions = document.querySelectorAll(`#question-${index} .option-btn`);
-questionOptions[selectedOptionIndex].classList.add('incorrect');
-// Marcar la opción correcta
-questionOptions[question.correctAnswer].classList.add('correct');
-// Restaurar el valor original en la celda
-const cellId = question.cellId;
-const cell = document.getElementById(cellId);
-if (cell) {
-cell.textContent = "?";
-cell.classList.remove('temp-value');
-}
+// Restaurar la celda vacía y mostrar respuesta correcta
+answer.cell.textContent = "?";
+answer.cell.classList.remove('temp-value');
+answer.cell.classList.add('empty-cell');
+// Mostrar cuál era la respuesta correcta
+showToast(`La respuesta correcta para ${questionId} era: ${question.options[question.correctAnswer].text}`);
 }
 });
 
 // Actualizar puntuación
-exerciseScore.textContent = `Puntuación: ${score}/25`;
+exerciseScore.textContent = `Puntuación: ${score}/5`;
 
 // Mostrar panda si hay respuestas correctas
 if (correctCount > 0) {
 pandaContainer.classList.add('show');
 pandaContainer.querySelector('.panda-message').textContent = 
-`¡Correcto! Has respondido bien ${correctCount} de ${questions.length} preguntas.`;
+`¡Correcto! Has respondido bien ${correctCount} de ${Object.keys(currentTableData.questions).length} preguntas.`;
 }
 
-// Deshabilitar todas las opciones
-document.querySelectorAll('.option-btn').forEach(btn => {
-btn.disabled = true;
+// Deshabilitar todas las celdas vacías
+document.querySelectorAll('.empty-cell').forEach(cell => {
+cell.style.cursor = 'default';
+cell.removeEventListener('click', showQuestion);
 });
 
 // Habilitar botón siguiente
@@ -1775,7 +1699,7 @@ nextBtn.disabled = false;
 function showResults() {
 exerciseSection.style.display = 'none';
 resultsSection.style.display = 'block';
-resultsScore.textContent = `Tu puntuación final: ${score}/25`;
+resultsScore.textContent = `Tu puntuación final: ${score}/5`;
 }
 
 // --- EVENT LISTENERS ---
@@ -1789,14 +1713,7 @@ window.addEventListener('click', (event) => { if (!event.target.closest('.navbar
 
 startBtn.addEventListener('click', startGame);
 confirmBtn.addEventListener('click', confirmAnswers);
-nextBtn.addEventListener('click', () => {
-currentTableIndex++;
-if (currentTableIndex >= tablesData.length) {
-showResults();
-} else {
-loadTable();
-}
-});
+nextBtn.addEventListener('click', showResults);
 restartBtn.addEventListener('click', () => {
 resultsSection.style.display = 'none';
 videoSection.style.display = 'block';
@@ -1807,13 +1724,13 @@ window.location.href = '7sabios.html';
 
 // Event listeners para los iconos flotantes
 document.getElementById('btn-misiones').addEventListener('click', () => {
-showToast('Completa correctamente todas las tablas para ganar puntos de experiencia');
+showToast('Completa correctamente la tabla para ganar puntos de experiencia');
 });
 document.getElementById('btn-nivel').addEventListener('click', () => {
 showToast('Nivel actual: Intermedio');
 });
 document.getElementById('btn-progreso').addEventListener('click', () => {
-showToast(`Progreso: ${Math.round(score/25*100)}% completado`);
+showToast(`Progreso: ${Math.round(score/5*100)}% completado`);
 });
 
 // --- MANEJO DE NAVEGACIÓN MÓVIL ---
