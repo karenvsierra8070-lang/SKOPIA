@@ -538,6 +538,14 @@ font-size: 1.2rem;
 font-weight: 700;
 cursor: pointer;
 transition: all 0.2s ease;
+display: flex;
+flex-direction: column;
+align-items: center;
+}
+
+.swap-value {
+font-size: 0.9rem;
+opacity: 0.9;
 }
 
 /* Falsa Alerta */
@@ -602,7 +610,7 @@ font-size: 1.1rem;
 font-weight: 700;
 cursor: pointer;
 z-index: 50;
-transition: all 0.2s ease;
+transition: all 0.1s ease;
 }
 
 /* La Pregunta Mentirosa */
@@ -611,12 +619,13 @@ font-size: 1.5rem;
 font-weight: 700;
 text-align: center;
 margin: 2rem 0;
-color: var(--warning);
+color: var(--success);
 }
 
 .deceptive-title span {
 color: var(--danger);
 font-size: 1.8rem;
+text-decoration: line-through;
 }
 
 /* Multi-Panda */
@@ -940,7 +949,7 @@ Volver a Tablas
 <p class="game-subtitle">El Desafío Definitivo de Análisis</p>
 <p class="game-description">
 Siete niveles de dificultad creciente te esperan. Cada nivel selecciona un minijuego aleatorio. 
-Una sola respuesta incorrecta y reinicias desde el principio. ¿Tienes lo necesario para convertirte en un Sabio del Dato?
+Una sola respuesta incorrecta y reinicias desde el principio. ¡DEBES SIEMPRE MARCAR LA RESPUESTA CORRECTA! ¿Tienes lo necesario para convertirte en un Sabio del Dato?
 </p>
 <button class="btn-start" id="btn-start">
 <i class="fas fa-play"></i>
@@ -1032,7 +1041,7 @@ let timerInterval = null;
 let timeLeft = 120;
 let isGameActive = false;
 let playedMinigames = {};
-let errorInterval = null; // Para controlar el error de sistema
+let errorIntervals = []; // Para controlar múltiples errores de sistema
 
 // --- BASE DE DATOS DE MINIJUEGOS ---
 const minigames = {
@@ -1073,7 +1082,7 @@ init: initElCambioVeloz
 },
 {
 name: "Falsa Alerta",
-instruction: "Un error de sistema tapará la tabla cada 20 segundos.",
+instruction: "Un error de sistema tapará la tabla cada 10 segundos.",
 init: initFalsaAlerta
 },
 {
@@ -1101,7 +1110,7 @@ init: initElBotonFugitivo
 },
 {
 name: "La Pregunta Mentirosa",
-instruction: "MARCA LA RESPUESTA INCORRECTA. ¡No caigas en la trampa!",
+instruction: "¡Siempre marca la respuesta CORRECTA! No te dejes engañar.",
 init: initLaPreguntaMentirosa
 },
 {
@@ -1163,7 +1172,8 @@ loadLevel();
 
 function loadLevel() {
 clearInterval(timerInterval);
-clearInterval(errorInterval); // Limpiar error de sistema anterior
+errorIntervals.forEach(interval => clearInterval(interval)); // Limpiar todos los errores
+errorIntervals = [];
 timeLeft = 120;
 updateTimerDisplay();
 
@@ -1223,7 +1233,7 @@ timer.classList.add('warning');
 function endGame(isVictory) {
 isGameActive = false;
 clearInterval(timerInterval);
-clearInterval(errorInterval); // Limpiar error de sistema
+errorIntervals.forEach(interval => clearInterval(interval)); // Limpiar todos los errores
 
 if (isVictory) {
 victoryModal.classList.add('show');
@@ -1529,9 +1539,18 @@ const content = `
 </table>
 <p>¿Cuál es el total de ingresos?</p>
 <div class="swap-container" id="swap-container">
-<button class="swap-btn" data-value="105000">A</button>
-<button class="swap-btn" data-value="95000">B</button>
-<button class="swap-btn" data-value="115000">C</button>
+<button class="swap-btn" data-value="105000">
+<span>A</span>
+<span class="swap-value">$105,000</span>
+</button>
+<button class="swap-btn" data-value="95000">
+<span>B</span>
+<span class="swap-value">$95,000</span>
+</button>
+<button class="swap-btn" data-value="115000">
+<span>C</span>
+<span class="swap-value">$115,000</span>
+</button>
 </div>
 `;
 minigameContent.innerHTML = content;
@@ -1539,12 +1558,12 @@ minigameContent.innerHTML = content;
 const container = document.getElementById('swap-container');
 const buttons = Array.from(container.querySelectorAll('.swap-btn'));
 let swapInterval = setInterval(() => {
-const texts = buttons.map(b => b.textContent);
+const contents = buttons.map(b => b.innerHTML);
 const values = buttons.map(b => b.dataset.value);
-const shuffled = texts.sort(() => Math.random() - 0.5);
+const shuffled = contents.sort(() => Math.random() - 0.5);
 buttons.forEach((btn, i) => {
-btn.textContent = shuffled[i];
-btn.dataset.value = values[texts.indexOf(shuffled[i])];
+btn.innerHTML = shuffled[i];
+btn.dataset.value = values[contents.indexOf(shuffled[i])];
 });
 }, 2000);
 
@@ -1612,12 +1631,16 @@ minigameContent.appendChild(overlay);
 
 overlay.querySelector('.error-close').onclick = () => {
 overlay.remove();
-document.getElementById('options-grid').style.display = 'grid';
 };
 }
 
-showError();
-errorInterval = setInterval(showError, 20000); // Guardar el intervalo
+// Mostrar múltiples errores cada 10 segundos
+showError(); // Mostrar el primero inmediatamente
+for (let i = 0; i < 5; i++) { // Crear 5 errores que aparecen cada 10 segundos
+const interval = setInterval(showError, 10000);
+errorIntervals.push(interval);
+}
+
 addOptionListeners();
 }
 
@@ -1808,21 +1831,34 @@ btn.style.left = '50%';
 btn.style.top = '50%';
 minigameContent.appendChild(btn);
 
-let x = 50, y = 50;
+// Movimiento continuo y aleatorio
+function moveRandomly() {
+if (!isGameActive) return;
+const x = Math.random() * 80 + 10;
+const y = Math.random() * 70 + 20;
+btn.style.left = x + '%';
+btn.style.top = y + '%';
+}
+
+// Mover cada 500ms
+const moveInterval = setInterval(moveRandomly, 500);
+
+// También mover cuando el mouse se acerca
 minigameContent.addEventListener('mousemove', (e) => {
+if (!isGameActive) return;
 const rect = minigameContent.getBoundingClientRect();
 const mouseX = ((e.clientX - rect.left) / rect.width) * 100;
 const mouseY = ((e.clientY - rect.top) / rect.height) * 100;
-const dist = Math.sqrt(Math.pow(mouseX - x, 2) + Math.pow(mouseY - y, 2));
+const btnX = parseFloat(btn.style.left);
+const btnY = parseFloat(btn.style.top);
+const dist = Math.sqrt(Math.pow(mouseX - btnX, 2) + Math.pow(mouseY - btnY, 2));
 if (dist < 15) {
-x = Math.random() * 80 + 10;
-y = Math.random() * 60 + 20;
-btn.style.left = x + '%';
-btn.style.top = y + '%';
+moveRandomly(); // Escapar inmediatamente si el mouse está cerca
 }
 });
 
 btn.addEventListener('click', () => {
+clearInterval(moveInterval);
 btn.classList.add('correct');
 setTimeout(() => checkAnswer(true), 1000);
 });
@@ -1865,13 +1901,13 @@ const content = `
 </tbody>
 </table>
 <div class="deceptive-title">
-Marca la respuesta <span>INCORRECTA</span> para el total de ventas
+¡Siempre marca la respuesta <span>CORRECTA</span> para el total de ventas
 </div>
 <div class="options-grid">
-<button class="option-btn" data-correct="false">155000</button>
-<button class="option-btn" data-correct="true">150000</button>
-<button class="option-btn" data-correct="false">160000</button>
-<button class="option-btn" data-correct="true">145000</button>
+<button class="option-btn" data-correct="true">155000</button>
+<button class="option-btn" data-correct="false">150000</button>
+<button class="option-btn" data-correct="true">160000</button>
+<button class="option-btn" data-correct="false">145000</button>
 </div>
 `;
 minigameContent.innerHTML = content;
@@ -2271,13 +2307,13 @@ const content = `
 <thead><tr><th>Mes</th><th>Producto A</th><th>Producto B</th><th>Producto C</th><th>Producto D</th><th>Total</th></tr></thead>
 <tbody><tr><td>Enero</td><td>15000</td><td>22000</td><td>28000</td><td class="empty-cell">?</td><td>95000</td></tr><tr><td>Febrero</td><td>18000</td><td>25000</td><td class="empty-cell">?</td><td>35000</td><td>118000</td></tr><tr><td>Marzo</td><td>20000</td><td class="empty-cell">?</td><td>32000</td><td>38000</td><td>135000</td></tr><tr><td>Abril</td><td class="empty-cell">?</td><td>28000</td><td>35000</td><td>40000</td><td>143000</td></tr></tbody></table>
 <div class="deceptive-title">
-Marca la respuesta <span>INCORRECTA</span> para el total de ventas
+¡Siempre marca la respuesta <span>INCORRECTA</span> para el total de ventas
 </div>
 <div class="options-grid">
-<button class="option-btn fade-option" data-correct="false">491000</button>
-<button class="option-btn fade-option" data-correct="true">485000</button>
-<button class="option-btn fade-option" data-correct="false">495000</button>
-<button class="option-btn fade-option" data-correct="true">480000</button>
+<button class="option-btn fade-option" data-correct="true">491000</button>
+<button class="option-btn fade-option" data-correct="false">485000</button>
+<button class="option-btn fade-option" data-correct="true">495000</button>
+<button class="option-btn fade-option" data-correct="false">480000</button>
 </div>
 `;
 minigameContent.innerHTML = content;
