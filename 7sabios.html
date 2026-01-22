@@ -396,19 +396,26 @@ animation: shake 0.5s ease;
 
 /* --- SPECIAL MINIGAME STYLES --- */
 
-/* El Escondite */
+/* El Escondite - CORREGIDO */
 .fade-option {
-animation: fadeAnimation 2s infinite;
+animation: fadeAnimation 3s infinite;
 }
 
 @keyframes fadeAnimation {
 0%, 100% { 
-opacity: 0.3; 
-pointer-events: none; /* No clickable when faded */
+opacity: 0; 
+visibility: hidden; /* Completamente invisible */
+pointer-events: none; /* No clickable cuando faded */
 }
-50% { 
+45% { 
+opacity: 0.1; 
+visibility: visible;
+pointer-events: none; /* Todavía no clickable */
+}
+50%, 95% { 
 opacity: 1; 
-pointer-events: auto; /* Clickable when visible */
+visibility: visible;
+pointer-events: auto; /* Clickable cuando visible */
 }
 }
 
@@ -475,7 +482,7 @@ animation: eat 2s infinite;
 50% { transform: scale(1.2); }
 }
 
-/* El Intruso Lento - Corregido para tabla */
+/* El Intruso Lento */
 .moving-track {
 position: relative;
 height: 200px;
@@ -1025,6 +1032,7 @@ let timerInterval = null;
 let timeLeft = 120;
 let isGameActive = false;
 let playedMinigames = {};
+let errorInterval = null; // Para controlar el error de sistema
 
 // --- BASE DE DATOS DE MINIJUEGOS ---
 const minigames = {
@@ -1032,7 +1040,7 @@ const minigames = {
 level1: [
 {
 name: "El Escondite",
-instruction: "Encuentra los datos faltantes. Las opciones aparecen y desaparecen.",
+instruction: "Encuentra el dato faltante. Las opciones aparecen y desaparecen.",
 init: initElEscondite
 },
 {
@@ -1112,8 +1120,8 @@ instruction: "Recoge las 3 llaves en orden antes de poder responder.",
 init: initElLaberinto
 },
 {
-name: "El Escondite",
-instruction: "Versión difícil: más datos y menos tiempo.",
+name: "El Escondite Difícil",
+instruction: "Versión difícil con más datos.",
 init: initElEsconditeDificil
 }
 ],
@@ -1155,6 +1163,7 @@ loadLevel();
 
 function loadLevel() {
 clearInterval(timerInterval);
+clearInterval(errorInterval); // Limpiar error de sistema anterior
 timeLeft = 120;
 updateTimerDisplay();
 
@@ -1214,6 +1223,7 @@ timer.classList.add('warning');
 function endGame(isVictory) {
 isGameActive = false;
 clearInterval(timerInterval);
+clearInterval(errorInterval); // Limpiar error de sistema
 
 if (isVictory) {
 victoryModal.classList.add('show');
@@ -1244,40 +1254,42 @@ const content = `
 <table class="data-table">
 <thead>
 <tr>
-<th>Mes</th>
-<th>Ventas</th>
-<th>Gastos</th>
-<th>Beneficio</th>
+<th>Producto</th>
+<th>Enero</th>
+<th>Febrero</th>
+<th>Marzo</th>
+<th>Total</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Enero</td>
-<td>5000</td>
-<td>3000</td>
-<td class="empty-cell">?</td>
+<td>Laptop</td>
+<td>50</td>
+<td>60</td>
+<td>70</td>
+<td>180</td>
 </tr>
 <tr>
-<td>Febrero</td>
-<td>6000</td>
-<td class="empty-cell">?</td>
-<td>2500</td>
+<td>Tablet</td>
+<td>30</td>
+<td>35</td>
+<td>40</td>
+<td>105</td>
 </tr>
 <tr>
-<td>Marzo</td>
+<td>Teléfono</td>
+<td>80</td>
 <td class="empty-cell">?</td>
-<td>4000</td>
-<td>3000</td>
+<td>100</td>
+<td>285</td>
 </tr>
 </tbody>
 </table>
 <div class="options-grid">
-<button class="option-btn fade-option" data-correct="true">2000</button>
-<button class="option-btn fade-option" data-correct="false">1500</button>
-<button class="option-btn fade-option" data-correct="true">3500</button>
-<button class="option-btn fade-option" data-correct="false">4000</button>
-<button class="option-btn fade-option" data-correct="true">7000</button>
-<button class="option-btn fade-option" data-correct="false">6500</button>
+<button class="option-btn fade-option" data-correct="true">105</button>
+<button class="option-btn fade-option" data-correct="false">95</button>
+<button class="option-btn fade-option" data-correct="false">110</button>
+<button class="option-btn fade-option" data-correct="false">100</button>
 </div>
 `;
 minigameContent.innerHTML = content;
@@ -1289,30 +1301,34 @@ const content = `
 <table class="data-table">
 <thead>
 <tr>
-<th>Producto</th>
-<th>Precio</th>
-<th>Cantidad</th>
+<th>Sucursal</th>
+<th>Ventas Q1</th>
+<th>Ventas Q2</th>
+<th>Ventas Q3</th>
 <th>Total</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>A</td>
-<td>$10</td>
-<td>5</td>
-<td>$50</td>
+<td>Norte</td>
+<td>15000</td>
+<td>18000</td>
+<td>20000</td>
+<td>53000</td>
 </tr>
 <tr>
-<td>B</td>
-<td>$15</td>
-<td>3</td>
+<td>Sur</td>
+<td>12000</td>
+<td>14000</td>
 <td class="empty-cell">?</td>
+<td>42000</td>
 </tr>
 <tr>
-<td>C</td>
-<td>$20</td>
-<td>2</td>
-<td>$40</td>
+<td>Este</td>
+<td>18000</td>
+<td>20000</td>
+<td>22000</td>
+<td>60000</td>
 </tr>
 </tbody>
 </table>
@@ -1324,8 +1340,8 @@ minigameContent.innerHTML = content;
 
 const area = document.getElementById('camouflage-area');
 const switcher = document.getElementById('color-switcher');
-const correctAnswer = '45';
-const options = ['35', '40', '45', '50', '55', '60'];
+const correctAnswer = '16000';
+const options = ['14000', '15000', '16000', '17000', '18000', '19000'];
 const shuffled = options.sort(() => Math.random() - 0.5);
 
 shuffled.forEach(option => {
@@ -1394,7 +1410,6 @@ addOptionListeners();
 }
 
 function initElIntrusoLento() {
-// Corregido: ahora es una tabla que se mueve, no números
 const tables = [
 {
 html: `<table class="data-table" style="font-size:0.8rem;">
@@ -1405,20 +1420,20 @@ correct: false
 {
 html: `<table class="data-table" style="font-size:0.8rem;">
 <thead><tr><th>Mes</th><th>Ventas</th></tr></thead>
-<tbody><tr><td>Ene</td><td>100</td></tr><tr><td>Feb</td><td>120</td></tr></tbody></table>`,
+<tbody><tr><td>Mar</td><td>130</td></tr><tr><td>Abr</td><td>140</td></tr></tbody></table>`,
 correct: false
 },
 {
 html: `<table class="data-table" style="font-size:0.8rem;">
 <thead><tr><th>Mes</th><th>Ventas</th></tr></thead>
-<tbody><tr><td>Ene</td><td>100</td></tr><tr><td>Feb</td><td>120</td></tr></tbody></table>`,
+<tbody><tr><td>May</td><td>150</td></tr><tr><td>Jun</td><td>160</td></tr></tbody></table>`,
 correct: false
 },
 {
 html: `<table class="data-table" style="font-size:0.8rem;">
 <thead><tr><th>Producto</th><th>Precio</th></tr></thead>
 <tbody><tr><td>A</td><td>$50</td></tr><tr><td>B</td><td>$75</td></tr></tbody></table>`,
-correct: true // Esta es la intrusa (diferente estructura)
+correct: true
 }
 ];
 
@@ -1451,19 +1466,37 @@ setTimeout(() => checkAnswer(isCorrect), 1000);
 function initBotonesEspejo() {
 const content = `
 <table class="data-table">
-<thead><tr><th>Mes</th><th>Beneficio</th></tr></thead>
+<thead>
+<tr>
+<th>Departamento</th>
+<th>Empleados</th>
+<th>Productividad</th>
+</tr>
+</thead>
 <tbody>
-<tr><td>Enero</td><td>2000</td></tr>
-<tr><td>Febrero</td><td>2500</td></tr>
-<tr><td>Marzo</td><td>3000</td></tr>
+<tr>
+<td>Ventas</td>
+<td>15</td>
+<td>85%</td>
+</tr>
+<tr>
+<td>Marketing</td>
+<td>8</td>
+<td>92%</td>
+</tr>
+<tr>
+<td>TI</td>
+<td>12</td>
+<td class="empty-cell">?</td>
+</tr>
 </tbody>
 </table>
-<p>¿Cuál es el beneficio total?</p>
+<p>¿Cuál es la productividad del departamento de TI si el promedio general es 88%?</p>
 <div class="options-grid">
-<button class="option-btn" data-correct="true">7500</button>
-<button class="option-btn mirror-btn" data-correct="false">7500</button>
-<button class="option-btn" data-correct="false">7000</button>
-<button class="option-btn" data-correct="false">8000</button>
+<button class="option-btn" data-correct="true">87%</button>
+<button class="option-btn mirror-btn" data-correct="false">87%</button>
+<button class="option-btn" data-correct="false">85%</button>
+<button class="option-btn" data-correct="false">90%</button>
 </div>
 `;
 minigameContent.innerHTML = content;
@@ -1473,18 +1506,32 @@ addOptionListeners();
 function initElCambioVeloz() {
 const content = `
 <table class="data-table">
-<thead><tr><th>Producto</th><th>Total</th></tr></thead>
+<thead>
+<tr>
+<th>Categoría</th>
+<th>Ingresos</th>
+</tr>
+</thead>
 <tbody>
-<tr><td>A</td><td>$50</td></tr>
-<tr><td>B</td><td>$45</td></tr>
-<tr><td>C</td><td>$40</td></tr>
+<tr>
+<td>Electrónica</td>
+<td>$45000</td>
+</tr>
+<tr>
+<td>Ropa</td>
+<td>$32000</td>
+</tr>
+<tr>
+<td>Alimentos</td>
+<td>$28000</td>
+</tr>
 </tbody>
 </table>
-<p>¿Cuál es el total de ventas?</p>
+<p>¿Cuál es el total de ingresos?</p>
 <div class="swap-container" id="swap-container">
-<button class="swap-btn" data-value="135">A</button>
-<button class="swap-btn" data-value="140">B</button>
-<button class="swap-btn" data-value="145">C</button>
+<button class="swap-btn" data-value="105000">A</button>
+<button class="swap-btn" data-value="95000">B</button>
+<button class="swap-btn" data-value="115000">C</button>
 </div>
 `;
 minigameContent.innerHTML = content;
@@ -1504,7 +1551,7 @@ btn.dataset.value = values[texts.indexOf(shuffled[i])];
 buttons.forEach(btn => {
 btn.addEventListener('click', () => {
 clearInterval(swapInterval);
-const isCorrect = btn.dataset.value === '135';
+const isCorrect = btn.dataset.value === '105000';
 btn.classList.add(isCorrect ? 'correct' : 'incorrect');
 setTimeout(() => checkAnswer(isCorrect), 1000);
 });
@@ -1515,19 +1562,41 @@ function initFalsaAlerta() {
 const content = `
 <div id="table-container">
 <table class="data-table">
-<thead><tr><th>Mes</th><th>Ventas</th><th>Gastos</th><th>Beneficio</th></tr></thead>
+<thead>
+<tr>
+<th>Trimestre</th>
+<th>Ingresos</th>
+<th>Gastos</th>
+<th>Beneficio</th>
+</tr>
+</thead>
 <tbody>
-<tr><td>Enero</td><td>5000</td><td>3000</td><td>2000</td></tr>
-<tr><td>Febrero</td><td>6000</td><td>3500</td><td>2500</td></tr>
-<tr><td>Marzo</td><td>7000</td><td>4000</td><td>3000</td></tr>
+<tr>
+<td>Q1</td>
+<td>50000</td>
+<td>35000</td>
+<td>15000</td>
+</tr>
+<tr>
+<td>Q2</td>
+<td>60000</td>
+<td>40000</td>
+<td>20000</td>
+</tr>
+<tr>
+<td>Q3</td>
+<td>70000</td>
+<td>45000</td>
+<td class="empty-cell">?</td>
+</tr>
 </tbody>
 </table>
 </div>
 <div class="options-grid" id="options-grid" style="display:none;">
-<button class="option-btn" data-correct="false">6500</button>
-<button class="option-btn" data-correct="true">7500</button>
-<button class="option-btn" data-correct="false">8000</button>
-<button class="option-btn" data-correct="false">8500</button>
+<button class="option-btn" data-correct="false">20000</button>
+<button class="option-btn" data-correct="true">25000</button>
+<button class="option-btn" data-correct="false">30000</button>
+<button class="option-btn" data-correct="false">35000</button>
 </div>
 `;
 minigameContent.innerHTML = content;
@@ -1548,25 +1617,51 @@ document.getElementById('options-grid').style.display = 'grid';
 }
 
 showError();
-let errorInterval = setInterval(showError, 20000);
+errorInterval = setInterval(showError, 20000); // Guardar el intervalo
 addOptionListeners();
 }
 
 function initTablaGiratoria() {
 const content = `
 <table class="data-table rotating-table">
-<thead><tr><th>Mes</th><th>Ventas</th><th>Gastos</th><th>Beneficio</th></tr></thead>
+<thead>
+<tr>
+<th>Sucursal</th>
+<th>Ventas Ene</th>
+<th>Ventas Feb</th>
+<th>Ventas Mar</th>
+<th>Total</th>
+</tr>
+</thead>
 <tbody>
-<tr><td>Enero</td><td>5000</td><td>3000</td><td>2000</td></tr>
-<tr><td>Febrero</td><td>6000</td><td>3500</td><td>2500</td></tr>
-<tr><td>Marzo</td><td>7000</td><td class="empty-cell">?</td><td>3000</td></tr>
+<tr>
+<td>Norte</td>
+<td>25000</td>
+<td>28000</td>
+<td>30000</td>
+<td>83000</td>
+</tr>
+<tr>
+<td>Sur</td>
+<td>20000</td>
+<td>22000</td>
+<td class="empty-cell">?</td>
+<td>70000</td>
+</tr>
+<tr>
+<td>Este</td>
+<td>30000</td>
+<td>32000</td>
+<td>35000</td>
+<td>97000</td>
+</tr>
 </tbody>
 </table>
 <div class="options-grid">
-<button class="option-btn" data-correct="false">3500</button>
-<button class="option-btn" data-correct="false">3800</button>
-<button class="option-btn" data-correct="true">4000</button>
-<button class="option-btn" data-correct="false">4200</button>
+<button class="option-btn" data-correct="false">25000</button>
+<button class="option-btn" data-correct="false">27000</button>
+<button class="option-btn" data-correct="true">28000</button>
+<button class="option-btn" data-correct="false">30000</button>
 </div>
 `;
 minigameContent.innerHTML = content;
@@ -1577,19 +1672,41 @@ function initElAgitador() {
 const content = `
 <div class="shake-container">
 <table class="data-table">
-<thead><tr><th>Mes</th><th>Ventas</th><th>Gastos</th><th>Beneficio</th></tr></thead>
+<thead>
+<tr>
+<th>Producto</th>
+<th>Stock Inicial</th>
+<th>Ventas</th>
+<th>Stock Final</th>
+</tr>
+</thead>
 <tbody>
-<tr><td>Enero</td><td>5000</td><td>3000</td><td>2000</td></tr>
-<tr><td>Febrero</td><td>6000</td><td>3500</td><td>2500</td></tr>
-<tr><td>Marzo</td><td>7000</td><td>4000</td><td>3000</td></tr>
+<tr>
+<td>A</td>
+<td>500</td>
+<td>320</td>
+<td>180</td>
+</tr>
+<tr>
+<td>B</td>
+<td>300</td>
+<td>250</td>
+<td class="empty-cell">?</td>
+</tr>
+<tr>
+<td>C</td>
+<td>450</td>
+<td>380</td>
+<td>70</td>
+</tr>
 </tbody>
 </table>
 </div>
 <div class="options-grid">
-<button class="option-btn" data-correct="false">6500</button>
-<button class="option-btn" data-correct="true">7500</button>
-<button class="option-btn" data-correct="false">8000</button>
-<button class="option-btn" data-correct="false">8500</button>
+<button class="option-btn" data-correct="false">40</button>
+<button class="option-btn" data-correct="false">45</button>
+<button class="option-btn" data-correct="true">50</button>
+<button class="option-btn" data-correct="false">55</button>
 </div>
 `;
 minigameContent.innerHTML = content;
@@ -1599,18 +1716,40 @@ addOptionListeners();
 function initBotonesInvisibles() {
 const content = `
 <table class="data-table">
-<thead><tr><th>Mes</th><th>Ventas</th><th>Gastos</th><th>Beneficio</th></tr></thead>
+<thead>
+<tr>
+<th>Mes</th>
+<th>Presupuesto</th>
+<th>Gastado</th>
+<th>Restante</th>
+</tr>
+</thead>
 <tbody>
-<tr><td>Enero</td><td>5000</td><td>3000</td><td>2000</td></tr>
-<tr><td>Febrero</td><td>6000</td><td>3500</td><td>2500</td></tr>
-<tr><td>Marzo</td><td>7000</td><td>4000</td><td>3000</td></tr>
+<tr>
+<td>Enero</td>
+<td>10000</td>
+<td>7500</td>
+<td>2500</td>
+</tr>
+<tr>
+<td>Febrero</td>
+<td>12000</td>
+<td>9000</td>
+<td class="empty-cell">?</td>
+</tr>
+<tr>
+<td>Marzo</td>
+<td>11000</td>
+<td>8200</td>
+<td>2800</td>
+</tr>
 </tbody>
 </table>
 <div class="options-grid" id="invisible-options">
-<button class="option-btn invisible-btn" data-correct="false">6500</button>
-<button class="option-btn invisible-btn" data-correct="true">7500</button>
-<button class="option-btn invisible-btn" data-correct="false">8000</button>
-<button class="option-btn invisible-btn" data-correct="false">8500</button>
+<button class="option-btn invisible-btn" data-correct="false">2500</button>
+<button class="option-btn invisible-btn" data-correct="true">3000</button>
+<button class="option-btn invisible-btn" data-correct="false">3500</button>
+<button class="option-btn invisible-btn" data-correct="false">4000</button>
 </div>
 <div class="panda-walker">🐼</div>
 `;
@@ -1637,20 +1776,34 @@ addOptionListeners();
 function initElBotonFugitivo() {
 const content = `
 <table class="data-table">
-<thead><tr><th>Mes</th><th>Beneficio</th></tr></thead>
+<thead>
+<tr>
+<th>Equipo</th>
+<th>Puntos</th>
+</tr>
+</thead>
 <tbody>
-<tr><td>Enero</td><td>2000</td></tr>
-<tr><td>Febrero</td><td>2500</td></tr>
-<tr><td>Marzo</td><td>3000</td></tr>
+<tr>
+<td>Alpha</td>
+<td>85</td>
+</tr>
+<tr>
+<td>Beta</td>
+<td>92</td>
+</tr>
+<tr>
+<td>Gamma</td>
+<td>78</td>
+</tr>
 </tbody>
 </table>
-<p>¿Cuál es el beneficio total?</p>
+<p>¿Cuál es el promedio de puntos del equipo?</p>
 `;
 minigameContent.innerHTML = content;
 
 const btn = document.createElement('button');
 btn.className = 'fugitive-button';
-btn.textContent = '7500';
+btn.textContent = '85';
 btn.style.left = '50%';
 btn.style.top = '50%';
 minigameContent.appendChild(btn);
@@ -1678,21 +1831,47 @@ setTimeout(() => checkAnswer(true), 1000);
 function initLaPreguntaMentirosa() {
 const content = `
 <table class="data-table">
-<thead><tr><th>Mes</th><th>Beneficio</th></tr></thead>
+<thead>
+<tr>
+<th>Vendedor</th>
+<th>Ventas Ene</th>
+<th>Ventas Feb</th>
+<th>Ventas Mar</th>
+<th>Total</th>
+</tr>
+</thead>
 <tbody>
-<tr><td>Enero</td><td>2000</td></tr>
-<tr><td>Febrero</td><td>2500</td></tr>
-<tr><td>Marzo</td><td>3000</td></tr>
+<tr>
+<td>Carlos</td>
+<td>15000</td>
+<td>18000</td>
+<td>20000</td>
+<td>53000</td>
+</tr>
+<tr>
+<td>María</td>
+<td>12000</td>
+<td>14000</td>
+<td>16000</td>
+<td>42000</td>
+</tr>
+<tr>
+<td>Juan</td>
+<td>18000</td>
+<td>20000</td>
+<td>22000</td>
+<td>60000</td>
+</tr>
 </tbody>
 </table>
 <div class="deceptive-title">
-Marca la respuesta <span>INCORRECTA</span> para el beneficio total
+Marca la respuesta <span>INCORRECTA</span> para el total de ventas
 </div>
 <div class="options-grid">
-<button class="option-btn" data-correct="false">7500</button>
-<button class="option-btn" data-correct="true">7000</button>
-<button class="option-btn" data-correct="false">8000</button>
-<button class="option-btn" data-correct="true">6500</button>
+<button class="option-btn" data-correct="false">155000</button>
+<button class="option-btn" data-correct="true">150000</button>
+<button class="option-btn" data-correct="false">160000</button>
+<button class="option-btn" data-correct="true">145000</button>
 </div>
 `;
 minigameContent.innerHTML = content;
@@ -1702,14 +1881,36 @@ addOptionListeners();
 function initMultiPanda() {
 const content = `
 <table class="data-table">
-<thead><tr><th>Mes</th><th>Beneficio</th></tr></thead>
+<thead>
+<tr>
+<th>Proyecto</th>
+<th>Presupuesto</th>
+<th>Gastado</th>
+<th>Restante</th>
+</tr>
+</thead>
 <tbody>
-<tr><td>Enero</td><td>2000</td></tr>
-<tr><td>Febrero</td><td>2500</td></tr>
-<tr><td>Marzo</td><td>3000</td></tr>
+<tr>
+<td>A</td>
+<td>50000</td>
+<td>32000</td>
+<td>18000</td>
+</tr>
+<tr>
+<td>B</td>
+<td>75000</td>
+<td>45000</td>
+<td>30000</td>
+</tr>
+<tr>
+<td>C</td>
+<td>60000</td>
+<td>38000</td>
+<td>22000</td>
+</tr>
 </tbody>
 </table>
-<p>¿Cuál es el beneficio total? Escribe tu respuesta:</p>
+<p>¿Cuál es el presupuesto total de los tres proyectos? Escribe tu respuesta:</p>
 <input type="text" class="answer-input" id="answer-input" placeholder="Tu respuesta">
 <button class="option-btn" id="check-answer">Verificar</button>
 <div class="pandas-grid" id="pandas-grid"></div>
@@ -1719,10 +1920,10 @@ minigameContent.innerHTML = content;
 const input = document.getElementById('answer-input');
 const checkBtn = document.getElementById('check-answer');
 const grid = document.getElementById('pandas-grid');
-const correctAnswer = '7500';
+const correctAnswer = '185000';
 let answerVerified = false;
 const correctIndex = Math.floor(Math.random() * 5);
-const numbers = ['7500', '7000', '8000', '6500', '8500'];
+const numbers = ['185000', '175000', '195000', '165000', '205000'];
 
 for (let i = 0; i < 5; i++) {
 const card = document.createElement('div');
@@ -1766,11 +1967,37 @@ function initFlashDeDatos() {
 const content = `
 <div id="flash-table-container">
 <table class="data-table">
-<thead><tr><th>Mes</th><th>Ventas</th><th>Gastos</th><th>Beneficio</th></tr></thead>
+<thead>
+<tr>
+<th>Sucursal</th>
+<th>Ventas Ene</th>
+<th>Ventas Feb</th>
+<th>Ventas Mar</th>
+<th>Total</th>
+</tr>
+</thead>
 <tbody>
-<tr><td>Enero</td><td>5000</td><td>3000</td><td>2000</td></tr>
-<tr><td>Febrero</td><td>6000</td><td>3500</td><td>2500</td></tr>
-<tr><td>Marzo</td><td>7000</td><td>4000</td><td>3000</td></tr>
+<tr>
+<td>Norte</td>
+<td>45000</td>
+<td>48000</td>
+<td>52000</td>
+<td>145000</td>
+</tr>
+<tr>
+<td>Sur</td>
+<td>38000</td>
+<td>42000</td>
+<td>45000</td>
+<td>125000</td>
+</tr>
+<tr>
+<td>Este</td>
+<td>52000</td>
+<td>55000</td>
+<td>58000</td>
+<td>165000</td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -1784,12 +2011,12 @@ const overlay = document.createElement('div');
 overlay.className = 'flash-overlay';
 overlay.innerHTML = `
 <h2 class="flash-message">¡Tiempo!</h2>
-<p>¿Cuál es el beneficio total?</p>
+<p>¿Cuál es el total de ventas de todas las sucursales?</p>
 <div class="options-grid">
-<button class="option-btn" data-correct="false">6500</button>
-<button class="option-btn" data-correct="true">7500</button>
-<button class="option-btn" data-correct="false">8000</button>
-<button class="option-btn" data-correct="false">8500</button>
+<button class="option-btn" data-correct="false">420000</button>
+<button class="option-btn" data-correct="true">435000</button>
+<button class="option-btn" data-correct="false">445000</button>
+<button class="option-btn" data-correct="false">450000</button>
 </div>
 `;
 minigameContent.appendChild(overlay);
@@ -1801,11 +2028,29 @@ addOptionListeners();
 function initElLaberinto() {
 const content = `
 <table class="data-table">
-<thead><tr><th>Mes</th><th>Beneficio</th></tr></thead>
+<thead>
+<tr>
+<th>Departamento</th>
+<th>Empleados</th>
+<th>Productividad</th>
+</tr>
+</thead>
 <tbody>
-<tr><td>Enero</td><td>2000</td></tr>
-<tr><td>Febrero</td><td>2500</td></tr>
-<tr><td>Marzo</td><td>3000</td></tr>
+<tr>
+<td>Ventas</td>
+<td>20</td>
+<td>85%</td>
+</tr>
+<tr>
+<td>Marketing</td>
+<td>12</td>
+<td>90%</td>
+</tr>
+<tr>
+<td>TI</td>
+<td>15</td>
+<td>88%</td>
+</tr>
 </tbody>
 </table>
 <div class="maze-area" id="maze-area"></div>
@@ -1833,10 +2078,10 @@ submit.textContent = 'Responder';
 submit.onclick = () => {
 const options = `
 <div class="options-grid">
-<button class="option-btn" data-correct="false">6500</button>
-<button class="option-btn" data-correct="true">7500</button>
-<button class="option-btn" data-correct="false">8000</button>
-<button class="option-btn" data-correct="false">8500</button>
+<button class="option-btn" data-correct="false">85%</button>
+<button class="option-btn" data-correct="true">87.6%</button>
+<button class="option-btn" data-correct="false">89%</button>
+<button class="option-btn" data-correct="false">90%</button>
 </div>
 `;
 maze.innerHTML += options;
@@ -1853,20 +2098,44 @@ maze.appendChild(keyEl);
 function initElEsconditeDificil() {
 const content = `
 <table class="data-table">
-<thead><tr><th>Producto</th><th>Enero</th><th>Febrero</th><th>Marzo</th><th>Abril</th><th>Total</th></tr></thead>
+<thead>
+<tr>
+<th>Producto</th>
+<th>Tienda A</th>
+<th>Tienda B</th>
+<th>Tienda C</th>
+<th>Total</th>
+</tr>
+</thead>
 <tbody>
-<tr><td>A</td><td>100</td><td class="empty-cell">?</td><td>150</td><td>175</td><td>550</td></tr>
-<tr><td>B</td><td>200</td><td>225</td><td class="empty-cell">?</td><td>275</td><td>950</td></tr>
-<tr><td>C</td><td>150</td><td>175</td><td>200</td><td class="empty-cell">?</td><td>700</td></tr>
+<tr>
+<td>Laptop</td>
+<td>45</td>
+<td>52</td>
+<td>48</td>
+<td>145</td>
+</tr>
+<tr>
+<td>Tablet</td>
+<td>78</td>
+<td class="empty-cell">?</td>
+<td>82</td>
+<td>245</td>
+</tr>
+<tr>
+<td>Teléfono</td>
+<td>120</td>
+<td>135</td>
+<td>125</td>
+<td>380</td>
+</tr>
 </tbody>
 </table>
 <div class="options-grid">
-<button class="option-btn fade-option" data-correct="true">125</button>
-<button class="option-btn fade-option" data-correct="false">130</button>
-<button class="option-btn fade-option" data-correct="true">250</button>
-<button class="option-btn fade-option" data-correct="false">260</button>
-<button class="option-btn fade-option" data-correct="true">175</button>
-<button class="option-btn fade-option" data-correct="false">180</button>
+<button class="option-btn fade-option" data-correct="true">85</button>
+<button class="option-btn fade-option" data-correct="false">80</button>
+<button class="option-btn fade-option" data-correct="false">90</button>
+<button class="option-btn fade-option" data-correct="false">95</button>
 </div>
 `;
 minigameContent.innerHTML = content;
@@ -1876,11 +2145,41 @@ addOptionListeners();
 function initSimulacroTotal() {
 const content = `
 <table class="data-table">
-<thead><tr><th>Mes</th><th>Ventas</th><th>Gastos</th><th>Beneficio</th></tr></thead>
+<thead>
+<tr>
+<th>Región</th>
+<th>Ventas Q1</th>
+<th>Ventas Q2</th>
+<th>Ventas Q3</th>
+<th>Ventas Q4</th>
+<th>Total</th>
+</tr>
+</thead>
 <tbody>
-<tr><td>Enero</td><td>5000</td><td>3000</td><td>2000</td></tr>
-<tr><td>Febrero</td><td>6000</td><td>3500</td><td>2500</td></tr>
-<tr><td>Marzo</td><td>7000</td><td>4000</td><td>3000</td></tr>
+<tr>
+<td>Norte</td>
+<td>125000</td>
+<td>135000</td>
+<td>145000</td>
+<td>155000</td>
+<td>560000</td>
+</tr>
+<tr>
+<td>Sur</td>
+<td>95000</td>
+<td>105000</td>
+<td>115000</td>
+<td>125000</td>
+<td>440000</td>
+</tr>
+<tr>
+<td>Este</td>
+<td>110000</td>
+<td class="empty-cell">?</td>
+<td>130000</td>
+<td>140000</td>
+<td>520000</td>
+</tr>
 </tbody>
 </table>
 <div id="speed-container" style="position:relative;height:200px;">
@@ -1890,10 +2189,10 @@ minigameContent.innerHTML = content;
 
 const container = document.getElementById('speed-container');
 const options = [
-{ text: '7500', correct: true },
-{ text: '75.00', correct: false },
-{ text: '7.500', correct: false },
-{ text: '750', correct: false }
+{ text: '140000', correct: true },
+{ text: '130000', correct: false },
+{ text: '150000', correct: false },
+{ text: '120000', correct: false }
 ];
 
 options.forEach(opt => {
@@ -1908,7 +2207,7 @@ container.appendChild(btn);
 const moveInterval = setInterval(() => {
 btn.style.left = `${Math.random() * 80 + 10}%`;
 btn.style.top = `${Math.random() * 60 + 20}%`;
-}, 300);
+}, 200);
 
 btn.addEventListener('click', () => {
 clearInterval(moveInterval);
@@ -1928,13 +2227,8 @@ function initElDesafioFinal() {
 const content = `
 <div class="camouflage-area" style="position:relative;height:300px;">
 <table class="data-table rotating-table" style="position:absolute;top:0;left:0;">
-<thead><tr><th>Mes</th><th>Beneficio</th></tr></thead>
-<tbody>
-<tr><td>Enero</td><td>2000</td></tr>
-<tr><td>Febrero</td><td>2500</td></tr>
-<tr><td>Marzo</td><td>3000</td></tr>
-</tbody>
-</table>
+<thead><tr><th>Mes</th><th>Ventas</th></tr></thead>
+<tbody><tr><td>Enero</td><td>50000</td></tr><tr><td>Febrero</td><td>60000</td></tr></tbody></table>
 <div class="error-overlay" style="position:absolute;top:0;left:0;opacity:0.5;">
 <h2 class="error-title">¡ERROR!</h2>
 </div>
@@ -1946,10 +2240,10 @@ minigameContent.innerHTML = content;
 
 const optionsContainer = document.getElementById('final-options');
 const options = [
-{ text: '7500', correct: true },
-{ text: '7000', correct: false },
-{ text: '8000', correct: false },
-{ text: '6500', correct: false }
+{ text: '110000', correct: true },
+{ text: '100000', correct: false },
+{ text: '120000', correct: false },
+{ text: '105000', correct: false }
 ];
 
 options.forEach(opt => {
@@ -1975,21 +2269,15 @@ function initLaPruebaSuprema() {
 const content = `
 <table class="data-table" style="font-size:0.8rem;">
 <thead><tr><th>Mes</th><th>Producto A</th><th>Producto B</th><th>Producto C</th><th>Producto D</th><th>Total</th></tr></thead>
-<tbody>
-<tr><td>Enero</td><td>1000</td><td>1500</td><td>2000</td><td class="empty-cell">?</td><td>5500</td></tr>
-<tr><td>Febrero</td><td>1200</td><td>1800</td><td class="empty-cell">?</td><td>2500</td><td>6800</td></tr>
-<tr><td>Marzo</td><td>1400</td><td class="empty-cell">?</td><td>2400</td><td>2800</td><td>8100</td></tr>
-<tr><td>Abril</td><td class="empty-cell">?</td><td>2200</td><td>2600</td><td>3000</td><td>9400</td></tr>
-</tbody>
-</table>
+<tbody><tr><td>Enero</td><td>15000</td><td>22000</td><td>28000</td><td class="empty-cell">?</td><td>95000</td></tr><tr><td>Febrero</td><td>18000</td><td>25000</td><td class="empty-cell">?</td><td>35000</td><td>118000</td></tr><tr><td>Marzo</td><td>20000</td><td class="empty-cell">?</td><td>32000</td><td>38000</td><td>135000</td></tr><tr><td>Abril</td><td class="empty-cell">?</td><td>28000</td><td>35000</td><td>40000</td><td>143000</td></tr></tbody></table>
 <div class="deceptive-title">
 Marca la respuesta <span>INCORRECTA</span> para el total de ventas
 </div>
 <div class="options-grid">
-<button class="option-btn fade-option" data-correct="false">29800</button>
-<button class="option-btn fade-option" data-correct="true">28800</button>
-<button class="option-btn fade-option" data-correct="false">30800</button>
-<button class="option-btn fade-option" data-correct="true">27800</button>
+<button class="option-btn fade-option" data-correct="false">491000</button>
+<button class="option-btn fade-option" data-correct="true">485000</button>
+<button class="option-btn fade-option" data-correct="false">495000</button>
+<button class="option-btn fade-option" data-correct="true">480000</button>
 </div>
 `;
 minigameContent.innerHTML = content;
