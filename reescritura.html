@@ -50,6 +50,7 @@ onAuthStateChanged(auth, (user) => {
     --color-verde: #4CAF50;
     --color-gris: #9E9E9E;
     --color-rojo: #d9534f;
+    --color-naranja: #ff9800;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -386,9 +387,13 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     border-style: solid; 
     animation: fadeIn 0.5s ease-in-out;
 }
-.results-box.plagio {
+.results-box.plagio-severo {
     border-color: var(--color-rojo);
     background-color: rgba(217, 83, 79, 0.05);
+}
+.results-box.plagio-moderado {
+    border-color: var(--color-naranja);
+    background-color: rgba(255, 152, 0, 0.05);
 }
 @keyframes fadeIn { 
     from { opacity: 0; transform: translateY(10px); } 
@@ -414,7 +419,8 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .score-display.low { color: #d9534f; }
 .score-display.medium { color: #f0ad4e; }
 .score-display.high { color: #5cb85c; }
-.score-display.plagio { color: var(--color-rojo); }
+.score-display.plagio-severo { color: var(--color-rojo); }
+.score-display.plagio-moderado { color: var(--color-naranja); }
 .feedback-message { 
     font-size: 1.1rem; 
     line-height: 1.6; 
@@ -426,19 +432,29 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     border-left: 5px solid var(--color-oliva-medio);
     margin-top: 15px;
 }
-.feedback-message.plagio {
+.feedback-message.plagio-severo {
     background-color: rgba(217, 83, 79, 0.1);
     border-left-color: var(--color-rojo);
+}
+.feedback-message.plagio-moderado {
+    background-color: rgba(255, 152, 0, 0.1);
+    border-left-color: var(--color-naranja);
 }
 .plagio-warning {
     display: flex;
     align-items: center;
     margin-bottom: 15px;
     padding: 10px;
-    background-color: rgba(217, 83, 79, 0.2);
     border-radius: 5px;
-    color: var(--color-rojo);
     font-weight: 500;
+}
+.plagio-warning.severo {
+    background-color: rgba(217, 83, 79, 0.2);
+    color: var(--color-rojo);
+}
+.plagio-warning.moderado {
+    background-color: rgba(255, 152, 0, 0.2);
+    color: var(--color-naranja);
 }
 .plagio-warning i {
     margin-right: 10px;
@@ -1317,33 +1333,48 @@ document.addEventListener('DOMContentLoaded', () => {
         return false;
     }
 
-    // Detectar secuencias largas de plagio (CORREGIDO)
-    function detectLongPlagiarism(original, rewritten, minWords = 30) {
+    // Detectar plagio con dos niveles (CORREGIDO)
+    function detectPlagiarism(original, rewritten) {
         const originalTokens = tokenize(original);
         const rewrittenTokens = tokenize(rewritten);
-        
-        // Crear una cadena del texto reescrito para búsqueda fácil
         const rewrittenText = rewrittenTokens.join(' ');
         
-        console.log("=== DETECCIÓN DE PLAGIO LARGO ===");
+        console.log("=== DETECCIÓN DE PLAGIO ===");
         console.log("Tokens originales:", originalTokens.length);
         console.log("Tokens reescritos:", rewrittenTokens.length);
         
-        // Verificar todas las secuencias posibles de minWords del original
-        for (let i = 0; i <= originalTokens.length - minWords; i++) {
-            const sequence = originalTokens.slice(i, i + minWords).join(' ');
+        let maxSequence = 0;
+        let plagiarismLevel = 'none'; // 'none', 'moderado', 'severo'
+        
+        // Buscar la secuencia más larga de palabras idénticas
+        for (let i = 0; i <= originalTokens.length - 1; i++) {
+            let currentSequence = 0;
             
-            console.log(`Verificando secuencia ${i+1}: "${sequence.substring(0, 50)}..."`);
-            
-            // Verificar si esta secuencia existe en el texto reescrito
-            if (rewrittenText.includes(sequence)) {
-                console.log(`¡PLAGIO DETECTADO! Secuencia de ${minWords} palabras encontrada.`);
-                return true;
+            for (let j = 0; j <= originalTokens.length - i; j++) {
+                const sequence = originalTokens.slice(i, i + j).join(' ');
+                
+                if (rewrittenText.includes(sequence)) {
+                    currentSequence = j;
+                    if (currentSequence > maxSequence) {
+                        maxSequence = currentSequence;
+                    }
+                }
             }
         }
         
-        console.log("No se detectó plagio largo.");
-        return false;
+        console.log(`Secuencia más larga encontrada: ${maxSequence} palabras`);
+        
+        // Determinar el nivel de plagio
+        if (maxSequence >= 70) {
+            plagiarismLevel = 'severo';
+        } else if (maxSequence >= 30) {
+            plagiarismLevel = 'moderado';
+        }
+        
+        return {
+            level: plagiarismLevel,
+            wordCount: maxSequence
+        };
     }
 
     // Identificar palabras simplificadas (MEJORADO)
@@ -1482,22 +1513,50 @@ document.addEventListener('DOMContentLoaded', () => {
         const vocabulary = [...new Set([...originalTokens, ...rewrittenTokens])];
         const rewrittenTextWordCount = rewrittenTokens.length;
 
-        // 2. Detección de plagio severo (CORREGIDO)
-        const isLongPlagiarism = detectLongPlagiarism(currentOriginalText, rewrittenText, 30);
+        // 2. Detección de plagio con dos niveles (CORREGIDO)
+        const plagiarismResult = detectPlagiarism(currentOriginalText, rewrittenText);
         
-        if (isLongPlagiarism) {
-            scoreDisplay.textContent = 'PLAGIO DETECTADO';
-            scoreDisplay.className = 'score-display plagio';
+        if (plagiarismResult.level === 'severo') {
+            // Plagio severo: más de 70 palabras
+            scoreDisplay.textContent = 'PLAGIO SEVERO';
+            scoreDisplay.className = 'score-display plagio-severo';
             feedbackMessage.innerHTML = `
-                <div class="plagio-warning">
+                <div class="plagio-warning severo">
                     <i class="fas fa-exclamation-triangle"></i>
-                    <span><strong>¡ADVERTENCIA DE PLAGIO!</strong> Se detectaron más de 30 palabras consecutivas idénticas al texto original.</span>
+                    <span><strong>¡PLAGIO SEVERO DETECTADO!</strong> Se detectaron ${plagiarismResult.wordCount} palabras consecutivas idénticas al texto original.</span>
                 </div>
-                <div class="feedback-message plagio">
-                    <strong>El plagio no es aceptable.</strong> El objetivo de este ejercicio es que desarrolles tu capacidad de expresar ideas con tus propias palabras. Por favor, intenta reescribir el texto utilizando un vocabulario y estructura diferentes.
+                <div class="feedback-message plagio-severo">
+                    <strong>El plagio no es aceptable.</strong> Has copiado una parte muy grande del texto original. El objetivo de este ejercicio es que desarrolles tu capacidad de expresar ideas con tus propias palabras. Tu nota ha sido anulada.
                 </div>
             `;
-            resultsBox.classList.add('active', 'plagio');
+            resultsBox.classList.add('active', 'plagio-severo');
+            return;
+        } else if (plagiarismResult.level === 'moderado') {
+            // Plagio moderado: entre 30 y 70 palabras
+            let finalScore = 0; // Anular nota base
+            scoreDisplay.textContent = 'PLAGIO MODERADO';
+            scoreDisplay.className = 'score-display plagio-moderado';
+            
+            // Aplicar penalización del 50% al cálculo normal
+            const vecOriginal = createTfVector(currentOriginalText, vocabulary);
+            const vecRewritten = createTfVector(rewrittenText, vocabulary);
+            const semanticSimilarity = cosineSimilarity(vecOriginal, vecRewritten);
+            finalScore = semanticSimilarity * 0.5; // Penalización del 50%
+            
+            const score = Math.round(finalScore * 100);
+            
+            feedbackMessage.innerHTML = `
+                <div class="plagio-warning moderado">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span><strong>¡ADVERTENCIA DE PLAGIO!</strong> Se detectaron ${plagiarismResult.wordCount} palabras consecutivas idénticas al texto original.</span>
+                </div>
+                <div class="feedback-message plagio-moderado">
+                    <strong>Se ha aplicado una penalización del 50%.</strong> Aunque tu nota ha sido reducida, te animamos a seguir practicando para mejorar tu capacidad de parafrasear. La próxima vez, intenta usar más tus propias palabras.
+                </div>
+                <br><br>
+                <strong>Tu puntuación con penalización: ${score}%</strong>
+            `;
+            resultsBox.classList.add('active', 'plagio-moderado');
             return;
         }
 
@@ -1612,7 +1671,7 @@ document.addEventListener('DOMContentLoaded', () => {
         scoreDisplay.textContent = `${score}%`;
         scoreDisplay.className = `score-display ${score < 70 ? 'low' : score < 90 ? 'medium' : 'high'}`;
         feedbackMessage.innerHTML = feedback;
-        resultsBox.classList.remove('plagio');
+        resultsBox.classList.remove('plagio-severo', 'plagio-moderado');
         resultsBox.classList.add('active');
 
         // 11. Mostrar conceptos clave
