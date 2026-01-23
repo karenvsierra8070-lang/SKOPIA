@@ -1787,18 +1787,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Generar mensaje motivador según el puntaje
-    function generateMotivationalMessage(score) {
-        if (score < 30) {
-            return "¡No te desanimes! Todo gran escritor empezó desde cero. Sigue practicando y verás cómo mejoras.";
-        } else if (score < 50) {
-            return "¡Vas por buen camino! Has capturado algunas ideas importantes. Intenta incluir más detalles clave en tu próxima reescritura.";
-        } else if (score < 70) {
-            return "¡Buen trabajo! Estás comprendiendo bien el texto. Un poco más de atención a los detalles y serás un experto.";
-        } else if (score < 90) {
-            return "¡Excelente! Tu reescritura es muy clara y precisa. Has demostrado una gran comprensión del texto.";
+    // Generar mensaje motivador según el puntaje (MEJORADO CON TEMÁTICA DE PANDA)
+    function generateMotivationalMessage(score, hasPastePenalty, dictionaryWordCount, rewrittenTextWordCount, originalTokensLength) {
+        if (hasPastePenalty) {
+            if (score < 30) {
+                return "🐼 ¡Oh, no! Los pandas somos originales y únicos, pero tu texto parece más de máquina que de bambú fresco. Tu reescritura necesita más de tu voz personal y menos pegado. ¡Sigue practicando para encontrar tu estilo único!";
+            } else if (score < 50) {
+                return "🐼 He notado que has pegado algo de texto, pero veo un esfuerzo por entender el contenido. Los pandas apreciamos el bambú auténtico, ¡intenta usar más tus propias palabras la próxima vez! Tu puntuación refleja tu comprensión, pero no tu originalidad.";
+            } else if (score < 70) {
+                return "🐼 ¡Hmm! Aunque has capturado las ideas principales, mi olfato de panda detecta que parte del texto no es tuyo. Los pandas somos maestros del parafraseo, ¡te animo a desarrollar esa habilidad! Tu comprensión es buena, pero tu originalidad necesita práctica.";
+            } else if (score < 90) {
+                return "🐼 ¡Casi perfecto! Has demostrado una excelente comprensión del texto, pero mi sentido panda detectó algo de texto pegado. Los grandes escritores pandas siempre usamos nuestras propias palabras. ¡Estás muy cerca de convertirte en un maestro del parafraseo!";
+            } else {
+                return "🐼 ¡Increíble! A pesar de haber pegado algo de texto, tu comprensión es excepcional. Como panda experto, te sugiero que la próxima vez intentes expresar estas maravillosas ideas completamente con tus propias palabras. ¡Tienes el potencial para ser un verdadero maestro de la reescritura!";
+            }
         } else {
-            return "¡Increíble! Has logrado una reescritura perfecta. ¡Eres un maestro de la síntesis!";
+            if (score < 30) {
+                return "🐼 ¡Oh, no! Parece que este texto fue un poco difícil de digerir, incluso para un panda con hambre de conocimiento. No te preocupes, todos empezamos comiendo bambú tierno antes de pasar a los tallos más gruesos. ¡Sigue practicando y verás cómo mejoras!";
+            } else if (score < 50) {
+                return "🐼 ¡Vas por buen camino! Has capturado algunas ideas importantes, como un panda que encuentra los brotes más tiernos de bambú. Intenta incluir más detalles clave en tu próxima reescritura para satisfacer completamente tu hambre de conocimiento.";
+            } else if (score < 70) {
+                return "🐼 ¡Buen trabajo! Estás comprendiendo bien el texto, casi como un panda experto en seleccionar el mejor bambú del bosque. Un poco más de atención a los detalles y serás un maestro en el arte de la reescritura.";
+            } else if (score < 90) {
+                return "🐼 ¡Excelente! Tu reescritura es tan clara y deliciosa como el bambú más fresco de la montaña. Has demostrado una gran comprensión del texto y tu habilidad para expresar las ideas con tus propias palabras es admirable.";
+            } else {
+                return "🐼 ¡Increíble! Has logrado una reescritura perfecta, tan refinada y sabrosa que hasta yo, como panda gourmet, quedo impresionado. ¡Eres un verdadero maestro de la síntesis! Tu habilidad para parafrasear es legendaria en el bosque de los pandas.";
+            }
         }
     }
 
@@ -1912,7 +1926,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 scoreDisplay.textContent = `${score}%`;
                 scoreDisplay.className = `score-display plagio-moderado`;
                 
-                const motivationalMessage = generateMotivationalMessage(score);
+                const motivationalMessage = generateMotivationalMessage(score, false, dictionaryWordCount, rewrittenTextWordCount, originalTokens.length);
                 feedbackMessage.innerHTML = `
                     <div class="plagio-warning moderado">
                         <i class="fas fa-exclamation-triangle"></i>
@@ -2048,37 +2062,88 @@ document.addEventListener('DOMContentLoaded', () => {
             simplifiedWords = identifySimplifiedWords(currentOriginalText, rewrittenText);
 
             // 10. Generación de Feedback Mejorado
-            const motivationalMessage = generateMotivationalMessage(score);
-            let feedback = `<strong>${motivationalMessage}</strong> Tu puntuación es de ${score}%.`;
+            const motivationalMessage = generateMotivationalMessage(score, pasteDetected && pasteWordCount > 0, dictionaryWordCount, rewrittenTextWordCount, originalTokens.length);
             
-            // Mostrar detalles del cálculo
-            if (bonuses.length > 0 || penalties.length > 0) {
-                feedback += `<br><br><strong>Desglose del puntaje:</strong><br>`;
-                feedback += `Base: ${(semanticSimilarity * 100).toFixed(1)}%<br>`;
+            // Crear un mensaje más elaborado con temática de panda
+            let feedback = `<div class="panda-feedback-header">
+                <span class="panda-emoji">🐼</span>
+                <strong>Opinión del Panda Skópia:</strong>
+            </div>`;
+            
+            feedback += `<div class="panda-feedback-message">${motivationalMessage}</div>`;
+            
+            // Mostrar detalles del cálculo con temática de panda
+            feedback += `<div class="panda-feedback-details">
+                <h4><span class="panda-emoji">🎋</span> Desglose del puntaje:</h4>
+                <div class="score-breakdown">
+                    <div class="score-item">
+                        <span class="score-label">Puntuación base:</span>
+                        <span class="score-value">${(semanticSimilarity * 100).toFixed(1)}%</span>
+                    </div>`;
+            
+            if (bonuses.length > 0) {
+                feedback += `<div class="score-section">
+                    <span class="section-title"><span class="panda-emoji">🎋</span> Bonos de bambú:</span>
+                    <ul class="bonus-list">`;
                 
-                if (bonuses.length > 0) {
-                    feedback += `Bonos: ${bonuses.join(', ')}<br>`;
-                }
+                bonuses.forEach(bonus => {
+                    feedback += `<li class="bonus-item">${bonus}</li>`;
+                });
                 
-                if (penalties.length > 0) {
-                    feedback += `Penalizaciones: ${penalties.join(', ')}<br>`;
-                }
-                
-                if (pasteDetected && pasteWordCount > 0) {
-                    feedback += `Penalización por pegado de texto: -${iaPenaltyAmount}%<br>`;
-                }
+                feedback += `</ul></div>`;
             }
+            
+            if (penalties.length > 0) {
+                feedback += `<div class="score-section">
+                    <span class="section-title"><span class="panda-emoji">🍂</span> Penalizaciones:</span>
+                    <ul class="penalty-list">`;
+                
+                penalties.forEach(penalty => {
+                    feedback += `<li class="penalty-item">${penalty}</li>`;
+                });
+                
+                feedback += `</ul></div>`;
+            }
+            
+            if (pasteDetected && pasteWordCount > 0) {
+                feedback += `<div class="score-section penalty-highlight">
+                    <span class="section-title"><span class="panda-emoji">⚠️</span> Penalización por pegado:</span>
+                    <div class="penalty-item">-${iaPenaltyAmount}% por pegar ${pasteWordCount} palabras</div>
+                </div>`;
+            }
+            
+            feedback += `</div>`;
+            
+            // Añadir consejos adicionales según el puntaje
+            feedback += `<div class="panda-advice">`;
             
             if (score < 70) {
                 if (dictionaryWordCount < 2) {
-                    feedback += `<br><br>Intenta usar más palabras clave del texto original. Has usado ${dictionaryWordCount} palabra(s) importante(s).`;
+                    feedback += `<div class="advice-item">
+                        <span class="advice-emoji">🎋</span>
+                        <div class="advice-text">
+                            <strong>Consejo de panda:</strong> Intenta usar más palabras clave del texto original. Has usado solo ${dictionaryWordCount} palabra(s) importante(s). Los pandas sabemos que el bambú más nutritivo está en los detalles.
+                        </div>
+                    </div>`;
                 }
                 if (rewrittenTextWordCount < originalTokens.length * 0.6) {
-                    feedback += ` Además, tu texto es considerablemente más corto. Asegúrate de cubrir todos los puntos importantes del original.`;
+                    feedback += `<div class="advice-item">
+                        <span class="advice-emoji">🎋</span>
+                        <div class="advice-text">
+                            <strong>Consejo de panda:</strong> Tu texto es considerablemente más corto. Como panda experto, te recomiendo masticar bien cada idea y asegurarte de incluir todos los nutrientes del texto original.
+                        </div>
+                    </div>`;
                 }
             } else {
-                feedback += `<br><br>Has utilizado ${dictionaryWordCount} palabra(s) clave relevante(s), lo que demuestra una gran comprensión.`;
+                feedback += `<div class="advice-item">
+                    <span class="advice-emoji">🎋</span>
+                    <div class="advice-text">
+                        <strong>¡Felicidades del panda!</strong> Has utilizado ${dictionaryWordCount} palabra(s) clave relevante(s), lo que demuestra una gran comprensión. ¡Tu estilo de escritura es tan refinado como el bambú más selecto!
+                    </div>
+                </div>`;
             }
+            
+            feedback += `</div>`;
 
             // 11. Mostrar Resultados
             scoreDisplay.textContent = `${score}%`;
@@ -2108,6 +2173,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // 14. Mostrar Panda SKOPIA
             if (score >= 70 && !(pasteDetected && pasteWordCount > 0)) {
                 pandaContainer.classList.add('active');
+                
+                // Cambiar el mensaje del panda según el puntaje
+                if (score >= 90) {
+                    pandaSign.textContent = "¡Escribes como un panda maestro!";
+                } else {
+                    pandaSign.textContent = "¡Tu texto es delicioso como el bambú!";
+                }
                 
                 // Ocultar el panda después de 5 segundos
                 setTimeout(() => {
@@ -2268,5 +2340,116 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAllTexts();
 });
 </script>
+
+<!-- ESTILOS ADICIONALES PARA LOS NUEVOS MENSAJES DE PANDA -->
+<style>
+.panda-feedback-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+    color: var(--color-oliva-oscuro);
+}
+
+.panda-emoji {
+    font-size: 1.5rem;
+    margin-right: 10px;
+}
+
+.panda-feedback-message {
+    margin-bottom: 20px;
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+.panda-feedback-details h4 {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    color: var(--color-oliva-medio);
+    font-size: 1.1rem;
+}
+
+.score-breakdown {
+    background-color: rgba(190, 192, 146, 0.1);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 15px;
+}
+
+.score-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.score-label {
+    font-weight: 500;
+}
+
+.score-value {
+    font-weight: 700;
+    color: var(--color-oliva-medio);
+}
+
+.score-section {
+    margin-bottom: 15px;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--color-oliva-oscuro);
+}
+
+.bonus-list, .penalty-list {
+    margin-left: 25px;
+    margin-bottom: 8px;
+}
+
+.bonus-item {
+    color: var(--color-verde);
+    margin-bottom: 5px;
+}
+
+.penalty-item {
+    color: var(--color-rojo);
+    margin-bottom: 5px;
+}
+
+.penalty-highlight {
+    background-color: rgba(217, 83, 79, 0.1);
+    border-radius: 8px;
+    padding: 12px;
+    border-left: 4px solid var(--color-rojo);
+}
+
+.panda-advice {
+    margin-top: 20px;
+    border-top: 1px dashed var(--color-oliva-claro);
+    padding-top: 15px;
+}
+
+.advice-item {
+    display: flex;
+    margin-bottom: 15px;
+}
+
+.advice-emoji {
+    font-size: 1.5rem;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.advice-text {
+    flex-grow: 1;
+}
+
+.advice-text strong {
+    color: var(--color-oliva-medio);
+}
+</style>
 </body>
 </html>
