@@ -1393,20 +1393,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
     
-    // Detectar si hay copia textual (n-gramas idénticos)
-    function hasVerbatimCopy(original, rewritten, n = 4) {
-        const originalTokens = tokenize(original);
-        const rewrittenTokens = tokenize(rewritten);
-        
-        for (let i = 0; i <= originalTokens.length - n; i++) {
-            const ngram = originalTokens.slice(i, i + n).join(' ');
-            if (rewritten.includes(ngram)) {
-                return true; // Se encontró una copia
-            }
-        }
-        return false;
-    }
-
     // Detectar plagio con dos niveles (CORREGIDO)
     function detectPlagiarism(original, rewritten) {
         const originalTokens = tokenize(original);
@@ -1708,8 +1694,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 3. Detección de copia textual menor
-        if (hasVerbatimCopy(currentOriginalText, rewrittenText)) {
+        // 3. Detección de copia textual menor (solo si no hay plagio moderado o severo)
+        // Detectar si hay copia textual (n-gramas idénticos) - solo para casos menores
+        const originalTokensForCopy = tokenize(currentOriginalText);
+        const rewrittenTokensForCopy = tokenize(rewrittenText);
+        
+        let hasMinorCopy = false;
+        for (let i = 0; i <= originalTokensForCopy.length - 4; i++) {
+            const ngram = originalTokensForCopy.slice(i, i + 4).join(' ');
+            if (rewrittenText.includes(ngram)) {
+                hasMinorCopy = true;
+                break;
+            }
+        }
+        
+        if (hasMinorCopy) {
             scoreDisplay.textContent = 'Trampa Detectada';
             scoreDisplay.className = 'score-display low';
             feedbackMessage.innerHTML = `<strong>¡Cuidado!</strong> Parece que has copiado partes del texto original. El objetivo es reescribirlo con tus propias palabras. Intenta reformular las ideas para que sean tuyas.`;
