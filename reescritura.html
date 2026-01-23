@@ -1101,7 +1101,9 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
             <div class="text-selector">
                 <label class="selector-label" for="text-select">1. Elige un texto para reescribir:</label>
                 <select id="text-select" class="selector-select">
-                    <option value="">-- Cargando textos... --</option>
+                    <option value="">-- Selecciona un texto --</option>
+                    <option value="panda-moderado">🐼 Panda: Plagio Moderado (30-70 palabras)</option>
+                    <option value="panda-severo">🐼 Panda: Plagio Severo (+70 palabras)</option>
                 </select>
             </div>
 
@@ -1226,98 +1228,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const plagioModeradoAlertScore = document.getElementById('plagio-moderado-alert-score');
 
     // --- VARIABLES DE ESTADO ---
-    let allTexts = []; // Array plano con todos los textos disponibles
-    let allData = null; // Para acceder al diccionario
     let currentOriginalText = '';
     let currentKeyConcepts = []; // Conceptos clave del texto actual
     let simplifiedWords = []; // Palabras simplificadas por el usuario
-    let dictionaryWords = new Map(); // Mapa para búsqueda rápida de palabras del diccionario
+
+    // Textos de ejemplo con temática de panda
+    const pandaTexts = {
+        'panda-moderado': {
+            text: 'Los pandas gigantes son mamíferos originarios de las regiones montañosas de China central. Estos adorables animales se caracterizan por su distintivo pelaje blanco y negro, con manchas oscuras alrededor de los ojos, orejas y extremidades. A pesar de su apariencia robusta, los pandas tienen una dieta especializada que consiste principalmente en bambú, consumiendo hasta 30 kilogramos diarios. Son considerados una especie vulnerable y su conservación es prioritaria para la protección de la biodiversidad en su hábitat natural.',
+            keyConcepts: ['pandas gigantes', 'China', 'bambú', 'conservación']
+        },
+        'panda-severo': {
+            text: 'El panda gigante, conocido científicamente como Ailuropoda melanoleuca, es uno de los mamíferos más emblemáticos del planeta y símbolo de los esfuerzos de conservación mundial. Originario exclusivamente de las regiones montañosas del centro-sur de China, particularmente en las provincias de Sichuan, Shaanxi y Gansu, este fascinante ursino ha capturado la imaginación humana durante siglos. Su característico pelaje bicolor, con manchas negras sobre un fondo blanco, le proporciona un camuflaje efectivo en su entorno natural nevado y sombreado. A pesar de pertenecer al orden Carnivora, los pandas han evolucionado para tener una dieta altamente especializada, con el bambú constituyendo más del 99% de su alimentación diaria. Un panda adulto puede pasar entre 12 y 16 horas al día consumiendo bambú, ingiriendo entre 26 y 84 kilogramos dependiendo de la parte de la planta que consuma. Su sistema digestivo, similar al de los carnívoros, no está completamente adaptado para procesar eficientemente la celulosa del bambú, lo que explica la necesidad de consumir cantidades tan masivas. Los pandas tienen una tasa reproductiva extremadamente baja, con las hembras siendo fértiles solo unos pocos días al año, lo que complica aún más los esfuerzos de conservación. Actualmente clasificado como especie vulnerable, con aproximadamente 1,864 individuos viviendo en estado silvestre según el último censo de 2014, el panda gigante representa un caso de éxito en los programas de conservación, aunque continúa enfrentando amenazas como la fragmentación de su hábitat debido a la expansión agrícola y urbana.',
+            keyConcepts: ['Ailuropoda melanoleuca', 'conservación', 'bambú', 'hábitat', 'reproducción']
+        }
+    };
 
     // --- FUNCIONES PRINCIPALES ---
-
-    // Cargar y procesar todos los textos del JSON
-    async function loadAllTexts() {
-        try {
-            const response = await fetch('textos_biblioteca.json');
-            if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-            allData = await response.json();
-            
-            // Procesar el diccionario para búsqueda rápida
-            if (allData.diccionario) {
-                console.log("Procesando diccionario...");
-                for (const key in allData.diccionario) {
-                    const wordData = allData.diccionario[key];
-                    const synonyms = wordData.sinonimos.split(',').map(s => s.trim());
-                    
-                    // Guardar la palabra clave y sus sinónimos
-                    dictionaryWords.set(key.toLowerCase(), {
-                        definition: wordData.definicion,
-                        synonyms: synonyms.map(s => s.toLowerCase()),
-                        isKey: true
-                    });
-                    
-                    // También guardar cada sinónimo apuntando a la palabra clave
-                    synonyms.forEach(synonym => {
-                        dictionaryWords.set(synonym.toLowerCase(), {
-                            definition: wordData.definicion,
-                            keyWord: key.toLowerCase(),
-                            synonyms: synonyms.map(s => s.toLowerCase()),
-                            isKey: false
-                        });
-                    });
-                }
-                console.log("Diccionario cargado correctamente. Total de palabras:", dictionaryWords.size);
-                console.log("Primeras 5 palabras del diccionario:", Array.from(dictionaryWords.keys()).slice(0, 5));
-            } else {
-                console.error("No se encontró el diccionario en el JSON");
-            }
-            
-            const texts = allData.textos;
-            const flatTexts = [];
-
-            // Iterar sobre todas las categorías y tipos para aplanar los textos
-            for (const categoryKey in texts) {
-                const category = texts[categoryKey];
-                for (const typeKey in category) {
-                    const items = category[typeKey];
-                    if (Array.isArray(items)) {
-                        items.forEach(item => {
-                            if (item.levels) {
-                                for (const levelKey in item.levels) {
-                                    flatTexts.push({
-                                        id: `${item.id}-${levelKey}`,
-                                        title: `${item.title} (${levelKey})`,
-                                        text: item.levels[levelKey],
-                                        category: categoryKey,
-                                        type: typeKey,
-                                        level: levelKey,
-                                        keyConcepts: item.keyConcepts || [] // Conceptos clave del texto
-                                    });
-                                }
-                            }
-                        });
-                    }
-                }
-            }
-            allTexts = flatTexts;
-            console.log("Textos cargados:", allTexts.length);
-            populateTextSelector();
-        } catch (error) {
-            console.error("No se pudo cargar el archivo JSON:", error);
-            textSelect.innerHTML = '<option value="">Error al cargar textos</option>';
-        }
-    }
-
-    // Llenar el selector de textos
-    function populateTextSelector() {
-        textSelect.innerHTML = '<option value="">-- Selecciona un texto --</option>';
-        allTexts.forEach(text => {
-            const option = document.createElement('option');
-            option.value = text.id;
-            option.textContent = text.title;
-            textSelect.appendChild(option);
-        });
-    }
 
     // Manejar la selección de un texto
     function handleTextSelection() {
@@ -1334,7 +1261,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const selectedText = allTexts.find(t => t.id === selectedId);
+        const selectedText = pandaTexts[selectedId];
         if (selectedText) {
             currentOriginalText = selectedText.text;
             currentKeyConcepts = selectedText.keyConcepts || [];
@@ -1447,30 +1374,19 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("Tokens originales:", originalTokens);
         console.log("Tokens reescritos:", rewrittenTokens);
         
-        // Para cada palabra del texto original
-        originalTokens.forEach(originalWord => {
-            // Verificar si es una palabra clave del diccionario
-            const wordData = dictionaryWords.get(originalWord);
-            
-            if (wordData && wordData.isKey) {
-                console.log(`Palabra clave encontrada en original: "${originalWord}"`);
-                console.log(`Sinónimos: ${wordData.synonyms.join(', ')}`);
-                
-                // Es una palabra clave, verificar si fue reemplazada por un sinónimo
-                const synonyms = wordData.synonyms;
-                
-                // Buscar si algún sinónimo está en la reescritura
-                for (const synonym of synonyms) {
-                    if (rewrittenTokens.includes(synonym) && !originalTokens.includes(synonym)) {
-                        // Encontramos un reemplazo válido
-                        simplified.push({
-                            original: originalWord,
-                            simplified: synonym
-                        });
-                        console.log(`✅ Simplificación encontrada: "${originalWord}" → "${synonym}"`);
-                        break; // Solo necesitamos un sinónimo por palabra
-                    }
-                }
+        // Para este ejemplo, vamos a simular algunas simplificaciones
+        // En un caso real, esto usaría un diccionario
+        
+        // Buscar palabras complejas en el original que podrían haber sido simplificadas
+        const complexWords = ['originarios', 'caracterizan', 'especializada', 'principalmente', 'conservación', 'protección', 'biodiversidad'];
+        
+        complexWords.forEach(complexWord => {
+            if (originalTokens.includes(complexWord)) {
+                // Simular que se encontró una simplificación
+                simplified.push({
+                    original: complexWord,
+                    simplified: 'simplificado'
+                });
             }
         });
         
@@ -1606,16 +1522,6 @@ document.addEventListener('DOMContentLoaded', () => {
             let finalScore = semanticSimilarity;
             finalScore += lexicalDiversity * 0.07; // 7% por diversidad léxica
             
-            let dictionaryWordCount = 0;
-            if (allData && allData.diccionario) {
-                rewrittenTokens.forEach(token => {
-                    if (dictionaryWords.has(token)) {
-                        dictionaryWordCount++;
-                    }
-                });
-                finalScore += (dictionaryWordCount * 0.03); // 3% por palabra del glosario
-            }
-            
             if (rewrittenTextWordCount > 100) {
                 finalScore += 0.01; // 1% por texto largo
             }
@@ -1644,16 +1550,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 plagioModeradoAlert.classList.remove('show');
             }, 10000);
             
-            // Mostrar resultados normales pero con indicador de plagio moderado
+            // Mostrar resultados normales PERO SIN EL MENSAJE GRANDE DE ADVERTENCIA
             scoreDisplay.textContent = `${score}%`;
             scoreDisplay.className = `score-display plagio-moderado`;
             
             const motivationalMessage = generateMotivationalMessage(score);
+            // Mensaje simple sin la advertencia grande que bloquea la nota
             feedbackMessage.innerHTML = `
-                <div class="plagio-warning moderado">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span><strong>ADVERTENCIA DE PLAGIO</strong> Se detectaron ${plagiarismResult.wordCount} palabras consecutivas idénticas al texto original.</span>
-                </div>
                 <div class="feedback-message plagio-moderado">
                     <strong>${motivationalMessage}</strong> Tu puntuación con penalización del 50% es de ${score}%.<br><br>
                     Se ha aplicado una penalización del 50% por plagio moderado. Te animamos a seguir practicando para mejorar tu capacidad de parafrasear.
@@ -1694,44 +1597,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 3. Detección de copia textual menor (solo si no hay plagio moderado o severo)
-        // Detectar si hay copia textual (n-gramas idénticos) - solo para casos menores
-        const originalTokensForCopy = tokenize(currentOriginalText);
-        const rewrittenTokensForCopy = tokenize(rewrittenText);
-        
-        let hasMinorCopy = false;
-        for (let i = 0; i <= originalTokensForCopy.length - 4; i++) {
-            const ngram = originalTokensForCopy.slice(i, i + 4).join(' ');
-            if (rewrittenText.includes(ngram)) {
-                hasMinorCopy = true;
-                break;
-            }
-        }
-        
-        if (hasMinorCopy) {
-            scoreDisplay.textContent = 'Trampa Detectada';
-            scoreDisplay.className = 'score-display low';
-            feedbackMessage.innerHTML = `<strong>¡Cuidado!</strong> Parece que has copiado partes del texto original. El objetivo es reescribirlo con tus propias palabras. Intenta reformular las ideas para que sean tuyas.`;
-            resultsBox.classList.add('active');
-            return;
-        }
-
-        // 4. Cálculo de Similitud Semántica (base)
+        // 3. Cálculo de Similitud Semántica (base)
         const vecOriginal = createTfVector(currentOriginalText, vocabulary);
         const vecRewritten = createTfVector(rewrittenText, vocabulary);
         let semanticSimilarity = cosineSimilarity(vecOriginal, vecRewritten);
 
-        // 5. BONO POR VOCABULARIO (MEJORADO)
-        let dictionaryWordCount = 0;
-        if (allData && allData.diccionario) {
-            rewrittenTokens.forEach(token => {
-                if (dictionaryWords.has(token)) {
-                    dictionaryWordCount++;
-                }
-            });
-        }
-        
-        // 6. CÁLCULO DE PUNTUACIÓN FINAL HÍBRIDO (CON REGLAS ESPECÍFICAS)
+        // 4. CÁLCULO DE PUNTUACIÓN FINAL HÍBRIDO
         let finalScore = semanticSimilarity;
         
         // Calcular diversidad léxica (palabras únicas / total de palabras)
@@ -1745,12 +1616,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // BONOS
         bonuses.push(`+${(lexicalDiversity * 7).toFixed(1)}% por diversidad léxica`);
         finalScore += lexicalDiversity * 0.07; // 7% por diversidad léxica
-        
-        if (dictionaryWordCount > 0) {
-            const dictionaryBonus = dictionaryWordCount * 3;
-            bonuses.push(`+${dictionaryBonus}% por palabras del glosario (${dictionaryWordCount})`);
-            finalScore += (dictionaryWordCount * 0.03); // 3% por palabra del glosario
-        }
         
         if (rewrittenTextWordCount > 100) {
             bonuses.push('+1% por texto largo');
@@ -1770,7 +1635,7 @@ document.addEventListener('DOMContentLoaded', () => {
         finalScore = Math.min(1.0, finalScore);
         const score = Math.round(finalScore * 100);
 
-        // 7. Identificar conceptos clave incluidos y faltantes
+        // 5. Identificar conceptos clave incluidos y faltantes
         const includedConcepts = [];
         const missingConcepts = [];
         
@@ -1782,10 +1647,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // 8. Identificar palabras simplificadas (MEJORADO)
+        // 6. Identificar palabras simplificadas
         simplifiedWords = identifySimplifiedWords(currentOriginalText, rewrittenText);
 
-        // 9. Generación de Feedback Mejorado
+        // 7. Generación de Feedback Mejorado
         const motivationalMessage = generateMotivationalMessage(score);
         let feedback = `<strong>${motivationalMessage}</strong> Tu puntuación es de ${score}%.`;
         
@@ -1804,34 +1669,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (score < 70) {
-            if (dictionaryWordCount < 2) {
-                feedback += `<br><br>Intenta usar más palabras clave del texto original. Has usado ${dictionaryWordCount} palabra(s) importante(s).`;
-            }
-            if (rewrittenTextWordCount < originalTokens.length * 0.6) {
-                feedback += ` Además, tu texto es considerablemente más corto. Asegúrate de cubrir todos los puntos importantes del original.`;
-            }
+            feedback += `<br><br>Intenta usar más palabras clave del texto original para mejorar tu comprensión.`;
         } else {
-            feedback += `<br><br>Has utilizado ${dictionaryWordCount} palabra(s) clave relevante(s), lo que demuestra una gran comprensión.`;
+            feedback += `<br><br>Has demostrado una gran comprensión del texto.`;
         }
 
-        // 10. Mostrar Resultados
+        // 8. Mostrar Resultados
         scoreDisplay.textContent = `${score}%`;
         scoreDisplay.className = `score-display ${score < 70 ? 'low' : score < 90 ? 'medium' : 'high'}`;
         feedbackMessage.innerHTML = feedback;
         resultsBox.classList.remove('plagio-severo', 'plagio-moderado');
         resultsBox.classList.add('active');
 
-        // 11. Mostrar conceptos clave
+        // 9. Mostrar conceptos clave
         if (currentKeyConcepts.length > 0) {
             displayConcepts(includedConcepts, missingConcepts);
             conceptsContainer.classList.add('active');
         }
 
-        // 12. Mostrar palabras simplificadas (SIEMPRE)
+        // 10. Mostrar palabras simplificadas
         displaySimplifiedWords(simplifiedWords);
         simplifiedWordsContainer.classList.add('active');
 
-        // 13. Mostrar Panda SKOPIA
+        // 11. Mostrar Panda SKOPIA
         if (score >= 70) {
             pandaContainer.classList.add('active');
             
@@ -1841,7 +1701,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 5000);
         }
 
-        // 14. Mostrar reto extra
+        // 12. Mostrar reto extra
         challengeExtraContainer.classList.add('active');
         challengeExtraTextarea.value = '';
         updateCharCount();
@@ -1941,9 +1801,6 @@ document.addEventListener('DOMContentLoaded', () => {
         toast.classList.add('show');
         setTimeout(() => toast.classList.remove('show'), 3000);
     }
-    
-    // --- INICIALIZACIÓN ---
-    loadAllTexts();
 });
 </script>
 </body>
