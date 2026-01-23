@@ -1087,6 +1087,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentOriginalText = '';
     let currentKeyConcepts = []; // Conceptos clave del texto actual
     let simplifiedWords = []; // Palabras simplificadas por el usuario
+    let dictionaryWords = new Map(); // Mapa para búsqueda rápida de palabras del diccionario
 
     // --- FUNCIONES PRINCIPALES ---
 
@@ -1096,6 +1097,31 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('textos_biblioteca.json');
             if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
             allData = await response.json();
+            
+            // Procesar el diccionario para búsqueda rápida
+            if (allData.diccionario) {
+                for (const key in allData.diccionario) {
+                    const wordData = allData.diccionario[key];
+                    const synonyms = wordData.sinonimos.split(',').map(s => s.trim());
+                    
+                    // Guardar la palabra clave y sus sinónimos
+                    dictionaryWords.set(key.toLowerCase(), {
+                        definition: wordData.definicion,
+                        synonyms: synonyms.map(s => s.toLowerCase()),
+                        isKey: true
+                    });
+                    
+                    // También guardar cada sinónimo apuntando a la palabra clave
+                    synonyms.forEach(synonym => {
+                        dictionaryWords.set(synonym.toLowerCase(), {
+                            definition: wordData.definicion,
+                            keyWord: key.toLowerCase(),
+                            synonyms: synonyms.map(s => s.toLowerCase()),
+                            isKey: false
+                        });
+                    });
+                }
+            }
             
             const texts = allData.textos;
             const flatTexts = [];
@@ -1229,26 +1255,31 @@ document.addEventListener('DOMContentLoaded', () => {
         return false;
     }
 
-    // Identificar palabras simplificadas
+    // Identificar palabras simplificadas (CORREGIDO)
     function identifySimplifiedWords(original, rewritten) {
         const simplified = [];
         const originalTokens = tokenize(original);
         const rewrittenTokens = tokenize(rewritten);
         
-        // Buscar palabras complejas en el original que no están en la reescritura
+        // Para cada palabra del texto original
         originalTokens.forEach(originalWord => {
-            if (originalWord.length > 6 && !rewrittenTokens.includes(originalWord)) {
-                // Buscar posibles sinónimos en la reescritura
-                const possibleSynonyms = rewrittenTokens.filter(rewrittenWord => 
-                    rewrittenWord.length < originalWord.length && 
-                    !originalTokens.includes(rewrittenWord)
-                );
+            // Verificar si es una palabra clave del diccionario
+            const wordData = dictionaryWords.get(originalWord);
+            
+            if (wordData && wordData.isKey) {
+                // Es una palabra clave, verificar si fue reemplazada por un sinónimo
+                const synonyms = wordData.synonyms;
                 
-                if (possibleSynonyms.length > 0) {
-                    simplified.push({
-                        original: originalWord,
-                        simplified: possibleSynonyms[0] // Tomar el primer sinónimo encontrado
-                    });
+                // Buscar si algún sinónimo está en la reescritura
+                for (const synonym of synonyms) {
+                    if (rewrittenTokens.includes(synonym) && !originalTokens.includes(synonym)) {
+                        // Encontramos un reemplazo válido
+                        simplified.push({
+                            original: originalWord,
+                            simplified: synonym
+                        });
+                        break; // Solo necesitamos un sinónimo por palabra
+                    }
                 }
             }
         });
@@ -1360,16 +1391,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // 4. BONO POR VOCABULARIO (NUEVO)
         let dictionaryWordCount = 0;
         if (allData && allData.diccionario) {
-            // Crear un Set para una búsqueda rápida de todas las palabras clave y sinónimos
-            const dictionaryKeyWords = new Set();
-            for (const key in allData.diccionario) {
-                dictionaryKeyWords.add(key);
-                const synonyms = allData.diccionario[key].sinonimos.split(',').map(s => s.trim());
-                synonyms.forEach(syn => dictionaryKeyWords.add(syn));
-            }
-
             rewrittenTokens.forEach(token => {
-                if (dictionaryKeyWords.has(token)) {
+                if (dictionaryWords.has(token)) {
                     dictionaryWordCount++;
                 }
             });
@@ -1402,7 +1425,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // 7. Identificar palabras simplificadas
+        // 7. Identificar palabras simplificadas (CORREGIDO)
         simplifiedWords = identifySimplifiedWords(currentOriginalText, rewrittenText);
 
         // 8. Generación de Feedback Mejorado
@@ -1438,7 +1461,7 @@ document.addEventListener('DOMContentLoaded', () => {
             simplifiedWordsContainer.classList.add('active');
         }
 
-        // 12. Mostrar Panda SKOPIA
+        // 12. Mostrar Panda SKOPIA (CORREGIDO)
         if (score >= 70) {
             pandaContainer.classList.add('active');
             
