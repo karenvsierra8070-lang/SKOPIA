@@ -490,6 +490,10 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     border-color: var(--color-naranja);
     background-color: rgba(255, 152, 0, 0.05);
 }
+.results-box.ia-penalty {
+    border-color: var(--color-rojo);
+    background-color: rgba(217, 83, 79, 0.05);
+}
 @keyframes fadeIn { 
     from { opacity: 0; transform: translateY(10px); } 
     to { opacity: 1; transform: translateY(0); } 
@@ -516,6 +520,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .score-display.high { color: #5cb85c; }
 .score-display.plagio-severo { color: var(--color-rojo); }
 .score-display.plagio-moderado { color: var(--color-naranja); }
+.score-display.ia-penalty { color: var(--color-rojo); }
 .feedback-message { 
     font-size: 1.1rem; 
     line-height: 1.6; 
@@ -535,6 +540,10 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     background-color: rgba(255, 152, 0, 0.1);
     border-left-color: var(--color-naranja);
 }
+.feedback-message.ia-penalty {
+    background-color: rgba(217, 83, 79, 0.1);
+    border-left-color: var(--color-rojo);
+}
 .plagio-warning {
     display: flex;
     align-items: center;
@@ -550,6 +559,10 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .plagio-warning.moderado {
     background-color: rgba(255, 152, 0, 0.2);
     color: var(--color-naranja);
+}
+.plagio-warning.ia-penalty {
+    background-color: rgba(217, 83, 79, 0.2);
+    color: var(--color-rojo);
 }
 .plagio-warning i {
     margin-right: 10px;
@@ -1348,9 +1361,9 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     </button>
     <div class="ia-usage-alert-header">
         <i class="fas fa-robot"></i>
-        <span>🤖 ¡DETECCIÓN DE USO DE IA!</span>
+        <span>🤖 ¡DETECCIÓN DE PEGADO DE TEXTO!</span>
     </div>
-    <p>He detectado <span id="ia-word-count">0</span> palabras que parecen generadas por una IA.</p>
+    <p>He detectado que pegaste <span id="ia-word-count">0</span> palabras en el campo de reescritura.</p>
     <p>¡Recuerda que el objetivo es desarrollar tus propias habilidades de escritura!</p>
     <p>Se ha aplicado una penalización del <span id="ia-penalty">0</span>% a tu nota.</p>
     <div class="ia-usage-alert-score" id="ia-usage-alert-score">0%</div>
@@ -1417,6 +1430,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentKeyConcepts = []; // Conceptos clave del texto actual
     let simplifiedWords = []; // Palabras simplificadas por el usuario
     let dictionaryWords = new Map(); // Mapa para búsqueda rápida de palabras del diccionario
+    let pasteDetected = false; // Variable para detectar si se pegó texto
+    let pasteWordCount = 0; // Contador de palabras pegadas
 
     // --- FUNCIONES PRINCIPALES ---
 
@@ -1534,6 +1549,10 @@ document.addEventListener('DOMContentLoaded', () => {
             plagioModeradoAlert.classList.remove('show');
             iaUsageAlert.classList.remove('show');
             
+            // Resetear variables de detección de pegado
+            pasteDetected = false;
+            pasteWordCount = 0;
+            
             challengeArea.style.display = 'grid';
             analyzeBtnContainer.style.display = 'block';
         }
@@ -1558,6 +1577,14 @@ document.addEventListener('DOMContentLoaded', () => {
                   .replace(/[.,!?;:()]/g, '') // Quitar puntuación
                   .split(/\s+/) // Separar por espacios
                   .filter(word => word.length > 0); // Quitar vacíos pero MANTENER stop words
+    }
+    
+    // Tokenización para contar palabras (incluye todas las palabras)
+    function tokenizeForWordCount(text) {
+        return text.toLowerCase()
+                  .replace(/[.,!?;:()]/g, '') // Quitar puntuación
+                  .split(/\s+/) // Separar por espacios
+                  .filter(word => word.length > 0); // Quitar vacíos
     }
 
     // Crear un vector TF-IDF simplificado (aquí solo TF)
@@ -1630,35 +1657,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return {
             level: plagiarismLevel,
             wordCount: maxSequence
-        };
-    }
-
-    // Detectar uso de IA (NUEVO)
-    function detectIAUsage(rewritten) {
-        const rewrittenTokens = tokenizeForPlagiarism(rewritten);
-        const wordCount = rewrittenTokens.length;
-        
-        console.log("=== DETECCIÓN DE USO DE IA ===");
-        console.log("Total de palabras en el texto:", wordCount);
-        
-        let iaUsageLevel = 'none'; // 'none', 'low', 'high'
-        let penalty = 0;
-        
-        // Determinar el nivel de uso de IA y la penalización
-        if (wordCount >= 120) {
-            iaUsageLevel = 'high';
-            penalty = 75; // -75% de penalización
-        } else if (wordCount > 0) {
-            iaUsageLevel = 'low';
-            penalty = 45; // -45% de penalización
-        }
-        
-        console.log(`Nivel de uso de IA: ${iaUsageLevel}, Penalización: ${penalty}%`);
-        
-        return {
-            level: iaUsageLevel,
-            wordCount: wordCount,
-            penalty: penalty
         };
     }
 
@@ -1827,8 +1825,15 @@ document.addEventListener('DOMContentLoaded', () => {
             // 2. Detección de plagio con dos niveles (CORREGIDO)
             const plagiarismResult = detectPlagiarism(currentOriginalText, rewrittenText);
             
-            // 3. Detección de uso de IA (NUEVO)
-            const iaUsageResult = detectIAUsage(rewrittenText);
+            // 3. Verificar si se detectó pegado de texto (NUEVO)
+            let iaPenalty = 0;
+            if (pasteDetected && pasteWordCount > 0) {
+                if (pasteWordCount >= 120) {
+                    iaPenalty = 75; // -75% de penalización
+                } else {
+                    iaPenalty = 45; // -45% de penalización
+                }
+            }
             
             if (plagiarismResult.level === 'severo') {
                 // Plagio severo: más de 70 palabras
@@ -1999,14 +2004,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Asegurarse de que la puntuación no exceda 1.0
             finalScore = Math.min(1.0, finalScore);
             
-            // 7. Aplicar penalización por uso de IA (NUEVO)
-            if (iaUsageResult.level !== 'none') {
-                // Aplicar penalización por uso de IA
-                finalScore = finalScore * (1 - iaUsageResult.penalty / 100);
+            // 7. Aplicar penalización por pegado de texto (NUEVO)
+            if (pasteDetected && pasteWordCount > 0) {
+                // Aplicar penalización por pegado de texto
+                finalScore = finalScore * (1 - iaPenalty / 100);
                 
                 // Mostrar alerta de uso de IA
-                iaWordCount.textContent = iaUsageResult.wordCount;
-                iaPenalty.textContent = iaUsageResult.penalty;
+                iaWordCount.textContent = pasteWordCount;
+                iaPenalty.textContent = iaPenalty;
                 iaUsageAlertScore.textContent = `${Math.round(finalScore * 100)}%`;
                 iaUsageAlert.classList.add('show');
                 
@@ -2050,8 +2055,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     feedback += `Penalizaciones: ${penalties.join(', ')}<br>`;
                 }
                 
-                if (iaUsageResult.level !== 'none') {
-                    feedback += `Penalización por uso de IA: -${iaUsageResult.penalty}%<br>`;
+                if (pasteDetected && pasteWordCount > 0) {
+                    feedback += `Penalización por pegado de texto: -${iaPenalty}%<br>`;
                 }
             }
             
@@ -2068,10 +2073,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 11. Mostrar Resultados
             scoreDisplay.textContent = `${score}%`;
-            scoreDisplay.className = `score-display ${score < 70 ? 'low' : score < 90 ? 'medium' : 'high'}`;
+            
+            // Aplicar estilo especial si hay penalización por pegado
+            if (pasteDetected && pasteWordCount > 0) {
+                scoreDisplay.className = `score-display ia-penalty`;
+                resultsBox.classList.add('active', 'ia-penalty');
+            } else {
+                scoreDisplay.className = `score-display ${score < 70 ? 'low' : score < 90 ? 'medium' : 'high'}`;
+                resultsBox.classList.remove('ia-penalty');
+                resultsBox.classList.add('active');
+            }
+            
             feedbackMessage.innerHTML = feedback;
-            resultsBox.classList.remove('plagio-severo', 'plagio-moderado');
-            resultsBox.classList.add('active');
 
             // 12. Mostrar conceptos clave
             if (currentKeyConcepts.length > 0) {
@@ -2084,7 +2097,7 @@ document.addEventListener('DOMContentLoaded', () => {
             simplifiedWordsContainer.classList.add('active');
 
             // 14. Mostrar Panda SKOPIA
-            if (score >= 70) {
+            if (score >= 70 && !(pasteDetected && pasteWordCount > 0)) {
                 pandaContainer.classList.add('active');
                 
                 // Ocultar el panda después de 5 segundos
@@ -2164,6 +2177,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event listener para cerrar la alerta de uso de IA (NUEVO)
     iaUsageAlertClose.addEventListener('click', () => {
         iaUsageAlert.classList.remove('show');
+    });
+    
+    // Event listener para detectar pegado de texto (NUEVO)
+    rewrittenTextEl.addEventListener('paste', (event) => {
+        // Obtener el texto pegado
+        const pastedText = (event.clipboardData || window.clipboardData).getData('text');
+        
+        // Contar las palabras pegadas
+        const pastedWords = tokenizeForWordCount(pastedText);
+        pasteWordCount = pastedWords.length;
+        pasteDetected = true;
+        
+        console.log("=== DETECCIÓN DE PEGADO ===");
+        console.log("Texto pegado:", pastedText);
+        console.log("Número de palabras pegadas:", pasteWordCount);
+        
+        // Si se pegaron más de 120 palabras, mostrar advertencia inmediata
+        if (pasteWordCount >= 120) {
+            showToast('⚠️ Has pegado más de 120 palabras. Se aplicará una penalización del 75%.');
+        } else if (pasteWordCount > 0) {
+            showToast('⚠️ Has pegado texto. Se aplicará una penalización del 45%.');
+        }
     });
 
     document.getElementById('btn-misiones').addEventListener('click', () => showToast('🎯 Misiones próximamente...'));
