@@ -1358,11 +1358,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Lista de palabras comunes a ignorar (stop words)
     const stopWords = new Set(['el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'del', 'y', 'o', 'pero', 'mas', 'si', 'no', 'en', 'a', 'con', 'por', 'para', 'que', 'como', 'al', 'lo', 'le', 'se', 'sus', 'mi', 'tu', 'su']);
 
+    // Tokenización para análisis semántico (con stop words)
     function tokenize(text) {
         return text.toLowerCase()
                   .replace(/[.,!?;:()]/g, '') // Quitar puntuación
                   .split(/\s+/) // Separar por espacios
                   .filter(word => word && !stopWords.has(word)); // Quitar vacíos y stop words
+    }
+
+    // Tokenización para detección de plagio (SIN stop words, cuenta todas las palabras)
+    function tokenizeForPlagiarism(text) {
+        return text.toLowerCase()
+                  .replace(/[.,!?;:()]/g, '') // Quitar puntuación
+                  .split(/\s+/) // Separar por espacios
+                  .filter(word => word.length > 0); // Quitar vacíos pero MANTENER stop words
     }
 
     // Crear un vector TF-IDF simplificado (aquí solo TF)
@@ -1396,13 +1405,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Detectar plagio con dos niveles (CORREGIDO)
     function detectPlagiarism(original, rewritten) {
-        const originalTokens = tokenize(original);
-        const rewrittenTokens = tokenize(rewritten);
+        const originalTokens = tokenizeForPlagiarism(original);
+        const rewrittenTokens = tokenizeForPlagiarism(rewritten);
         const rewrittenText = rewrittenTokens.join(' ');
         
         console.log("=== DETECCIÓN DE PLAGIO ===");
-        console.log("Tokens originales:", originalTokens.length);
-        console.log("Tokens reescritos:", rewrittenTokens.length);
+        console.log("Tokens originales (CON stop words):", originalTokens.length);
+        console.log("Tokens reescritos (CON stop words):", rewrittenTokens.length);
         
         let maxSequence = 0;
         let plagiarismLevel = 'none'; // 'none', 'moderado', 'severo'
@@ -1478,6 +1487,26 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("Total de simplificaciones:", simplified.length);
         console.log("Simplificaciones:", simplified);
         return simplified.slice(0, 5); // Limitar a 5 palabras
+    }
+
+    // Contar palabras únicas del diccionario (CORREGIDO)
+    function countUniqueDictionaryWords(text) {
+        const tokens = tokenize(text);
+        const uniqueDictionaryWords = new Set();
+        
+        tokens.forEach(token => {
+            if (dictionaryWords.has(token)) {
+                // Obtener la palabra clave original para evitar duplicados
+                const wordData = dictionaryWords.get(token);
+                const keyWord = wordData.isKey ? token : wordData.keyWord;
+                uniqueDictionaryWords.add(keyWord);
+            }
+        });
+        
+        console.log("Palabras únicas del diccionario encontradas:", uniqueDictionaryWords.size);
+        console.log("Palabras:", Array.from(uniqueDictionaryWords));
+        
+        return uniqueDictionaryWords.size;
     }
 
     // Mostrar conceptos en el círculo
@@ -1609,15 +1638,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let finalScore = semanticSimilarity;
             finalScore += lexicalDiversity * 0.07; // 7% por diversidad léxica
             
-            let dictionaryWordCount = 0;
-            if (allData && allData.diccionario) {
-                rewrittenTokens.forEach(token => {
-                    if (dictionaryWords.has(token)) {
-                        dictionaryWordCount++;
-                    }
-                });
-                finalScore += (dictionaryWordCount * 0.03); // 3% por palabra del glosario
-            }
+            // CONTAR PALABRAS ÚNICAS DEL DICCIONARIO (CORREGIDO)
+            const dictionaryWordCount = countUniqueDictionaryWords(rewrittenText);
+            finalScore += (dictionaryWordCount * 0.03); // 3% por palabra única del glosario
             
             if (rewrittenTextWordCount > 100) {
                 finalScore += 0.01; // 1% por texto largo
@@ -1704,14 +1727,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let semanticSimilarity = cosineSimilarity(vecOriginal, vecRewritten);
 
         // 4. BONO POR VOCABULARIO (MEJORADO)
-        let dictionaryWordCount = 0;
-        if (allData && allData.diccionario) {
-            rewrittenTokens.forEach(token => {
-                if (dictionaryWords.has(token)) {
-                    dictionaryWordCount++;
-                }
-            });
-        }
+        // CONTAR PALABRAS ÚNICAS DEL DICCIONARIO (CORREGIDO)
+        const dictionaryWordCount = countUniqueDictionaryWords(rewrittenText);
         
         // 5. CÁLCULO DE PUNTUACIÓN FINAL HÍBRIDO (CON REGLAS ESPECÍFICAS)
         let finalScore = semanticSimilarity;
@@ -1730,8 +1747,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (dictionaryWordCount > 0) {
             const dictionaryBonus = dictionaryWordCount * 3;
-            bonuses.push(`+${dictionaryBonus}% por palabras del glosario (${dictionaryWordCount})`);
-            finalScore += (dictionaryWordCount * 0.03); // 3% por palabra del glosario
+            bonuses.push(`+${dictionaryBonus}% por palabras únicas del glosario (${dictionaryWordCount})`);
+            finalScore += (dictionaryWordCount * 0.03); // 3% por palabra única del glosario
         }
         
         if (rewrittenTextWordCount > 100) {
