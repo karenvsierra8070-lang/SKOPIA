@@ -1435,6 +1435,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- FUNCIONES PRINCIPALES ---
 
+    // Función para contar palabras (incluye todas las palabras)
+    function countWords(text) {
+        return text.toLowerCase()
+                  .replace(/[.,!?;:()]/g, '') // Quitar puntuación
+                  .split(/\s+/) // Separar por espacios
+                  .filter(word => word.length > 0).length; // Quitar vacíos
+    }
+
     // Cargar y procesar todos los textos del JSON
     async function loadAllTexts() {
         try {
@@ -1577,14 +1585,6 @@ document.addEventListener('DOMContentLoaded', () => {
                   .replace(/[.,!?;:()]/g, '') // Quitar puntuación
                   .split(/\s+/) // Separar por espacios
                   .filter(word => word.length > 0); // Quitar vacíos pero MANTENER stop words
-    }
-    
-    // Tokenización para contar palabras (incluye todas las palabras)
-    function tokenizeForWordCount(text) {
-        return text.toLowerCase()
-                  .replace(/[.,!?;:()]/g, '') // Quitar puntuación
-                  .split(/\s+/) // Separar por espacios
-                  .filter(word => word.length > 0); // Quitar vacíos
     }
 
     // Crear un vector TF-IDF simplificado (aquí solo TF)
@@ -1816,6 +1816,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Simular un tiempo de procesamiento para mostrar el indicador de carga
         setTimeout(() => {
+            console.log("=== INICIANDO ANÁLISIS ===");
+            console.log("pasteDetected:", pasteDetected);
+            console.log("pasteWordCount:", pasteWordCount);
+            
             // 1. Preparación para el análisis
             const originalTokens = tokenize(currentOriginalText);
             const rewrittenTokens = tokenize(rewrittenText);
@@ -1826,13 +1830,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const plagiarismResult = detectPlagiarism(currentOriginalText, rewrittenText);
             
             // 3. Verificar si se detectó pegado de texto (NUEVO)
-            let iaPenalty = 0;
+            let iaPenaltyAmount = 0;
             if (pasteDetected && pasteWordCount > 0) {
                 if (pasteWordCount >= 120) {
-                    iaPenalty = 75; // -75% de penalización
+                    iaPenaltyAmount = 75; // -75% de penalización
                 } else {
-                    iaPenalty = 45; // -45% de penalización
+                    iaPenaltyAmount = 45; // -45% de penalización
                 }
+                console.log("Penalización por pegado aplicada:", iaPenaltyAmount);
             }
             
             if (plagiarismResult.level === 'severo') {
@@ -2004,14 +2009,18 @@ document.addEventListener('DOMContentLoaded', () => {
             // Asegurarse de que la puntuación no exceda 1.0
             finalScore = Math.min(1.0, finalScore);
             
+            console.log("Puntuación antes de penalización por pegado:", finalScore);
+            
             // 7. Aplicar penalización por pegado de texto (NUEVO)
             if (pasteDetected && pasteWordCount > 0) {
                 // Aplicar penalización por pegado de texto
-                finalScore = finalScore * (1 - iaPenalty / 100);
+                finalScore = finalScore * (1 - iaPenaltyAmount / 100);
+                
+                console.log("Puntuación después de penalización por pegado:", finalScore);
                 
                 // Mostrar alerta de uso de IA
                 iaWordCount.textContent = pasteWordCount;
-                iaPenalty.textContent = iaPenalty;
+                iaPenalty.textContent = iaPenaltyAmount;
                 iaUsageAlertScore.textContent = `${Math.round(finalScore * 100)}%`;
                 iaUsageAlert.classList.add('show');
                 
@@ -2056,7 +2065,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 if (pasteDetected && pasteWordCount > 0) {
-                    feedback += `Penalización por pegado de texto: -${iaPenalty}%<br>`;
+                    feedback += `Penalización por pegado de texto: -${iaPenaltyAmount}%<br>`;
                 }
             }
             
@@ -2181,17 +2190,33 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Event listener para detectar pegado de texto (NUEVO)
     rewrittenTextEl.addEventListener('paste', (event) => {
+        console.log("=== EVENTO DE PEGADO DETECTADO ===");
+        
+        // Prevenir el comportamiento por defecto momentáneamente
+        event.preventDefault();
+        
         // Obtener el texto pegado
         const pastedText = (event.clipboardData || window.clipboardData).getData('text');
         
         // Contar las palabras pegadas
-        const pastedWords = tokenizeForWordCount(pastedText);
-        pasteWordCount = pastedWords.length;
+        const pastedWords = countWords(pastedText);
+        pasteWordCount = pastedWords;
         pasteDetected = true;
         
-        console.log("=== DETECCIÓN DE PEGADO ===");
         console.log("Texto pegado:", pastedText);
         console.log("Número de palabras pegadas:", pasteWordCount);
+        
+        // Insertar el texto pegado manualmente
+        const start = rewrittenTextEl.selectionStart;
+        const end = rewrittenTextEl.selectionEnd;
+        const textBefore = rewrittenTextEl.value.substring(0, start);
+        const textAfter = rewrittenTextEl.value.substring(end, rewrittenTextEl.value.length);
+        
+        rewrittenTextEl.value = textBefore + pastedText + textAfter;
+        
+        // Restaurar la posición del cursor
+        const cursorPosition = start + pastedText.length;
+        rewrittenTextEl.setSelectionRange(cursorPosition, cursorPosition);
         
         // Si se pegaron más de 120 palabras, mostrar advertencia inmediata
         if (pasteWordCount >= 120) {
