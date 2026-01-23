@@ -527,12 +527,13 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 
 /* --- Sección del Panda SKOPIA (NUEVO) --- */
 .panda-container {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    width: 200px;
-    height: 250px;
-    z-index: 1000;
+    position: absolute;
+    top: -80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 100px;
+    z-index: 10;
     display: none;
     flex-direction: column;
     align-items: center;
@@ -542,43 +543,71 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     display: flex;
 }
 @keyframes bounceIn {
-    0% { transform: scale(0); opacity: 0; }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); opacity: 1; }
+    0% { transform: translateX(-50%) scale(0); opacity: 0; }
+    50% { transform: translateX(-50%) scale(1.1); }
+    100% { transform: translateX(-50%) scale(1); opacity: 1; }
 }
-.panda-image {
-    width: 150px;
-    height: 150px;
-    background-image: url('https://picsum.photos/seed/panda/150/150.jpg');
-    background-size: cover;
+.panda-character {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    background-color: white;
     border-radius: 50%;
-    border: 3px solid white;
+    border: 3px solid var(--color-oliva-oscuro);
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.panda-character::before, .panda-character::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: var(--color-oliva-oscuro);
+    border-radius: 50%;
+}
+.panda-character::before {
+    top: 20px;
+    left: 18px;
+}
+.panda-character::after {
+    top: 20px;
+    right: 18px;
+}
+.panda-nose {
+    position: absolute;
+    bottom: 25px;
+    width: 15px;
+    height: 10px;
+    background-color: var(--color-oliva-medio);
+    border-radius: 50%;
 }
 .panda-sign {
-    margin-top: -20px;
-    padding: 10px 15px;
+    margin-top: 5px;
+    padding: 8px 12px;
     background-color: white;
     border-radius: 10px;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
     font-family: 'Patrick Hand', cursive;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: var(--color-oliva-oscuro);
     text-align: center;
     position: relative;
-    max-width: 180px;
+    max-width: 150px;
+    border: 2px solid var(--color-oliva-medio);
 }
 .panda-sign::before {
     content: '';
     position: absolute;
-    top: -10px;
+    top: -8px;
     left: 50%;
     transform: translateX(-50%);
     width: 0;
     height: 0;
-    border-left: 10px solid transparent;
-    border-right: 10px solid transparent;
-    border-bottom: 10px solid white;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid white;
 }
 
 /* --- Sección de Reto Extra (NUEVO) --- */
@@ -748,16 +777,17 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
         height: 250px;
     }
     .panda-container {
-        width: 150px;
-        height: 200px;
-    }
-    .panda-image {
         width: 100px;
-        height: 100px;
+        height: 80px;
+        top: -60px;
+    }
+    .panda-character {
+        width: 60px;
+        height: 60px;
     }
     .panda-sign {
-        max-width: 140px;
-        font-size: 0.8rem;
+        max-width: 120px;
+        font-size: 0.7rem;
     }
 }
 </style>
@@ -1002,6 +1032,16 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
             </div>
 
             <div class="results-box" id="results-box">
+                <!-- Panda SKOPIA (posicionado encima del resultado) -->
+                <div class="panda-container" id="panda-container">
+                    <div class="panda-character">
+                        <div class="panda-nose"></div>
+                    </div>
+                    <div class="panda-sign" id="panda-sign">
+                        ¡Hablaste tan claro que hasta yo te entendí!
+                    </div>
+                </div>
+                
                 <div class="score-display" id="score-display">0%</div>
                 <div class="feedback-message" id="feedback-message">
                     <!-- Feedback dinámico -->
@@ -1035,14 +1075,6 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
         </div>
     </div>
 </main>
-
-<!-- Panda SKOPIA (NUEVO) -->
-<div class="panda-container" id="panda-container">
-    <div class="panda-image"></div>
-    <div class="panda-sign" id="panda-sign">
-        ¡Hablaste tan claro que hasta yo te entendí!
-    </div>
-</div>
 
 <div class="floating-icons" aria-hidden="false">
     <button id="btn-misiones" title="Misiones">🎯</button>
@@ -1121,6 +1153,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     });
                 }
+                console.log("Diccionario cargado:", dictionaryWords);
             }
             
             const texts = allData.textos;
@@ -1255,11 +1288,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return false;
     }
 
-    // Identificar palabras simplificadas (CORREGIDO)
+    // Identificar palabras simplificadas (MEJORADO)
     function identifySimplifiedWords(original, rewritten) {
         const simplified = [];
         const originalTokens = tokenize(original);
         const rewrittenTokens = tokenize(rewritten);
+        
+        console.log("Tokens originales:", originalTokens);
+        console.log("Tokens reescritos:", rewrittenTokens);
+        console.log("Diccionario:", dictionaryWords);
         
         // Para cada palabra del texto original
         originalTokens.forEach(originalWord => {
@@ -1278,12 +1315,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             original: originalWord,
                             simplified: synonym
                         });
+                        console.log(`Simplificación encontrada: ${originalWord} → ${synonym}`);
                         break; // Solo necesitamos un sinónimo por palabra
                     }
                 }
             }
         });
         
+        console.log("Palabras simplificadas:", simplified);
         return simplified.slice(0, 5); // Limitar a 5 palabras
     }
 
@@ -1388,7 +1427,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const vecRewritten = createTfVector(rewrittenText, vocabulary);
         let semanticSimilarity = cosineSimilarity(vecOriginal, vecRewritten);
 
-        // 4. BONO POR VOCABULARIO (NUEVO)
+        // 4. BONO POR VOCABULARIO (MEJORADO)
         let dictionaryWordCount = 0;
         if (allData && allData.diccionario) {
             rewrittenTokens.forEach(token => {
@@ -1398,17 +1437,22 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // 5. CÁLCULO DE PUNTUACIÓN FINAL HÍBRIDO (NUEVO)
+        // 5. CÁLCULO DE PUNTUACIÓN FINAL HÍBRIDO (MEJORADO)
         let finalScore = semanticSimilarity;
 
         // Aplicar la regla especial del usuario
-        if (rewrittenTextWordCount > 150 && dictionaryWordCount >= 2) {
+        if (rewrittenTextWordCount > 100 && dictionaryWordCount >= 2) {
             finalScore = Math.max(finalScore, 0.75); // Garantizar al menos 75%
         }
 
-        // Añadir un pequeño bono por cada palabra del diccionario usada
-        finalScore += (dictionaryWordCount * 0.02); // 2% por palabra clave
-
+        // Añadir bono por cada palabra del diccionario usada (aumentado)
+        finalScore += (dictionaryWordCount * 0.03); // 3% por palabra clave (aumentado de 2%)
+        
+        // Bono adicional por longitud del texto
+        if (rewrittenTextWordCount > 100) {
+            finalScore += 0.05; // 5% extra por texto largo
+        }
+        
         // Asegurarse de que la puntuación no exceda 1.0
         finalScore = Math.min(1.0, finalScore);
         const score = Math.round(finalScore * 100);
@@ -1425,7 +1469,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // 7. Identificar palabras simplificadas (CORREGIDO)
+        // 7. Identificar palabras simplificadas (MEJORADO)
         simplifiedWords = identifySimplifiedWords(currentOriginalText, rewrittenText);
 
         // 8. Generación de Feedback Mejorado
@@ -1455,14 +1499,14 @@ document.addEventListener('DOMContentLoaded', () => {
             conceptsContainer.classList.add('active');
         }
 
-        // 11. Mostrar palabras simplificadas
+        // 11. Mostrar palabras simplificadas (SIEMPRE que haya alguna)
         if (simplifiedWords.length > 0) {
             displaySimplifiedWords(simplifiedWords);
             simplifiedWordsContainer.classList.add('active');
         }
 
-        // 12. Mostrar Panda SKOPIA (CORREGIDO)
-        if (score >= 70) {
+        // 12. Mostrar Panda SKOPIA (MEJORADO)
+        if (score >= 60) { // Reducido a 60% para que aparezca más seguido
             pandaContainer.classList.add('active');
             
             // Ocultar el panda después de 5 segundos
