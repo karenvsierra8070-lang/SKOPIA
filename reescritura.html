@@ -1132,6 +1132,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Procesar el diccionario para búsqueda rápida
             if (allData.diccionario) {
+                console.log("Procesando diccionario...");
                 for (const key in allData.diccionario) {
                     const wordData = allData.diccionario[key];
                     const synonyms = wordData.sinonimos.split(',').map(s => s.trim());
@@ -1153,7 +1154,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     });
                 }
-                console.log("Diccionario cargado:", dictionaryWords);
+                console.log("Diccionario cargado correctamente. Total de palabras:", dictionaryWords.size);
+                console.log("Primeras 5 palabras del diccionario:", Array.from(dictionaryWords.keys()).slice(0, 5));
+            } else {
+                console.error("No se encontró el diccionario en el JSON");
             }
             
             const texts = allData.textos;
@@ -1184,6 +1188,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             allTexts = flatTexts;
+            console.log("Textos cargados:", allTexts.length);
             populateTextSelector();
         } catch (error) {
             console.error("No se pudo cargar el archivo JSON:", error);
@@ -1294,9 +1299,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const originalTokens = tokenize(original);
         const rewrittenTokens = tokenize(rewritten);
         
+        console.log("=== ANÁLISIS DE PALABRAS SIMPLIFICADAS ===");
         console.log("Tokens originales:", originalTokens);
         console.log("Tokens reescritos:", rewrittenTokens);
-        console.log("Diccionario:", dictionaryWords);
         
         // Para cada palabra del texto original
         originalTokens.forEach(originalWord => {
@@ -1304,6 +1309,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const wordData = dictionaryWords.get(originalWord);
             
             if (wordData && wordData.isKey) {
+                console.log(`Palabra clave encontrada en original: "${originalWord}"`);
+                console.log(`Sinónimos: ${wordData.synonyms.join(', ')}`);
+                
                 // Es una palabra clave, verificar si fue reemplazada por un sinónimo
                 const synonyms = wordData.synonyms;
                 
@@ -1315,14 +1323,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             original: originalWord,
                             simplified: synonym
                         });
-                        console.log(`Simplificación encontrada: ${originalWord} → ${synonym}`);
+                        console.log(`✅ Simplificación encontrada: "${originalWord}" → "${synonym}"`);
                         break; // Solo necesitamos un sinónimo por palabra
                     }
                 }
             }
         });
         
-        console.log("Palabras simplificadas:", simplified);
+        console.log("Total de simplificaciones:", simplified.length);
+        console.log("Simplificaciones:", simplified);
         return simplified.slice(0, 5); // Limitar a 5 palabras
     }
 
@@ -1372,16 +1381,23 @@ document.addEventListener('DOMContentLoaded', () => {
     function displaySimplifiedWords(words) {
         simplifiedWordsList.innerHTML = '';
         
-        words.forEach(word => {
+        if (words.length === 0) {
             const li = document.createElement('li');
             li.className = 'simplified-word-item';
-            li.innerHTML = `
-                <span class="simplified-word-original">${word.original}</span>
-                <span class="simplified-word-arrow">→</span>
-                <span class="simplified-word-new">${word.simplified}</span>
-            `;
+            li.innerHTML = `<span style="color: var(--color-oliva-medio);">No se detectaron palabras simplificadas del glosario.</span>`;
             simplifiedWordsList.appendChild(li);
-        });
+        } else {
+            words.forEach(word => {
+                const li = document.createElement('li');
+                li.className = 'simplified-word-item';
+                li.innerHTML = `
+                    <span class="simplified-word-original">${word.original}</span>
+                    <span class="simplified-word-arrow">→</span>
+                    <span class="simplified-word-new">${word.simplified}</span>
+                `;
+                simplifiedWordsList.appendChild(li);
+            });
+        }
     }
 
     // Generar mensaje motivador según el puntaje
@@ -1437,20 +1453,22 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // 5. CÁLCULO DE PUNTUACIÓN FINAL HÍBRIDO (MEJORADO)
+        // 5. CÁLCULO DE PUNTUACIÓN FINAL HÍBRIDO (SIN MÍNIMOS GARANTIZADOS)
         let finalScore = semanticSimilarity;
-
-        // Aplicar la regla especial del usuario
-        if (rewrittenTextWordCount > 100 && dictionaryWordCount >= 2) {
-            finalScore = Math.max(finalScore, 0.75); // Garantizar al menos 75%
-        }
-
-        // Añadir bono por cada palabra del diccionario usada (aumentado)
-        finalScore += (dictionaryWordCount * 0.03); // 3% por palabra clave (aumentado de 2%)
         
-        // Bono adicional por longitud del texto
+        // Calcular diversidad léxica (palabras únicas / total de palabras)
+        const uniqueWords = new Set(rewrittenTokens).size;
+        const lexicalDiversity = uniqueWords / rewrittenTokens.length;
+        
+        // Añadir bono por diversidad léxica (para evitar que textos repetitivos den 100%)
+        finalScore += lexicalDiversity * 0.05; // Reducido a 5%
+        
+        // Añadir un pequeño bono por cada palabra del diccionario usada (moderado)
+        finalScore += (dictionaryWordCount * 0.01); // 1% por palabra clave
+        
+        // Bono muy pequeño por longitud del texto
         if (rewrittenTextWordCount > 100) {
-            finalScore += 0.05; // 5% extra por texto largo
+            finalScore += 0.01; // 1% extra por texto largo
         }
         
         // Asegurarse de que la puntuación no exceda 1.0
@@ -1499,14 +1517,12 @@ document.addEventListener('DOMContentLoaded', () => {
             conceptsContainer.classList.add('active');
         }
 
-        // 11. Mostrar palabras simplificadas (SIEMPRE que haya alguna)
-        if (simplifiedWords.length > 0) {
-            displaySimplifiedWords(simplifiedWords);
-            simplifiedWordsContainer.classList.add('active');
-        }
+        // 11. Mostrar palabras simplificadas (SIEMPRE)
+        displaySimplifiedWords(simplifiedWords);
+        simplifiedWordsContainer.classList.add('active');
 
-        // 12. Mostrar Panda SKOPIA (MEJORADO)
-        if (score >= 60) { // Reducido a 60% para que aparezca más seguido
+        // 12. Mostrar Panda SKOPIA (CORREGIDO)
+        if (score >= 70) { // Vuelto a 70% como pediste
             pandaContainer.classList.add('active');
             
             // Ocultar el panda después de 5 segundos
