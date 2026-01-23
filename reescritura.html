@@ -51,6 +51,7 @@ onAuthStateChanged(auth, (user) => {
     --color-gris: #9E9E9E;
     --color-rojo: #d9534f;
     --color-naranja: #ff9800;
+    --color-azul: #2196F3;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -371,6 +372,29 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .analyze-btn:disabled::before {
     display: none;
 }
+.analyze-btn.loading {
+    background-color: var(--color-oliva-medio);
+    pointer-events: none;
+}
+.analyze-btn.loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    margin: auto;
+    border: 2px solid transparent;
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
 
 .results-box { 
     margin-top: 30px; 
@@ -394,6 +418,10 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .results-box.plagio-moderado {
     border-color: var(--color-naranja);
     background-color: rgba(255, 152, 0, 0.05);
+}
+.results-box.portapapeles {
+    border-color: var(--color-azul);
+    background-color: rgba(33, 150, 243, 0.05);
 }
 @keyframes fadeIn { 
     from { opacity: 0; transform: translateY(10px); } 
@@ -421,6 +449,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .score-display.high { color: #5cb85c; }
 .score-display.plagio-severo { color: var(--color-rojo); }
 .score-display.plagio-moderado { color: var(--color-naranja); }
+.score-display.portapapeles { color: var(--color-azul); }
 .feedback-message { 
     font-size: 1.1rem; 
     line-height: 1.6; 
@@ -440,6 +469,10 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     background-color: rgba(255, 152, 0, 0.1);
     border-left-color: var(--color-naranja);
 }
+.feedback-message.portapapeles {
+    background-color: rgba(33, 150, 243, 0.1);
+    border-left-color: var(--color-azul);
+}
 .plagio-warning {
     display: flex;
     align-items: center;
@@ -455,6 +488,10 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .plagio-warning.moderado {
     background-color: rgba(255, 152, 0, 0.2);
     color: var(--color-naranja);
+}
+.plagio-warning.portapapeles {
+    background-color: rgba(33, 150, 243, 0.2);
+    color: var(--color-azul);
 }
 .plagio-warning i {
     margin-right: 10px;
@@ -505,6 +542,52 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     font-weight: 700;
     margin: 10px 0;
     color: var(--color-naranja);
+}
+
+/* --- Alerta de Portapapeles (NUEVO) --- */
+.portapapeles-alert {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: white;
+    border-left: 5px solid var(--color-azul);
+    border-radius: 8px;
+    padding: 15px 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    max-width: 400px;
+    z-index: 2000;
+    transform: translateX(450px);
+    transition: transform 0.3s ease-in-out;
+}
+.portapapeles-alert.show {
+    transform: translateX(0);
+}
+.portapapeles-alert-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    color: var(--color-azul);
+    font-weight: 700;
+}
+.portapapeles-alert-header i {
+    margin-right: 10px;
+    font-size: 1.2rem;
+}
+.portapapeles-alert-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: var(--color-gris);
+    cursor: pointer;
+}
+.portapapeles-alert-score {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 10px 0;
+    color: var(--color-azul);
 }
 
 /* --- Sección de Conceptos (NUEVO) --- */
@@ -875,7 +958,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
         max-width: 120px;
         font-size: 0.7rem;
     }
-    .plagio-moderado-alert {
+    .plagio-moderado-alert, .portapapeles-alert {
         right: 10px;
         left: 10px;
         max-width: none;
@@ -1183,6 +1266,22 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     <p>¡Sigue practicando para que tu escritura sea tan única como un panda!</p>
 </div>
 
+<!-- Alerta de Portapapeles (NUEVO) -->
+<div class="portapapeles-alert" id="portapapeles-alert">
+    <button class="portapapeles-alert-close" id="portapapeles-alert-close">
+        <i class="fas fa-times"></i>
+    </button>
+    <div class="portapapeles-alert-header">
+        <i class="fas fa-clipboard"></i>
+        <span>🐼 ¡PANDA DETECTA PORTAPAPELES!</span>
+    </div>
+    <p>He detectado <span id="portapapeles-word-count">0</span> palabras copiadas del portapapeles.</p>
+    <p>🐼 <strong>Consejo de panda:</strong> ¡El portapapeles es como el bambú enlatado! Es conveniente pero no tiene el mismo sabor que el fresco.</p>
+    <p>Se ha aplicado una penalización del <span id="portapapeles-penalty">0</span>% a tu nota.</p>
+    <div class="portapapeles-alert-score" id="portapapeles-alert-score">0%</div>
+    <p>¡Usa tu propia creatividad, panda creativo!</p>
+</div>
+
 <div class="floating-icons" aria-hidden="false">
     <button id="btn-misiones" title="Misiones">🎯</button>
     <button id="btn-nivel" title="Nivel actual">⭐</button>
@@ -1225,6 +1324,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const plagioModeradoAlertClose = document.getElementById('plagio-moderado-alert-close');
     const plagioWordCount = document.getElementById('plagio-word-count');
     const plagioModeradoAlertScore = document.getElementById('plagio-moderado-alert-score');
+    
+    // Elementos para alerta de portapapeles
+    const portapapelesAlert = document.getElementById('portapapeles-alert');
+    const portapapelesAlertClose = document.getElementById('portapapeles-alert-close');
+    const portapapelesWordCount = document.getElementById('portapapeles-word-count');
+    const portapapelesPenalty = document.getElementById('portapapeles-penalty');
+    const portapapelesAlertScore = document.getElementById('portapapeles-alert-score');
 
     // --- VARIABLES DE ESTADO ---
     let allTexts = []; // Array plano con todos los textos disponibles
@@ -1332,6 +1438,7 @@ document.addEventListener('DOMContentLoaded', () => {
             challengeExtraContainer.classList.remove('active');
             pandaContainer.classList.remove('active');
             plagioModeradoAlert.classList.remove('show');
+            portapapelesAlert.classList.remove('show');
             return;
         }
 
@@ -1347,6 +1454,7 @@ document.addEventListener('DOMContentLoaded', () => {
             challengeExtraContainer.classList.remove('active');
             pandaContainer.classList.remove('active');
             plagioModeradoAlert.classList.remove('show');
+            portapapelesAlert.classList.remove('show');
             
             challengeArea.style.display = 'grid';
             analyzeBtnContainer.style.display = 'block';
@@ -1445,6 +1553,77 @@ document.addEventListener('DOMContentLoaded', () => {
             level: plagiarismLevel,
             wordCount: maxSequence
         };
+    }
+
+    // Detectar copia del portapapeles (NUEVO)
+    async function detectClipboardCopy(rewrittenText) {
+        try {
+            // Solicitar permiso para acceder al portapapeles
+            const clipboardText = await navigator.clipboard.readText();
+            
+            if (!clipboardText || clipboardText.trim() === '') {
+                return { detected: false, wordCount: 0, penalty: 0 };
+            }
+            
+            // Tokenizar ambos textos para comparación
+            const clipboardTokens = tokenizeForPlagiarism(clipboardText);
+            const rewrittenTokens = tokenizeForPlagiarism(rewrittenText);
+            
+            // Calcular similitud entre el texto del usuario y el del portapapeles
+            let matchingWords = 0;
+            let maxSequence = 0;
+            
+            // Buscar secuencias coincidentes
+            for (let i = 0; i <= clipboardTokens.length - 1; i++) {
+                let currentSequence = 0;
+                
+                for (let j = 0; j <= clipboardTokens.length - i; j++) {
+                    const sequence = clipboardTokens.slice(i, i + j).join(' ');
+                    
+                    if (rewrittenText.toLowerCase().includes(sequence.toLowerCase())) {
+                        currentSequence = j;
+                        if (currentSequence > maxSequence) {
+                            maxSequence = currentSequence;
+                        }
+                    }
+                }
+            }
+            
+            // Contar palabras coincidentes
+            const clipboardTextLower = clipboardText.toLowerCase();
+            rewrittenTokens.forEach(token => {
+                if (clipboardTextLower.includes(token)) {
+                    matchingWords++;
+                }
+            });
+            
+            console.log("=== DETECCIÓN DE PORTAPAPELES ===");
+            console.log("Palabras del portapapeles:", clipboardTokens.length);
+            console.log("Palabras coincidentes:", matchingWords);
+            console.log("Secuencia más larga:", maxSequence);
+            
+            // Determinar penalización
+            let penalty = 0;
+            let detected = false;
+            
+            if (maxSequence >= 120) {
+                penalty = 0.75; // 75% de penalización
+                detected = true;
+            } else if (maxSequence >= 30) {
+                penalty = 0.45; // 45% de penalización
+                detected = true;
+            }
+            
+            return {
+                detected: detected,
+                wordCount: maxSequence,
+                penalty: penalty
+            };
+            
+        } catch (error) {
+            console.log("No se pudo acceder al portapapeles:", error);
+            return { detected: false, wordCount: 0, penalty: 0 };
+        }
     }
 
     // Identificar palabras simplificadas (MEJORADO)
@@ -1590,63 +1769,283 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Analizar la reescritura del usuario (CON LÓGICA MEJORADA)
-    function analyzeRewrite() {
+    async function analyzeRewrite() {
         const rewrittenText = rewrittenTextEl.value.trim();
         if (!rewrittenText) {
             alert('Por favor, escribe tu reescritura antes de analizar.');
             return;
         }
 
-        // 1. Preparación para el análisis
-        const originalTokens = tokenize(currentOriginalText);
-        const rewrittenTokens = tokenize(rewrittenText);
-        const vocabulary = [...new Set([...originalTokens, ...rewrittenTokens])];
-        const rewrittenTextWordCount = rewrittenTokens.length;
+        // Mostrar estado de carga
+        analyzeBtn.classList.add('loading');
+        analyzeBtn.disabled = true;
+        analyzeBtn.textContent = '';
 
-        // 2. Detección de plagio con dos niveles (CORREGIDO)
-        const plagiarismResult = detectPlagiarism(currentOriginalText, rewrittenText);
-        
-        if (plagiarismResult.level === 'severo') {
-            // Plagio severo: más de 70 palabras
-            scoreDisplay.textContent = '🐼 PLAGIO SEVERO';
-            scoreDisplay.className = 'score-display plagio-severo';
-            feedbackMessage.innerHTML = `
-                <div class="plagio-warning severo">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span><strong>🐼 ¡ALERTA MÁXIMA DE PANDA!</strong> He detectado ${plagiarismResult.wordCount} palabras consecutivas idénticas al texto original.</span>
-                </div>
-                <div class="feedback-message plagio-severo">
-                    <strong>¡Oh no! Esto es como si un panda encontrara bambú falso!</strong><br><br>
-                    Has copiado una parte muy grande del texto original. Los pandas somos originales y únicos, ¡como debería ser tu escritura!<br><br>
-                    <strong>Consecuencia:</strong> Tu nota ha sido anulada. Te sugiero practicar el arte de parafrasear, ¡tan difícil como encontrar bambú silvestre!
-                </div>
-            `;
-            resultsBox.classList.add('active', 'plagio-severo');
-            return;
-        } else if (plagiarismResult.level === 'moderado') {
-            // Plagio moderado: entre 30 y 70 palabras
-            // Calcular la nota normal primero
+        try {
+            // 1. Preparación para el análisis
+            const originalTokens = tokenize(currentOriginalText);
+            const rewrittenTokens = tokenize(rewrittenText);
+            const vocabulary = [...new Set([...originalTokens, ...rewrittenTokens])];
+            const rewrittenTextWordCount = rewrittenTokens.length;
+
+            // 2. Detección de plagio con dos niveles (CORREGIDO)
+            const plagiarismResult = detectPlagiarism(currentOriginalText, rewrittenText);
+            
+            if (plagiarismResult.level === 'severo') {
+                // Plagio severo: más de 70 palabras
+                scoreDisplay.textContent = '🐼 PLAGIO SEVERO';
+                scoreDisplay.className = 'score-display plagio-severo';
+                feedbackMessage.innerHTML = `
+                    <div class="plagio-warning severo">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span><strong>🐼 ¡ALERTA MÁXIMA DE PANDA!</strong> He detectado ${plagiarismResult.wordCount} palabras consecutivas idénticas al texto original.</span>
+                    </div>
+                    <div class="feedback-message plagio-severo">
+                        <strong>¡Oh no! Esto es como si un panda encontrara bambú falso!</strong><br><br>
+                        Has copiado una parte muy grande del texto original. Los pandas somos originales y únicos, ¡como debería ser tu escritura!<br><br>
+                        <strong>Consecuencia:</strong> Tu nota ha sido anulada. Te sugiero practicar el arte de parafrasear, ¡tan difícil como encontrar bambú silvestre!
+                    </div>
+                `;
+                resultsBox.classList.add('active', 'plagio-severo');
+                return;
+            } else if (plagiarismResult.level === 'moderado') {
+                // Plagio moderado: entre 30 y 70 palabras
+                // Calcular la nota normal primero
+                const vecOriginal = createTfVector(currentOriginalText, vocabulary);
+                const vecRewritten = createTfVector(rewrittenText, vocabulary);
+                let semanticSimilarity = cosineSimilarity(vecOriginal, vecRewritten);
+                
+                // Calcular diversidad léxica (palabras únicas / total de palabras)
+                const uniqueWords = new Set(rewrittenTokens).size;
+                const lexicalDiversity = uniqueWords / rewrittenTokens.length;
+                
+                // Calcular bonos y penalizaciones
+                let finalScore = semanticSimilarity;
+                finalScore += lexicalDiversity * 0.07; // 7% por diversidad léxica
+                
+                // CONTAR PALABRAS ÚNICAS DEL DICCIONARIO (CORREGIDO)
+                const dictionaryWordCount = countUniqueDictionaryWords(rewrittenText);
+                finalScore += (dictionaryWordCount * 0.03); // 3% por palabra única del glosario
+                
+                if (rewrittenTextWordCount > 100) {
+                    finalScore += 0.01; // 1% por texto largo
+                }
+                
+                if (rewrittenTextWordCount < 100) {
+                    finalScore -= 0.15; // -15% por menos de 100 palabras
+                }
+                
+                // Asegurarse de que la puntuación no sea negativa
+                finalScore = Math.max(0, finalScore);
+                
+                // Asegurarse de que la puntuación no exceda 1.0
+                finalScore = Math.min(1.0, finalScore);
+                
+                // Aplicar penalización del 50%
+                finalScore = finalScore * 0.5;
+                const score = Math.round(finalScore * 100);
+                
+                // Mostrar alerta de plagio moderado (no ocupa toda la pantalla)
+                plagioWordCount.textContent = plagiarismResult.wordCount;
+                plagioModeradoAlertScore.textContent = `${score}%`;
+                plagioModeradoAlert.classList.add('show');
+                
+                // Ocultar la alerta después de 10 segundos
+                setTimeout(() => {
+                    plagioModeradoAlert.classList.remove('show');
+                }, 10000);
+                
+                // Mostrar resultados normales pero con indicador de plagio moderado
+                scoreDisplay.textContent = `${score}%`;
+                scoreDisplay.className = `score-display plagio-moderado`;
+                
+                const motivationalMessage = generateMotivationalMessage(score);
+                feedbackMessage.innerHTML = `
+                    <div class="plagio-warning moderado">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span><strong>🐼 ¡ADVERTENCIA DE PANDA!</strong> He detectado ${plagiarismResult.wordCount} palabras consecutivas idénticas al texto original.</span>
+                    </div>
+                    <div class="feedback-message plagio-moderado">
+                        <strong>${motivationalMessage}</strong> Tu puntuación con penalización del 50% es de ${score}%.<br><br>
+                        🐼 <strong>Consejo de panda:</strong> Aunque te gusta el bambú del texto original, ¡intenta cultivar el tuyo propio! La próxima vez, usa más tus propias palabras.<br><br>
+                        Se ha aplicado una penalización del 50% por plagio moderado. ¡Sigue practicando para que tu escritura sea tan única como un panda en la naturaleza!
+                    </div>
+                `;
+                resultsBox.classList.add('active', 'plagio-moderado');
+                
+                // Identificar conceptos clave incluidos y faltantes
+                const includedConcepts = [];
+                const missingConcepts = [];
+                
+                currentKeyConcepts.forEach(concept => {
+                    if (rewrittenText.toLowerCase().includes(concept.toLowerCase())) {
+                        includedConcepts.push(concept);
+                    } else {
+                        missingConcepts.push(concept);
+                    }
+                });
+
+                // Identificar palabras simplificadas
+                simplifiedWords = identifySimplifiedWords(currentOriginalText, rewrittenText);
+
+                // Mostrar conceptos clave
+                if (currentKeyConcepts.length > 0) {
+                    displayConcepts(includedConcepts, missingConcepts);
+                    conceptsContainer.classList.add('active');
+                }
+
+                // Mostrar palabras simplificadas
+                displaySimplifiedWords(simplifiedWords);
+                simplifiedWordsContainer.classList.add('active');
+
+                // Mostrar reto extra
+                challengeExtraContainer.classList.add('active');
+                challengeExtraTextarea.value = '';
+                updateCharCount();
+                
+                return;
+            }
+
+            // 3. Detección de copia del portapapeles (NUEVO)
+            const clipboardResult = await detectClipboardCopy(rewrittenText);
+            
+            if (clipboardResult.detected) {
+                // Calcular la nota normal primero
+                const vecOriginal = createTfVector(currentOriginalText, vocabulary);
+                const vecRewritten = createTfVector(rewrittenText, vocabulary);
+                let semanticSimilarity = cosineSimilarity(vecOriginal, vecRewritten);
+                
+                // Calcular diversidad léxica (palabras únicas / total de palabras)
+                const uniqueWords = new Set(rewrittenTokens).size;
+                const lexicalDiversity = uniqueWords / rewrittenTokens.length;
+                
+                // Calcular bonos y penalizaciones
+                let finalScore = semanticSimilarity;
+                finalScore += lexicalDiversity * 0.07; // 7% por diversidad léxica
+                
+                // CONTAR PALABRAS ÚNICAS DEL DICCIONARIO (CORREGIDO)
+                const dictionaryWordCount = countUniqueDictionaryWords(rewrittenText);
+                finalScore += (dictionaryWordCount * 0.03); // 3% por palabra única del glosario
+                
+                if (rewrittenTextWordCount > 100) {
+                    finalScore += 0.01; // 1% por texto largo
+                }
+                
+                if (rewrittenTextWordCount < 100) {
+                    finalScore -= 0.15; // -15% por menos de 100 palabras
+                }
+                
+                // Asegurarse de que la puntuación no sea negativa
+                finalScore = Math.max(0, finalScore);
+                
+                // Asegurarse de que la puntuación no exceda 1.0
+                finalScore = Math.min(1.0, finalScore);
+                
+                // Aplicar penalización del portapapeles
+                finalScore = finalScore * (1 - clipboardResult.penalty);
+                const score = Math.round(finalScore * 100);
+                const penaltyPercent = Math.round(clipboardResult.penalty * 100);
+                
+                // Mostrar alerta de portapapeles
+                portapapelesWordCount.textContent = clipboardResult.wordCount;
+                portapapelesPenalty.textContent = penaltyPercent;
+                portapapelesAlertScore.textContent = `${score}%`;
+                portapapelesAlert.classList.add('show');
+                
+                // Ocultar la alerta después de 10 segundos
+                setTimeout(() => {
+                    portapapelesAlert.classList.remove('show');
+                }, 10000);
+                
+                // Mostrar resultados con indicador de portapapeles
+                scoreDisplay.textContent = `${score}%`;
+                scoreDisplay.className = `score-display portapapeles`;
+                
+                const motivationalMessage = generateMotivationalMessage(score);
+                feedbackMessage.innerHTML = `
+                    <div class="plagio-warning portapapeles">
+                        <i class="fas fa-clipboard"></i>
+                        <span><strong>🐼 ¡PANDA DETECTA PORTAPAPELES!</strong> He detectado ${clipboardResult.wordCount} palabras copiadas del portapapeles.</span>
+                    </div>
+                    <div class="feedback-message portapapeles">
+                        <strong>${motivationalMessage}</strong> Tu puntuación con penalización del ${penaltyPercent}% es de ${score}%.<br><br>
+                        🐼 <strong>Consejo de panda:</strong> ¡El portapapeles es como el bambú enlatado! Es conveniente pero no tiene el mismo sabor que el fresco. Tu creatividad es mucho más valiosa.<br><br>
+                        Se ha aplicado una penalización del ${penaltyPercent}% por uso excesivo del portapapeles. ¡Demuestra tu talento original, panda creativo!
+                    </div>
+                `;
+                resultsBox.classList.add('active', 'portapapeles');
+                
+                // Identificar conceptos clave incluidos y faltantes
+                const includedConcepts = [];
+                const missingConcepts = [];
+                
+                currentKeyConcepts.forEach(concept => {
+                    if (rewrittenText.toLowerCase().includes(concept.toLowerCase())) {
+                        includedConcepts.push(concept);
+                    } else {
+                        missingConcepts.push(concept);
+                    }
+                });
+
+                // Identificar palabras simplificadas
+                simplifiedWords = identifySimplifiedWords(currentOriginalText, rewrittenText);
+
+                // Mostrar conceptos clave
+                if (currentKeyConcepts.length > 0) {
+                    displayConcepts(includedConcepts, missingConcepts);
+                    conceptsContainer.classList.add('active');
+                }
+
+                // Mostrar palabras simplificadas
+                displaySimplifiedWords(simplifiedWords);
+                simplifiedWordsContainer.classList.add('active');
+
+                // Mostrar reto extra
+                challengeExtraContainer.classList.add('active');
+                challengeExtraTextarea.value = '';
+                updateCharCount();
+                
+                return;
+            }
+
+            // 4. Cálculo de Similitud Semántica (base)
             const vecOriginal = createTfVector(currentOriginalText, vocabulary);
             const vecRewritten = createTfVector(rewrittenText, vocabulary);
             let semanticSimilarity = cosineSimilarity(vecOriginal, vecRewritten);
+
+            // 5. BONO POR VOCABULARIO (MEJORADO)
+            // CONTAR PALABRAS ÚNICAS DEL DICCIONARIO (CORREGIDO)
+            const dictionaryWordCount = countUniqueDictionaryWords(rewrittenText);
+            
+            // 6. CÁLCULO DE PUNTUACIÓN FINAL HÍBRIDO (CON REGLAS ESPECÍFICAS)
+            let finalScore = semanticSimilarity;
             
             // Calcular diversidad léxica (palabras únicas / total de palabras)
             const uniqueWords = new Set(rewrittenTokens).size;
             const lexicalDiversity = uniqueWords / rewrittenTokens.length;
             
-            // Calcular bonos y penalizaciones
-            let finalScore = semanticSimilarity;
+            // Aplicar reglas específicas del usuario
+            let penalties = [];
+            let bonuses = [];
+            
+            // BONOS
+            bonuses.push(`+${(lexicalDiversity * 7).toFixed(1)}% por diversidad léxica`);
             finalScore += lexicalDiversity * 0.07; // 7% por diversidad léxica
             
-            // CONTAR PALABRAS ÚNICAS DEL DICCIONARIO (CORREGIDO)
-            const dictionaryWordCount = countUniqueDictionaryWords(rewrittenText);
-            finalScore += (dictionaryWordCount * 0.03); // 3% por palabra única del glosario
+            if (dictionaryWordCount > 0) {
+                const dictionaryBonus = dictionaryWordCount * 3;
+                bonuses.push(`+${dictionaryBonus}% por palabras únicas del glosario (${dictionaryWordCount})`);
+                finalScore += (dictionaryWordCount * 0.03); // 3% por palabra única del glosario
+            }
             
             if (rewrittenTextWordCount > 100) {
+                bonuses.push('+1% por texto largo');
                 finalScore += 0.01; // 1% por texto largo
             }
             
+            // PENALIDADES
             if (rewrittenTextWordCount < 100) {
+                penalties.push('-15% por texto corto');
                 finalScore -= 0.15; // -15% por menos de 100 palabras
             }
             
@@ -1655,40 +2054,9 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Asegurarse de que la puntuación no exceda 1.0
             finalScore = Math.min(1.0, finalScore);
-            
-            // Aplicar penalización del 50%
-            finalScore = finalScore * 0.5;
             const score = Math.round(finalScore * 100);
-            
-            // Mostrar alerta de plagio moderado (no ocupa toda la pantalla)
-            plagioWordCount.textContent = plagiarismResult.wordCount;
-            plagioModeradoAlertScore.textContent = `${score}%`;
-            plagioModeradoAlert.classList.add('show');
-            
-            // Ocultar la alerta después de 10 segundos
-            setTimeout(() => {
-                plagioModeradoAlert.classList.remove('show');
-            }, 10000);
-            
-            // Mostrar resultados normales pero con indicador de plagio moderado
-            scoreDisplay.textContent = `${score}%`;
-            scoreDisplay.className = `score-display plagio-moderado`;
-            
-            const motivationalMessage = generateMotivationalMessage(score);
-            feedbackMessage.innerHTML = `
-                <div class="plagio-warning moderado">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span><strong>🐼 ¡ADVERTENCIA DE PANDA!</strong> He detectado ${plagiarismResult.wordCount} palabras consecutivas idénticas al texto original.</span>
-                </div>
-                <div class="feedback-message plagio-moderado">
-                    <strong>${motivationalMessage}</strong> Tu puntuación con penalización del 50% es de ${score}%.<br><br>
-                    🐼 <strong>Consejo de panda:</strong> Aunque te gusta el bambú del texto original, ¡intenta cultivar el tuyo propio! La próxima vez, usa más tus propias palabras.<br><br>
-                    Se ha aplicado una penalización del 50% por plagio moderado. ¡Sigue practicando para que tu escritura sea tan única como un panda en la naturaleza!
-                </div>
-            `;
-            resultsBox.classList.add('active', 'plagio-moderado');
-            
-            // Identificar conceptos clave incluidos y faltantes
+
+            // 7. Identificar conceptos clave incluidos y faltantes
             const includedConcepts = [];
             const missingConcepts = [];
             
@@ -1700,150 +2068,76 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Identificar palabras simplificadas
+            // 8. Identificar palabras simplificadas (MEJORADO)
             simplifiedWords = identifySimplifiedWords(currentOriginalText, rewrittenText);
 
-            // Mostrar conceptos clave
+            // 9. Generación de Feedback Mejorado
+            const motivationalMessage = generateMotivationalMessage(score);
+            let feedback = `<strong>${motivationalMessage}</strong> Tu puntuación es de ${score}%.`;
+            
+            // Mostrar detalles del cálculo
+            if (bonuses.length > 0 || penalties.length > 0) {
+                feedback += `<br><br><strong>Desglose del puntaje:</strong><br>`;
+                feedback += `Base: ${(semanticSimilarity * 100).toFixed(1)}%<br>`;
+                
+                if (bonuses.length > 0) {
+                    feedback += `Bonos: ${bonuses.join(', ')}<br>`;
+                }
+                
+                if (penalties.length > 0) {
+                    feedback += `Penalizaciones: ${penalties.join(', ')}<br>`;
+                }
+            }
+            
+            if (score < 70) {
+                if (dictionaryWordCount < 2) {
+                    feedback += `<br><br>Intenta usar más palabras clave del texto original. Has usado ${dictionaryWordCount} palabra(s) importante(s).`;
+                }
+                if (rewrittenTextWordCount < originalTokens.length * 0.6) {
+                    feedback += ` Además, tu texto es considerablemente más corto. Asegúrate de cubrir todos los puntos importantes del original.`;
+                }
+            } else {
+                feedback += `<br><br>Has utilizado ${dictionaryWordCount} palabra(s) clave relevante(s), lo que demuestra una gran comprensión.`;
+            }
+
+            // 10. Mostrar Resultados
+            scoreDisplay.textContent = `${score}%`;
+            scoreDisplay.className = `score-display ${score < 70 ? 'low' : score < 90 ? 'medium' : 'high'}`;
+            feedbackMessage.innerHTML = feedback;
+            resultsBox.classList.remove('plagio-severo', 'plagio-moderado', 'portapapeles');
+            resultsBox.classList.add('active');
+
+            // 11. Mostrar conceptos clave
             if (currentKeyConcepts.length > 0) {
                 displayConcepts(includedConcepts, missingConcepts);
                 conceptsContainer.classList.add('active');
             }
 
-            // Mostrar palabras simplificadas
+            // 12. Mostrar palabras simplificadas (SIEMPRE)
             displaySimplifiedWords(simplifiedWords);
             simplifiedWordsContainer.classList.add('active');
 
-            // Mostrar reto extra
+            // 13. Mostrar Panda SKOPIA
+            if (score >= 70) {
+                pandaContainer.classList.add('active');
+                
+                // Ocultar el panda después de 5 segundos
+                setTimeout(() => {
+                    pandaContainer.classList.remove('active');
+                }, 5000);
+            }
+
+            // 14. Mostrar reto extra
             challengeExtraContainer.classList.add('active');
             challengeExtraTextarea.value = '';
             updateCharCount();
             
-            return;
+        } finally {
+            // Restaurar el botón
+            analyzeBtn.classList.remove('loading');
+            analyzeBtn.disabled = false;
+            analyzeBtn.textContent = 'Analizar mi Reescritura';
         }
-
-        // 3. Cálculo de Similitud Semántica (base)
-        const vecOriginal = createTfVector(currentOriginalText, vocabulary);
-        const vecRewritten = createTfVector(rewrittenText, vocabulary);
-        let semanticSimilarity = cosineSimilarity(vecOriginal, vecRewritten);
-
-        // 4. BONO POR VOCABULARIO (MEJORADO)
-        // CONTAR PALABRAS ÚNICAS DEL DICCIONARIO (CORREGIDO)
-        const dictionaryWordCount = countUniqueDictionaryWords(rewrittenText);
-        
-        // 5. CÁLCULO DE PUNTUACIÓN FINAL HÍBRIDO (CON REGLAS ESPECÍFICAS)
-        let finalScore = semanticSimilarity;
-        
-        // Calcular diversidad léxica (palabras únicas / total de palabras)
-        const uniqueWords = new Set(rewrittenTokens).size;
-        const lexicalDiversity = uniqueWords / rewrittenTokens.length;
-        
-        // Aplicar reglas específicas del usuario
-        let penalties = [];
-        let bonuses = [];
-        
-        // BONOS
-        bonuses.push(`+${(lexicalDiversity * 7).toFixed(1)}% por diversidad léxica`);
-        finalScore += lexicalDiversity * 0.07; // 7% por diversidad léxica
-        
-        if (dictionaryWordCount > 0) {
-            const dictionaryBonus = dictionaryWordCount * 3;
-            bonuses.push(`+${dictionaryBonus}% por palabras únicas del glosario (${dictionaryWordCount})`);
-            finalScore += (dictionaryWordCount * 0.03); // 3% por palabra única del glosario
-        }
-        
-        if (rewrittenTextWordCount > 100) {
-            bonuses.push('+1% por texto largo');
-            finalScore += 0.01; // 1% por texto largo
-        }
-        
-        // PENALIDADES
-        if (rewrittenTextWordCount < 100) {
-            penalties.push('-15% por texto corto');
-            finalScore -= 0.15; // -15% por menos de 100 palabras
-        }
-        
-        // Asegurarse de que la puntuación no sea negativa
-        finalScore = Math.max(0, finalScore);
-        
-        // Asegurarse de que la puntuación no exceda 1.0
-        finalScore = Math.min(1.0, finalScore);
-        const score = Math.round(finalScore * 100);
-
-        // 6. Identificar conceptos clave incluidos y faltantes
-        const includedConcepts = [];
-        const missingConcepts = [];
-        
-        currentKeyConcepts.forEach(concept => {
-            if (rewrittenText.toLowerCase().includes(concept.toLowerCase())) {
-                includedConcepts.push(concept);
-            } else {
-                missingConcepts.push(concept);
-            }
-        });
-
-        // 7. Identificar palabras simplificadas (MEJORADO)
-        simplifiedWords = identifySimplifiedWords(currentOriginalText, rewrittenText);
-
-        // 8. Generación de Feedback Mejorado
-        const motivationalMessage = generateMotivationalMessage(score);
-        let feedback = `<strong>${motivationalMessage}</strong> Tu puntuación es de ${score}%.`;
-        
-        // Mostrar detalles del cálculo
-        if (bonuses.length > 0 || penalties.length > 0) {
-            feedback += `<br><br><strong>Desglose del puntaje:</strong><br>`;
-            feedback += `Base: ${(semanticSimilarity * 100).toFixed(1)}%<br>`;
-            
-            if (bonuses.length > 0) {
-                feedback += `Bonos: ${bonuses.join(', ')}<br>`;
-            }
-            
-            if (penalties.length > 0) {
-                feedback += `Penalizaciones: ${penalties.join(', ')}<br>`;
-            }
-        }
-        
-        if (score < 70) {
-            if (dictionaryWordCount < 2) {
-                feedback += `<br><br>Intenta usar más palabras clave del texto original. Has usado ${dictionaryWordCount} palabra(s) importante(s).`;
-            }
-            if (rewrittenTextWordCount < originalTokens.length * 0.6) {
-                feedback += ` Además, tu texto es considerablemente más corto. Asegúrate de cubrir todos los puntos importantes del original.`;
-            }
-        } else {
-            feedback += `<br><br>Has utilizado ${dictionaryWordCount} palabra(s) clave relevante(s), lo que demuestra una gran comprensión.`;
-        }
-
-        // 9. Mostrar Resultados
-        scoreDisplay.textContent = `${score}%`;
-        scoreDisplay.className = `score-display ${score < 70 ? 'low' : score < 90 ? 'medium' : 'high'}`;
-        feedbackMessage.innerHTML = feedback;
-        resultsBox.classList.remove('plagio-severo', 'plagio-moderado');
-        resultsBox.classList.add('active');
-
-        // 10. Mostrar conceptos clave
-        if (currentKeyConcepts.length > 0) {
-            displayConcepts(includedConcepts, missingConcepts);
-            conceptsContainer.classList.add('active');
-        }
-
-        // 11. Mostrar palabras simplificadas (SIEMPRE)
-        displaySimplifiedWords(simplifiedWords);
-        simplifiedWordsContainer.classList.add('active');
-
-        // 12. Mostrar Panda SKOPIA
-        if (score >= 70) {
-            pandaContainer.classList.add('active');
-            
-            // Ocultar el panda después de 5 segundos
-            setTimeout(() => {
-                pandaContainer.classList.remove('active');
-            }, 5000);
-        }
-
-        // 13. Mostrar reto extra
-        challengeExtraContainer.classList.add('active');
-        challengeExtraTextarea.value = '';
-        updateCharCount();
     }
 
     // Actualizar contador de caracteres
@@ -1901,6 +2195,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event listener para cerrar la alerta de plagio moderado
     plagioModeradoAlertClose.addEventListener('click', () => {
         plagioModeradoAlert.classList.remove('show');
+    });
+    
+    // Event listener para cerrar la alerta de portapapeles
+    portapapelesAlertClose.addEventListener('click', () => {
+        portapapelesAlert.classList.remove('show');
     });
 
     document.getElementById('btn-misiones').addEventListener('click', () => showToast('🎯 Misiones próximamente...'));
