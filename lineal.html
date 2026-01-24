@@ -1068,7 +1068,7 @@ const studentTips = [
 { text: "Practica con <span class='highlight'>ejemplos reales</span> del examen: familiarízate con el estilo y complejidad de los gráficos de Saber Pro.", condition: "exam_familiarity" },
 { text: "Desarrolla tu <span class='highlight'>memoria visual</span>: aprende a retener información clave del gráfico mientras lees las preguntas.", condition: "visual_memory" },
 { text: "Mejora tu <span class='highlight'>concentración</span>: practica manteniendo el foco durante períodos prolongados para evitar errores por fatiga.", condition: "concentration" },
-{ text: "Aprende a <span class='highlight'>eliminar distracciones</span>: identifica elementos irrelevantes en el gráfico que no contribuyen a la respuesta.", condition: "distraction_filtering" },
+{ text: "Aprende a <span class='highlight'>eliminar distractores</span>: identifica elementos irrelevantes en el gráfico que no contribuyen a la respuesta.", condition: "distraction_filtering" },
 { text: "Practica la <span class='highlight'>autoevaluación</span>: revisa tus respuestas y identifica patrones en tus errores para mejorar continuamente.", condition: "self_assessment" }
 ];
 
@@ -1285,26 +1285,30 @@ const variance = currentData.reduce((sum, point) => sum + Math.pow(point.value -
 const stdDev = Math.sqrt(variance);
 const isHighVolatility = stdDev > 15;
 
+// --- CORRECCIÓN: Crear descripción dinámica del cambio más significativo ---
+let significantChangeText = "";
+if (maxChange > 5) { // Umbral más bajo para mencionarlo más a menudo
+    const year1 = currentData[maxChangeIndex-1].year;
+    const year2 = currentData[maxChangeIndex].year;
+    const changeDirection = currentData[maxChangeIndex].value > currentData[maxChangeIndex-1].value ? 'aumento' : 'reducción';
+    significantChangeText = `El ${changeDirection} más significativo se observa entre ${year1} y ${year2}, con una variación de ${maxChange} puntos.`;
+}
+
 // Actualizar conclusión (más larga y detallada)
 let conclusionHTML = '';
 
 if (trend < -10) {
-conclusionHTML = `<p>El índice de rendimiento académico ha mostrado una <span class="highlight">tendencia decreciente</span> durante el período 2018-2022, lo que indica una <span class="success">transformación educativa</span> en el sistema. La reducción más significativa se observa entre 2019 y 2020, coincidiendo con la transición hacia modelos de aprendizaje híbrido durante la pandemia.</p>`;
-conclusionHTML += `<p>Este patrón refleja los desafíos y adaptaciones que las instituciones educativas enfrentaron al implementar nuevas tecnologías y metodologías pedagógicas. La caída inicial representa el período de ajuste, mientras que la posterior recuperación sugiere una <span class="highlight">resiliencia del sistema</span> y una mejora gradual en la adaptación a los nuevos paradigmas educativos.</p>`;
-conclusionHTML += `<p>Al analizar los puntos de inflexión, podemos identificar momentos clave donde las intervenciones educativas tuvieron mayor impacto. El valor más bajo se registró en ${minPoint.year} con un índice de ${minPoint.value}, marcando un punto de inflexión crucial en la evolución del sistema educativo.</p>`;
+    conclusionHTML = `<p>El índice de rendimiento académico ha mostrado una <span class="highlight">tendencia decreciente</span> durante el período 2018-2022, lo que indica una <span class="success">transformación educativa</span> en el sistema. ${significantChangeText}</p>`;
+    conclusionHTML += `<p>Este patrón refleja los desafíos y adaptaciones que las instituciones educativas enfrentaron al implementar nuevas tecnologías y metodologías pedagógicas. La caída inicial representa el período de ajuste, mientras que la posterior recuperación sugiere una <span class="highlight">resiliencia del sistema</span> y una mejora gradual en la adaptación a los nuevos paradigmas educativos.</p>`;
+    conclusionHTML += `<p>Al analizar los puntos de inflexión, podemos identificar momentos clave donde las intervenciones educativas tuvieron mayor impacto. El valor más bajo se registró en ${minPoint.year} con un índice de ${minPoint.value}, marcando un punto de inflexión crucial en la evolución del sistema educativo.</p>`;
 } else if (trend > 10) {
-conclusionHTML = `<p>El índice de rendimiento académico ha demostrado una <span class="highlight">tendencia creciente</span> durante el período 2018-2022, lo que sugiere una <span class="success">mejora continua</span> en la calidad educativa. El incremento más notable se observa entre ${currentData[maxChangeIndex-1].year} y ${currentData[maxChangeIndex].year}, con un aumento de ${maxChange} puntos.</p>`;
-conclusionHTML += `<p>Esta evolución positiva refleja el impacto de las reformas educativas implementadas durante este período, así como la adaptación exitosa a nuevos desafíos pedagógicos. El valor más alto se registró en ${maxPoint.year} con un índice de ${maxPoint.value}, representando el punto álgido de esta tendencia ascendente.</p>`;
-conclusionHTML += `<p>El análisis detallado de estos datos permite identificar las estrategias más efectivas que contribuyeron a esta mejora, proporcionando información valiosa para futuras intervenciones educativas y políticas públicas.</p>`;
+    conclusionHTML = `<p>El índice de rendimiento académico ha demostrado una <span class="highlight">tendencia creciente</span> durante el período 2018-2022, lo que sugiere una <span class="success">mejora continua</span> en la calidad educativa. ${significantChangeText}</p>`;
+    conclusionHTML += `<p>Esta evolución positiva refleja el impacto de las reformas educativas implementadas durante este período, así como la adaptación exitosa a nuevos desafíos pedagógicos. El valor más alto se registró en ${maxPoint.year} con un índice de ${maxPoint.value}, representando el punto álgido de esta tendencia ascendente.</p>`;
+    conclusionHTML += `<p>El análisis detallado de estos datos permite identificar las estrategias más efectivas que contribuyeron a esta mejora, proporcionando información valiosa para futuras intervenciones educativas y políticas públicas.</p>`;
 } else {
-conclusionHTML = `<p>El índice de rendimiento académico ha mantenido una <span class="highlight">estabilidad relativa</span> durante el período 2018-2022, con fluctuaciones controladas que sugieren un sistema educativo en equilibrio. El valor más bajo fue ${minPoint.value} en ${minPoint.year} y el más alto fue ${maxPoint.value} en ${maxPoint.year}.</p>`;
-conclusionHTML += `<p>Esta estabilidad puede interpretarse como un indicador de la resiliencia del sistema educativo frente a diversos desafíos, incluyendo la transición a modelos de enseñanza remota durante la pandemia. La capacidad de mantener niveles consistentes de rendimiento a pesar de las circunstancias adversas refleja la fortaleza de las estructuras educativas existentes.</p>`;
-conclusionHTML += `<p>Las variaciones observadas, aunque moderadas, coinciden con períodos de cambios significativos en el entorno educativo, sugiriendo que el sistema ha logrado adaptarse sin comprometer la calidad general del rendimiento académico.</p>`;
-}
-
-if (maxChange > 15) {
-const changeDirection = currentData[maxChangeIndex].value > currentData[maxChangeIndex-1].value ? 'aumento' : 'disminución';
-conclusionHTML += `<p>Se observa un cambio significativo entre ${currentData[maxChangeIndex-1].year} y ${currentData[maxChangeIndex].year}, con un ${changeDirection} de ${maxChange} puntos en el índice. Este punto de inflexión representa un momento crucial en la evolución del rendimiento académico y merece un análisis detallado de sus causas y consecuencias.</p>`;
+    conclusionHTML = `<p>El índice de rendimiento académico ha mantenido una <span class="highlight">estabilidad relativa</span> durante el período 2018-2022, con fluctuaciones controladas que sugieren un sistema educativo en equilibrio. ${significantChangeText ? `A pesar de esta estabilidad general, se registra ${significantChangeText.toLowerCase()}` : ''}</p>`;
+    conclusionHTML += `<p>Esta estabilidad puede interpretarse como un indicador de la resiliencia del sistema educativo frente a diversos desafíos, incluyendo la transición a modelos de enseñanza remota durante la pandemia. La capacidad de mantener niveles consistentes de rendimiento a pesar de las circunstancias adversas refleja la fortaleza de las estructuras educativas existentes.</p>`;
+    conclusionHTML += `<p>Las variaciones observadas, aunque moderadas, coinciden con períodos de cambios significativos en el entorno educativo, sugiriendo que el sistema ha logrado adaptarse sin comprometer la calidad general del rendimiento académico.</p>`;
 }
 
 conclusionContent.innerHTML = conclusionHTML;
