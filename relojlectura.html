@@ -1470,51 +1470,64 @@
         }
 
         function prepareQuestions() {
-            // Crear un array plano con todas las preguntas individuales
-            const allIndividualQuestions = [];
+            // Crear una copia del banco de textos y mezclarlo aleatoriamente
+            const shuffledTexts = [...QUESTIONS_BANK].sort(() => Math.random() - 0.5);
             
-            QUESTIONS_BANK.forEach((item, index) => {
-                item.questions.forEach((q, qIndex) => {
-                    allIndividualQuestions.push({
-                        id: `${index}-${qIndex}`,
-                        text: q.question,
-                        options: q.options,
-                        correct: q.correct,
-                        sourceText: item.text,
-                        sourceIndex: index
-                    });
-                });
-            });
+            // Seleccionar textos hasta alcanzar 30 preguntas
+            questions = [];
+            let totalQuestions = 0;
             
-            // Mezclar todas las preguntas
-            allIndividualQuestions.sort(() => Math.random() - 0.5);
-            
-            // Seleccionar 30 preguntas (o todas si hay menos de 30)
-            const selectedQuestions = allIndividualQuestions.slice(0, Math.min(30, allIndividualQuestions.length));
-            
-            // Agrupar las preguntas seleccionadas por texto fuente
-            const questionsBySource = {};
-            
-            selectedQuestions.forEach(q => {
-                if (!questionsBySource[q.sourceIndex]) {
-                    questionsBySource[q.sourceIndex] = {
-                        id: q.sourceIndex,
-                        text: q.sourceText,
-                        questions: []
-                    };
-                }
+            for (const textItem of shuffledTexts) {
+                const questionCount = textItem.questions.length;
                 
-                questionsBySource[q.sourceIndex].questions.push({
-                    id: q.id,
-                    text: q.text,
-                    options: q.options,
-                    correct: q.correct
-                });
-            });
-            
-            // Convertir a array y mezclar los grupos
-            questions = Object.values(questionsBySource);
-            questions.sort(() => Math.random() - 0.5);
+                // Verificar si agregar este texto no excede las 30 preguntas
+                if (totalQuestions + questionCount <= 30) {
+                    // Agregar el texto completo con sus preguntas
+                    questions.push({
+                        id: questions.length,
+                        text: textItem.text,
+                        questions: textItem.questions.map((q, qIndex) => ({
+                            id: `${questions.length}-${qIndex}`,
+                            text: q.question,
+                            options: q.options,
+                            correct: q.correct
+                        }))
+                    });
+                    
+                    totalQuestions += questionCount;
+                    
+                    // Si ya alcanzamos exactamente 30 preguntas, terminamos
+                    if (totalQuestions === 30) {
+                        break;
+                    }
+                } else {
+                    // Si este texto excede las 30 preguntas, buscamos uno que encaje mejor
+                    // entre los textos restantes
+                    const remainingTexts = shuffledTexts.slice(shuffledTexts.indexOf(textItem) + 1);
+                    
+                    // Buscar un texto con 2 preguntas si necesitamos exactamente 2
+                    if (30 - totalQuestions === 2) {
+                        const fittingText = remainingTexts.find(t => t.questions.length === 2);
+                        if (fittingText) {
+                            questions.push({
+                                id: questions.length,
+                                text: fittingText.text,
+                                questions: fittingText.questions.map((q, qIndex) => ({
+                                    id: `${questions.length}-${qIndex}`,
+                                    text: q.question,
+                                    options: q.options,
+                                    correct: q.correct
+                                }))
+                            });
+                            totalQuestions += 2;
+                            break;
+                        }
+                    }
+                    
+                    // Si no encontramos uno que encaje perfectamente, terminamos
+                    break;
+                }
+            }
             
             // Mostrar la primera pregunta
             showQuestion(0);
