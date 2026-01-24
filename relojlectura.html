@@ -1470,29 +1470,50 @@
         }
 
         function prepareQuestions() {
-            // Crear un array de preguntas a partir del banco
-            questions = [];
+            // Crear un array plano con todas las preguntas individuales
+            const allIndividualQuestions = [];
             
             QUESTIONS_BANK.forEach((item, index) => {
-                const questionGroup = {
-                    id: index,
-                    text: item.text,
-                    questions: []
-                };
-                
                 item.questions.forEach((q, qIndex) => {
-                    questionGroup.questions.push({
+                    allIndividualQuestions.push({
                         id: `${index}-${qIndex}`,
                         text: q.question,
                         options: q.options,
-                        correct: q.correct
+                        correct: q.correct,
+                        sourceText: item.text,
+                        sourceIndex: index
                     });
                 });
-                
-                questions.push(questionGroup);
             });
             
-            // Mezclar preguntas
+            // Mezclar todas las preguntas
+            allIndividualQuestions.sort(() => Math.random() - 0.5);
+            
+            // Seleccionar 30 preguntas (o todas si hay menos de 30)
+            const selectedQuestions = allIndividualQuestions.slice(0, Math.min(30, allIndividualQuestions.length));
+            
+            // Agrupar las preguntas seleccionadas por texto fuente
+            const questionsBySource = {};
+            
+            selectedQuestions.forEach(q => {
+                if (!questionsBySource[q.sourceIndex]) {
+                    questionsBySource[q.sourceIndex] = {
+                        id: q.sourceIndex,
+                        text: q.sourceText,
+                        questions: []
+                    };
+                }
+                
+                questionsBySource[q.sourceIndex].questions.push({
+                    id: q.id,
+                    text: q.text,
+                    options: q.options,
+                    correct: q.correct
+                });
+            });
+            
+            // Convertir a array y mezclar los grupos
+            questions = Object.values(questionsBySource);
             questions.sort(() => Math.random() - 0.5);
             
             // Mostrar la primera pregunta
@@ -1637,6 +1658,12 @@
         }
 
         function endChallenge() {
+            // Pausar el temporizador inmediatamente
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+            }
+            
             // Ocultar área de desafío
             document.getElementById('challenge-area').classList.remove('active');
             
