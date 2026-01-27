@@ -388,6 +388,10 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 .quiz-submit:hover {
     background-color: var(--color-oliva-medio);
 }
+.quiz-submit:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
 .quiz-result {
     margin-top: 20px;
     padding: 15px;
@@ -405,6 +409,23 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     background-color: rgba(244, 67, 54, 0.2);
     color: #c62828;
     border: 1px solid #f44336;
+}
+
+/* --- ESTILOS PARA RETROALIMENTACIÓN VISUAL (NUEVO) --- */
+.option-label.correct-answer {
+    background-color: rgba(76, 175, 80, 0.3); /* Verde más visible */
+    border: 1px solid #4caf50;
+    font-weight: 500;
+}
+.option-label.incorrect-answer {
+    background-color: rgba(244, 67, 54, 0.3); /* Rojo más visible */
+    border: 1px solid #f44336;
+}
+/* Evitar que el hover afecte las respuestas ya evaluadas */
+.option-label.correct-answer:hover,
+.option-label.incorrect-answer:hover {
+    background-color: inherit;
+    cursor: default;
 }
 
 /* --- Responsive --- */
@@ -786,6 +807,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let speechSynthesis = window.speechSynthesis;
     let speechUtterance = null;
 
+    // --- VARIABLES DE ESTADO DEL CUESTIONARIO (CORRECCIÓN) ---
+    let currentQuizQuestions = []; // Almacena las preguntas que se muestran
+    let quizSubmitted = false; // Controla si el cuestionario ya fue enviado
+
     // --- FUNCIONES PRINCIPALES ---
 
     // Cargar datos desde el archivo JSON
@@ -830,8 +855,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = 'reading-card';
             
-            // Aseguramos que cada lectura tenga una imagen asociada
-            // Si no tiene imagen, usamos una imagen por defecto basada en el tipo de texto
             let imageUrl = reading.image;
             if (!imageUrl) {
                 const type = typeFilter.value;
@@ -867,7 +890,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const modalMedia = document.getElementById('modal-media');
         let imageUrl = reading.modalImageUrl || reading.chartImage || reading.image;
         
-        // Si no hay una imagen específica para el modal, generamos una basada en el título
         if (!imageUrl) {
             imageUrl = `https://picsum.photos/seed/${reading.title}/800/400.jpg`;
         }
@@ -876,9 +898,10 @@ document.addEventListener('DOMContentLoaded', () => {
         modalMedia.style.display = 'block';
 
         updateModalText();
-        // Ocultar el cuestionario al abrir un nuevo texto
+        // Ocultar el cuestionario y reiniciar su estado al abrir un nuevo texto
         quizContainer.classList.remove('active');
         quizToggleBtn.classList.remove('active');
+        resetQuizState();
         
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
@@ -888,18 +911,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateModalText() {
         if (!currentReading) return;
         
-        // 1. Obtenemos el texto del JSON
         const text = currentReading.levels[currentDifficulty];
-        
-        // 2. Reemplazamos los saltos de línea (\n\n) por etiquetas de párrafo HTML
         const paragraphs = text.split(/\n\n/).map(paragraph => `<p>${paragraph}</p>`).join('');
         
-        // 3. Ahora procesamos las palabras para los tooltips
         const words = paragraphs.split(/(\s+)/);
         modalText.innerHTML = words.map(word => {
-            // No procesamos las etiquetas HTML para no romperlas
             if (word.startsWith('<')) return word; 
-            if (/\s+/.test(word)) return word; // No envolver espacios
+            if (/\s+/.test(word)) return word; 
             
             const cleanWord = word.toLowerCase().replace(/[.,!?;:]/g, '');
             if (allData.diccionario[cleanWord]) {
@@ -908,23 +926,33 @@ document.addEventListener('DOMContentLoaded', () => {
             return `<span class="word">${word}</span>`;
         }).join('');
 
-        // 4. Añadimos los listeners a las palabras
         modalText.querySelectorAll('.word').forEach(wordSpan => {
             wordSpan.addEventListener('click', handleWordClick);
         });
     }
 
+    // --- FUNCIONES DEL CUESTIONARIO (CORREGIDAS) ---
+
+    // Función para reiniciar el estado del cuestionario
+    function resetQuizState() {
+        currentQuizQuestions = [];
+        quizSubmitted = false;
+        quizResult.style.display = 'none';
+        quizSubmit.disabled = false;
+        quizSubmit.textContent = 'Enviar respuestas';
+    }
+
     // Preparar el cuestionario según el nivel de dificultad
     function prepareQuiz() {
+        resetQuizState(); // Reiniciar estado cada vez que se prepara
+
         if (!currentReading || !quizData) {
             quizQuestions.innerHTML = '<p style="text-align: center; color: var(--color-oliva-medio);">No hay cuestionario disponible para este texto.</p>';
             return;
         }
         
         quizQuestions.innerHTML = '';
-        quizResult.style.display = 'none';
         
-        // Obtener las preguntas del texto actual
         const allQuestions = quizData.cuestionarios[currentReading.id];
         
         if (!allQuestions || allQuestions.length === 0) {
@@ -932,10 +960,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Seleccionar aleatoriamente 5 preguntas de las disponibles
-        const selectedQuestions = getRandomQuestions(allQuestions, 5);
+        // Seleccionar aleatoriamente 5 preguntas y guardarlas en el estado
+        currentQuizQuestions = getRandomQuestions(allQuestions, 5);
         
-        selectedQuestions.forEach((question, index) => {
+        currentQuizQuestions.forEach((question, index) => {
             const questionContainer = document.createElement('div');
             questionContainer.className = 'question-container';
             
@@ -961,44 +989,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Función para seleccionar preguntas aleatorias
     function getRandomQuestions(allQuestions, count) {
-        // Crear una copia del array para no modificar el original
         const questionsCopy = [...allQuestions];
         const selectedQuestions = [];
         
-        // Seleccionar preguntas aleatoriamente
         for (let i = 0; i < count && questionsCopy.length > 0; i++) {
             const randomIndex = Math.floor(Math.random() * questionsCopy.length);
             selectedQuestions.push(questionsCopy[randomIndex]);
-            // Eliminar la pregunta seleccionada para evitar duplicados
             questionsCopy.splice(randomIndex, 1);
         }
         
         return selectedQuestions;
     }
 
-    // Evaluar las respuestas del cuestionario
+    // Evaluar las respuestas del cuestionario (CORREGIDA)
     function evaluateQuiz() {
-        if (!currentReading || !quizData) return;
-        
-        const allQuestions = quizData.cuestionarios[currentReading.id];
-        if (!allQuestions || allQuestions.length === 0) return;
-        
-        // Obtener las mismas preguntas que se mostraron
-        const selectedQuestions = getRandomQuestions(allQuestions, 5);
+        if (quizSubmitted) return; // No hacer nada si ya se envió
+
         let correctAnswers = 0;
         
-        selectedQuestions.forEach((question, index) => {
+        // Usar las preguntas almacenadas en currentQuizQuestions
+        currentQuizQuestions.forEach((question, index) => {
             const selectedOption = document.querySelector(`input[name="question-${index}"]:checked`);
-            if (selectedOption && parseInt(selectedOption.value) === question.respuestaCorrecta) {
+            const correctAnswerIndex = question.respuestaCorrecta;
+
+            // Marcar la respuesta correcta
+            const correctLabel = document.querySelector(`input[name="question-${index}"][value="${correctAnswerIndex}"]`).parentElement;
+            correctLabel.classList.add('correct-answer');
+            
+            // Si el usuario seleccionó una opción y es incorrecta, marcarla
+            if (selectedOption && parseInt(selectedOption.value) !== correctAnswerIndex) {
+                selectedOption.parentElement.classList.add('incorrect-answer');
+            }
+            
+            // Contar respuestas correctas
+            if (selectedOption && parseInt(selectedOption.value) === correctAnswerIndex) {
                 correctAnswers++;
             }
         });
         
-        const percentage = Math.round((correctAnswers / selectedQuestions.length) * 100);
+        const percentage = Math.round((correctAnswers / currentQuizQuestions.length) * 100);
         
-        quizResult.textContent = `Has respondido correctamente ${correctAnswers} de ${selectedQuestions.length} preguntas (${percentage}%)`;
+        quizResult.textContent = `Has respondido correctamente ${correctAnswers} de ${currentQuizQuestions.length} preguntas (${percentage}%)`;
         quizResult.className = 'quiz-result ' + (percentage >= 60 ? 'correct' : 'incorrect');
         quizResult.style.display = 'block';
+        
+        // Deshabilitar todas las opciones y el botón de envío
+        document.querySelectorAll('#quiz-questions input').forEach(input => input.disabled = true);
+        quizSubmit.disabled = true;
+        quizSubmit.textContent = 'Respuestas enviadas';
+
+        // Marcar como enviado para evitar reenvíos
+        quizSubmitted = true;
         
         // Desplazarse hacia el resultado
         quizResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1029,6 +1070,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         currentReading = null;
         tooltip.classList.remove('active');
+        resetQuizState(); // Asegurarse de reiniciar el cuestionario al cerrar
     }
 
     // --- EVENT LISTENERS ---
@@ -1064,7 +1106,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.add('active');
             currentDifficulty = btn.dataset.level;
             updateModalText();
-            // Si el cuestionario está visible, actualizarlo
+            // Si el cuestionario está visible, actualizarlo y reiniciarlo
             if (quizContainer.classList.contains('active')) {
                 prepareQuiz();
             }
@@ -1090,10 +1132,8 @@ document.addEventListener('DOMContentLoaded', () => {
         quizContainer.classList.toggle('active');
         quizToggleBtn.classList.toggle('active');
         
-        // Si se está mostrando el cuestionario, preparar las preguntas y desplazarse hacia abajo
         if (quizContainer.classList.contains('active')) {
-            prepareQuiz();
-            // Pequeña demora para asegurar que el contenedor sea visible antes de desplazarse
+            prepareQuiz(); // Prepara y reinicia el cuestionario al mostrarlo
             setTimeout(() => {
                 quizContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
@@ -1125,7 +1165,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
-        // JS for nested dropdowns on mobile
         const subItems = item.querySelectorAll('.dropdown > li');
         subItems.forEach(subItem => {
             const subLink = subItem.querySelector('span');
