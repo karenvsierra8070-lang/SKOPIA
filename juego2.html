@@ -3,920 +3,1477 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ráfaga Numérica: Operaciones Fundamentales</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+    <title>Ráfaga Numérica: Operaciones Fundamentales - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
         }
 
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        window.auth = auth;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            console.log("Usuario autenticado:", user.email);
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0d2818 0%, #1a4332 100%);
+            font-family: 'Roboto', sans-serif;
+            background: #000;
+            color: white;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Fondo de videojuego animado */
+        .game-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0f0a 0%, #1a2e1a 25%, #0d1f0d 50%, #1a331a 75%, #0a0f0a 100%);
+            z-index: 1;
+        }
+
+        /* Efectos de red hexagonal */
+        .hex-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(76, 255, 76, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(76, 255, 76, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: hex-move 20s linear infinite;
+        }
+
+        @keyframes hex-move {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        /* Partículas mejoradas */
+        .particles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .particle {
+            position: absolute;
+            background: radial-gradient(circle, rgba(76, 255, 76, 0.8) 0%, rgba(76, 255, 76, 0) 70%);
+            border-radius: 50%;
+            animation: float-particle 10s infinite linear;
+        }
+
+        @keyframes float-particle {
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+                transform: translateY(80vh) scale(1);
+            }
+            90% {
+                opacity: 1;
+                transform: translateY(10vh) scale(1);
+            }
+            100% {
+                transform: translateY(-10vh) scale(0);
+                opacity: 0;
+            }
+        }
+
+        /* Efectos de luz ambiental */
+        .ambient-light {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(76, 255, 76, 0.1) 0%, transparent 50%);
+            transform: translate(-50%, -50%);
+            animation: pulse-light 4s ease-in-out infinite;
+            z-index: 3;
+        }
+
+        @keyframes pulse-light {
+            0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.1); }
+        }
+
+        /* Contenedor principal */
+        .game-container {
+            position: relative;
+            z-index: 10;
             min-height: 100vh;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            color: white;
-            overflow: hidden;
+            justify-content: center;
+            padding: 20px;
         }
 
-        .container {
-            width: 90%;
-            max-width: 800px;
-            background: rgba(13, 40, 24, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            padding: 40px;
-            position: relative;
-            border: 2px solid #2d7a5f;
-        }
-
-        /* Pantalla de Inicio */
-        .pantalla-inicio {
+        /* Pantalla de presentación mejorada */
+        .intro-screen {
             text-align: center;
-            animation: fadeIn 0.5s ease-in;
+            animation: intro-entrance 1.5s ease-out;
         }
 
-        .titulo-juego {
-            font-size: 2.5em;
-            color: #4ade80;
+        @keyframes intro-entrance {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) rotateX(90deg);
+            }
+            50% {
+                transform: scale(1.1) rotateX(0deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotateX(0deg);
+            }
+        }
+
+        .game-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 4.5rem;
+            font-weight: 900;
+            background: linear-gradient(45deg, #4cff4c, #00ff00, #4cff4c);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 40px rgba(76, 255, 76, 0.8);
             margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-            animation: pulse 2s infinite;
+            animation: title-glow 3s ease-in-out infinite, title-gradient 4s ease-in-out infinite;
+            letter-spacing: 3px;
         }
 
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.02); }
+        @keyframes title-glow {
+            0%, 100% {
+                filter: drop-shadow(0 0 20px rgba(76, 255, 76, 0.8)) drop-shadow(0 0 40px rgba(76, 255, 76, 0.4));
+            }
+            50% {
+                filter: drop-shadow(0 0 30px rgba(76, 255, 76, 1)) drop-shadow(0 0 60px rgba(76, 255, 76, 0.6));
+            }
         }
 
-        .subtitulo {
-            font-size: 1.2em;
-            color: #86efac;
-            margin-bottom: 30px;
-            line-height: 1.6;
+        @keyframes title-gradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
         }
 
-        .btn-iniciar {
-            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        .game-subtitle {
+            font-size: 1.8rem;
+            color: #a0ffa0;
+            margin-bottom: 40px;
+            text-shadow: 0 0 20px rgba(160, 255, 160, 0.5);
+            animation: subtitle-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes subtitle-pulse {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+
+        .start-btn {
+            background: linear-gradient(45deg, #1a5a1a, #4cff4c, #1a5a1a);
+            background-size: 200% 200%;
             color: white;
-            border: none;
-            padding: 15px 50px;
-            font-size: 1.2em;
+            border: 3px solid #4cff4c;
+            padding: 25px 80px;
+            font-size: 1.8rem;
+            font-weight: bold;
             border-radius: 50px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
-            font-weight: bold;
+            transition: all 0.4s;
+            box-shadow: 0 15px 40px rgba(76, 255, 76, 0.4);
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            position: relative;
+            overflow: hidden;
+            animation: btn-pulse 2s ease-in-out infinite, btn-gradient 3s ease-in-out infinite;
         }
 
-        .btn-iniciar:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+        @keyframes btn-pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 15px 40px rgba(76, 255, 76, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 20px 50px rgba(76, 255, 76, 0.6); }
         }
 
-        /* Pantalla de Juego */
-        .pantalla-juego {
+        @keyframes btn-gradient {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .start-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .start-btn:hover::before {
+            left: 100%;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-5px) scale(1.1);
+            box-shadow: 0 25px 60px rgba(76, 255, 76, 0.8);
+        }
+
+        /* Pantalla de juego mejorada */
+        .game-screen {
             display: none;
-            animation: slideIn 0.5s ease-out;
+            width: 100%;
+            max-width: 1200px;
+            animation: game-entrance 0.8s ease-out;
         }
 
-        @keyframes slideIn {
+        @keyframes game-entrance {
             from {
                 opacity: 0;
-                transform: translateX(20px);
+                transform: translateX(100px) rotateY(90deg);
             }
             to {
                 opacity: 1;
-                transform: translateX(0);
+                transform: translateX(0) rotateY(0deg);
             }
         }
 
-        .header-juego {
+        /* Header del juego mejorado */
+        .game-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #2d7a5f;
-        }
-
-        .temporizador {
-            font-size: 2em;
-            color: #fbbf24;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .temporizador.peligro {
-            color: #ef4444;
-            animation: blink 1s infinite;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .progreso {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .corazon {
-            font-size: 1.5em;
-            color: #ef4444;
-            transition: all 0.3s ease;
-        }
-
-        .corazon.perdido {
-            color: #4b5563;
-            transform: scale(0.8);
-        }
-
-        .contador-preguntas {
-            background: #1e40af;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-        }
-
-        .enunciado {
-            background: rgba(45, 122, 95, 0.2);
+            margin-bottom: 40px;
             padding: 25px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            font-size: 1.2em;
-            line-height: 1.8;
-            border-left: 4px solid #4ade80;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(26, 58, 26, 0.8));
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(76, 255, 76, 0.3);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
         }
 
-        .opciones {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+        .timer-container {
+            display: flex;
+            align-items: center;
             gap: 15px;
-            margin-bottom: 20px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            color: #4cff4c;
         }
 
-        .opcion {
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid #2d7a5f;
-            padding: 20px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 1.1em;
+        .timer-icon {
+            font-size: 2.5rem;
+            animation: timer-spin 2s linear infinite;
+        }
+
+        @keyframes timer-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .timer {
+            font-weight: bold;
+            font-size: 2.5rem;
+            min-width: 80px;
+            text-align: center;
+            text-shadow: 0 0 20px currentColor;
+            position: relative;
+        }
+
+        .timer::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle, transparent 30%, rgba(76, 255, 76, 0.2) 100%);
+            animation: timer-pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes timer-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        .timer.warning {
+            color: #ffaa00;
+            animation: timer-warning 0.5s infinite;
+        }
+
+        .timer.danger {
+            color: #ff4444;
+            animation: timer-danger 0.3s infinite;
+        }
+
+        @keyframes timer-warning {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        @keyframes timer-danger {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.1) rotate(-5deg); }
+            75% { transform: scale(1.1) rotate(5deg); }
+        }
+
+        .progress-container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .lives {
+            display: flex;
+            gap: 10px;
+        }
+
+        .life {
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(45deg, #4cff4c, #00ff00);
+            border-radius: 50%;
+            transition: all 0.3s;
+            box-shadow: 0 0 20px rgba(76, 255, 76, 0.5);
             position: relative;
             overflow: hidden;
         }
 
-        .opcion:hover {
-            background: rgba(74, 222, 128, 0.1);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        .life::before {
+            content: '❤';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.2rem;
         }
 
-        .opcion.correcta {
-            background: rgba(34, 197, 94, 0.3);
-            border-color: #22c55e;
-            animation: correctAnswer 0.5s ease;
+        .life.lost {
+            background: linear-gradient(45deg, #444, #222);
+            transform: scale(0.8) rotate(180deg);
+            box-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
         }
 
-        .opcion.incorrecta {
-            background: rgba(239, 68, 68, 0.3);
-            border-color: #ef4444;
-            animation: incorrectAnswer 0.5s ease;
+        .life.lost::before {
+            content: '💔';
         }
 
-        @keyframes correctAnswer {
+        .question-counter {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: #a0ffa0;
+            text-shadow: 0 0 10px rgba(160, 255, 160, 0.5);
+        }
+
+        /* Contenedor de pregunta mejorado y más grande */
+        .question-container {
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(26, 58, 26, 0.9));
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 40px;
+            backdrop-filter: blur(20px);
+            border: 3px solid rgba(76, 255, 76, 0.4);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .question-container::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #4cff4c, #00ff00, #4cff4c);
+            border-radius: 25px;
+            z-index: -1;
+            animation: border-glow 3s linear infinite;
+        }
+
+        @keyframes border-glow {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .question-text {
+            font-size: 1.8rem;
+            line-height: 1.8;
+            margin-bottom: 40px;
+            text-align: center;
+            color: #ffffff;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Opciones de respuesta mejoradas */
+        .options-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .option {
+            background: linear-gradient(135deg, rgba(76, 255, 76, 0.1), rgba(0, 255, 0, 0.05));
+            border: 2px solid rgba(76, 255, 76, 0.4);
+            border-radius: 20px;
+            padding: 25px 25px 25px 60px;
+            cursor: pointer;
+            transition: all 0.4s;
+            font-size: 1.4rem;
+            position: relative;
+            overflow: hidden;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+        }
+
+        .option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(76, 255, 76, 0.3), transparent);
+            transition: left 0.6s;
+        }
+
+        .option:hover::before {
+            left: 100%;
+        }
+
+        .option:hover {
+            background: linear-gradient(135deg, rgba(76, 255, 76, 0.2), rgba(0, 255, 0, 0.1));
+            border-color: #4cff4c;
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 15px 40px rgba(76, 255, 76, 0.3);
+        }
+
+        .option.selected {
+            background: linear-gradient(135deg, rgba(76, 255, 76, 0.3), rgba(0, 255, 0, 0.2));
+            border-color: #4cff4c;
+            border-width: 3px;
+            transform: scale(1.02);
+        }
+
+        .option.correct {
+            background: linear-gradient(135deg, rgba(76, 255, 76, 0.4), rgba(0, 255, 0, 0.3));
+            border-color: #4cff4c;
+            animation: correct-animation 0.6s;
+            box-shadow: 0 0 30px rgba(76, 255, 76, 0.8);
+        }
+
+        .option.incorrect {
+            background: linear-gradient(135deg, rgba(255, 68, 68, 0.4), rgba(255, 0, 0, 0.3));
+            border-color: #ff4444;
+            animation: incorrect-animation 0.6s;
+            box-shadow: 0 0 30px rgba(255, 68, 68, 0.8);
+        }
+
+        @keyframes correct-animation {
             0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            50% { transform: scale(1.1); }
             100% { transform: scale(1); }
         }
 
-        @keyframes incorrectAnswer {
+        @keyframes incorrect-animation {
             0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            20%, 40%, 60%, 80% { transform: translateX(10px); }
         }
 
+        .option-label {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: linear-gradient(45deg, #4cff4c, #00ff00);
+            color: #0a0f0a;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            box-shadow: 0 5px 15px rgba(76, 255, 76, 0.5);
+            z-index: 2;
+        }
+
+        /* Feedback mejorado */
         .feedback {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 5em;
+            font-size: 6rem;
             z-index: 1000;
-            animation: feedbackPop 0.5s ease;
             pointer-events: none;
+            animation: feedback-pop 1s ease-out;
         }
 
-        @keyframes feedbackPop {
+        @keyframes feedback-pop {
             0% {
-                transform: translate(-50%, -50%) scale(0);
+                transform: translate(-50%, -50%) scale(0) rotate(0deg);
                 opacity: 0;
             }
             50% {
-                transform: translate(-50%, -50%) scale(1.2);
+                transform: translate(-50%, -50%) scale(1.3) rotate(180deg);
                 opacity: 1;
             }
             100% {
-                transform: translate(-50%, -50%) scale(1);
+                transform: translate(-50%, -50%) scale(1) rotate(360deg);
                 opacity: 0;
             }
         }
 
-        .feedback.correcto {
-            color: #22c55e;
+        .feedback.correct {
+            color: #4cff4c;
+            text-shadow: 0 0 50px rgba(76, 255, 76, 0.8);
         }
 
-        .feedback.incorrecto {
-            color: #ef4444;
+        .feedback.incorrect {
+            color: #ff4444;
+            text-shadow: 0 0 50px rgba(255, 68, 68, 0.8);
         }
 
-        /* Pantalla de Resultados */
-        .pantalla-resultados {
+        /* Pantalla de resultados mejorada */
+        .results-screen {
             display: none;
             text-align: center;
-            animation: fadeIn 0.5s ease-in;
+            animation: results-entrance 1s ease-out;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        @keyframes results-entrance {
+            from {
+                opacity: 0;
+                transform: scale(0.8) rotateY(90deg);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) rotateY(0deg);
+            }
         }
 
-        .titulo-resultados {
-            font-size: 2.5em;
-            color: #4ade80;
-            margin-bottom: 30px;
+        .results-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3.5rem;
+            background: linear-gradient(45deg, #4cff4c, #00ff00, #4cff4c);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 40px;
+            animation: title-glow 3s ease-in-out infinite, title-gradient 4s ease-in-out infinite;
         }
 
-        .estadisticas {
-            background: rgba(45, 122, 95, 0.2);
-            padding: 30px;
+        .results-stats {
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(26, 58, 26, 0.9));
+            border-radius: 25px;
+            padding: 50px;
+            margin-bottom: 40px;
+            backdrop-filter: blur(20px);
+            border: 3px solid rgba(76, 255, 76, 0.4);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            font-size: 1.5rem;
+            padding: 15px;
+            background: rgba(76, 255, 76, 0.05);
             border-radius: 15px;
-            margin-bottom: 30px;
+            transition: all 0.3s;
         }
 
-        .estadistica {
-            margin: 15px 0;
-            font-size: 1.2em;
+        .stat-row:hover {
+            background: rgba(76, 255, 76, 0.1);
+            transform: translateX(10px);
         }
 
-        .estadistica span {
-            color: #fbbf24;
+        .stat-label {
+            color: #a0ffa0;
+            text-shadow: 0 0 10px rgba(160, 255, 160, 0.5);
+        }
+
+        .stat-value {
+            font-family: 'Orbitron', sans-serif;
             font-weight: bold;
+            color: #4cff4c;
+            text-shadow: 0 0 20px rgba(76, 255, 76, 0.8);
+            font-size: 1.8rem;
         }
 
-        .btn-siguiente {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        .next-level-btn {
+            background: linear-gradient(45deg, #1a5a1a, #4cff4c, #1a5a1a);
+            background-size: 200% 200%;
             color: white;
-            border: none;
-            padding: 15px 40px;
-            font-size: 1.1em;
+            border: 3px solid #4cff4c;
+            padding: 20px 50px;
+            font-size: 1.5rem;
+            font-weight: bold;
             border-radius: 50px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 10px;
-            font-weight: bold;
+            transition: all 0.4s;
+            box-shadow: 0 15px 40px rgba(76, 255, 76, 0.4);
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 15px;
+            position: relative;
+            overflow: hidden;
+            animation: btn-pulse 2s ease-in-out infinite, btn-gradient 3s ease-in-out infinite;
         }
 
-        .btn-siguiente:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        .next-level-btn:hover {
+            transform: translateY(-5px) scale(1.1);
+            box-shadow: 0 25px 60px rgba(76, 255, 76, 0.8);
         }
 
-        .btn-reintentar {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        .next-level-btn:disabled {
+            background: linear-gradient(45deg, #444, #222);
+            border-color: #666;
+            cursor: not-allowed;
+            opacity: 0.5;
+            animation: none;
         }
 
-        .btn-volver {
+        /* Botón de volver mejorado */
+        .back-btn {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(107, 114, 128, 0.3);
-            color: white;
-            border: 1px solid #4b5563;
-            padding: 10px 20px;
-            border-radius: 25px;
+            top: 30px;
+            left: 30px;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(26, 58, 26, 0.8));
+            color: #4cff4c;
+            border: 2px solid #4cff4c;
+            padding: 15px 30px;
+            border-radius: 30px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            font-size: 0.9em;
+            transition: all 0.3s;
+            font-size: 1.2rem;
+            z-index: 100;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            backdrop-filter: blur(10px);
         }
 
-        .btn-volver:hover {
-            background: rgba(107, 114, 128, 0.5);
-            transform: translateX(-2px);
+        .back-btn:hover {
+            background: rgba(76, 255, 76, 0.2);
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(76, 255, 76, 0.4);
         }
 
-        .medalla {
-            font-size: 4em;
-            margin: 20px 0;
-            animation: bounce 1s ease infinite;
+        /* Efectos de sonido visual */
+        .sound-wave {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            gap: 5px;
+            z-index: 100;
         }
 
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+        .wave-bar {
+            width: 4px;
+            height: 20px;
+            background: #4cff4c;
+            border-radius: 2px;
+            animation: wave 0.5s ease-in-out infinite;
         }
 
-        /* Responsive */
-        @media (max-width: 600px) {
-            .container {
-                width: 95%;
-                padding: 20px;
+        .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+        .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+        .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+        .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
+        @keyframes wave {
+            0%, 100% { height: 20px; }
+            50% { height: 40px; }
+        }
+
+        /* Responsive mejorado */
+        @media (max-width: 768px) {
+            .game-title {
+                font-size: 3rem;
             }
-
-            .titulo-juego {
-                font-size: 1.8em;
-            }
-
-            .opciones {
+            
+            .options-container {
                 grid-template-columns: 1fr;
             }
-
-            .header-juego {
+            
+            .game-header {
                 flex-direction: column;
-                gap: 15px;
+                gap: 30px;
+            }
+            
+            .question-text {
+                font-size: 1.5rem;
+            }
+            
+            .option {
+                font-size: 1.2rem;
+                padding: 20px 20px 20px 50px;
+            }
+            
+            .question-container {
+                padding: 30px;
             }
         }
     </style>
 </head>
+
 <body>
-    <div class="container">
-        <a href="modulos.html" class="btn-volver">← Volver al Menú</a>
-        
-        <!-- Pantalla de Inicio -->
-        <div class="pantalla-inicio" id="pantallaInicio">
-            <h1 class="titulo-juego">🎮 Ráfaga Numérica: Operaciones Fundamentales</h1>
-            <p class="subtitulo">
-                ¡Desafía tu mente con problemas matemáticos al estilo ICFES!<br>
-                Traduce enunciados reales en operaciones matemáticas y resuelve bajo presión.<br>
-                ¿Tienes lo necesario para superar este nivel?
+    <!-- Fondo de videojuego -->
+    <div class="game-background">
+        <div class="hex-grid"></div>
+    </div>
+    
+    <!-- Partículas mejoradas -->
+    <div class="particles-container" id="particles"></div>
+    
+    <!-- Luz ambiental -->
+    <div class="ambient-light"></div>
+
+    <!-- Botón de volver -->
+    <button class="back-btn" onclick="goToModules()">
+        <i class="fas fa-arrow-left"></i> Volver a Módulos
+    </button>
+
+    <!-- Efectos de sonido visual -->
+    <div class="sound-wave">
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+    </div>
+
+    <!-- Contenedor principal del juego -->
+    <div class="game-container">
+        <!-- Pantalla de presentación -->
+        <div class="intro-screen" id="introScreen">
+            <h1 class="game-title">RÁFAGA NUMÉRICA</h1>
+            <p class="game-subtitle">Operaciones Fundamentales</p>
+            <p style="margin-bottom: 40px; color: #a0ffa0; font-size: 1.3rem;">
+                🎮 Desafía tu mente con preguntas tipo ICFES Saber Pro<br>
+                ⏱️ ¡Tienes 30 segundos por pregunta!<br>
+                🏆 Completa 10 correctamente para desbloquear el siguiente nivel
             </p>
-            <button class="btn-iniciar" onclick="iniciarJuego()">🚀 INICIAR DESAFÍO</button>
+            <button class="start-btn" onclick="startGame()">
+                <i class="fas fa-play"></i> INICIAR JUEGO
+            </button>
         </div>
 
-        <!-- Pantalla de Juego -->
-        <div class="pantalla-juego" id="pantallaJuego">
-            <div class="header-juego">
-                <div class="temporizador" id="temporizador">
-                    ⏱️ <span id="tiempo">30</span>s
+        <!-- Pantalla de juego -->
+        <div class="game-screen" id="gameScreen">
+            <div class="game-header">
+                <div class="timer-container">
+                    <i class="fas fa-clock timer-icon"></i>
+                    <span class="timer" id="timer">30</span>
                 </div>
-                <div class="progreso">
-                    <div class="contador-preguntas">
-                        Pregunta <span id="preguntaActual">1</span> de <span id="totalPreguntas">10</span>
+                <div class="progress-container">
+                    <div class="lives" id="lives">
+                        <div class="life"></div>
+                        <div class="life"></div>
+                        <div class="life"></div>
                     </div>
-                    <div id="vidas">
-                        <span class="corazon">❤️</span>
-                        <span class="corazon">❤️</span>
-                        <span class="corazon">❤️</span>
+                    <div class="question-counter">
+                        Pregunta <span id="currentQuestion">1</span> de <span id="totalQuestions">10</span>
                     </div>
                 </div>
             </div>
 
-            <div class="enunciado" id="enunciado">
-                <!-- Enunciado de la pregunta -->
-            </div>
-
-            <div class="opciones" id="opciones">
-                <!-- Opciones de respuesta -->
+            <div class="question-container">
+                <div class="question-text" id="questionText">
+                    Cargando pregunta...
+                </div>
+                <div class="options-container" id="optionsContainer">
+                    <!-- Las opciones se generarán dinámicamente -->
+                </div>
             </div>
         </div>
 
-        <!-- Pantalla de Resultados -->
-        <div class="pantalla-resultados" id="pantallaResultados">
-            <h2 class="titulo-resultados" id="tituloResultados">🎉 ¡Desafío Completado!</h2>
-            <div class="medalla" id="medalla">🏆</div>
-            <div class="estadisticas">
-                <div class="estadistica">
-                    Puntuación Final: <span id="puntuacionFinal">0</span> / <span id="totalFinal">10</span>
+        <!-- Pantalla de resultados -->
+        <div class="results-screen" id="resultsScreen">
+            <h2 class="results-title">¡JUEGO COMPLETADO!</h2>
+            <div class="results-stats">
+                <div class="stat-row">
+                    <span class="stat-label">🎯 Puntuación:</span>
+                    <span class="stat-value" id="scoreDisplay">0/10</span>
                 </div>
-                <div class="estadistica">
-                    Tiempo Total Utilizado: <span id="tiempoTotal">0</span> segundos
+                <div class="stat-row">
+                    <span class="stat-label">⏱️ Tiempo total:</span>
+                    <span class="stat-value" id="timeDisplay">0s</span>
                 </div>
-                <div class="estadistica">
-                    Precisión: <span id="precision">0</span>%
+                <div class="stat-row">
+                    <span class="stat-label">📊 Precisión:</span>
+                    <span class="stat-value" id="accuracyDisplay">0%</span>
                 </div>
             </div>
-            <div id="botonesResultados">
-                <!-- Botones dinámicos -->
+            <div id="nextLevelContainer">
+                <!-- El botón de siguiente nivel se agregará dinámicamente -->
             </div>
+            <button class="next-level-btn" onclick="restartGame()">
+                <i class="fas fa-redo"></i> Jugar de Nuevo
+            </button>
         </div>
     </div>
 
+    <!-- Contenedor para feedback -->
+    <div id="feedbackContainer"></div>
+
     <script>
-        // Base de datos de preguntas tipo ICFES
-        const bancoPreguntas = [
+        // Base de datos de preguntas (50 preguntas)
+        const questions = [
             {
-                enunciado: "Una empresa de mensajería cobra una tarifa fija de $5.000 por el envío de paquetes de hasta 2 kg. Por cada kilogramo adicional o fracción, se cobra un recargo de $1.500. Un cliente desea enviar tres paquetes que pesan 1,5 kg, 3,2 kg y 0,8 kg respectivamente. ¿Cuál es el costo total que el cliente debe pagar por el envío de los tres paquetes?",
-                opciones: ["$15.000", "$18.000", "$19.500", "$21.000"],
-                correcta: 2
+                question: "Una empresa de mensajería cobra una tarifa fija de $5.000 por el envío de paquetes de hasta 2 kg. Por cada kilogramo adicional o fracción, se cobra un recargo de $1.500. Un cliente desea enviar tres paquetes que pesan 1,5 kg, 3,2 kg y 0,8 kg respectivamente. ¿Cuál es el costo total que el cliente debe pagar por el envío de los tres paquetes?",
+                options: ["$15.000", "$18.000", "$19.500", "$21.000"],
+                correct: 1
             },
             {
-                enunciado: "En una tienda, el precio de un producto es $25.000. Si hay un descuento del 20% y luego se aplica un IVA del 19% sobre el precio con descuento, ¿cuál es el precio final del producto?",
-                opciones: ["$23.750", "$24.000", "$24.500", "$25.000"],
-                correcta: 0
+                question: "Un estudiante compra 3 cuadernos a $2.500 cada uno y 2 bolígrafos a $1.800 cada uno. Si paga con un billete de $20.000, ¿cuánto dinero recibe de cambio?",
+                options: ["$8.900", "$9.100", "$10.400", "$11.200"],
+                correct: 1
             },
             {
-                enunciado: "Un estudiante obtuvo las siguientes calificaciones: 4.2, 3.8, 4.5, 3.9 y 4.1. Si la nota mínima para ganar es 4.0, ¿cuál es el promedio del estudiante y si ganó o perdió la materia?",
-                opciones: ["4.1 - Ganó", "4.0 - Ganó", "3.9 - Perdió", "4.2 - Ganó"],
-                correcta: 0
+                question: "En una tienda, el precio de un producto es $12.000. Si hay un descuento del 20% y luego se aplica un IVA del 19%, ¿cuál es el precio final del producto?",
+                options: ["$11.424", "$11.568", "$12.000", "$13.200"],
+                correct: 0
             },
             {
-                enunciado: "Una persona recibe un salario de $2.000.000 mensuales. Si le descuentan el 8% de salud, el 9% de pensión y $150.000 de préstamo, ¿cuánto recibe netamente?",
-                opciones: ["$1.540.000", "$1.560.000", "$1.580.000", "$1.600.000"],
-                correcta: 1
+                question: "Una persona recorre 120 km en 2 horas. Si mantiene la misma velocidad, ¿cuánto tiempo tardará en recorrer 180 km?",
+                options: ["2.5 horas", "3 horas", "3.5 horas", "4 horas"],
+                correct: 1
             },
             {
-                enunciado: "Un automóvil consume 8 litros de gasolina cada 100 km. Si el precio de la gasolina es $9.500 por litro, ¿cuánto cuesta viajar 350 km?",
-                opciones: ["$247.000", "$266.000", "$285.000", "$304.000"],
-                correcta: 1
+                question: "Un tanque contiene 500 litros de agua. Se consumen 75 litros por día durante 4 días. ¿Cuántos litros quedan en el tanque?",
+                options: ["150 litros", "200 litros", "300 litros", "425 litros"],
+                correct: 1
             },
             {
-                enunciado: "En una fábrica se producen 120 unidades por hora. Si trabajan 8 horas diarias durante 5 días a la semana, ¿cuántas unidades se producen en una semana?",
-                opciones: ["3.800", "4.000", "4.800", "5.200"],
-                correcta: 2
+                question: "Una fábrica produce 250 unidades por día. Si trabaja 6 días a la semana, ¿cuántas unidades produce en 3 semanas?",
+                options: ["3.500", "4.500", "5.250", "6.000"],
+                correct: 1
             },
             {
-                enunciado: "Un préstamo de $5.000.000 genera intereses del 2% mensual. Si se paga en 6 meses sin capitalizar, ¿cuánto se paga en total por intereses?",
-                opciones: ["$500.000", "$600.000", "$700.000", "$800.000"],
-                correcta: 1
+                question: "Un celular cuesta $800.000. Si se paga en cuotas, se aplica un recargo del 15% sobre el precio de contado. ¿Cuál es el precio total en cuotas?",
+                options: ["$880.000", "$920.000", "$960.000", "$1.000.000"],
+                correct: 1
             },
             {
-                enunciado: "Una piscina rectangular mide 8 metros de largo, 4 metros de ancho y 2 metros de profundidad. Si se llena al 80% de su capacidad, ¿cuántos metros cúbicos de agua contiene?",
-                opciones: ["45.2", "51.2", "56.8", "61.4"],
-                correcta: 1
+                question: "En un estacionamiento, la primera hora cuesta $2.000 y cada hora adicional $1.500. Si un vehículo estacionó durante 4 horas, ¿cuánto debe pagar?",
+                options: ["$5.500", "$6.500", "$7.500", "$8.000"],
+                correct: 1
             },
             {
-                enunciado: "Un restaurante ofrece un menú del día por $15.000. Si incluye una bebida de $3.000 y un postre de $4.000, ¿cuál es el descuento porcentual que ofrece el restaurante?",
-                opciones: ["25%", "30%", "35%", "40%"],
-                correcta: 1
+                question: "Una receta para 4 personas requiere 200g de harina. ¿Cuántos gramos de harina se necesitan para 10 personas?",
+                options: ["400g", "450g", "500g", "600g"],
+                correct: 2
             },
             {
-                enunciado: "En una carrera de 10 km, un corredor mantiene un ritmo constante de 5 minutos por kilómetro durante los primeros 6 km, luego reduce su velocidad a 6 minutos por kilómetro. ¿Cuánto tiempo total tarda en completar la carrera?",
-                opciones: ["52 minutos", "54 minutos", "56 minutos", "58 minutos"],
-                correcta: 1
+                question: "Un trabajador gana $25.000 por hora y trabaja 8 horas diarias, 5 días a la semana. ¿Cuál es su salario mensual (4 semanas)?",
+                options: ["$3.000.000", "$4.000.000", "$4.500.000", "$5.000.000"],
+                correct: 1
             },
             {
-                enunciado: "Una compañía telefónica cobra $30.000 mensuales más $0.50 por cada minuto adicional de 300 minutos. Si un usuario habló 450 minutos, ¿cuál es el total a pagar?",
-                opciones: ["$97.500", "$105.000", "$112.500", "$120.000"],
-                correcta: 1
+                question: "Un producto aumenta su precio de $80.000 a $96.000. ¿Cuál fue el porcentaje de aumento?",
+                options: ["15%", "18%", "20%", "25%"],
+                correct: 2
             },
             {
-                enunciado: "Un producto aumenta su precio en un 15% en enero y luego disminuye en un 10% en febrero. Si el precio original era $50.000, ¿cuál es el precio final?",
-                opciones: ["$51.750", "$52.500", "$53.250", "$54.000"],
-                correcta: 0
+                question: "En una competencia, el primer lugar recibe $500.000, el segundo $300.000 y el tercero $100.000. Si el premio total es $1.200.000, ¿cuánto recibe el cuarto lugar?",
+                options: ["$150.000", "$200.000", "$250.000", "$300.000"],
+                correct: 3
             },
             {
-                enunciado: "Tres amigos reparten un premio de $12.000.000 en proporción a sus aportes: el primero aportó $2.000, el segundo $3.000 y el tercero $5.000. ¿Cuánto recibe el segundo?",
-                opciones: ["$3.600.000", "$4.000.000", "$4.400.000", "$4.800.000"],
-                correcta: 0
+                question: "Una piscina rectangular mide 8m de largo y 4m de ancho. Si se llena con agua hasta una altura de 1.5m, ¿cuántos metros cúbicos de agua contiene?",
+                options: ["32 m³", "48 m³", "64 m³", "96 m³"],
+                correct: 1
             },
             {
-                enunciado: "Una tienda vende un artículo con una ganancia del 40% sobre el costo. Si el precio de venta es $84.000, ¿cuál era el costo del artículo?",
-                opciones: ["$50.000", "$55.000", "$60.000", "$65.000"],
-                correcta: 2
+                question: "Un vehículo consume 12 litros de gasolina por cada 100 km. Si realiza un viaje de 350 km, ¿cuántos litros consumirá?",
+                options: ["36 litros", "42 litros", "45 litros", "48 litros"],
+                correct: 1
             },
             {
-                enunciado: "En una encuesta, el 60% de las personas prefieren el color azul, el 25% prefieren verde y el resto prefieren rojo. Si 150 personas prefieren rojo, ¿cuántas personas fueron encuestadas en total?",
-                opciones: ["500", "600", "750", "1.000"],
-                correcta: 2
+                question: "En una bodega hay 15 cajas con 24 unidades cada una. Si se venden 180 unidades, ¿cuántas cajas completas quedan?",
+                options: ["6 cajas", "7 cajas", "8 cajas", "9 cajas"],
+                correct: 1
             },
             {
-                enunciado: "Un trabajador gana $25.000 por hora. Si trabaja 8 horas diarias de lunes a viernes y 4 horas el sábado, ¿cuál es su salario semanal?",
-                opciones: ["$1.000.000", "$1.100.000", "$1.200.000", "$1.300.000"],
-                correcta: 1
+                question: "Una película dura 2 horas y 15 minutos. Si comienza a las 3:45 PM, ¿a qué hora termina?",
+                options: ["5:45 PM", "6:00 PM", "6:15 PM", "6:30 PM"],
+                correct: 1
             },
             {
-                enunciado: "Una bacteria se duplica cada 20 minutos. Si inicialmente hay 100 bacterias, ¿cuántas habrá después de 2 horas?",
-                opciones: ["3.200", "6.400", "12.800", "25.600"],
-                correcta: 2
+                question: "Un edificio tiene 12 pisos, cada piso mide 3.5m de altura. ¿Cuál es la altura total del edificio?",
+                options: ["36m", "42m", "45m", "48m"],
+                correct: 1
             },
             {
-                enunciado: "Un estanque tiene 500 litros de agua. Se evaporan 2 litros por hora y se agregan 15 litros cada 3 horas. ¿Cuántos litros habrá después de 12 horas?",
-                opciones: ["560", "580", "600", "620"],
-                correcta: 0
+                question: "En una oferta, 3 artículos cuestan $9.000. ¿Cuánto costarían 5 artículos?",
+                options: ["$12.000", "$13.000", "$15.000", "$18.000"],
+                correct: 2
             },
             {
-                enunciado: "En una promoción 'compre 3 y pague 2', si cada artículo cuesta $12.000, ¿cuánto se ahorra al comprar 9 artículos?",
-                opciones: ["$24.000", "$36.000", "$48.000", "$60.000"],
-                correcta: 1
+                question: "Una persona camina 5 km en 1 hora. Si aumenta su velocidad en 20%, ¿cuánto tiempo tardará en recorrer 6 km?",
+                options: ["50 minutos", "54 minutos", "60 minutos", "72 minutos"],
+                correct: 0
             },
             {
-                enunciado: "Un tren viaja a 80 km/h durante 2.5 horas, luego a 60 km/h durante 1.5 horas. ¿Cuál es la distancia total recorrida?",
-                opciones: ["250 km", "280 km", "310 km", "340 km"],
-                correcta: 1
+                question: "Un restaurante ofrece un menú por $15.000 con bebida incluida. Si la bebida por separado cuesta $2.500, ¿cuál es el precio del menú sin bebida?",
+                options: ["$10.500", "$12.500", "$13.500", "$14.000"],
+                correct: 1
             },
             {
-                enunciado: "Una persona invierte $3.000.000 al 8% anual simple. ¿Cuánto tendrá después de 3 años?",
-                opciones: ["$3.480.000", "$3.600.000", "$3.720.000", "$3.840.000"],
-                correcta: 2
+                question: "Una empresa tiene 120 empleados. Si el 30% son mujeres, ¿cuántos hombres trabajan en la empresa?",
+                options: ["72", "84", "90", "96"],
+                correct: 1
             },
             {
-                enunciado: "En una clase de 30 estudiantes, el 70% son mujeres. Si se retiran 3 hombres y 2 mujeres, ¿qué porcentaje de mujeres queda en la clase?",
-                opciones: ["68%", "70%", "72%", "74%"],
-                correcta: 2
+                question: "Un libro tiene 300 páginas. Si una persona lee 25 páginas por día, ¿en cuántos días terminará el libro?",
+                options: ["10 días", "11 días", "12 días", "13 días"],
+                correct: 2
             },
             {
-                enunciado: "Un rectángulo tiene un perímetro de 48 cm. Si el largo es el doble del ancho, ¿cuál es el área del rectángulo?",
-                opciones: ["96 cm²", "108 cm²", "128 cm²", "144 cm²"],
-                correcta: 2
+                question: "En una tienda, 2 camisas cuestan $30.000. Si hay una promoción de 3x2, ¿cuánto costarán 4 camisas?",
+                options: ["$45.000", "$50.000", "$60.000", "$75.000"],
+                correct: 0
             },
             {
-                enunciado: "Una empresa vende 200 unidades a $5.000 cada una. Si los costos fijos son $300.000 y los variables $2.000 por unidad, ¿cuál es la utilidad?",
-                opciones: ["$100.000", "$200.000", "$300.000", "$400.000"],
-                correcta: 1
+                question: "Un tren viaja a 80 km/h durante 2.5 horas. ¿Qué distancia recorre?",
+                options: ["180 km", "200 km", "220 km", "250 km"],
+                correct: 1
             },
             {
-                enunciado: "En una ruleta hay 38 números. Si apuestas $10.000 a un número específico y ganas, te pagan 35 veces tu apuesta. ¿Cuál es la ganancia neta?",
-                opciones: ["$340.000", "$350.000", "$360.000", "$370.000"],
-                correcta: 1
+                question: "Una persona tiene $500.000 y gasta el 35% en comida. ¿Cuánto dinero le queda?",
+                options: ["$175.000", "$300.000", "$325.000", "$350.000"],
+                correct: 2
             },
             {
-                enunciado: "Un tanque se llena en 4 horas con la llave A y en 6 horas con la llave B. Si ambas llaves abren simultáneamente, ¿en cuánto tiempo se llena el tanque?",
-                opciones: ["2.2 horas", "2.4 horas", "2.6 horas", "2.8 horas"],
-                correcta: 1
+                question: "En una granja hay 80 gallinas que producen 4 huevos cada una por semana. ¿Cuántos huevos se producen en un mes (4 semanas)?",
+                options: ["960", "1.080", "1.200", "1.280"],
+                correct: 3
             },
             {
-                enunciado: "Un producto cuesta $100.000. Si aplican un descuento del 15% y luego un aumento del 10%, ¿cuál es el precio final?",
-                opciones: ["$93.500", "$94.500", "$95.500", "$96.500"],
-                correcta: 0
+                question: "Un automóvil disminuye su velocidad de 100 km/h a 60 km/h en 5 segundos. ¿Cuál fue la reducción de velocidad por segundo?",
+                options: ["6 km/h", "8 km/h", "10 km/h", "12 km/h"],
+                correct: 1
             },
             {
-                enunciado: "En una competencia, el primer lugar recibe el doble que el segundo, y el segundo el doble que el tercero. Si el premio total es $21.000, ¿cuánto recibe el segundo lugar?",
-                opciones: ["$4.000", "$5.000", "$6.000", "$7.000"],
-                correcta: 2
+                question: "Una oferta dice: 'Compra 2 y lleva 3' en productos de $5.000 cada uno. ¿Cuánto ahorras por cada 3 productos?",
+                options: ["$3.333", "$5.000", "$10.000", "$15.000"],
+                correct: 1
             },
             {
-                enunciado: "Una circunferencia tiene un radio de 7 cm. ¿Cuál es el área del círculo? (Use π ≈ 3.14)",
-                opciones: ["138.16 cm²", "145.14 cm²", "153.86 cm²", "161.28 cm²"],
-                correcta: 2
+                question: "Un estadio tiene 50 filas con 30 asientos cada una. Si está lleno al 80%, ¿cuántas personas asisten?",
+                options: ["1.000", "1.200", "1.500", "2.000"],
+                correct: 1
             },
             {
-                enunciado: "Un celular tiene un descuento del 25% y cuesta $600.000. Si el descuento aumenta al 30%, ¿cuánto más se ahorra?",
-                opciones: ["$20.000", "$25.000", "$30.000", "$35.000"],
-                correcta: 2
+                question: "Una bombilla consume 60W y está encendida 6 horas diarias. ¿Cuántos kWh consume en un mes (30 días)?",
+                options: ["9.6 kWh", "10.8 kWh", "12.0 kWh", "13.2 kWh"],
+                correct: 1
             },
             {
-                enunciado: "En una fábrica, 3 máquinas producen 500 unidades en 2 horas. ¿Cuántas unidades producirán 5 máquinas en 3 horas?",
-                opciones: ["1.000", "1.125", "1.250", "1.375"],
-                correcta: 2
+                question: "En una carrera de 10 km, un corredor lleva 5 km en 20 minutos. Si mantiene el mismo ritmo, ¿en qué tiempo completará la carrera?",
+                options: ["35 minutos", "40 minutos", "45 minutos", "50 minutos"],
+                correct: 1
             },
             {
-                enunciado: "Un triángulo tiene lados de 3 cm, 4 cm y 5 cm. ¿Cuál es su área?",
-                opciones: ["5 cm²", "6 cm²", "7 cm²", "8 cm²"],
-                correcta: 1
+                question: "Un teléfono cuesta $1.200.000. Si se financia en 12 cuotas sin interés, ¿cuánto se paga por cuota?",
+                options: ["$80.000", "$90.000", "$100.000", "$120.000"],
+                correct: 2
             },
             {
-                enunciado: "Una cuenta de banco tiene $2.000.000. Si se retira el 30% y luego se deposita $500.000, ¿cuál es el saldo final?",
-                opciones: ["$1.700.000", "$1.800.000", "$1.900.000", "$2.000.000"],
-                correcta: 2
+                question: "Una botella de 2 litros de soda sirve 8 vasos. ¿Cuántas botellas se necesitan para servir 50 vasos?",
+                options: ["5.5", "6.25", "7.5", "8"],
+                correct: 1
             },
             {
-                enunciado: "En una rifa hay 1000 números. Si compras 20 números, ¿cuál es la probabilidad de ganar?",
-                opciones: ["1%", "2%", "3%", "4%"],
-                correcta: 1
+                question: "Un edificio de 20 pisos tiene 4 apartamentos por piso. Si cada apartamento aloja 4 personas, ¿cuántas personas viven en el edificio?",
+                options: ["240", "280", "320", "360"],
+                correct: 2
             },
             {
-                enunciado: "Un automóvil pierde el 20% de su valor cada año. Si cuesta $40.000.000 nuevo, ¿cuánto valdrá después de 2 años?",
-                opciones: ["$24.000.000", "$25.600.000", "$27.200.000", "$28.800.000"],
-                correcta: 1
+                question: "Una computadora cuesta $1.800.000. Si se paga el 40% de cuota inicial, ¿cuánto se financia?",
+                options: ["$720.000", "$1.080.000", "$1.200.000", "$1.400.000"],
+                correct: 1
             },
             {
-                enunciado: "Una persona camina 5 km al norte, luego 3 km al este, y finalmente 2 km al sur. ¿A qué distancia está del punto de partida?",
-                opciones: ["3.16 km", "3.61 km", "4.00 km", "4.24 km"],
-                correcta: 1
+                question: "En una fábrica, 3 máquinas producen 150 unidades por hora. ¿Cuántas unidades producen 5 máquinas en 2 horas?",
+                options: ["400", "500", "600", "750"],
+                correct: 1
             },
             {
-                enunciado: "En una oferta, por cada 3 productos comprados, el cuarto tiene 50% de descuento. Si cada producto cuesta $20.000, ¿cuánto pagan 8 productos?",
-                opciones: ["$130.000", "$140.000", "$150.000", "$160.000"],
-                correcta: 1
+                question: "Un paquete de 500g de café cuesta $12.000. ¿Cuál es el precio por kilogramo?",
+                options: ["$20.000", "$22.000", "$24.000", "$26.000"],
+                correct: 2
             },
             {
-                enunciado: "Un estanque rectangular de 10m x 6m se llena a una razón de 50 litros por minuto. ¿Cuánto tiempo tarda en llenarse hasta 1.5m de profundidad?",
-                opciones: ["150 minutos", "160 minutos", "170 minutos", "180 minutos"],
-                correcta: 3
+                question: "Una persona ahorra $200.000 mensuales. ¿Cuánto ahorrará en 2 años?",
+                options: ["$2.400.000", "$4.000.000", "$4.800.000", "$5.200.000"],
+                correct: 2
             },
             {
-                enunciado: "Si el 40% de los estudiantes de una clase son hombres y hay 18 mujeres, ¿cuántos estudiantes hay en total?",
-                opciones: ["25", "30", "35", "40"],
-                correcta: 1
+                question: "En un supermercado, 3 kg de manzanas cuestan $9.000. ¿Cuánto costarán 5 kg?",
+                options: ["$12.000", "$13.000", "$15.000", "$18.000"],
+                correct: 2
             },
             {
-                enunciado: "Una empresa tiene gastos de $5.000.000 mensuales. Si cada producto genera $50.000 de utilidad, ¿cuántos productos debe vender para cubrir gastos y obtener $1.000.000 de ganancia?",
-                opciones: ["100", "110", "120", "130"],
-                correcta: 2
+                question: "Un bus transporta 40 pasajeros y hace 8 viajes diarios. ¿Cuántos pasajeros transporta en una semana (5 días)?",
+                options: ["1.200", "1.400", "1.600", "1.800"],
+                correct: 2
             },
             {
-                enunciado: "En un triángulo rectángulo, un cateto mide 8 cm y la hipotenusa 17 cm. ¿Cuánto mide el otro cateto?",
-                opciones: ["13 cm", "14 cm", "15 cm", "16 cm"],
-                correcta: 2
+                question: "Una impresora imprime 20 páginas por minuto. ¿Cuánto tiempo tardará en imprimir un documento de 150 páginas?",
+                options: ["6.5 minutos", "7 minutos", "7.5 minutos", "8 minutos"],
+                correct: 2
             },
             {
-                enunciado: "Un número aumenta en 25% y luego disminuye en 20%. Si el resultado final es 120, ¿cuál era el número original?",
-                opciones: ["115", "120", "125", "130"],
-                correcta: 2
+                question: "En una tienda, el precio de un producto disminuye de $50.000 a $40.000. ¿Cuál fue el porcentaje de descuento?",
+                options: ["15%", "18%", "20%", "25%"],
+                correct: 2
             },
             {
-                enunciado: "Una persona recibe $3.000.000 y los distribuye así: 40% para vivienda, 30% para alimentación, 20% para transporte y el resto para ahorro. ¿Cuánto ahorra?",
-                opciones: ["$200.000", "$250.000", "$300.000", "$350.000"],
-                correcta: 2
+                question: "Una persona corre 3 km en 15 minutos. ¿Cuál es su velocidad en km/h?",
+                options: ["10 km/h", "12 km/h", "15 km/h", "18 km/h"],
+                correct: 1
             },
             {
-                enunciado: "En una progresión aritmética, el primer término es 5 y la diferencia es 3. ¿Cuál es la suma de los primeros 10 términos?",
-                opciones: ["170", "175", "180", "185"],
-                correcta: 1
+                question: "Un tanque de agua se llena en 4 horas con un grifo. ¿Cuánto tiempo tomará llenarlo con 2 grifos iguales?",
+                options: ["1 hora", "1.5 horas", "2 horas", "2.5 horas"],
+                correct: 2
             },
             {
-                enunciado: "Un barco navega río abajo a 20 km/h y río arriba a 12 km/h. Si el viaje total de ida y vuelta dura 8 horas, ¿cuál es la distancia de ida?",
-                opciones: ["45 km", "48 km", "51 km", "54 km"],
-                correcta: 1
+                question: "En una oficina, 5 personas consumen 25 tazas de café al día. ¿Cuántas tazas consumen 8 personas?",
+                options: ["30", "35", "40", "45"],
+                correct: 2
             },
             {
-                enunciado: "Si el área de un cuadrado es 144 cm², ¿cuál es la longitud de su diagonal?",
-                opciones: ["16.97 cm", "18.97 cm", "20.97 cm", "22.97 cm"],
-                correcta: 0
+                question: "Un producto cuesta $8.000. Si se aplica un impuesto del 16%, ¿cuál es el precio final?",
+                options: ["$8.800", "$9.280", "$9.600", "$10.400"],
+                correct: 1
             },
             {
-                enunciado: "En una encuesta, el 65% de las personas prefieren el producto A sobre el B. Si 105 personas prefieren A, ¿cuántas fueron encuestadas en total?",
-                opciones: ["140", "150", "160", "170"],
-                correctia: 2
+                question: "Una persona recorre 15 km en bicicleta. Si cada pedal completo avanza 2 metros, ¿cuántos pedaleos realiza?",
+                options: ["5.000", "6.000", "7.500", "8.000"],
+                correct: 2
             },
             {
-                enunciado: "Un inversor gana el 5% mensual sobre su capital. Si después de 3 meses tiene $1.157.625, ¿cuál era su inversión inicial?",
-                opciones: ["$950.000", "$975.000", "$1.000.000", "$1.025.000"],
-                correcta: 2
+                question: "En un concierto, las entradas cuestan $50.000. Si hay un descuento del 20% para estudiantes, ¿cuánto paga un estudiante?",
+                options: ["$30.000", "$35.000", "$40.000", "$45.000"],
+                correct: 2
             },
             {
-                enunciado: "Una piscina circular tiene un diámetro de 8 metros. ¿Cuántos metros de cerca se necesitan para rodearla completamente?",
-                opciones: ["22.4 m", "24.4 m", "25.1 m", "26.4 m"],
-                correcta: 2
+                question: "Un celular tiene una batería de 4.000 mAh. Si consume 200 mAh por hora, ¿cuántas horas dura la batería?",
+                options: ["15 horas", "18 horas", "20 horas", "25 horas"],
+                correct: 2
             },
             {
-                enunciado: "Si 5 trabajadores pueden construir una casa en 30 días, ¿cuántos días tardarán 8 trabajadores?",
-                opciones: ["16.5", "17.5", "18.75", "19.5"],
-                correcta: 2
+                question: "Una pizzería vende 50 pizzas al día a $12.000 cada una. ¿Cuáles son sus ventas semanales (6 días)?",
+                options: ["$2.400.000", "$3.000.000", "$3.600.000", "$4.200.000"],
+                correct: 2
             },
             {
-                enunciado: "Un producto tiene un precio de lista de $80.000. Si se aplican sucesivamente descuentos del 10% y 15%, ¿cuál es el precio final?",
-                opciones: ["$58.800", "$60.800", "$62.800", "$64.800"],
-                correcta: 1
+                question: "Un estudiante obtiene 85, 90 y 80 en tres exámenes. Si el cuarto examen vale el doble, ¿qué nota necesita para promediar 85?",
+                options: ["82", "85", "88", "90"],
+                correct: 1
             },
             {
-                enunciado: "En una competencia de atletismo, el corredor A completa la vuelta en 50 segundos, el B en 55 segundos y el C en 60 segundos. Si comienzan juntos, ¿después de cuántos segundos volverán a estar juntos en la línea de salida?",
-                opciones: ["660 segundos", "720 segundos", "780 segundos", "840 segundos"],
-                correcta: 0
+                question: "En una granja, 12 vacas producen 96 litros de leche diarios. ¿Cuántos litros produce una vaca por día?",
+                options: ["6 litros", "8 litros", "10 litros", "12 litros"],
+                correct: 1
             },
             {
-                enunciado: "Una tienda vende un artículo con 30% de ganancia. Si el precio de venta es $65.000, ¿cuál era el precio de compra?",
-                opciones: ["$45.000", "$48.000", "$50.000", "$52.000"],
-                correcta: 2
+                question: "Una persona compra 3 artículos por $45.000. Si el primero cuesta $10.000 y el segundo $15.000, ¿cuánto cuesta el tercero?",
+                options: ["$15.000", "18.000", "$20.000", "$25.000"],
+                correct: 2
             },
             {
-                enunciado: "Si el perímetro de un rectángulo es 60 cm y su largo es 5 cm más que el ancho, ¿cuál es el área?",
-                opciones: ["200 cm²", "212.5 cm²", "225 cm²", "237.5 cm²"],
-                correcta: 1
+                question: "Un tren sale de una estación a las 8:00 AM y llega a su destino a las 11:30 AM. Si el viaje es de 210 km, ¿cuál fue la velocidad promedio?",
+                options: ["50 km/h", "55 km/h", "60 km/h", "65 km/h"],
+                correct: 2
             },
             {
-                enunciado: "Un depósito contiene 200 litros de una solución al 15% de alcohol. ¿Cuántos litros de alcohol puro se deben agregar para obtener una solución al 25%?",
-                opciones: ["24 litros", "26.67 litros", "28.5 litros", "30 litros"],
-                correcta: 1
+                question: "En una oferta, 2 litros de jugo cuestan $6.000. ¿Cuánto cuestan 5 litros?",
+                options: ["$12.000", "$13.000", "$15.000", "$18.000"],
+                correct: 2
+            },
+            {
+                question: "Una empresa tiene 24 empleados. Si el 25% trabaja en administración, ¿cuántos empleados trabajan en otras áreas?",
+                options: ["12", "14", "16", "18"],
+                correct: 3
+            },
+            {
+                question: "Un automóvil recorre 180 km con 12 litros de gasolina. ¿Cuál es su consumo en litros por cada 100 km?",
+                options: ["5.5", "6.7", "7.2", "8.0"],
+                correct: 1
+            },
+            {
+                question: "Una persona gana $2.500 por hora y trabaja 40 horas semanales. ¿Cuál es su salario semanal?",
+                options: ["$80.000", "$90.000", "$100.000", "$120.000"],
+                correct: 2
             }
         ];
 
         // Variables del juego
-        let preguntasSeleccionadas = [];
-        let preguntaActual = 0;
-        let respuestasCorrectas = 0;
-        let vidas = 3;
-        let temporizadorInterval;
-        let tiempoRestante = 30;
-        let tiempoTotalUsado = 0;
-        let preguntaStartTime;
-        let respondido = false;
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let lives = 3;
+        let timer = null;
+        let timeLeft = 30;
+        let selectedQuestions = [];
+        let totalGameTime = 0;
+        let questionStartTime = 0;
+        let currentScreen = 'intro';
 
-        // Función para mezclar array
-        function mezclarArray(array) {
-            const newArray = [...array];
-            for (let i = newArray.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+        // Inicializar partículas mejoradas
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.width = particle.style.height = Math.random() * 6 + 2 + 'px';
+                particle.style.animationDelay = Math.random() * 10 + 's';
+                particle.style.animationDuration = (Math.random() * 5 + 8) + 's';
+                particlesContainer.appendChild(particle);
             }
-            return newArray;
+        }
+
+        // Seleccionar preguntas aleatorias
+        function selectRandomQuestions() {
+            const shuffled = [...questions].sort(() => Math.random() - 0.5);
+            selectedQuestions = shuffled.slice(0, 10);
         }
 
         // Iniciar juego
-        function iniciarJuego() {
-            // Seleccionar 10 preguntas aleatorias
-            const preguntasMezcladas = mezclarArray(bancoPreguntas);
-            preguntasSeleccionadas = preguntasMezcladas.slice(0, 10);
+        function startGame() {
+            currentScreen = 'game';
+            score = 0;
+            lives = 3;
+            currentQuestionIndex = 0;
+            totalGameTime = 0;
             
-            // Reiniciar variables
-            preguntaActual = 0;
-            respuestasCorrectas = 0;
-            vidas = 3;
-            tiempoTotalUsado = 0;
+            selectRandomQuestions();
             
-            // Ocultar pantalla de inicio y mostrar juego
-            document.getElementById('pantallaInicio').style.display = 'none';
-            document.getElementById('pantallaJuego').style.display = 'block';
-            document.getElementById('pantallaResultados').style.display = 'none';
+            document.getElementById('introScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            document.getElementById('resultsScreen').style.display = 'none';
             
-            // Mostrar primera pregunta
-            mostrarPregunta();
+            document.getElementById('totalQuestions').textContent = selectedQuestions.length;
+            updateLives();
+            loadQuestion();
         }
 
-        // Mostrar pregunta
-        function mostrarPregunta() {
-            if (preguntaActual >= preguntasSeleccionadas.length || vidas <= 0) {
-                finalizarJuego();
+        // Cargar pregunta
+        function loadQuestion() {
+            if (currentQuestionIndex >= selectedQuestions.length) {
+                endGame();
                 return;
             }
+
+            const question = selectedQuestions[currentQuestionIndex];
+            document.getElementById('currentQuestion').textContent = currentQuestionIndex + 1;
+            document.getElementById('questionText').textContent = question.question;
             
-            respondido = false;
-            preguntaStartTime = Date.now();
-            tiempoRestante = 30;
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
             
-            const pregunta = preguntasSeleccionadas[preguntaActual];
-            
-            // Actualizar contador
-            document.getElementById('preguntaActual').textContent = preguntaActual + 1;
-            document.getElementById('totalPreguntas').textContent = preguntasSeleccionadas.length;
-            
-            // Mostrar enunciado
-            document.getElementById('enunciado').textContent = pregunta.enunciado;
-            
-            // Mostrar opciones
-            const opcionesDiv = document.getElementById('opciones');
-            opcionesDiv.innerHTML = '';
-            
-            pregunta.opciones.forEach((opcion, index) => {
-                const boton = document.createElement('button');
-                boton.className = 'opcion';
-                boton.textContent = `${String.fromCharCode(65 + index)}. ${opcion}`;
-                boton.onclick = () => verificarRespuesta(index);
-                opcionesDiv.appendChild(boton);
+            question.options.forEach((option, index) => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'option';
+                optionDiv.innerHTML = `
+                    <span class="option-label">${String.fromCharCode(65 + index)}</span>
+                    <span>${option}</span>
+                `;
+                optionDiv.onclick = () => selectAnswer(index);
+                optionsContainer.appendChild(optionDiv);
             });
             
-            // Iniciar temporizador
-            iniciarTemporizador();
+            startTimer();
+            questionStartTime = Date.now();
         }
 
         // Iniciar temporizador
-        function iniciarTemporizador() {
-            clearInterval(temporizadorInterval);
+        function startTimer() {
+            timeLeft = 30;
+            updateTimerDisplay();
             
-            const temporizadorDiv = document.getElementById('temporizador');
-            const tiempoSpan = document.getElementById('tiempo');
+            if (timer) clearInterval(timer);
             
-            temporizadorInterval = setInterval(() => {
-                tiempoRestante--;
-                tiempoSpan.textContent = tiempoRestante;
+            timer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
                 
-                if (tiempoRestante <= 10) {
-                    temporizadorDiv.classList.add('peligro');
-                } else {
-                    temporizadorDiv.classList.remove('peligro');
-                }
-                
-                if (tiempoRestante <= 0) {
-                    clearInterval(temporizadorInterval);
-                    if (!respondido) {
-                        verificarRespuesta(-1); // Tiempo agotado
-                    }
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    timeUp();
                 }
             }, 1000);
         }
 
-        // Verificar respuesta
-        function verificarRespuesta(indiceSeleccionado) {
-            if (respondido) return;
-            respondido = true;
+        // Actualizar display del temporizador
+        function updateTimerDisplay() {
+            const timerElement = document.getElementById('timer');
+            timerElement.textContent = timeLeft;
             
-            clearInterval(temporizadorInterval);
+            timerElement.classList.remove('warning', 'danger');
+            if (timeLeft <= 10) {
+                timerElement.classList.add('warning');
+            }
+            if (timeLeft <= 5) {
+                timerElement.classList.add('danger');
+            }
+        }
+
+        // Seleccionar respuesta
+        function selectAnswer(index) {
+            if (currentScreen !== 'game') return;
             
-            const tiempoUsado = 30 - tiempoRestante;
-            tiempoTotalUsado += tiempoUsado;
+            clearInterval(timer);
             
-            const pregunta = preguntasSeleccionadas[preguntaActual];
-            const opciones = document.querySelectorAll('.opcion');
+            const question = selectedQuestions[currentQuestionIndex];
+            const options = document.querySelectorAll('.option');
             
-            if (indiceSeleccionado === pregunta.correcta) {
-                // Respuesta correcta
-                opciones[indiceSeleccionado].classList.add('correcta');
-                respuestasCorrectas++;
-                mostrarFeedback(true);
+            // Calcular tiempo usado en esta pregunta
+            const timeUsed = 30 - timeLeft;
+            totalGameTime += timeUsed;
+            
+            // Deshabilitar opciones
+            options.forEach(opt => opt.style.pointerEvents = 'none');
+            
+            // Marcar respuesta seleccionada
+            options[index].classList.add('selected');
+            
+            // Mostrar feedback
+            if (index === question.correct) {
+                options[index].classList.add('correct');
+                score++;
+                showFeedback(true);
             } else {
-                // Respuesta incorrecta
-                if (indiceSeleccionado >= 0) {
-                    opciones[indiceSeleccionado].classList.add('incorrecta');
-                }
-                opciones[pregunta.correcta].classList.add('correcta');
-                mostrarFeedback(false);
-                vidas--;
-                actualizarVidas();
+                options[index].classList.add('incorrect');
+                options[question.correct].classList.add('correct');
+                showFeedback(false);
+                lives--;
+                updateLives();
             }
             
-            // Siguiente pregunta después de 2 segundos
+            // Siguiente pregunta después de un delay
             setTimeout(() => {
-                preguntaActual++;
-                mostrarPregunta();
+                currentQuestionIndex++;
+                if (lives > 0) {
+                    loadQuestion();
+                } else {
+                    endGame();
+                }
+            }, 2000);
+        }
+
+        // Tiempo agotado
+        function timeUp() {
+            const question = selectedQuestions[currentQuestionIndex];
+            const options = document.querySelectorAll('.option');
+            
+            options.forEach(opt => opt.style.pointerEvents = 'none');
+            options[question.correct].classList.add('correct');
+            
+            showFeedback(false);
+            lives--;
+            updateLives();
+            
+            setTimeout(() => {
+                currentQuestionIndex++;
+                if (lives > 0) {
+                    loadQuestion();
+                } else {
+                    endGame();
+                }
             }, 2000);
         }
 
         // Mostrar feedback
-        function mostrarFeedback(esCorrecto) {
+        function showFeedback(isCorrect) {
             const feedback = document.createElement('div');
-            feedback.className = `feedback ${esCorrecto ? 'correcto' : 'incorrecto'}`;
-            feedback.textContent = esCorrecto ? '✓' : '✗';
-            document.body.appendChild(feedback);
+            feedback.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+            feedback.innerHTML = isCorrect ? '✓' : '✗';
+            document.getElementById('feedbackContainer').appendChild(feedback);
             
             setTimeout(() => {
                 feedback.remove();
-            }, 500);
+            }, 1000);
         }
 
         // Actualizar vidas
-        function actualizarVidas() {
-            const corazones = document.querySelectorAll('.corazon');
-            corazones.forEach((corazon, index) => {
-                if (index >= vidas) {
-                    corazon.classList.add('perdido');
+        function updateLives() {
+            const livesElements = document.querySelectorAll('.life');
+            livesElements.forEach((life, index) => {
+                if (index >= lives) {
+                    life.classList.add('lost');
                 } else {
-                    corazon.classList.remove('perdido');
+                    life.classList.remove('lost');
                 }
             });
         }
 
-        // Finalizar juego
-        function finalizarJuego() {
-            clearInterval(temporizadorInterval);
+        // Terminar juego
+        function endGame() {
+            currentScreen = 'results';
+            clearInterval(timer);
             
-            document.getElementById('pantallaJuego').style.display = 'none';
-            document.getElementById('pantallaResultados').style.display = 'block';
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('resultsScreen').style.display = 'block';
             
-            const precision = Math.round((respuestasCorrectas / preguntasSeleccionadas.length) * 100);
+            const accuracy = Math.round((score / selectedQuestions.length) * 100);
             
-            document.getElementById('puntuacionFinal').textContent = respuestasCorrectas;
-            document.getElementById('totalFinal').textContent = preguntasSeleccionadas.length;
-            document.getElementById('tiempoTotal').textContent = tiempoTotalUsado;
-            document.getElementById('precision').textContent = precision;
+            document.getElementById('scoreDisplay').textContent = `${score}/${selectedQuestions.length}`;
+            document.getElementById('timeDisplay').textContent = `${totalGameTime}s`;
+            document.getElementById('accuracyDisplay').textContent = `${accuracy}%`;
             
-            // Determinar medalla y título
-            const tituloResultados = document.getElementById('tituloResultados');
-            const medalla = document.getElementById('medalla');
-            const botonesResultados = document.getElementById('botonesResultados');
+            // Guardar progreso
+            saveProgress();
             
-            if (respuestasCorrectas >= 9) {
-                tituloResultados.textContent = '🏆 ¡Excelente Desempeño!';
-                medalla.textContent = '🥇';
-            } else if (respuestasCorrectas >= 7) {
-                tituloResultados.textContent = '🎉 ¡Buen Trabajo!';
-                medalla.textContent = '🥈';
-            } else if (respuestasCorrectas >= 5) {
-                tituloResultados.textContent = '👍 ¡Puedes Mejorar!';
-                medalla.textContent = '🥉';
-            } else {
-                tituloResultados.textContent = '💪 ¡Sigue Intentando!';
-                medalla.textContent = '📚';
-            }
+            // Mostrar botón de siguiente nivel si se aprobaron 10 ejercicios
+            const nextLevelContainer = document.getElementById('nextLevelContainer');
+            nextLevelContainer.innerHTML = '';
             
-            // Botones según resultado
-            botonesResultados.innerHTML = '';
-            
-            if (respuestasCorrectas >= 8) {
-                // Desbloquear siguiente nivel
-                localStorage.setItem('nivel1Completado', 'true');
-                const btnSiguiente = document.createElement('button');
-                btnSiguiente.className = 'btn-siguiente';
-                btnSiguiente.textContent = '🚀 Siguiente Nivel: Jerarquía de Operaciones';
-                btnSiguiente.onclick = () => {
+            if (score >= 10) {
+                const nextLevelBtn = document.createElement('button');
+                nextLevelBtn.className = 'next-level-btn';
+                nextLevelBtn.innerHTML = '<i class="fas fa-arrow-right"></i> Siguiente Nivel: Jerarquía de Operaciones';
+                nextLevelBtn.onclick = () => {
+                    // Guardar que se completó el nivel 1
+                    localStorage.setItem('skopia_level1_completed', 'true');
                     window.location.href = 'juego2fase2.html';
                 };
-                botonesResultados.appendChild(btnSiguiente);
+                nextLevelContainer.appendChild(nextLevelBtn);
+                
+                // Mostrar mensaje de éxito
+                const successMessage = document.createElement('div');
+                successMessage.style.cssText = `
+                    color: #4cff4c;
+                    font-size: 1.5rem;
+                    margin: 20px 0;
+                    animation: pulse-glow 2s ease-in-out infinite;
+                `;
+                successMessage.innerHTML = '🎉 ¡FELICITACIONES! Has desbloqueado el siguiente nivel 🎉';
+                nextLevelContainer.appendChild(successMessage);
+            } else {
+                const message = document.createElement('p');
+                message.style.cssText = `
+                    color: #ffaa00;
+                    font-size: 1.4rem;
+                    margin: 20px 0;
+                    text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+                `;
+                message.textContent = `Necesitas 10 respuestas correctas para desbloquear el siguiente nivel. Te faltan ${10 - score} respuestas.`;
+                nextLevelContainer.appendChild(message);
             }
-            
-            const btnReintentar = document.createElement('button');
-            btnReintentar.className = 'btn-siguiente btn-reintentar';
-            btnReintentar.textContent = '🔄 Reintentar Nivel';
-            btnReintentar.onclick = iniciarJuego;
-            botonesResultados.appendChild(btnReintentar);
         }
 
-        // Verificar si el nivel ya fue completado al cargar
-        window.onload = function() {
-            if (localStorage.getItem('nivel1Completado') === 'true') {
-                console.log('Nivel 1 ya completado previamente');
+        // Guardar progreso
+        function saveProgress() {
+            const progress = {
+                level: 1,
+                score: score,
+                totalQuestions: selectedQuestions.length,
+                completed: score >= 10,
+                timestamp: Date.now()
+            };
+            
+            // Guardar en localStorage
+            localStorage.setItem('skopia_game_progress', JSON.stringify(progress));
+            
+            // También guardar el estado de este nivel específico
+            const levelProgress = {
+                'level1_operations': {
+                    completed: score >= 10,
+                    score: score,
+                    bestScore: Math.max(score, parseInt(localStorage.getItem('level1_bestScore') || '0'))
+                }
+            };
+            
+            localStorage.setItem('skopia_level_progress', JSON.stringify(levelProgress));
+            localStorage.setItem('level1_bestScore', levelProgress['level1_operations'].bestScore);
+        }
+
+        // Reiniciar juego
+        function restartGame() {
+            startGame();
+        }
+
+        // Volver a módulos
+        function goToModules() {
+            if (confirm('¿Estás seguro de que quieres salir? Perderás el progreso actual.')) {
+                window.location.href = 'modulos.html';
             }
-        };
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            createParticles();
+        });
+
+        // Prevenir que el usuario se vaya por accidente
+        window.addEventListener('beforeunload', (e) => {
+            if (currentScreen === 'game') {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
     </script>
 </body>
 </html>
