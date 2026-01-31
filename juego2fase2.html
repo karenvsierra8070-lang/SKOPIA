@@ -768,6 +768,23 @@
             opacity: 1;
         }
 
+        /* Loading indicator */
+        .loading-indicator {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            color: #4cff4c;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .game-container {
@@ -905,8 +922,9 @@
             </div>
 
             <div class="equation-tree" id="equationTree">
-                <div class="tree-connections" id="treeConnections"></div>
-                <!-- El árbol se generará dinámicamente -->
+                <div class="loading-indicator" id="loadingIndicator">
+                    <i class="fas fa-spinner fa-spin"></i> Cargando...
+                </div>
             </div>
         </div>
 
@@ -1336,6 +1354,7 @@
         let answeredQuestions = [];
         let currentQuestionIndex = 0;
         let questionOrder = [];
+        let isTransitioning = false;
 
         // Inicializar contexto de audio
         function initAudio() {
@@ -1409,79 +1428,81 @@
             questionOrder = selectedExercises.map((_, index) => index);
             answeredQuestions = [];
             currentQuestionIndex = 0;
+            console.log('Ejercicios seleccionados:', selectedExercises.length);
         }
 
-        // Crear árbol de ecuaciones
+        // Función completamente reescrita para crear el árbol de ecuaciones
         function createEquationTree(exercise) {
+            console.log('Creando árbol para ejercicio:', exercise.expression);
+            
             const tree = document.getElementById('equationTree');
-            const connections = document.getElementById('treeConnections');
             
+            // Limpiar completamente el contenedor
             tree.innerHTML = '';
-            connections.innerHTML = '';
             
-            // Nodo raíz
-            const rootNode = document.createElement('div');
-            rootNode.className = 'tree-node';
-            rootNode.innerHTML = `
-                <div class="node-content" data-step="0">
-                    <span class="node-number">1</span>
-                    ${exercise.expression}
-                </div>
-            `;
-            tree.appendChild(rootNode);
+            // Mostrar indicador de carga
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'loading-indicator';
+            loadingIndicator.id = 'loadingIndicator';
+            loadingIndicator.style.display = 'block';
+            loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
+            tree.appendChild(loadingIndicator);
             
-            // Crear nodos hijos
-            exercise.steps.forEach((step, index) => {
-                const childNode = document.createElement('div');
-                childNode.className = 'tree-node';
-                childNode.innerHTML = `
-                    <div class="node-content" data-step="${index + 1}">
-                        <span class="node-number">${index + 2}</span>
-                        ${step.text}
+            // Pequeño delay para asegurar que el DOM se actualice
+            setTimeout(() => {
+                // Ocultar indicador de carga
+                loadingIndicator.style.display = 'none';
+                
+                // Crear el contenido del árbol
+                const treeContent = document.createElement('div');
+                treeContent.style.display = 'block';
+                
+                // Nodo raíz
+                const rootNode = document.createElement('div');
+                rootNode.className = 'tree-node';
+                rootNode.innerHTML = `
+                    <div class="node-content" data-step="0">
+                        <span class="node-number">1</span>
+                        ${exercise.expression}
                     </div>
                 `;
-                tree.appendChild(childNode);
+                treeContent.appendChild(rootNode);
                 
-                // Agregar evento de clic
-                const nodeContent = childNode.querySelector('.node-content');
-                nodeContent.addEventListener('click', () => selectStep(index));
-                
-                // Dibujar conexiones
-                setTimeout(() => {
-                    drawConnections();
-                }, 100);
-            });
-        }
-
-        // Dibujar conexiones del árbol
-        function drawConnections() {
-            const connections = document.getElementById('treeConnections');
-            const nodes = document.querySelectorAll('.tree-node');
-            
-            connections.innerHTML = '';
-            
-            // Conectar el nodo raíz con los hijos
-            if (nodes.length > 1) {
-                const rootRect = nodes[0].getBoundingClientRect();
-                const containerRect = document.getElementById('equationTree').getBoundingClientRect();
-                
-                for (let i = 1; i < Math.min(4, nodes.length); i++) {
-                    const childRect = nodes[i].getBoundingClientRect();
+                // Crear nodos hijos
+                exercise.steps.forEach((step, index) => {
+                    const childNode = document.createElement('div');
+                    childNode.className = 'tree-node';
+                    childNode.innerHTML = `
+                        <div class="node-content" data-step="${index + 1}">
+                            <span class="node-number">${index + 2}</span>
+                            ${step.text}
+                        </div>
+                    `;
+                    treeContent.appendChild(childNode);
                     
-                    const line = document.createElement('div');
-                    line.className = 'tree-line vertical';
-                    line.style.top = '0';
-                    line.style.left = '50%';
-                    line.style.height = (childRect.top - rootRect.bottom - rootRect.top + containerRect.top) + 'px';
-                    
-                    connections.appendChild(line);
-                }
-            }
+                    // Agregar evento de clic
+                    const nodeContent = childNode.querySelector('.node-content');
+                    nodeContent.addEventListener('click', () => {
+                        if (!isTransitioning) {
+                            selectStep(index);
+                        }
+                    });
+                });
+                
+                // Limpiar y agregar el nuevo contenido
+                tree.innerHTML = '';
+                tree.appendChild(treeContent);
+                
+                console.log('Árbol creado exitosamente');
+            }, 100);
         }
 
         // Seleccionar paso
         function selectStep(stepIndex) {
-            if (currentScreen !== 'game') return;
+            if (currentScreen !== 'game' || isTransitioning) return;
+            
+            console.log('Paso seleccionado:', stepIndex);
+            isTransitioning = true;
             
             const exercise = selectedExercises[currentQuestionIndex];
             const selectedStep = exercise.steps[stepIndex];
@@ -1493,7 +1514,9 @@
             
             // Marcar el paso seleccionado
             const selectedNode = document.querySelector(`[data-step="${stepIndex + 1}"]`);
-            selectedNode.classList.add('selected');
+            if (selectedNode) {
+                selectedNode.classList.add('selected');
+            }
             
             // Registrar la pregunta respondida
             answeredQuestions.push({
@@ -1505,8 +1528,10 @@
             // Verificar si es correcto
             if (selectedStep.isCorrect) {
                 // Incorrecto: el paso correcto es otro
-                selectedNode.classList.remove('selected');
-                selectedNode.classList.add('incorrect');
+                if (selectedNode) {
+                    selectedNode.classList.remove('selected');
+                    selectedNode.classList.add('incorrect');
+                }
                 
                 // Mostrar el paso correcto
                 exercise.steps.forEach((step, index) => {
@@ -1552,29 +1577,40 @@
 
         // Siguiente pregunta
         function nextQuestion() {
+            console.log('Pasando a siguiente pregunta. Actual:', currentQuestionIndex, 'Total:', selectedExercises.length);
+            
             // Si ya respondimos todas las preguntas o ganamos, terminar el juego
             if (answeredQuestions.length >= 10 || gameWon) {
+                console.log('Terminando juego');
                 endGame();
                 return;
             }
             
-            // Avanzar a la siguiente pregunta en orden
+            // Avanzar a la siguiente pregunta
             currentQuestionIndex++;
             if (currentQuestionIndex < selectedExercises.length) {
+                console.log('Cargando pregunta', currentQuestionIndex);
+                isTransitioning = false;
                 loadExercise();
             } else {
+                console.log('No hay más preguntas');
                 endGame();
             }
         }
 
         // Cargar ejercicio
         function loadExercise() {
+            console.log('Cargando ejercicio. Índice:', currentQuestionIndex, 'Total:', selectedExercises.length);
+            
             if (gameWon || currentQuestionIndex >= selectedExercises.length) {
+                console.log('Juego terminado o sin más ejercicios');
                 endGame();
                 return;
             }
             
             const exercise = selectedExercises[currentQuestionIndex];
+            console.log('Ejercicio a cargar:', exercise.expression);
+            
             createEquationTree(exercise);
             startTimer();
         }
@@ -1602,20 +1638,24 @@
             const timerText = document.getElementById('timerText');
             const hourglassSand = document.getElementById('hourglassSand');
             
-            timerText.textContent = timeLeft;
-            
-            const sandHeight = (timeLeft / 30) * 100;
-            hourglassSand.style.height = sandHeight + '%';
-            
-            if (timeLeft <= 5) {
-                hourglassSand.classList.add('danger');
-            } else {
-                hourglassSand.classList.remove('danger');
+            if (timerText) timerText.textContent = timeLeft;
+            if (hourglassSand) {
+                const sandHeight = (timeLeft / 30) * 100;
+                hourglassSand.style.height = sandHeight + '%';
+                
+                if (timeLeft <= 5) {
+                    hourglassSand.classList.add('danger');
+                } else {
+                    hourglassSand.classList.remove('danger');
+                }
             }
         }
 
         // Tiempo agotado
         function timeUp() {
+            if (isTransitioning) return;
+            isTransitioning = true;
+            
             showFeedback(false);
             playTimeUpSound();
             
@@ -1659,7 +1699,10 @@
 
         // Actualizar puntuación
         function updateScore() {
-            document.getElementById('score').textContent = score;
+            const scoreElement = document.getElementById('score');
+            if (scoreElement) {
+                scoreElement.textContent = score;
+            }
         }
 
         // Actualizar racha
@@ -1667,11 +1710,11 @@
             const streakDisplay = document.getElementById('streakDisplay');
             const streakMultiplier = document.getElementById('streakMultiplier');
             
-            if (streak > 1) {
+            if (streak > 1 && streakDisplay && streakMultiplier) {
                 streakDisplay.classList.add('active');
                 streakMultiplier.textContent = streak;
                 playStreakSound();
-            } else {
+            } else if (streakDisplay && streakMultiplier) {
                 streakDisplay.classList.remove('active');
                 streakMultiplier.textContent = '1';
             }
@@ -1685,32 +1728,38 @@
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('resultsScreen').style.display = 'block';
             
-            document.getElementById('finalScore').textContent = score;
-            document.getElementById('finalStreak').textContent = streak;
-            document.getElementById('finalTime').textContent = (30 * answeredQuestions.length - totalGameTime) + 's';
+            const finalScore = document.getElementById('finalScore');
+            const finalStreak = document.getElementById('finalStreak');
+            const finalTime = document.getElementById('finalTime');
+            
+            if (finalScore) finalScore.textContent = score;
+            if (finalStreak) finalStreak.textContent = streak;
+            if (finalTime) finalTime.textContent = (30 * answeredQuestions.length - totalGameTime) + 's';
             
             // Guardar progreso
             saveProgress();
             
             // Crear botones de resultados
             const resultButtons = document.getElementById('resultButtons');
-            resultButtons.innerHTML = '';
-            
-            // Botón de siguiente nivel si se aprobaron 7 ejercicios
-            if (score >= 7) {
-                const nextBtn = document.createElement('button');
-                nextBtn.className = 'next-level-btn';
-                nextBtn.innerHTML = '<i class="fas fa-unlock"></i> Siguiente Desafío';
-                nextBtn.onclick = goToNextLevel;
-                resultButtons.appendChild(nextBtn);
+            if (resultButtons) {
+                resultButtons.innerHTML = '';
+                
+                // Botón de siguiente nivel si se aprobaron 7 ejercicios
+                if (score >= 7) {
+                    const nextBtn = document.createElement('button');
+                    nextBtn.className = 'next-level-btn';
+                    nextBtn.innerHTML = '<i class="fas fa-unlock"></i> Siguiente Desafío';
+                    nextBtn.onclick = goToNextLevel;
+                    resultButtons.appendChild(nextBtn);
+                }
+                
+                // Botón de reintentar
+                const retryBtn = document.createElement('button');
+                retryBtn.className = 'retry-btn';
+                retryBtn.innerHTML = '<i class="fas fa-redo"></i> Reintentar';
+                retryBtn.onclick = retryGame;
+                resultButtons.appendChild(retryBtn);
             }
-            
-            // Botón de reintentar
-            const retryBtn = document.createElement('button');
-            retryBtn.className = 'retry-btn';
-            retryBtn.innerHTML = '<i class="fas fa-redo"></i> Reintentar';
-            retryBtn.onclick = retryGame;
-            resultButtons.appendChild(retryBtn);
         }
 
         // Reintentar juego
@@ -1722,6 +1771,7 @@
             totalGameTime = 0;
             gameWon = false;
             answeredQuestions = [];
+            isTransitioning = false;
             
             document.getElementById('resultsScreen').style.display = 'none';
             document.getElementById('startScreen').style.display = 'block';
@@ -1772,6 +1822,7 @@
 
         // Iniciar juego
         function startGame() {
+            console.log('Iniciando juego');
             currentScreen = 'game';
             score = 0;
             streak = 0;
@@ -1779,6 +1830,7 @@
             totalGameTime = 0;
             gameWon = false;
             answeredQuestions = [];
+            isTransitioning = false;
             
             selectRandomExercises();
             
@@ -1788,7 +1840,11 @@
             
             updateScore();
             updateStreak();
-            loadExercise();
+            
+            // Pequeño delay para asegurar que la pantalla de juego sea visible
+            setTimeout(() => {
+                loadExercise();
+            }, 100);
         }
 
         // Inicializar
