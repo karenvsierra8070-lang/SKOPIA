@@ -409,7 +409,7 @@
             text-shadow: 0 0 10px rgba(160, 255, 160, 0.5);
         }
 
-        /* Contenedor de pregunta mejorado y más grande */
+        /* Contenedor de pregunta mejorado y más grande SIN BACKDROP-FILTER */
         .question-container {
             background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(26, 58, 26, 0.9));
             border-radius: 25px;
@@ -619,7 +619,6 @@
             border-radius: 25px;
             padding: 50px;
             margin-bottom: 40px;
-            backdrop-filter: blur(20px);
             border: 3px solid rgba(76, 255, 76, 0.4);
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
         }
@@ -704,7 +703,6 @@
             font-family: 'Orbitron', sans-serif;
             text-transform: uppercase;
             letter-spacing: 1px;
-            backdrop-filter: blur(10px);
         }
 
         .back-btn:hover {
@@ -771,7 +769,6 @@
         }
     </style>
 </head>
-
 <body>
     <!-- Fondo de videojuego -->
     <div class="game-background">
@@ -807,7 +804,7 @@
             <p style="margin-bottom: 40px; color: #a0ffa0; font-size: 1.3rem;">
                 🎮 Desafía tu mente con preguntas tipo ICFES Saber Pro<br>
                 ⏱️ ¡Tienes 60 segundos por pregunta!<br>
-                🏆 Completa 10 correctamente para desbloquear el siguiente nivel
+                🏆 ¡Consigue 7 respuestas correctas para ganar!
             </p>
             <button class="start-btn" onclick="startGame()">
                 <i class="fas fa-play"></i> INICIAR JUEGO
@@ -845,7 +842,7 @@
 
         <!-- Pantalla de resultados -->
         <div class="results-screen" id="resultsScreen">
-            <h2 class="results-title">¡JUEGO COMPLETADO!</h2>
+            <h2 class="results-title" id="resultsTitle">¡JUEGO COMPLETADO!</h2>
             <div class="results-stats">
                 <div class="stat-row">
                     <span class="stat-label">🎯 Puntuación:</span>
@@ -871,6 +868,23 @@
 
     <!-- Contenedor para feedback -->
     <div id="feedbackContainer"></div>
+
+    <!-- Audio para efectos de sonido -->
+    <audio id="correctSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT" type="audio/wav">
+    </audio>
+    <audio id="incorrectSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT" type="audio/wav">
+    </audio>
+    <audio id="loseLifeSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT" type="audio/wav">
+    </audio>
+    <audio id="winSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT" type="audio/wav">
+    </audio>
+    <audio id="loseSound" preload="auto">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT" type="audio/wav">
+    </audio>
 
     <script>
         // Base de datos de preguntas (50 preguntas)
@@ -1172,11 +1186,21 @@
         let score = 0;
         let lives = 3;
         let timer = null;
-        let timeLeft = 60;
+        let timeLeft = 60; // Cambiado a 60 segundos
         let selectedQuestions = [];
         let totalGameTime = 0;
         let questionStartTime = 0;
         let currentScreen = 'intro';
+        let gameWon = false;
+
+        // Funciones de sonido
+        function playSound(soundId) {
+            const sound = document.getElementById(soundId);
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(e => console.log("Error reproduciendo sonido:", e));
+            }
+        }
 
         // Inicializar partículas mejoradas
         function createParticles() {
@@ -1205,6 +1229,7 @@
             lives = 3;
             currentQuestionIndex = 0;
             totalGameTime = 0;
+            gameWon = false;
             
             selectRandomQuestions();
             
@@ -1219,7 +1244,7 @@
 
         // Cargar pregunta
         function loadQuestion() {
-            if (currentQuestionIndex >= selectedQuestions.length) {
+            if (currentQuestionIndex >= selectedQuestions.length || gameWon) {
                 endGame();
                 return;
             }
@@ -1248,7 +1273,7 @@
 
         // Iniciar temporizador
         function startTimer() {
-            timeLeft = 60;
+            timeLeft = 60; // Cambiado a 60 segundos
             updateTimerDisplay();
             
             if (timer) clearInterval(timer);
@@ -1270,10 +1295,10 @@
             timerElement.textContent = timeLeft;
             
             timerElement.classList.remove('warning', 'danger');
-            if (timeLeft <= 10) {
+            if (timeLeft <= 20) { // Cambiado a 20 segundos para advertencia
                 timerElement.classList.add('warning');
             }
-            if (timeLeft <= 5) {
+            if (timeLeft <= 10) { // Cambiado a 10 segundos para peligro
                 timerElement.classList.add('danger');
             }
         }
@@ -1297,27 +1322,45 @@
             // Marcar respuesta seleccionada
             options[index].classList.add('selected');
             
-            // Mostrar feedback
+            // Mostrar feedback y reproducir sonido
             if (index === question.correct) {
                 options[index].classList.add('correct');
                 score++;
                 showFeedback(true);
+                playSound('correctSound');
             } else {
                 options[index].classList.add('incorrect');
                 options[question.correct].classList.add('correct');
                 showFeedback(false);
+                playSound('incorrectSound');
                 lives--;
                 updateLives();
+                playSound('loseLifeSound');
+                
+                // Verificar si perdió todas las vidas
+                if (lives <= 0) {
+                    setTimeout(() => {
+                        playSound('loseSound');
+                        endGame();
+                    }, 2000);
+                    return;
+                }
+            }
+            
+            // Verificar si ganó (7 respuestas correctas)
+            if (score >= 7) {
+                gameWon = true;
+                setTimeout(() => {
+                    playSound('winSound');
+                    endGame();
+                }, 2000);
+                return;
             }
             
             // Siguiente pregunta después de un delay
             setTimeout(() => {
                 currentQuestionIndex++;
-                if (lives > 0) {
-                    loadQuestion();
-                } else {
-                    endGame();
-                }
+                loadQuestion();
             }, 2000);
         }
 
@@ -1330,16 +1373,23 @@
             options[question.correct].classList.add('correct');
             
             showFeedback(false);
+            playSound('incorrectSound');
             lives--;
             updateLives();
+            playSound('loseLifeSound');
+            
+            // Verificar si perdió todas las vidas
+            if (lives <= 0) {
+                setTimeout(() => {
+                    playSound('loseSound');
+                    endGame();
+                }, 2000);
+                return;
+            }
             
             setTimeout(() => {
                 currentQuestionIndex++;
-                if (lives > 0) {
-                    loadQuestion();
-                } else {
-                    endGame();
-                }
+                loadQuestion();
             }, 2000);
         }
 
@@ -1381,14 +1431,24 @@
             document.getElementById('timeDisplay').textContent = `${totalGameTime}s`;
             document.getElementById('accuracyDisplay').textContent = `${accuracy}%`;
             
+            // Cambiar el título según si ganó o perdió
+            const resultsTitle = document.getElementById('resultsTitle');
+            if (gameWon) {
+                resultsTitle.textContent = '¡¡¡VICTORIA ALCANZADA!!!';
+                resultsTitle.style.color = '#4cff4c';
+            } else {
+                resultsTitle.textContent = '¡JUEGO TERMINADO!';
+                resultsTitle.style.color = '#ff4444';
+            }
+            
             // Guardar progreso
             saveProgress();
             
-            // Mostrar botón de siguiente nivel si se aprobaron 10 ejercicios
+            // Mostrar botón de siguiente nivel si se aprobaron 7 ejercicios
             const nextLevelContainer = document.getElementById('nextLevelContainer');
             nextLevelContainer.innerHTML = '';
             
-            if (score >= 10) {
+            if (score >= 7) {
                 const nextLevelBtn = document.createElement('button');
                 nextLevelBtn.className = 'next-level-btn';
                 nextLevelBtn.innerHTML = '<i class="fas fa-arrow-right"></i> Siguiente Nivel: Jerarquía de Operaciones';
@@ -1417,7 +1477,7 @@
                     margin: 20px 0;
                     text-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
                 `;
-                message.textContent = `Necesitas 10 respuestas correctas para desbloquear el siguiente nivel. Te faltan ${10 - score} respuestas.`;
+                message.textContent = `Necesitas 7 respuestas correctas para desbloquear el siguiente nivel. Te faltan ${7 - score} respuestas.`;
                 nextLevelContainer.appendChild(message);
             }
         }
@@ -1428,7 +1488,8 @@
                 level: 1,
                 score: score,
                 totalQuestions: selectedQuestions.length,
-                completed: score >= 10,
+                completed: score >= 7,
+                won: gameWon,
                 timestamp: Date.now()
             };
             
@@ -1438,7 +1499,7 @@
             // También guardar el estado de este nivel específico
             const levelProgress = {
                 'level1_operations': {
-                    completed: score >= 10,
+                    completed: score >= 7,
                     score: score,
                     bestScore: Math.max(score, parseInt(localStorage.getItem('level1_bestScore') || '0'))
                 }
