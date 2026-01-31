@@ -739,6 +739,26 @@
             50% { height: 40px; }
         }
 
+        /* Indicador de sonido activo */
+        .sound-indicator {
+            position: fixed;
+            bottom: 80px;
+            right: 30px;
+            background: rgba(76, 255, 76, 0.2);
+            border: 2px solid #4cff4c;
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            color: #4cff4c;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+        }
+
+        .sound-indicator.show {
+            opacity: 1;
+        }
+
         /* Responsive mejorado */
         @media (max-width: 768px) {
             .game-title {
@@ -795,6 +815,9 @@
         <div class="wave-bar"></div>
     </div>
 
+    <!-- Indicador de sonido -->
+    <div class="sound-indicator" id="soundIndicator">🔊 Sonido activado</div>
+
     <!-- Contenedor principal del juego -->
     <div class="game-container">
         <!-- Pantalla de presentación -->
@@ -804,7 +827,8 @@
             <p style="margin-bottom: 40px; color: #a0ffa0; font-size: 1.3rem;">
                 🎮 Desafía tu mente con preguntas tipo ICFES Saber Pro<br>
                 ⏱️ ¡Tienes 60 segundos por pregunta!<br>
-                🏆 ¡Consigue 7 respuestas correctas para ganar!
+                🏆 ¡Consigue 7 respuestas correctas para ganar!<br>
+                🔊 ¡Efectos de sonido incluidos!
             </p>
             <button class="start-btn" onclick="startGame()">
                 <i class="fas fa-play"></i> INICIAR JUEGO
@@ -868,23 +892,6 @@
 
     <!-- Contenedor para feedback -->
     <div id="feedbackContainer"></div>
-
-    <!-- Audio para efectos de sonido -->
-    <audio id="correctSound" preload="auto">
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT" type="audio/wav">
-    </audio>
-    <audio id="incorrectSound" preload="auto">
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT" type="audio/wav">
-    </audio>
-    <audio id="loseLifeSound" preload="auto">
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT" type="audio/wav">
-    </audio>
-    <audio id="winSound" preload="auto">
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT" type="audio/wav">
-    </audio>
-    <audio id="loseSound" preload="auto">
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT" type="audio/wav">
-    </audio>
 
     <script>
         // Base de datos de preguntas (50 preguntas)
@@ -1192,14 +1199,83 @@
         let questionStartTime = 0;
         let currentScreen = 'intro';
         let gameWon = false;
+        let audioContext = null;
 
-        // Funciones de sonido
-        function playSound(soundId) {
-            const sound = document.getElementById(soundId);
-            if (sound) {
-                sound.currentTime = 0;
-                sound.play().catch(e => console.log("Error reproduciendo sonido:", e));
+        // Inicializar contexto de audio
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
             }
+        }
+
+        // Funciones de sonido usando Web Audio API
+        function playSound(frequency, duration, type = 'sine') {
+            initAudio();
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = frequency;
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+            
+            // Mostrar indicador de sonido
+            showSoundIndicator();
+        }
+
+        // Sonidos específicos
+        function playCorrectSound() {
+            // Tono ascendente feliz
+            playSound(523.25, 0.1); // Do
+            setTimeout(() => playSound(659.25, 0.1), 100); // Mi
+            setTimeout(() => playSound(783.99, 0.2), 200); // Sol
+        }
+
+        function playIncorrectSound() {
+            // Tono descendente error
+            playSound(300, 0.2, 'sawtooth');
+        }
+
+        function playLoseLifeSound() {
+            // Tono grave de pérdida
+            playSound(150, 0.3, 'square');
+        }
+
+        function playWinSound() {
+            // Melodía de victoria
+            playSound(523.25, 0.1); // Do
+            setTimeout(() => playSound(659.25, 0.1), 150); // Mi
+            setTimeout(() => playSound(783.99, 0.1), 300); // Sol
+            setTimeout(() => playSound(1046.50, 0.2), 450); // Do alto
+        }
+
+        function playLoseSound() {
+            // Tono de derrota
+            playSound(200, 0.5, 'sawtooth');
+        }
+
+        function playStartSound() {
+            // Tono de inicio
+            playSound(440, 0.1); // La
+            setTimeout(() => playSound(554.37, 0.1), 100); // Do#
+            setTimeout(() => playSound(659.25, 0.2), 200); // Mi
+        }
+
+        // Mostrar indicador de sonido
+        function showSoundIndicator() {
+            const indicator = document.getElementById('soundIndicator');
+            indicator.classList.add('show');
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 1000);
         }
 
         // Inicializar partículas mejoradas
@@ -1232,6 +1308,7 @@
             gameWon = false;
             
             selectRandomQuestions();
+            playStartSound();
             
             document.getElementById('introScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
@@ -1327,20 +1404,20 @@
                 options[index].classList.add('correct');
                 score++;
                 showFeedback(true);
-                playSound('correctSound');
+                playCorrectSound();
             } else {
                 options[index].classList.add('incorrect');
                 options[question.correct].classList.add('correct');
                 showFeedback(false);
-                playSound('incorrectSound');
+                playIncorrectSound();
                 lives--;
                 updateLives();
-                playSound('loseLifeSound');
+                playLoseLifeSound();
                 
                 // Verificar si perdió todas las vidas
                 if (lives <= 0) {
                     setTimeout(() => {
-                        playSound('loseSound');
+                        playLoseSound();
                         endGame();
                     }, 2000);
                     return;
@@ -1351,7 +1428,7 @@
             if (score >= 7) {
                 gameWon = true;
                 setTimeout(() => {
-                    playSound('winSound');
+                    playWinSound();
                     endGame();
                 }, 2000);
                 return;
@@ -1373,15 +1450,15 @@
             options[question.correct].classList.add('correct');
             
             showFeedback(false);
-            playSound('incorrectSound');
+            playIncorrectSound();
             lives--;
             updateLives();
-            playSound('loseLifeSound');
+            playLoseLifeSound();
             
             // Verificar si perdió todas las vidas
             if (lives <= 0) {
                 setTimeout(() => {
-                    playSound('loseSound');
+                    playLoseSound();
                     endGame();
                 }, 2000);
                 return;
@@ -1524,6 +1601,12 @@
         // Inicializar
         document.addEventListener('DOMContentLoaded', () => {
             createParticles();
+            
+            // Inicializar audio al primer clic del usuario
+            document.addEventListener('click', function initAudioOnFirstClick() {
+                initAudio();
+                document.removeEventListener('click', initAudioOnFirstClick);
+            }, { once: true });
         });
 
         // Prevenir que el usuario se vaya por accidente
