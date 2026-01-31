@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El Desarmador de Ecuaciones - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        window.auth = auth;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            console.log("Usuario autenticado:", user.email);
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+            --color-dorado: #FFD700;
+            --color-arena: #F4E4C1;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #0a0f0a 0%, #1a2e1a 25%, #0d1f0d 50%, #1a331a 75%, #0a0f0a 100%);
+            color: white;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Fondo de videojuego */
+        .game-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a0f0a 0%, #1a2e1a 25%, #0d1f0d 50%, #1a331a 75%, #0a0f0a 100%);
+            z-index: 1;
+        }
+
+        /* Efectos de red hexagonal */
+        .hex-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(76, 255, 76, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(76, 255, 76, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: hex-move 20s linear infinite;
+        }
+
+        @keyframes hex-move {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        /* Partículas */
+        .particles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .particle {
+            position: absolute;
+            background: radial-gradient(circle, rgba(76, 255, 76, 0.8) 0%, rgba(76, 255, 76, 0) 70%);
+            border-radius: 50%;
+            animation: float-particle 10s infinite linear;
+        }
+
+        @keyframes float-particle {
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+                transform: translateY(80vh) scale(1);
+            }
+            90% {
+                opacity: 1;
+                transform: translateY(10vh) scale(1);
+            }
+            100% {
+                transform: translateY(-10vh) scale(0);
+                opacity: 0;
+            }
+        }
+
+        /* Luz ambiental */
+        .ambient-light {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(76, 255, 76, 0.1) 0%, transparent 50%);
+            transform: translate(-50%, -50%);
+            animation: pulse-light 4s ease-in-out infinite;
+            z-index: 3;
+        }
+
+        @keyframes pulse-light {
+            0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.1); }
+        }
+
+        /* Contenedor principal */
+        .game-container {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* Pantalla de verificación */
+        .verification-screen {
+            text-align: center;
+            animation: intro-entrance 1.5s ease-out;
+        }
+
+        @keyframes intro-entrance {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) rotateX(90deg);
+            }
+            50% {
+                transform: scale(1.1) rotateX(0deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotateX(0deg);
+            }
+        }
+
+        .verification-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            color: #ff4444;
+            margin-bottom: 20px;
+            animation: pulse-red 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .verification-message {
+            font-size: 1.3rem;
+            color: #a0ffa0;
+            margin-bottom: 30px;
+            max-width: 600px;
+        }
+
+        .return-btn {
+            background: linear-gradient(45deg, #1a5a1a, #4cff4c, #1a5a1a);
+            color: white;
+            border: 3px solid #4cff4c;
+            padding: 20px 50px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.4s;
+            box-shadow: 0 15px 40px rgba(76, 255, 76, 0.4);
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            animation: btn-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes btn-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .return-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 50px rgba(76, 255, 76, 0.6);
+        }
+
+        /* Pantalla de juego */
+        .game-screen {
+            display: none;
+            width: 100%;
+            max-width: 1400px;
+            animation: game-entrance 0.8s ease-out;
+        }
+
+        @keyframes game-entrance {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Header del juego */
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(26, 58, 26, 0.8));
+            border-radius: 20px;
+            border: 2px solid rgba(76, 255, 76, 0.3);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .game-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: #4cff4c;
+            text-shadow: 0 0 20px rgba(76, 255, 76, 0.5);
+        }
+
+        /* Reloj de arena */
+        .hourglass-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            position: relative;
+        }
+
+        .hourglass {
+            width: 60px;
+            height: 80px;
+            position: relative;
+            background: linear-gradient(to bottom, var(--color-arena) 0%, var(--color-crema) 100%);
+            border-radius: 10px;
+            border: 3px solid var(--color-oliva-medio);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .hourglass::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--color-oliva-oscuro);
+        }
+
+        .hourglass-sand {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, var(--color-arena) 0%, var(--color-arena) 80%, transparent 80%);
+            transition: height 1s linear;
+            height: 100%;
+        }
+
+        .hourglass-sand.danger {
+            background: linear-gradient(to top, #ff4444 0%, #ff4444 80%, transparent 80%);
+        }
+
+        .timer-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: var(--color-arena);
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        /* Progreso y racha */
+        .progress-container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .score-display {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: #4cff4c;
+        }
+
+        .streak-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: rgba(255, 215, 0, 0.2);
+            border: 2px solid var(--color-dorado);
+            border-radius: 20px;
+            transition: all 0.3s;
+        }
+
+        .streak-display.active {
+            background: rgba(255, 215, 0, 0.4);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            animation: streak-glow 1s ease-in-out infinite;
+        }
+
+        @keyframes streak-glow {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .streak-icon {
+            color: var(--color-dorado);
+            font-size: 1.2rem;
+        }
+
+        .streak-text {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--color-dorado);
+            font-weight: bold;
+        }
+
+        /* Contenedor del árbol de ecuaciones */
+        .equation-tree {
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(26, 58, 26, 0.9));
+            border-radius: 25px;
+            padding: 40px;
+            margin-bottom: 30px;
+            border: 3px solid rgba(76, 255, 76, 0.4);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+            position: relative;
+            min-height: 400px;
+        }
+
+        .equation-tree::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #4cff4c, #00ff00, #4cff4c);
+            border-radius: 25px;
+            z-index: -1;
+            animation: border-glow 3s linear infinite;
+        }
+
+        @keyframes border-glow {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* Estructura del árbol */
+        .tree-node {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .node-content {
+            display: inline-block;
+            padding: 15px 25px;
+            background: rgba(76, 255, 76, 0.1);
+            border: 2px solid rgba(76, 255, 76, 0.4);
+            border-radius: 15px;
+            font-family: 'Space Mono', monospace;
+            font-size: 1.3rem;
+            color: #ffffff;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .node-content:hover {
+            background: rgba(76, 255, 76, 0.2);
+            border-color: #4cff4c;
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(76, 255, 76, 0.3);
+        }
+
+        .node-content.selected {
+            background: rgba(255, 215, 0, 0.3);
+            border-color: var(--color-dorado);
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+            animation: selected-pulse 0.6s;
+        }
+
+        @keyframes selected-pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .node-content.correct {
+            background: rgba(76, 255, 76, 0.3);
+            border-color: #4cff4c;
+            box-shadow: 0 0 30px rgba(76, 255, 76, 0.8);
+        }
+
+        .node-number {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            background: var(--color-oliva-medio);
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            z-index: 1;
+        }
+
+        /* Conexiones del árbol */
+        .tree-connections {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .tree-line {
+            position: absolute;
+            background: rgba(76, 255, 76, 0.3);
+            transform-origin: top center;
+        }
+
+        .tree-line.vertical {
+            width: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .tree-line.horizontal-left {
+            height: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .tree-line.horizontal-right {
+            height: 2px;
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+        }
+
+        /* Feedback */
+        .feedback {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 6rem;
+            z-index: 1000;
+            pointer-events: none;
+            animation: feedback-pop 1s ease-out;
+        }
+
+        @keyframes feedback-pop {
+            0% {
+                transform: translate(-50%, -50%) scale(0) rotate(0deg);
+                opacity: 0;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.3) rotate(180deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .feedback.correct {
+            color: #4cff4c;
+            text-shadow: 0 0 50px rgba(76, 255, 76, 0.8);
+        }
+
+        .feedback.incorrect {
+            color: #ff4444;
+            text-shadow: 0 0 50px rgba(255, 68, 68, 0.8);
+        }
+
+        /* Pantalla de resultados */
+        .results-screen {
+            display: none;
+            text-align: center;
+            animation: results-entrance 1s ease-out;
+            position: relative;
+        }
+
+        @keyframes results-entrance {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .results-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            animation: fade-in 1s ease-out;
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .results-banner {
+            background: linear-gradient(135deg, var(--color-oliva-oscuro), var(--color-oliva-medio));
+            border: 3px solid var(--color-dorado);
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px auto;
+            max-width: 800px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            position: relative;
+            z-index: 101;
+            animation: banner-entrance 1s ease-out 0.5s both;
+        }
+
+        @keyframes banner-entrance {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .results-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            color: var(--color-dorado);
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+        }
+
+        .results-stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            color: #4cff4c;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(76, 255, 76, 0.6);
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            color: var(--color-crema);
+            margin-top: 5px;
+        }
+
+        .next-level-btn {
+            background: linear-gradient(45deg, var(--color-oliva-oscuro), var(--color-oliva-medio), var(--color-oliva-oscuro));
+            color: white;
+            border: 3px solid var(--color-dorado);
+            padding: 20px 50px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.4s;
+            box-shadow: 0 15px 40px rgba(76, 255, 76, 0.4);
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 20px;
+            position: relative;
+            overflow: hidden;
+            animation: btn-pulse 2s ease-in-out infinite;
+        }
+
+        .next-level-btn:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 25px 60px rgba(76, 255, 76, 0.8);
+        }
+
+        /* Botón de volver */
+        .back-btn {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(26, 58, 26, 0.8));
+            color: #4cff4c;
+            border: 2px solid #4cff4c;
+            padding: 15px 30px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1.2rem;
+            z-index: 100;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .back-btn:hover {
+            background: rgba(76, 255, 76, 0.2);
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(76, 255, 76, 0.4);
+        }
+
+        /* Indicador de sonido */
+        .sound-indicator {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: rgba(76, 255, 76, 0.2);
+            border: 2px solid #4cff4c;
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            color: #4cff4c;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+        }
+
+        .sound-indicator.show {
+            opacity: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .game-title {
+                font-size: 1.5rem;
+            }
+            
+            .equation-tree {
+                padding: 20px;
+                min-height: 300px;
+            }
+            
+            .node-content {
+                font-size: 1rem;
+                padding: 10px 15px;
+            }
+            
+            .results-title {
+                font-size: 2rem;
+            }
+            
+            .stat-value {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Fondo de videojuego -->
+    <div class="game-background">
+        <div class="hex-grid"></div>
+    </div>
+    
+    <!-- Partículas -->
+    <div class="particles-container" id="particles"></div>
+    
+    <!-- Luz ambiental -->
+    <div class="ambient-light"></div>
+
+    <!-- Botón de volver -->
+    <button class="back-btn" onclick="goBack()">
+        <i class="fas fa-arrow-left"></i> Volver
+    </button>
+
+    <!-- Indicador de sonido -->
+    <div class="sound-indicator" id="soundIndicator">🔊 Sonido activado</div>
+
+    <!-- Contenedor principal del juego -->
+    <div class="game-container">
+        <!-- Pantalla de verificación -->
+        <div class="verification-screen" id="verificationScreen">
+            <h1 class="verification-title">
+                <i class="fas fa-lock"></i> Nivel Bloqueado
+            </h1>
+            <p class="verification-message">
+                Debes completar la primera fase "Ráfaga Numérica: Operaciones Fundamentales" antes de poder acceder a "El Desarmador de Ecuaciones".
+            </p>
+            <button class="return-btn" onclick="goToFirstLevel()">
+                <i class="fas fa-play"></i> Completar Primera Fase
+            </button>
+        </div>
+
+        <!-- Pantalla de juego -->
+        <div class="game-screen" id="gameScreen">
+            <div class="game-header">
+                <div class="game-title">El Desarmador de Ecuaciones</div>
+                <div class="hourglass-container">
+                    <div class="hourglass">
+                        <div class="hourglass-sand" id="hourglassSand"></div>
+                    </div>
+                    <div class="timer-text" id="timerText">60</div>
+                </div>
+                <div class="progress-container">
+                    <div class="score-display">
+                        Errores: <span id="score">0</span>/7
+                    </div>
+                    <div class="streak-display" id="streakDisplay">
+                        <i class="fas fa-fire streak-icon"></i>
+                        <span class="streak-text">Racha x<span id="streakMultiplier">1</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="equation-tree" id="equationTree">
+                <div class="tree-connections" id="treeConnections"></div>
+                <!-- El árbol se generará dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Pantalla de resultados -->
+        <div class="results-screen" id="resultsScreen">
+            <div class="results-overlay"></div>
+            <div class="results-banner">
+                <h2 class="results-title">Jerarquía Dominada: Nivel Superior</h2>
+                <div class="results-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="finalScore">0</div>
+                        <div class="stat-label">Errores Detectados</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="finalStreak">0</div>
+                        <div class="stat-label">Mejor Racha</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="finalTime">0s</div>
+                        <div class="stat-label">Tiempo Total</div>
+                    </div>
+                </div>
+                <button class="next-level-btn" id="nextLevelBtn" onclick="goToNextLevel()">
+                    <i class="fas fa-unlock"></i> Desbloquear: Fracciones y Decimales
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor para feedback -->
+    <div id="feedbackContainer"></div>
+
+    <script>
+        // Base de datos de ejercicios con trampas lógicas (30 ejercicios)
+        const exercises = [
+            {
+                expression: "√(a² - b²)",
+                steps: [
+                    { text: "√(a² - b²) = √a² - √b²", isCorrect: false, trap: "Error común: separar raíz de resta" },
+                    { text: "√(a² - b²) = √((a-b)(a+b))", isCorrect: true },
+                    { text: "√((a-b)(a+b)) = √(a-b) × √(a+b)", isCorrect: true }
+                ]
+            },
+            {
+                expression: "(x + y)²",
+                steps: [
+                    { text: "(x + y)² = x² + y²", isCorrect: false, trap: "Error común: olvidar término cruzado" },
+                    { text: "(x + y)² = x² + 2xy + y²", isCorrect: true },
+                    { text: "x² + 2xy + y² = (x + y)(x + y)", isCorrect: true }
+                ]
+            },
+            {
+                expression: "log(a × b)",
+                steps: [
+                    { text: "log(a × b) = log(a) × log(b)", isCorrect: false, trap: "Error común: logaritmo de producto" },
+                    { text: "log(a × b) = log(a) + log(b)", isCorrect: true },
+                    { text: "log(a) + log(b) = log(ab)", isCorrect: true }
+                ]
+            },
+            {
+                expression: "sin(α + β)",
+                steps: [
+                    { text: "sin(α + β) = sin(α) + sin(β)", isCorrect: false, trap: "Error común: suma de senos" },
+                    { text: "sin(α + β) = sin(α)cos(β) + cos(α)sin(β)", isCorrect: true },
+                    { text: "sin(α)cos(β) + cos(α)sin(β) = sin(α + β)", isCorrect: true }
+                ]
+            },
+            {
+                expression: "(a/b) ÷ (c/d)",
+                steps: [
+                    { text: "(a/b) ÷ (c/d) = (a/c) ÷ (b/d)", isCorrect: false, trap: "Error común: división cruzada incorrecta" },
+                    { text: "(a/b) ÷ (c/d) = (a/b) × (d/c)", isCorrect: true },
+                    { text: "(a/b) × (d/c) = ad/bc", isCorrect: true }
+                ]
+            },
+            {
+                expression: "(a^m)^n",
+                steps: [
+                    { text: "(a^m)^n = a^(m+n)", isCorrect: false, trap: "Error común: suma de exponentes" },
+                    { text: "(a^m)^n = a^(m×n)", isCorrect: true },
+                    { text: "a^(m×n) = (a^m)^n", isCorrect: true }
+                ]
+            },
+            {
+                expression: "√(x² + y²)",
+                steps: [
+                    { text: "√(x² + y²) = x + y", isCorrect: false, trap: "Error común: raíz de suma" },
+                    { text: "√(x² + y²) = √x² + √y²", isCorrect: false, trap: "Error común: separar raíz" },
+                    { text: "√(x² + y²) no se puede simplificar", isCorrect: true }
+                ]
+            },
+            {
+                expression: "a^(b-c)",
+                steps: [
+                    { text: "a^(b-c) = a^b - a^c", isCorrect: false, trap: "Error común: resta de exponentes" },
+                    { text: "a^(b-c) = a^b ÷ a^c", isCorrect: true },
+                    { text: "a^b ÷ a^c = a^(b-c)", isCorrect: true }
+                ]
+            },
+            {
+                expression: "ln(e^x)",
+                steps: [
+                    { text: "ln(e^x) = x × ln(e)", isCorrect: false, trap: "Error común: propiedad incorrecta del logaritmo" },
+                    { text: "ln(e^x) = x", isCorrect: true },
+                    { text: "x = ln(e^x)", isCorrect: true }
+                ]
+            },
+            {
+                expression: "|a + b|",
+                steps: [
+                    { text: "|a + b| = |a| + |b|", isCorrect: false, trap: "Error común: valor absoluto de suma" },
+                    { text: "|a + b| = |a| + |b| solo si a,b ≥ 0", isCorrect: false, trap: "Condición incorrecta" },
+                    { text: "|a + b| no se puede separar", isCorrect: true }
+                ]
+            },
+            {
+                expression: "cos(2α)",
+                steps: [
+                    { text: "cos(2α) = 2cos²(α)", isCorrect: false, trap: "Error común: fórmula incompleta" },
+                    { text: "cos(2α) = 2cos²(α) - 1", isCorrect: true },
+                    { text: "cos(2α) = 1 - 2sin²(α)", isCorrect: true }
+                ]
+            },
+            {
+                expression: "(√a)²",
+                steps: [
+                    { text: "(√a)² = √(a²)", isCorrect: false, trap: "Error común: mover raíz dentro" },
+                    { text: "(√a)² = a", isCorrect: true },
+                    { text: "a = (√a)²", isCorrect: true }
+                ]
+            },
+            {
+                expression: "log(a/b)",
+                steps: [
+                    { text: "log(a/b) = log(a) ÷ log(b)", isCorrect: false, trap: "Error común: logaritmo de cociente" },
+                    { text: "log(a/b) = log(a) - log(b)", isCorrect: true },
+                    { text: "log(a) - log(b) = log(a/b)", isCorrect: true }
+                ]
+            },
+            {
+                expression: "(ab)^n",
+                steps: [
+                    { text: "(ab)^n = a^n × b^n", isCorrect: false, trap: "Error común: distribuir exponente" },
+                    { text: "(ab)^n = a^n × b^n solo si n=1", isCorrect: false, trap: "Condición incorrecta" },
+                    { text: "(ab)^n = a^n × b^n", isCorrect: false, trap: "Error común pero a veces aceptado" },
+                    { text: "(ab)^n = a^n × b^n", isCorrect: true }
+                ]
+            },
+            {
+                expression: "√(-1)",
+                steps: [
+                    { text: "√(-1) = -1", isCorrect: false, trap: "Error común: raíz de negativo" },
+                    { text: "√(-1) = i", isCorrect: true },
+                    { text: "i² = -1", isCorrect: true }
+                ]
+            },
+            {
+                expression: "0^0",
+                steps: [
+                    { text: "0^0 = 0", isCorrect: false, trap: "Error común: cero elevado a cero" },
+                    { text: "0^0 = 1", isCorrect: true },
+                    { text: "0^0 es indefinido pero se define como 1", isCorrect: true }
+                ]
+            },
+            {
+                expression: "1/∞",
+                steps: [
+                    { text: "1/∞ = ∞", isCorrect: false, trap: "Error común: recíproco de infinito" },
+                    { text: "1/∞ = 0", isCorrect: true },
+                    { text: "lim(x→∞) 1/x = 0", isCorrect: true }
+                ]
+            },
+            {
+                expression: "(-a)^2",
+                steps: [
+                    { text: "(-a)^2 = -a²", isCorrect: false, trap: "Error común: signo negativo" },
+                    { text: "(-a)^2 = a²", isCorrect: true },
+                    { text: "(-a) × (-a) = a²", isCorrect: true }
+                ]
+            },
+            {
+                expression: "√(a²)",
+                steps: [
+                    { text: "√(a²) = -a", isCorrect: false, trap: "Error común: raíz cuadrada" },
+                    { text: "√(a²) = |a|", isCorrect: true },
+                    { text: "|a| = √(a²)", isCorrect: true }
+                ]
+            },
+            {
+                expression: "a^(1/2)",
+                steps: [
+                    { text: "a^(1/2) = 1/(2a)", isCorrect: false, trap: "Error común: exponente fraccionario" },
+                    { text: "a^(1/2) = √a", isCorrect: true },
+                    { text: "√a = a^(1/2)", isCorrect: true }
+                ]
+            },
+            {
+                expression: "sin(90°)",
+                steps: [
+                    { text: "sin(90°) = 0", isCorrect: false, trap: "Error común: seno de 90°" },
+                    { text: "sin(90°) = 1", isCorrect: true },
+                    { text: "cos(0°) = 1", isCorrect: true }
+                ]
+            },
+            {
+                expression: "tan(90°)",
+                steps: [
+                    { text: "tan(90°) = 0", isCorrect: false, trap: "Error común: tangente de 90°" },
+                    { text: "tan(90°) es indefinido", isCorrect: true },
+                    { text: "tan(90°) = sin(90°)/cos(90°)", isCorrect: true }
+                ]
+            },
+            {
+                expression: "log(1)",
+                steps: [
+                    { text: "log(1) = 0", isCorrect: false, trap: "Error común: logaritmo de 1" },
+                    { text: "log(1) = 1", isCorrect: true },
+                    { text: "a^0 = 1 para cualquier a ≠ 0", isCorrect: true }
+                ]
+            },
+            {
+                expression: "(-1)^n",
+                steps: [
+                    { text: "(-1)^n = -1 para todo n", isCorrect: false, trap: "Error común: potencia de -1" },
+                    { text: "(-1)^n = 1 si n es par", isCorrect: true },
+                    { text: "(-1)^n = -1 si n es impar", isCorrect: true }
+                ]
+            },
+            {
+                expression: "|x| < a",
+                steps: [
+                    { text: "|x| < a ⇒ x < a", isCorrect: false, trap: "Error común: valor absoluto" },
+                    { text: "|x| < a ⇒ -a < x < a", isCorrect: true },
+                    { text: "-a < x < a ⇔ |x| < a", isCorrect: true }
+                ]
+            },
+            {
+                expression: "√(x/y)",
+                steps: [
+                    { text: "√(x/y) = √x/√y", isCorrect: false, trap: "Error común: raíz de cociente" },
+                    { text: "√(x/y) = √x/√y solo si x,y ≥ 0", isCorrect: false, trap: "Condición incorrecta" },
+                    { text: "√(x/y) = √x/√y", isCorrect: true }
+                ]
+            },
+            {
+                expression: "(a+b)³",
+                steps: [
+                    { text: "(a+b)³ = a³ + b³", isCorrect: false, trap: "Error común: suma de cubos" },
+                    { text: "(a+b)³ = a³ + 3a²b + 3ab² + b³", isCorrect: true },
+                    { text: "Binomio de Newton: (a+b)³", isCorrect: true }
+                ]
+            },
+            {
+                expression: "cos²(α) + sin²(α)",
+                steps: [
+                    { text: "cos²(α) + sin²(α) = 2", isCorrect: false, trap: "Error común: identidad pitagórica" },
+                    { text: "cos²(α) + sin²(α) = 1", isCorrect: true },
+                    { text: "Identidad fundamental trigonométrica", isCorrect: true }
+                ]
+            },
+            {
+                expression: "e^(ln(x))",
+                steps: [
+                    { text: "e^(ln(x)) = x × e", isCorrect: false, trap: "Error común: exp y log inversos" },
+                    { text: "e^(ln(x)) = x", isCorrect: true },
+                    { text: "e^ln(x) = x para x > 0", isCorrect: true }
+                ]
+            },
+            {
+                expression: "ln(e^x)",
+                steps: [
+                    { text: "ln(e^x) = ln(e) × ln(x)", isCorrect: false, trap: "Error común: logaritmo de potencia" },
+                    { text: "ln(e^x) = x", isCorrect: true },
+                    { text: "ln(e^x) = x ln(e) = x", isCorrect: true }
+                ]
+            },
+            {
+                expression: "a^(log_a(b))",
+                steps: [
+                    { text: "a^(log_a(b)) = b × a", isCorrect: false, trap: "Error común: cambio de base" },
+                    { text: "a^(log_a(b)) = b", isCorrect: true },
+                    { text: "Propiedad: a^(log_a(b)) = b", isCorrect: true }
+                ]
+            },
+            {
+                expression: "log_a(a^b)",
+                steps: [
+                    { text: "log_a(a^b) = b × log_a(a)", isCorrect: false, trap: "Error común: logaritmo de potencia" },
+                    { text: "log_a(a^b) = b", isCorrect: true },
+                    { text: "log_a(a^b) = b log_a(a) = b", isCorrect: true }
+                ]
+            },
+            {
+                expression: "√(a²b²)",
+                steps: [
+                    { text: "√(a²b²) = ab", isCorrect: true },
+                    { text: "√(a²b²) = √a² × √b²", isCorrect: true },
+                    { text: "√(a²b²) = |ab|", isCorrect: true }
+                ]
+            },
+            {
+                expression: "(x^a)^b",
+                steps: [
+                    { text: "(x^a)^b = x^(a+b)", isCorrect: false, trap: "Error común: suma de exponentes" },
+                    { text: "(x^a)^b = x^(ab)", isCorrect: true },
+                    { text: "Potencia de potencia: (x^a)^b = x^(ab)", isCorrect: true }
+                ]
+            },
+            {
+                expression: "√(-a) × √(-b)",
+                steps: [
+                    { text: "√(-a) × √(-b) = √(ab)", isCorrect: false, trap: "Error común: raíces de negativos" },
+                    { text: "√(-a) × √(-b) = -√(ab)", isCorrect: true },
+                    { text: "i√a × i√b = i²√(ab) = -√(ab)", isCorrect: true }
+                ]
+            },
+            {
+                expression: "log_a(1)",
+                steps: [
+                    { text: "log_a(1) = a", isCorrect: false, trap: "Error común: logaritmo de 1" },
+                    { text: "log_a(1) = 0", isCorrect: true },
+                    { text: "a^0 = 1 ⇒ log_a(1) = 0", isCorrect: true }
+                ]
+            },
+            {
+                expression: "(-x)²",
+                steps: [
+                    { text: "(-x)² = -x²", isCorrect: false, trap: "Error común: cuadrado de negativo" },
+                    { text: "(-x)² = x²", isCorrect: true },
+                    { text: "(-x) × (-x) = x²", isCorrect: true }
+                ]
+            },
+            {
+                expression: "|x| = -x",
+                steps: [
+                    { text: "|x| = -x siempre", isCorrect: false, trap: "Error común: valor absoluto" },
+                    { text: "|x| = -x solo si x ≤ 0", isCorrect: true },
+                    { text: "|x| = -x ⇔ x ≤ 0", isCorrect: true }
+                ]
+            }
+        ];
+
+        // Variables del juego
+        let currentExerciseIndex = 0;
+        let score = 0;
+        let streak = 0;
+        let timer = null;
+        let timeLeft = 60;
+        let selectedExercises = [];
+        let totalGameTime = 0;
+        let currentScreen = 'verification';
+        let gameWon = false;
+        let audioContext = null;
+        let correctStepIndex = -1;
+
+        // Inicializar contexto de audio
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // Funciones de sonido
+        function playSound(frequency, duration, type = 'sine') {
+            initAudio();
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = frequency;
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+            
+            showSoundIndicator();
+        }
+
+        function playCorrectSound() {
+            playSound(523.25, 0.1);
+            setTimeout(() => playSound(659.25, 0.1), 100);
+            setTimeout(() => playSound(783.99, 0.2), 200);
+        }
+
+        function playIncorrectSound() {
+            playSound(300, 0.2, 'sawtooth');
+        }
+
+        function playStreakSound() {
+            playSound(800, 0.1);
+            setTimeout(() => playSound(1000, 0.1), 100);
+            setTimeout(() => playSound(1200, 0.2), 200);
+        }
+
+        function playWinSound() {
+            playSound(523.25, 0.1);
+            setTimeout(() => playSound(659.25, 0.1), 150);
+            setTimeout(() => playSound(783.99, 0.1), 300);
+            setTimeout(() => playSound(1046.50, 0.2), 450);
+            setTimeout(() => playSound(1318.51, 0.3), 600);
+        }
+
+        function playTimeUpSound() {
+            playSound(200, 0.5, 'square');
+        }
+
+        function showSoundIndicator() {
+            const indicator = document.getElementById('soundIndicator');
+            indicator.classList.add('show');
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 1000);
+        }
+
+        // Verificar si se completó la primera fase
+        function checkFirstLevelCompletion() {
+            const level1Completed = localStorage.getItem('skopia_level1_completed') === 'true';
+            if (!level1Completed) {
+                document.getElementById('verificationScreen').style.display = 'block';
+                document.getElementById('gameScreen').style.display = 'none';
+                document.getElementById('resultsScreen').style.display = 'none';
+                return false;
+            }
+            return true;
+        }
+
+        // Seleccionar ejercicios aleatorios
+        function selectRandomExercises() {
+            const shuffled = [...exercises].sort(() => Math.random() - 0.5);
+            selectedExercises = shuffled.slice(0, 10);
+        }
+
+        // Crear árbol de ecuaciones
+        function createEquationTree(exercise) {
+            const tree = document.getElementById('equationTree');
+            const connections = document.getElementById('treeConnections');
+            
+            tree.innerHTML = '';
+            connections.innerHTML = '';
+            
+            // Nodo raíz
+            const rootNode = document.createElement('div');
+            rootNode.className = 'tree-node';
+            rootNode.innerHTML = `
+                <div class="node-content" data-step="0">
+                    <span class="node-number">1</span>
+                    ${exercise.expression}
+                </div>
+            `;
+            tree.appendChild(rootNode);
+            
+            // Crear nodos hijos
+            exercise.steps.forEach((step, index) => {
+                const childNode = document.createElement('div');
+                childNode.className = 'tree-node';
+                childNode.innerHTML = `
+                    <div class="node-content" data-step="${index + 1}">
+                        <span class="node-number">${index + 2}</span>
+                        ${step.text}
+                    </div>
+                `;
+                tree.appendChild(childNode);
+                
+                // Agregar evento de clic
+                const nodeContent = childNode.querySelector('.node-content');
+                nodeContent.addEventListener('click', () => selectStep(index));
+                
+                // Dibujar conexiones
+                setTimeout(() => {
+                    drawConnections();
+                }, 100);
+            });
+        }
+
+        // Dibujar conexiones del árbol
+        function drawConnections() {
+            const connections = document.getElementById('treeConnections');
+            const nodes = document.querySelectorAll('.tree-node');
+            
+            connections.innerHTML = '';
+            
+            // Conectar el nodo raíz con los hijos
+            if (nodes.length > 1) {
+                const rootRect = nodes[0].getBoundingClientRect();
+                const containerRect = document.getElementById('equationTree').getBoundingClientRect();
+                
+                for (let i = 1; i < Math.min(4, nodes.length); i++) {
+                    const childRect = nodes[i].getBoundingClientRect();
+                    
+                    const line = document.createElement('div');
+                    line.className = 'tree-line vertical';
+                    line.style.top = '0';
+                    line.style.left = '50%';
+                    line.style.height = (childRect.top - rootRect.bottom - rootRect.top + containerRect.top) + 'px';
+                    
+                    connections.appendChild(line);
+                }
+            }
+        }
+
+        // Seleccionar paso
+        function selectStep(stepIndex) {
+            if (currentScreen !== 'game') return;
+            
+            const exercise = selectedExercises[currentExerciseIndex];
+            const selectedStep = exercise.steps[stepIndex];
+            
+            // Deshabilitar todos los nodos
+            document.querySelectorAll('.node-content').forEach(node => {
+                node.style.pointerEvents = 'none';
+            });
+            
+            // Marcar el paso seleccionado
+            const selectedNode = document.querySelector(`[data-step="${stepIndex + 1}"]`);
+            selectedNode.classList.add('selected');
+            
+            // Verificar si es correcto
+            if (selectedStep.isCorrect) {
+                // Incorrecto: el paso correcto es otro
+                selectedNode.classList.remove('selected');
+                selectedNode.classList.add('incorrect');
+                
+                // Mostrar el paso correcto
+                exercise.steps.forEach((step, index) => {
+                    if (step.isCorrect) {
+                        const correctNode = document.querySelector(`[data-step="${index + 1}"]`);
+                        if (correctNode) {
+                            correctNode.classList.add('correct');
+                        }
+                    }
+                });
+                
+                showFeedback(false);
+                playIncorrectSound();
+                streak = 0;
+                updateStreak();
+            } else {
+                // Correcto: este es el paso incorrecto
+                showFeedback(true);
+                playCorrectSound();
+                score++;
+                streak++;
+                updateStreak();
+                updateScore();
+                
+                // Verificar si ganó
+                if (score >= 7) {
+                    gameWon = true;
+                    setTimeout(() => {
+                        playWinSound();
+                        endGame();
+                    }, 2000);
+                    return;
+                }
+                
+                // Siguiente ejercicio después de un delay
+                setTimeout(() => {
+                    currentExerciseIndex++;
+                    if (currentExerciseIndex < selectedExercises.length) {
+                        loadExercise();
+                    } else {
+                        endGame();
+                    }
+                }, 2000);
+            }
+            
+            clearInterval(timer);
+        }
+
+        // Cargar ejercicio
+        function loadExercise() {
+            if (currentExerciseIndex >= selectedExercises.length || gameWon) {
+                endGame();
+                return;
+            }
+            
+            const exercise = selectedExercises[currentExerciseIndex];
+            createEquationTree(exercise);
+            startTimer();
+        }
+
+        // Iniciar temporizador
+        function startTimer() {
+            timeLeft = 60;
+            updateTimerDisplay();
+            
+            if (timer) clearInterval(timer);
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    timeUp();
+                }
+            }, 1000);
+        }
+
+        // Actualizar display del temporizador
+        function updateTimerDisplay() {
+            const timerText = document.getElementById('timerText');
+            const hourglassSand = document.getElementById('hourglassSand');
+            
+            timerText.textContent = timeLeft;
+            
+            const sandHeight = (timeLeft / 60) * 100;
+            hourglassSand.style.height = sandHeight + '%';
+            
+            if (timeLeft <= 10) {
+                hourglassSand.classList.add('danger');
+            } else {
+                hourglassSand.classList.remove('danger');
+            }
+        }
+
+        // Tiempo agotado
+        function timeUp() {
+            showFeedback(false);
+            playTimeUpSound();
+            
+            // Mostrar el paso correcto
+            const exercise = selectedExercises[currentExerciseIndex];
+            exercise.steps.forEach((step, index) => {
+                if (step.isCorrect) {
+                    const correctNode = document.querySelector(`[data-step="${index + 1}"]`);
+                    if (correctNode) {
+                        correctNode.classList.add('correct');
+                    }
+                }
+            });
+            
+            streak = 0;
+            updateStreak();
+            
+            setTimeout(() => {
+                currentExerciseIndex++;
+                if (currentExerciseIndex < selectedExercises.length) {
+                    loadExercise();
+                } else {
+                    endGame();
+                }
+            }, 2000);
+        }
+
+        // Mostrar feedback
+        function showFeedback(isCorrect) {
+            const feedback = document.createElement('div');
+            feedback.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+            feedback.innerHTML = isCorrect ? '✓' : '✗';
+            document.getElementById('feedbackContainer').appendChild(feedback);
+            
+            setTimeout(() => {
+                feedback.remove();
+            }, 1000);
+        }
+
+        // Actualizar puntuación
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        // Actualizar racha
+        function updateStreak() {
+            const streakDisplay = document.getElementById('streakDisplay');
+            const streakMultiplier = document.getElementById('streakMultiplier');
+            
+            if (streak > 1) {
+                streakDisplay.classList.add('active');
+                streakMultiplier.textContent = streak;
+                playStreakSound();
+            } else {
+                streakDisplay.classList.remove('active');
+                streakMultiplier.textContent = '1';
+            }
+        }
+
+        // Terminar juego
+        function endGame() {
+            currentScreen = 'results';
+            clearInterval(timer);
+            
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('resultsScreen').style.display = 'block';
+            
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalStreak').textContent = streak;
+            document.getElementById('finalTime').textContent = (60 * 10 - totalGameTime) + 's';
+            
+            // Guardar progreso
+            saveProgress();
+            
+            // Mostrar botón de siguiente nivel si se aprobaron 7 ejercicios
+            if (score >= 7) {
+                document.getElementById('nextLevelBtn').style.display = 'inline-block';
+            } else {
+                document.getElementById('nextLevelBtn').style.display = 'none';
+            }
+        }
+
+        // Guardar progreso
+        function saveProgress() {
+            const progress = {
+                level: 2,
+                score: score,
+                maxScore: 10,
+                completed: score >= 7,
+                won: gameWon,
+                streak: streak,
+                timestamp: Date.now()
+            };
+            
+            localStorage.setItem('skopia_level2_progress', JSON.stringify(progress));
+            
+            if (score >= 7) {
+                localStorage.setItem('skopia_level2_completed', 'true');
+            }
+        }
+
+        // Navegación
+        function goToFirstLevel() {
+            window.location.href = 'juego2.html';
+        }
+
+        function goBack() {
+            window.location.href = 'juego2.html';
+        }
+
+        function goToNextLevel() {
+            window.location.href = 'juego2fase3.html';
+        }
+
+        // Inicializar partículas
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.width = particle.style.height = Math.random() * 6 + 2 + 'px';
+                particle.style.animationDelay = Math.random() * 10 + 's';
+                particle.style.animationDuration = (Math.random() * 5 + 8) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Inicializar juego
+        function startGame() {
+            if (!checkFirstLevelCompletion()) return;
+            
+            currentScreen = 'game';
+            score = 0;
+            streak = 0;
+            currentExerciseIndex = 0;
+            totalGameTime = 0;
+            gameWon = false;
+            
+            selectRandomExercises();
+            
+            document.getElementById('verificationScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            document.getElementById('resultsScreen').style.display = 'none';
+            
+            updateScore();
+            updateStreak();
+            loadExercise();
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            createParticles();
+            
+            // Inicializar audio al primer clic
+            document.addEventListener('click', function initAudioOnFirstClick() {
+                initAudio();
+                document.removeEventListener('click', initAudioOnFirstClick);
+            }, { once: true });
+            
+            // Verificar completion al cargar
+            if (checkFirstLevelCompletion()) {
+                startGame();
+            }
+        });
+    </script>
+</body>
+</html>
