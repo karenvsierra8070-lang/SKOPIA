@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ráfaga Numérica - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+            --game-primary: #6366f1;
+            --game-secondary: #8b5cf6;
+            --game-accent: #ec4899;
+            --game-success: #10b981;
+            --game-error: #ef4444;
+            --game-warning: #f59e0b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Roboto', sans-serif; 
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%); 
+            color: white; 
+            min-height: 100vh; 
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Efectos de fondo animados */
+        .bg-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 50%;
+            animation: float-up 8s infinite linear;
+        }
+        @keyframes float-up {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+        }
+
+        /* Contenedor principal del juego */
+        .game-container {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Pantalla de presentación */
+        .intro-screen {
+            text-align: center;
+            animation: fadeIn 1s ease;
+        }
+        .game-title {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 3rem;
+            background: linear-gradient(45deg, var(--game-primary), var(--game-secondary), var(--game-accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(99, 102, 241, 0.5);
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
+        }
+        .game-subtitle {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: var(--color-oliva-claro);
+            margin-bottom: 40px;
+        }
+        .start-btn {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            padding: 20px 50px;
+            background: linear-gradient(45deg, var(--game-primary), var(--game-secondary));
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .start-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(99, 102, 241, 0.5);
+        }
+
+        /* Pantalla del juego */
+        .game-screen {
+            display: none;
+            width: 100%;
+            max-width: 900px;
+            background: rgba(30, 27, 75, 0.9);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(99, 102, 241, 0.3);
+        }
+
+        /* Header del juego */
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(99, 102, 241, 0.3);
+        }
+        .game-stats {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+        }
+        .stat-icon {
+            font-size: 1.5rem;
+            color: var(--game-accent);
+        }
+        .timer {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--game-warning);
+            min-width: 100px;
+            text-align: center;
+            animation: timer-pulse 1s ease-in-out infinite;
+        }
+        .timer.danger {
+            color: var(--game-error);
+            animation: timer-danger 0.5s ease-in-out infinite;
+        }
+        @keyframes timer-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        @keyframes timer-danger {
+            0%, 100% { transform: scale(1); color: var(--game-error); }
+            50% { transform: scale(1.1); color: #ff6b6b; }
+        }
+
+        /* Barra de progreso */
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--game-primary), var(--game-secondary));
+            border-radius: 5px;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+
+        /* Contenedor de pregunta */
+        .question-container {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+        .question-text {
+            font-size: 1.3rem;
+            line-height: 1.8;
+            margin-bottom: 20px;
+            color: #e2e8f0;
+        }
+        .question-math {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--color-oliva-claro);
+            font-weight: 700;
+        }
+
+        /* Opciones de respuesta */
+        .options-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .option-btn {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(99, 102, 241, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+        .option-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--game-primary);
+            transform: translateY(-2px);
+        }
+        .option-btn.correct {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: var(--game-success);
+            animation: correct-flash 0.5s ease;
+        }
+        .option-btn.incorrect {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: var(--game-error);
+            animation: incorrect-shake 0.5s ease;
+        }
+        .option-btn.disabled {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+        @keyframes correct-flash {
+            0%, 100% { background: rgba(16, 185, 129, 0.2); }
+            50% { background: rgba(16, 185, 129, 0.4); }
+        }
+        @keyframes incorrect-shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        /* Feedback inmediato */
+        .feedback {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 5rem;
+            z-index: 1000;
+            animation: feedback-pop 0.5s ease;
+            pointer-events: none;
+        }
+        .feedback.correct { color: var(--game-success); }
+        .feedback.incorrect { color: var(--game-error); }
+        @keyframes feedback-pop {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+        }
+
+        /* Pantalla de resultados */
+        .results-screen {
+            display: none;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+        .results-title {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            color: var(--game-accent);
+        }
+        .results-stats {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 2px solid rgba(99, 102, 241, 0.3);
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+        }
+        .result-label {
+            color: var(--color-oliva-claro);
+        }
+        .result-value {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--game-primary);
+        }
+        .next-level-btn {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            padding: 20px 50px;
+            background: linear-gradient(45deg, var(--game-success), #059669);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-right: 15px;
+        }
+        .next-level-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(16, 185, 129, 0.5);
+        }
+        .retry-btn {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            padding: 20px 50px;
+            background: linear-gradient(45deg, var(--game-warning), #d97706);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .retry-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(245, 158, 11, 0.5);
+        }
+        .next-level-btn:disabled {
+            background: gray;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Animaciones */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .game-title { font-size: 2rem; }
+            .game-screen { padding: 20px; margin: 20px; }
+            .options-container { grid-template-columns: 1fr; }
+            .game-stats { flex-direction: column; gap: 15px; }
+            .timer { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Partículas de fondo -->
+    <div class="bg-particles" id="particles"></div>
+
+    <div class="game-container">
+        <!-- Pantalla de introducción -->
+        <div class="intro-screen" id="introScreen">
+            <h1 class="game-title">RÁFAGA NUMÉRICA</h1>
+            <p class="game-subtitle">Operaciones Fundamentales</p>
+            <p style="margin-bottom: 40px; font-size: 1.1rem; opacity: 0.8;">
+                ¡Prepárate para el desafío matemático más intensivo!<br>
+                Resuelve 10 preguntas en tiempo récord y demuestra tu dominio de las operaciones básicas.
+            </p>
+            <button class="start-btn" onclick="startGame()">
+                <i class="fas fa-play"></i> INICIAR JUEGO
+            </button>
+        </div>
+
+        <!-- Pantalla del juego -->
+        <div class="game-screen" id="gameScreen">
+            <div class="game-header">
+                <div class="game-stats">
+                    <div class="stat-item">
+                        <i class="fas fa-trophy stat-icon"></i>
+                        <span id="score">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-question-circle stat-icon"></i>
+                        <span id="questionNumber">1/10</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-heart stat-icon"></i>
+                        <span id="lives">❤️❤️❤️</span>
+                    </div>
+                </div>
+                <div class="timer" id="timer">30</div>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 10%"></div>
+            </div>
+
+            <div class="question-container">
+                <div class="question-text" id="questionText">
+                    Cargando pregunta...
+                </div>
+            </div>
+
+            <div class="options-container" id="optionsContainer">
+                <!-- Las opciones se generarán dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Pantalla de resultados -->
+        <div class="results-screen" id="resultsScreen">
+            <h2 class="results-title">¡MISIÓN COMPLETADA!</h2>
+            <div class="results-stats">
+                <div class="result-item">
+                    <span class="result-label">Puntuación Final:</span>
+                    <span class="result-value" id="finalScore">0/10</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Tiempo Total:</span>
+                    <span class="result-value" id="totalTime">0s</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Precisión:</span>
+                    <span class="result-value" id="accuracy">0%</span>
+                </div>
+            </div>
+            <div id="resultButtons">
+                <button class="next-level-btn" id="nextLevelBtn" disabled>
+                    <i class="fas fa-arrow-right"></i> SIGUIENTE NIVEL
+                </button>
+                <button class="retry-btn" onclick="location.reload()">
+                    <i class="fas fa-redo"></i> REINTENTAR
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback visual -->
+    <div class="feedback" id="feedback"></div>
+
+    <script>
+        // Banco de preguntas tipo ICFES sobre operaciones básicas
+        const questionBank = [
+            {
+                question: "Una empresa de mensajería cobra una tarifa fija de $5.000 por el envío de paquetes de hasta 2 kg. Por cada kilogramo adicional o fracción, se cobra un recargo de $1.500. Un cliente desea enviar tres paquetes que pesan 1,5 kg, 3,2 kg y 0,8 kg respectivamente. ¿Cuál es el costo total que el cliente debe pagar por el envío de los tres paquetes?",
+                options: ["$15.000", "$18.000", "$19.500", "$21.000"],
+                correct: 1
+            },
+            {
+                question: "En una tienda, el precio de un producto es $120.000. Si se aplica un descuento del 20% y luego se agrega un IVA del 19%, ¿cuál es el precio final del producto?",
+                options: ["$115.200", "$134.400", "$142.800", "$152.000"],
+                correct: 0
+            },
+            {
+                question: "Un estudiante obtuvo las siguientes calificaciones: 85, 90, 78, 92 y 85. Si la nota mínima para aprobar es 80, ¿cuántos puntos necesita en el siguiente examen para mantener un promedio de 85?",
+                options: ["85", "90", "95", "100"],
+                correct: 0
+            },
+            {
+                question: "Una piscina rectangular mide 8 metros de largo y 4 metros de ancho. Si se llena con agua hasta una altura de 1,5 metros, ¿cuántos litros de agua contiene aproximadamente? (1m³ = 1000 litros)",
+                options: ["48.000 litros", "60.000 litros", "72.000 litros", "96.000 litros"],
+                correct: 0
+            },
+            {
+                question: "Un automóvil consume 12 litros de gasolina por cada 100 kilómetros. Si el precio del galón es $12.000 y el tanque tiene capacidad para 15 galones, ¿cuántos kilómetros puede recorrer con el tanque lleno?",
+                options: ["375 km", "450 km", "525 km", "600 km"],
+                correct: 1
+            },
+            {
+                question: "En una fábrica se producen 500 unidades diarias. Si se trabaja 5 días a la semana y se toman 2 semanas de vacaciones al año, ¿cuántas unidades se producen en un año?",
+                options: ["120.000", "125.000", "130.000", "135.000"],
+                correct: 0
+            },
+            {
+                question: "Un préstamo de $10.000.000 genera intereses del 2% mensual. Si se paga una cuota fija de $500.000 mensuales, ¿cuánto se habrá pagado en total después de 6 meses?",
+                options: ["$2.800.000", "$3.000.000", "$3.200.000", "$3.400.000"],
+                correct: 1
+            },
+            {
+                question: "Una receta para 4 personas requiere 200 gramos de harina. Si se desea preparar la misma receta para 6 personas, ¿cuántos gramos de harina se necesitan?",
+                options: ["250 g", "300 g", "350 g", "400 g"],
+                correct: 1
+            },
+            {
+                question: "En una carrera de 10 kilómetros, un corredor mantiene un ritmo de 5 minutos por kilómetro durante los primeros 6 km y luego acelera a 4 minutos por kilómetro. ¿Cuál es su tiempo total?",
+                options: ["42 minutos", "44 minutos", "46 minutos", "48 minutos"],
+                correct: 1
+            },
+            {
+                question: "Un comerciante compra un producto a $8.000 y lo vende con una ganancia del 25%. Si ofrece un descuento del 10% sobre el precio de venta, ¿cuál es el precio final de venta?",
+                options: ["$9.000", "$9.500", "$10.000", "$10.500"],
+                correct: 0
+            },
+            {
+                question: "Una persona camina 30 minutos al día a una velocidad de 5 km/h. ¿Cuántos kilómetros camina en una semana?",
+                options: ["15,5 km", "17,5 km", "19,5 km", "21,5 km"],
+                correct: 1
+            },
+            {
+                question: "En un restaurante, la cuenta total es $120.000. Si se incluye un servicio del 10% y se divide entre 4 personas, ¿cuánto paga cada persona?",
+                options: ["$30.000", "$33.000", "$36.000", "$39.000"],
+                correct: 1
+            },
+            {
+                question: "Un tanque de agua tiene una capacidad de 500 litros. Si se llenan 3/4 de su capacidad y luego se consumen 120 litros, ¿cuántos litros quedan?",
+                options: ["255 litros", "265 litros", "275 litros", "285 litros"],
+                correct: 0
+            },
+            {
+                question: "Una empresa tiene 120 empleados. Si el 35% son mujeres y el 60% de las mujeres tienen más de 30 años, ¿cuántas mujeres mayores de 30 años hay?",
+                options: ["20", "25", "30", "35"],
+                correct: 1
+            },
+            {
+                question: "Un producto tiene un precio original de $50.000. Si primero se aumenta en 20% y luego se disminuye en 15%, ¿cuál es el precio final?",
+                options: ["$51.000", "$53.000", "$55.000", "$57.000"],
+                correct: 0
+            },
+            {
+                question: "En una granja hay 240 animales. Si la relación de vacas a ovejas es de 3:5, ¿cuántas vacas hay?",
+                options: ["90", "100", "110", "120"],
+                correct: 0
+            },
+            {
+                question: "Un estudiante dedica 2 horas diarias al estudio de lunes a viernes y 4 horas los sábados. ¿Cuántas horas estudia en un mes de 30 días si hay 4 sábados?",
+                options: ["60 horas", "64 horas", "68 horas", "72 horas"],
+                correct: 0
+            },
+            {
+                question: "Una botella de 2 litros de soda cuesta $3.000. ¿Cuál es el precio por mililitro?",
+                options: ["$1,20", "$1,30", "$1,40", "$1,50"],
+                correct: 3
+            },
+            {
+                question: "En una competencia, el primer premio es $5.000.000, el segundo es la mitad del primero, y el tercero es la mitad del segundo. ¿Cuál es la suma total de los tres premios?",
+                options: ["$7.500.000", "$8.000.000", "$8.750.000", "$9.000.000"],
+                correct: 2
+            },
+            {
+                question: "Un vehículo recorre 180 km en 2 horas. Si mantiene la misma velocidad, ¿cuánto tiempo tardará en recorrer 315 km?",
+                options: ["3 horas", "3,5 horas", "4 horas", "4,5 horas"],
+                correct: 1
+            },
+            {
+                question: "Una caja contiene 48 manzanas. Si se distribuyen en bolsas de 6 manzanas cada una, ¿cuántas bolsas se pueden llenar?",
+                options: ["6", "7", "8", "9"],
+                correct: 2
+            },
+            {
+                question: "El precio de un artículo aumenta de $80.000 a $96.000. ¿Cuál es el porcentaje de aumento?",
+                options: ["15%", "18%", "20%", "22%"],
+                correct: 2
+            },
+            {
+                question: "En una clase de 30 estudiantes, el 70% aprobó el examen. ¿Cuántos estudiantes reprobaron?",
+                options: ["6", "7", "8", "9"],
+                correct: 3
+            },
+            {
+                question: "Un jardín rectangular mide 15 metros de largo y 8 metros de ancho. Si se construye un camino de 2 metros de ancho alrededor, ¿cuál es el área total incluyendo el camino?",
+                options: ["221 m²", "231 m²", "241 m²", "251 m²"],
+                correct: 1
+            },
+            {
+                question: "Una persona gana $2.500.000 mensuales. Si gasta el 30% en vivienda, el 20% en alimentación y el 15% en transporte, ¿cuánto le queda para otros gastos?",
+                options: "$875.000", "$925.000", "$975.000", "$1.025.000"],
+                correct: 0
+            },
+            {
+                question: "En una tienda, 3 camisas cuestan $45.000. ¿Cuánto costarán 5 camisas si el precio por unidad es el mismo?",
+                options: ["$65.000", "$70.000", "$75.000", "$80.000"],
+                correct: 2
+            },
+            {
+                question: "Un edificio tiene 12 pisos y cada piso tiene 8 apartamentos. Si el 75% de los apartamentos están ocupados, ¿cuántos apartamentos están vacíos?",
+                options: ["20", "22", "24", "26"],
+                correct: 2
+            },
+            {
+                question: "Una receta requiere 3/4 de taza de azúcar. Si solo tienes 1/2 taza, ¿cuánta azúcar te falta?",
+                options: ["1/8 taza", "1/4 taza", "1/3 taza", "1/2 taza"],
+                correct: 1
+            },
+            {
+                question: "Un teléfono cuesta $800.000. Si se puede pagar en 6 cuotas iguales sin intereses, ¿cuánto se paga por cuota?",
+                options: ["$120.000", "$125.000", "$130.000", "$133.333"],
+                correct: 3
+            },
+            {
+                question: "En una competencia de natación, un nadador completa 4 vueltas a una piscina de 50 metros en 2 minutos. ¿Cuál es su velocidad promedio en metros por segundo?",
+                options: ["1,33 m/s", "1,50 m/s", "1,67 m/s", "1,83 m/s"],
+                correct: 2
+            },
+            {
+                question: "Una librería vende libros a $25.000 cada uno. Si compras 3 libros, te hacen un descuento del 20% en el total. ¿Cuánto pagas?",
+                options: ["$55.000", "$60.000", "$65.000", "$70.000"],
+                correct: 1
+            },
+            {
+                question: "Un tren sale de la estación A a las 8:00 AM y llega a la estación B a las 10:30 AM. Si la distancia entre las estaciones es 150 km, ¿cuál es la velocidad promedio del tren?",
+                options: ["50 km/h", "60 km/h", "70 km/h", "80 km/h"],
+                correct: 1
+            },
+            {
+                question: "En una bolsa hay 60 caramelos: 20 rojos, 15 verdes y el resto azules. ¿Qué fracción representan los caramelos azules?",
+                options: ["1/3", "3/8", "5/12", "7/15"],
+                correct: 2
+            },
+            {
+                question: "Una persona camina 5 km en 1 hora. Si aumenta su velocidad en 20%, ¿cuánto tiempo tardará en caminar 6 km?",
+                options: ["1 hora", "1 hora 6 minutos", "1 hora 12 minutos", "1 hora 18 minutos"],
+                correct: 0
+            },
+            {
+                question: "Un restaurante ofrece un menú del día por $15.000. Si incluye una bebida que normalmente cuesta $3.000, ¿cuál es el descuento real si el menú completo costaría $20.000?",
+                options: ["20%", "25%", "30%", "35%"],
+                correct: 1
+            },
+            {
+                question: "En una clase de matemáticas, 18 estudiantes aprobaron y 12 reprobaron. ¿Cuál es la razón de aprobados a reprobados?",
+                options: ["2:1", "3:2", "4:3", "5:4"],
+                correct: 1
+            },
+            {
+                question: "Un depósito de agua pierde 2 litros por hora. Si inicialmente contiene 100 litros, ¿cuántas horas pueden pasar antes de que queden menos de 50 litros?",
+                options: ["20 horas", "22 horas", "24 horas", "26 horas"],
+                correct: 3
+            },
+            {
+                question: "Una película dura 2 horas y 15 minutos. Si comienza a las 7:30 PM, ¿a qué hora termina?",
+                options: ["9:30 PM", "9:45 PM", "10:00 PM", "10:15 PM"],
+                correct: 1
+            },
+            {
+                question: "En una tienda, el precio de un producto es $45.000. Si pagas con un billete de $50.000, ¿cuánto deberían darte de vuelto si aplican un descuento del 10%?",
+                options: ["$9.500", "$10.000", "$10.500", "$11.000"],
+                correct: 0
+            },
+            {
+                question: "Un atleta corre 5 km en 20 minutos. Si mantiene este ritmo, ¿cuánto tiempo tardará en correr una maratón (42,195 km)?",
+                options: ["2 horas 48 minutos", "2 horas 52 minutos", "2 horas 56 minutos", "3 horas"],
+                correct: 1
+            },
+            {
+                question: "Una biblioteca tiene 3.000 libros. Si el 40% son novelas, el 30% son textos académicos y el resto son libros infantiles, ¿cuántos libros infantiles hay?",
+                options: ["600", "700", "800", "900"],
+                correct: 3
+            },
+            {
+                question: "Un producto cuesta $120.000. Si se aplica un impuesto del 16% y luego un descuento del 10% sobre el subtotal, ¿cuál es el precio final?",
+                options: ["$118.080", "$122.400", "$126.720", "$131.040"],
+                correct: 0
+            },
+            {
+                question: "En una carrera de relevos, cada corredor corre 100 metros. Si el equipo completa los 400 metros en 45 segundos, ¿cuál es el tiempo promedio por corredor?",
+                options: ["10 segundos", "11 segundos", "11,25 segundos", "12 segundos"],
+                correct: 2
+            },
+            {
+                question: "Una persona ahorra $200.000 mensuales. Si los intereses son del 1% mensual compuesto, ¿cuánto tendrá después de un año?",
+                options: ["$2.400.000", "$2.426.800", "$2.453.600", "$2.480.400"],
+                correct: 1
+            },
+            {
+                question: "Un rectángulo tiene un perímetro de 60 metros. Si el largo es el doble del ancho, ¿cuál es el área del rectángulo?",
+                options: ["150 m²", "175 m²", "200 m²", "225 m²"],
+                correct: 2
+            },
+            {
+                question: "En una encuesta, 240 personas prefieren el café y 160 prefieren el té. ¿Qué porcentaje prefiere el café?",
+                options: ["55%", "60%", "65%", "70%"],
+                correct: 1
+            },
+            {
+                question: "Un tanque se llena en 3 horas con el grifo abierto y se vacía en 6 horas con el desagüe abierto. Si ambos están abiertos, ¿cuánto tiempo tardará en llenarse?",
+                options: ["4 horas", "5 horas", "6 horas", "7 horas"],
+                correct: 2
+            },
+            {
+                question: "Una compra total es $85.000. Si tienes un cupón de 10% de descuento y pagas con $100.000, ¿cuánto dinero te sobra?",
+                options: ["$23.500", "$24.500", "$25.500", "$26.500"],
+                correct: 0
+            },
+            {
+                question: "En un estadio hay 8.000 asientos. Si se venden el 75% para un concierto y cada boleta cuesta $50.000, ¿cuál es la recaudación total?",
+                options:["$250.000.000", "$300.000.000", "$350.000.000", "$400.000.000"],
+                correct: 1
+            },
+            {
+                question: "Un ciclista recorre 30 km en 1 hora y 15 minutos. ¿Cuál es su velocidad promedio en km/h?",
+                options: ["20 km/h", "22 km/h", "24 km/h", "26 km/h"],
+                correct: 2
+            },
+            {
+                question: "Una oferta dice 'Compra 2 y lleva 3' en un producto que cuesta $10.000. ¿Cuál es el descuento real por producto?",
+                options: ["25%", "30%", "33,33%", "40%"],
+                correct: 2
+            },
+            {
+                question: "En una granja hay 150 animales entre vacas y pollos. Si hay 420 patas en total, ¿cuántas vacas hay?",
+                options: ["45", "60", "75", "90"],
+                correct: 1
+            }
+        ];
+
+        // Variables del juego
+        let currentQuestion = 0;
+        let score = 0;
+        let lives = 3;
+        let timer = null;
+        let timeLeft = 30;
+        let totalTime = 0;
+        let selectedQuestions = [];
+        let currentTimer = null;
+
+        // Crear partículas de fondo
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 8 + 's';
+                particle.style.animationDuration = (8 + Math.random() * 4) + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        // Seleccionar preguntas aleatorias
+        function selectRandomQuestions() {
+            const shuffled = [...questionBank].sort(() => 0.5 - Math.random());
+            selectedQuestions = shuffled.slice(0, 10);
+        }
+
+        // Iniciar juego
+        function startGame() {
+            document.getElementById('introScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            
+            selectRandomQuestions();
+            currentQuestion = 0;
+            score = 0;
+            lives = 3;
+            totalTime = 0;
+            
+            updateDisplay();
+            loadQuestion();
+        }
+
+        // Cargar pregunta
+        function loadQuestion() {
+            if (currentQuestion >= selectedQuestions.length) {
+                endGame();
+                return;
+            }
+
+            const question = selectedQuestions[currentQuestion];
+            document.getElementById('questionText').innerHTML = question.question;
+            document.getElementById('questionNumber').textContent = `${currentQuestion + 1}/10`;
+            
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+            
+            question.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.className = 'option-btn';
+                button.innerHTML = `<strong>${String.fromCharCode(65 + index)}.</strong> ${option}`;
+                button.onclick = () => selectAnswer(index);
+                optionsContainer.appendChild(button);
+            });
+
+            startTimer();
+        }
+
+        // Iniciar temporizador
+        function startTimer() {
+            timeLeft = 30;
+            updateTimer();
+            
+            if (currentTimer) clearInterval(currentTimer);
+            
+            currentTimer = setInterval(() => {
+                timeLeft--;
+                totalTime++;
+                updateTimer();
+                
+                if (timeLeft <= 0) {
+                    clearInterval(currentTimer);
+                    timeUp();
+                }
+            }, 1000);
+        }
+
+        // Actualizar temporizador
+        function updateTimer() {
+            const timerElement = document.getElementById('timer');
+            timerElement.textContent = timeLeft;
+            
+            if (timeLeft <= 10) {
+                timerElement.classList.add('danger');
+            } else {
+                timerElement.classList.remove('danger');
+            }
+        }
+
+        // Seleccionar respuesta
+        function selectAnswer(index) {
+            clearInterval(currentTimer);
+            
+            const question = selectedQuestions[currentQuestion];
+            const buttons = document.querySelectorAll('.option-btn');
+            
+            buttons.forEach((button, i) => {
+                button.classList.add('disabled');
+                if (i === question.correct) {
+                    button.classList.add('correct');
+                } else if (i === index) {
+                    button.classList.add('incorrect');
+                }
+            });
+
+            // Mostrar feedback
+            showFeedback(index === question.correct);
+
+            if (index === question.correct) {
+                score++;
+            } else {
+                lives--;
+                updateLives();
+            }
+
+            setTimeout(() => {
+                currentQuestion++;
+                updateDisplay();
+                loadQuestion();
+            }, 1500);
+        }
+
+        // Tiempo agotado
+        function timeUp() {
+            lives--;
+            updateLives();
+            
+            const question = selectedQuestions[currentQuestion];
+            const buttons = document.querySelectorAll('.option-btn');
+            
+            buttons.forEach((button, i) => {
+                button.classList.add('disabled');
+                if (i === question.correct) {
+                    button.classList.add('correct');
+                }
+            });
+
+            showFeedback(false);
+
+            setTimeout(() => {
+                currentQuestion++;
+                updateDisplay();
+                loadQuestion();
+            }, 1500);
+        }
+
+        // Mostrar feedback
+        function showFeedback(correct) {
+            const feedback = document.getElementById('feedback');
+            feedback.textContent = correct ? '✓' : '✗';
+            feedback.className = `feedback ${correct ? 'correct' : 'incorrect'}`;
+            
+            setTimeout(() => {
+                feedback.className = 'feedback';
+            }, 500);
+        }
+
+        // Actualizar display
+        function updateDisplay() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('progressFill').style.width = `${((currentQuestion + 1) / 10) * 100}%`;
+        }
+
+        // Actualizar vidas
+        function updateLives() {
+            const hearts = '❤️'.repeat(Math.max(0, lives)) + '🖤'.repeat(Math.max(0, 3 - lives));
+            document.getElementById('lives').textContent = hearts;
+            
+            if (lives <= 0) {
+                endGame();
+            }
+        }
+
+        // Finalizar juego
+        function endGame() {
+            clearInterval(currentTimer);
+            
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('resultsScreen').style.display = 'block';
+            
+            const accuracy = Math.round((score / 10) * 100);
+            document.getElementById('finalScore').textContent = `${score}/10`;
+            document.getElementById('totalTime').textContent = `${totalTime}s`;
+            document.getElementById('accuracy').textContent = `${accuracy}%`;
+            
+            // Habilitar siguiente nivel si se aprobó
+            if (score >= 7) {
+                document.getElementById('nextLevelBtn').disabled = false;
+                document.getElementById('nextLevelBtn').onclick = () => {
+                    // Guardar progreso
+                    localStorage.setItem('skopia_game_progress', JSON.stringify({
+                        level: 1,
+                        completed: true,
+                        score: score,
+                        accuracy: accuracy
+                    }));
+                    window.location.href = 'juego2fase2.html';
+                };
+            }
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            createParticles();
+        });
+    </script>
+</body>
+</html>
