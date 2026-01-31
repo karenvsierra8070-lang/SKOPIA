@@ -450,14 +450,14 @@
             border: 2px solid rgba(76, 255, 76, 0.4);
             border-radius: 15px;
             font-family: 'Space Mono', monospace;
-            font-size: 1.8rem; /* Aumentado para mejor visibilidad */
+            font-size: 1.8rem;
             color: #ffffff;
             cursor: pointer;
             transition: all 0.3s;
             position: relative;
             overflow: hidden;
-            min-width: 350px; /* Aumentado */
-            line-height: 1.5; /* Añadido para mejor legibilidad */
+            min-width: 350px;
+            line-height: 1.5;
         }
 
         .node-content:hover {
@@ -484,6 +484,12 @@
             background: rgba(76, 255, 76, 0.3);
             border-color: #4cff4c;
             box-shadow: 0 0 30px rgba(76, 255, 76, 0.8);
+        }
+
+        .node-content.incorrect {
+            background: rgba(255, 68, 68, 0.3);
+            border-color: #ff4444;
+            box-shadow: 0 0 30px rgba(255, 68, 68, 0.8);
         }
 
         .node-number {
@@ -1320,7 +1326,7 @@
         let score = 0;
         let streak = 0;
         let timer = null;
-        let timeLeft = 30; // Cambiado a 30 segundos
+        let timeLeft = 30;
         let selectedExercises = [];
         let totalGameTime = 0;
         let currentScreen = 'start';
@@ -1329,6 +1335,7 @@
         let correctStepIndex = -1;
         let answeredQuestions = [];
         let currentQuestionIndex = 0;
+        let questionOrder = [];
 
         // Inicializar contexto de audio
         function initAudio() {
@@ -1395,10 +1402,11 @@
             }, 1000);
         }
 
-        // Seleccionar ejercicios aleatorios
+        // Seleccionar ejercicios aleatorios y crear orden
         function selectRandomExercises() {
             const shuffled = [...exercises].sort(() => Math.random() - 0.5);
             selectedExercises = shuffled.slice(0, 10);
+            questionOrder = selectedExercises.map((_, index) => index);
             answeredQuestions = [];
             currentQuestionIndex = 0;
         }
@@ -1542,7 +1550,7 @@
             }, 2000);
         }
 
-        // Siguiente pregunta aleatoria
+        // Siguiente pregunta
         function nextQuestion() {
             // Si ya respondimos todas las preguntas o ganamos, terminar el juego
             if (answeredQuestions.length >= 10 || gameWon) {
@@ -1550,16 +1558,9 @@
                 return;
             }
             
-            // Seleccionar una pregunta aleatoria que no hayamos respondido aún
-            const remainingQuestions = [];
-            for (let i = 0; i < selectedExercises.length; i++) {
-                if (!answeredQuestions.some(q => q.questionIndex === i)) {
-                    remainingQuestions.push(i);
-                }
-            }
-            
-            if (remainingQuestions.length > 0) {
-                currentQuestionIndex = remainingQuestions[Math.floor(Math.random() * remainingQuestions.length)];
+            // Avanzar a la siguiente pregunta en orden
+            currentQuestionIndex++;
+            if (currentQuestionIndex < selectedExercises.length) {
                 loadExercise();
             } else {
                 endGame();
@@ -1568,7 +1569,7 @@
 
         // Cargar ejercicio
         function loadExercise() {
-            if (gameWon) {
+            if (gameWon || currentQuestionIndex >= selectedExercises.length) {
                 endGame();
                 return;
             }
@@ -1580,7 +1581,7 @@
 
         // Iniciar temporizador
         function startTimer() {
-            timeLeft = 30; // Cambiado a 30 segundos
+            timeLeft = 30;
             updateTimerDisplay();
             
             if (timer) clearInterval(timer);
@@ -1603,7 +1604,7 @@
             
             timerText.textContent = timeLeft;
             
-            const sandHeight = (timeLeft / 30) * 100; // Cambiado a 30 segundos
+            const sandHeight = (timeLeft / 30) * 100;
             hourglassSand.style.height = sandHeight + '%';
             
             if (timeLeft <= 5) {
