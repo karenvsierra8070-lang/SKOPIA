@@ -382,10 +382,9 @@
             background: #fdf2f2;
         }
 
-        /* <<< CORRECCIÓN 1: Nueva clase para deshabilitar tarjetas >>> */
         .expression-card.disabled {
-            pointer-events: none; /* Evita que se pueda hacer clic */
-            opacity: 0.6; /* Feedback visual adicional */
+            pointer-events: none;
+            opacity: 0.6;
         }
 
         @keyframes shake {
@@ -415,7 +414,6 @@
             margin: 0 auto;
         }
         
-        /* Estilo para la pantalla de VICTORIA */
         .results-screen.win .results-container {
             border: 3px solid var(--color-dorado);
         }
@@ -424,7 +422,6 @@
             color: var(--color-dorado);
         }
 
-        /* Estilo para la pantalla de DERROTA */
         .results-screen.lose .results-container {
             border: 3px solid var(--color-error-marron);
         }
@@ -432,7 +429,6 @@
         .results-screen.lose .results-title {
             color: var(--color-error-marron);
         }
-
 
         .results-title {
             font-family: 'Orbitron', sans-serif;
@@ -706,6 +702,7 @@
         let failedAttempts = 0;
         let correctPairs = 0;
         let audioContext = null;
+        let cardsInCurrentRound = 0; // <<< SOLUCIÓN: Contador de tarjetas en la ronda actual
 
         // Inicializar contexto de audio
         function initAudio() {
@@ -746,25 +743,21 @@
             setTimeout(() => playSound(1046.50, 0.2), 450);
         }
 
-        // <<< CORRECCIÓN 1 y 2: Lógica de clic actualizada >>>
+        // <<< SOLUCIÓN: Lógica de clic actualizada y más robusta >>>
         function handleCardClick(event) {
             const clickedCard = event.target;
 
-            // Si la tarjeta ya es correcta o está deshabilitada, no hacer nada
             if (clickedCard.classList.contains('correct') || clickedCard.classList.contains('disabled')) {
                 return;
             }
 
             if (selectedCard === null) {
-                // Primer clic: seleccionar la tarjeta
                 selectedCard = clickedCard;
                 clickedCard.classList.add('selected');
             } else {
-                // Segundo clic: verificar la pareja
                 const isMatch = selectedCard.dataset.pairId === clickedCard.dataset.pairId;
 
                 if (isMatch) {
-                    // ¡Pareja correcta!
                     playCorrectSound();
                     score += 20;
                     correctPairs++;
@@ -777,35 +770,32 @@
                         selectedCard.remove();
                         clickedCard.remove();
                         
-                        checkGameEnd(); // Comprobar si se alcanzaron los 300 puntos
+                        cardsInCurrentRound -= 2; // <<< SOLUCIÓN: Reducir el contador
+
+                        checkGameEnd();
                         
-                        // <<< CORRECCIÓN 2: Siempre cargar nueva ronda si no quedan tarjetas >>>
-                        const remainingCards = document.querySelectorAll('.expression-card:not(.correct)');
-                        if (remainingCards.length === 0) {
+                        // <<< SOLUCIÓN: Usar el contador en lugar de una consulta al DOM >>>
+                        if (cardsInCurrentRound === 0) {
                             loadNewRound();
                         }
                     }, 600);
 
                 } else {
-                    // Pareja incorrecta
                     playIncorrectSound();
                     failedAttempts++;
                     timeLeft = Math.max(0, timeLeft - 5);
                     updateTimerDisplay();
                     updateEfficiency();
 
-                    // <<< CORRECCIÓN 1: Añadir clase 'disabled' para bloquear clics >>>
                     selectedCard.classList.add('incorrect', 'disabled');
                     clickedCard.classList.add('incorrect', 'disabled');
                     
                     setTimeout(() => {
-                        // Quitar todas las clases de estado después de la animación
                         selectedCard.classList.remove('incorrect', 'disabled', 'selected');
                         clickedCard.classList.remove('incorrect', 'disabled');
                     }, 500);
                 }
                 
-                // Resetear la selección
                 selectedCard = null;
             }
         }
@@ -857,6 +847,9 @@
                 card.addEventListener('click', handleCardClick);
                 simplificationsContainer.appendChild(card);
             });
+
+            // <<< SOLUCIÓN: Establecer el contador al inicio de cada ronda >>>
+            cardsInCurrentRound = 12; // 6 expresiones + 6 simplificaciones
         }
 
 
