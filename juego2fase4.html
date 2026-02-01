@@ -387,21 +387,6 @@
             opacity: 0.6;
         }
 
-        /* <<< MEJORA FINAL: Estilo para la tarjeta revelada >>> */
-        .expression-card.revealed {
-            background: #f8d7da;
-            border-left-color: var(--color-error-marron);
-            opacity: 0.9;
-            pointer-events: none;
-            animation: revealPulse 1.5s ease-in-out;
-        }
-
-        @keyframes revealPulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             20%, 60% { transform: translateX(-8px); }
@@ -582,7 +567,7 @@
                         </li>
                         <li>
                             <span class="step-number">4</span>
-                            <span>Un error te restará 5 segundos. ¡Precisión es clave!</span>
+                            <span>Un error hará desaparecer la expresión y su correcta. ¡Precisión es clave!</span>
                         </li>
                     </ul>
                 </div>
@@ -758,14 +743,16 @@
             setTimeout(() => playSound(1046.50, 0.2), 450);
         }
 
-        // <<< MEJORA FINAL: Lógica de clic con revelación de respuesta >>>
+        // <<< MODIFICACIÓN CLAVE: Lógica de clic para penalizar errores >>>
         function handleCardClick(event) {
             const clickedCard = event.target;
 
-            if (clickedCard.classList.contains('correct') || clickedCard.classList.contains('disabled') || clickedCard.classList.contains('revealed')) {
+            // Evitar clics en tarjetas que ya no son válidas
+            if (clickedCard.classList.contains('correct') || clickedCard.classList.contains('disabled')) {
                 return;
             }
 
+            // Si se hace clic en la misma tarjeta seleccionada, deseleccionarla
             if (selectedCard !== null && selectedCard === clickedCard) {
                 selectedCard.classList.remove('selected');
                 selectedCard = null;
@@ -809,7 +796,6 @@
                     updateTimerDisplay();
                     updateEfficiency();
 
-                    // Encontrar la tarjeta correcta que no fue seleccionada
                     const correctPairId = selectedCard.dataset.pairId;
                     const allCards = document.querySelectorAll('.expression-card:not(.correct)');
                     let actualCorrectCard = null;
@@ -818,31 +804,45 @@
                             actualCorrectCard = card;
                         }
                     });
-                    
-                    // Marcar la tarjeta incorrecta y la correcta
+
+                    // Guardar referencias para las animaciones
                     const cardToShake1 = selectedCard;
                     const cardToShake2 = clickedCard;
-                    
+
                     cardToShake1.classList.add('incorrect', 'disabled');
                     cardToShake2.classList.add('incorrect', 'disabled');
-                    if (actualCorrectCard) {
-                        actualCorrectCard.classList.add('revealed'); // <<< MEJORA: Revelar la respuesta correcta
-                    }
                     
                     selectedCard = null;
                     
-                    setTimeout(() => {
-                        cardToShake1.remove(); // Eliminar la tarjeta equivocada
-                        cardToShake2.remove();
-                        if (actualCorrectCard) {
-                            actualCorrectCard.remove(); // Eliminar la tarjeta revelada
-                        }
-                        cardsInCurrentRound -= 2;
-                        checkGameEnd();
-                        if (cardsInCurrentRound === 0) {
-                            loadNewRound();
-                        }
-                    }, 1000); // Un poco más de tiempo para que el usuario vea la respuesta
+                    // Si encontramos la tarjeta correcta, la eliminamos junto con la incorrecta
+                    if (actualCorrectCard) {
+                        actualCorrectCard.classList.add('disabled');
+                        
+                        setTimeout(() => {
+                            // Eliminar la tarjeta seleccionada y la correcta
+                            cardToShake1.classList.add('correct');
+                            actualCorrectCard.classList.add('correct');
+                            
+                            setTimeout(() => {
+                                cardToShake1.remove();
+                                actualCorrectCard.remove();
+                                cardsInCurrentRound -= 2;
+                                
+                                // Restaurar la tarjeta con la que se hizo la segunda selección (la incorrecta)
+                                cardToShake2.classList.remove('incorrect', 'disabled');
+                                
+                                if (cardsInCurrentRound === 0) {
+                                    loadNewRound();
+                                }
+                            }, 600); // Duración de la animación de desaparición
+                        }, 500); // Duración de la animación de temblor
+                    } else {
+                        // Caso de respaldo si no se encuentra la tarjeta correcta (no debería ocurrir)
+                        setTimeout(() => {
+                            cardToShake1.classList.remove('incorrect', 'disabled', 'selected');
+                            cardToShake2.classList.remove('incorrect', 'disabled');
+                        }, 500);
+                    }
                 }
             }
         }
