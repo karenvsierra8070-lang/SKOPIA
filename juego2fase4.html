@@ -703,7 +703,6 @@
         let correctPairs = 0;
         let audioContext = null;
         let cardsInCurrentRound = 0;
-        let isProcessing = false; // <<< SOLUCIÓN 1: Bloqueo de procesamiento
 
         // Inicializar contexto de audio
         function initAudio() {
@@ -744,16 +743,16 @@
             setTimeout(() => playSound(1046.50, 0.2), 450);
         }
 
-        // <<< SOLUCIÓN 1, 2, 3 y 4: Lógica de clic completamente reescrita >>>
+        // <<< SOLUCIÓN FINAL: Lógica de clic sin bloqueo global >>>
         function handleCardClick(event) {
             const clickedCard = event.target;
 
-            // Evitar clics si ya se está procesando una acción o la tarjeta no es válida
-            if (isProcessing || clickedCard.classList.contains('correct') || clickedCard.classList.contains('disabled')) {
+            // Evitar clics en tarjetas que ya no son válidas
+            if (clickedCard.classList.contains('correct') || clickedCard.classList.contains('disabled')) {
                 return;
             }
 
-            // SOLUCIÓN 4: Si se hace clic en la misma tarjeta seleccionada, deseleccionarla
+            // Si se hace clic en la misma tarjeta seleccionada, deseleccionarla
             if (selectedCard !== null && selectedCard === clickedCard) {
                 selectedCard.classList.remove('selected');
                 selectedCard = null;
@@ -764,7 +763,6 @@
                 selectedCard = clickedCard;
                 clickedCard.classList.add('selected');
             } else {
-                isProcessing = true; // Iniciar bloqueo de procesamiento
                 const isMatch = selectedCard.dataset.pairId === clickedCard.dataset.pairId;
 
                 if (isMatch) {
@@ -773,18 +771,24 @@
                     correctPairs++;
                     updateScore();
 
-                    selectedCard.classList.add('correct');
-                    clickedCard.classList.add('correct');
+                    // Guardar referencias a las tarjetas para eliminarlas después
+                    const cardToRemove1 = selectedCard;
+                    const cardToRemove2 = clickedCard;
+
+                    cardToRemove1.classList.add('correct');
+                    cardToRemove2.classList.add('correct');
+                    
+                    // Limpiar la selección inmediatamente para permitir el siguiente clic
+                    selectedCard = null;
 
                     setTimeout(() => {
-                        selectedCard.remove();
-                        clickedCard.remove();
+                        cardToRemove1.remove();
+                        cardToRemove2.remove();
                         cardsInCurrentRound -= 2;
                         checkGameEnd();
                         if (cardsInCurrentRound === 0) {
                             loadNewRound();
                         }
-                        isProcessing = false; // Desbloquear
                     }, 600);
 
                 } else {
@@ -794,7 +798,6 @@
                     updateTimerDisplay();
                     updateEfficiency();
 
-                    // SOLUCIÓN 2: Encontrar y bloquear la tarjeta correcta que no se seleccionó
                     const correctPairId = selectedCard.dataset.pairId;
                     const allCards = document.querySelectorAll('.expression-card:not(.correct)');
                     let actualCorrectCard = null;
@@ -804,32 +807,36 @@
                         }
                     });
 
-                    selectedCard.classList.add('incorrect', 'disabled');
-                    clickedCard.classList.add('incorrect', 'disabled');
+                    // Guardar referencias para la animación
+                    const cardToShake1 = selectedCard;
+                    const cardToShake2 = clickedCard;
+
+                    cardToShake1.classList.add('incorrect', 'disabled');
+                    cardToShake2.classList.add('incorrect', 'disabled');
                     if (actualCorrectCard) {
                         actualCorrectCard.classList.add('disabled');
                     }
                     
+                    // Limpiar la selección
+                    selectedCard = null;
+                    
                     setTimeout(() => {
-                        selectedCard.classList.remove('incorrect', 'disabled', 'selected');
-                        clickedCard.classList.remove('incorrect', 'disabled');
+                        cardToShake1.classList.remove('incorrect', 'disabled', 'selected');
+                        cardToShake2.classList.remove('incorrect', 'disabled');
                         if (actualCorrectCard) {
                             actualCorrectCard.classList.remove('disabled');
                         }
-                        isProcessing = false; // Desbloquear
                     }, 500);
                 }
-                
-                selectedCard = null;
             }
         }
         
-        // SOLUCIÓN 3: Cargar nueva ronda evitando duplicados de simplificación
+        // Cargar nueva ronda evitando duplicados de simplificación
         function loadNewRound() {
             let roundPairs = [];
             let usedSimplificationsInRound = new Set();
             let attempts = 0;
-            const maxAttempts = 20; // Para evitar bucles infinitos
+            const maxAttempts = 20;
 
             while (roundPairs.length < 6 && attempts < maxAttempts) {
                 if (currentGameBank.length === 0) {
@@ -839,17 +846,14 @@
                 
                 const potentialPair = currentGameBank.shift();
                 
-                // Reemplazar la variable por la de la partida
                 const originalVar = potentialPair.expression.match(/([a-z])/)[1];
                 const expression = potentialPair.expression.replace(new RegExp(originalVar, 'g'), gameVariable);
                 const simplification = potentialPair.simplification.replace(new RegExp(originalVar, 'g'), gameVariable);
                 
-                // Comprobar si la simplificación ya está en uso en esta ronda
                 if (!usedSimplificationsInRound.has(simplification)) {
                     usedSimplificationsInRound.add(simplification);
                     roundPairs.push({ expression, simplification });
                 } else {
-                    // Colisión: devolver el par al final del banco para usarlo más tarde
                     currentGameBank.push(potentialPair);
                 }
                 attempts++;
@@ -968,7 +972,6 @@
             score = 0;
             failedAttempts = 0;
             selectedCard = null;
-            isProcessing = false; // Resetear el bloqueo
             
             document.getElementById('startScreen').style.display = 'none';
             document.getElementById('resultsScreenWin').style.display = 'none';
