@@ -387,6 +387,21 @@
             opacity: 0.6;
         }
 
+        /* <<< MEJORA FINAL: Estilo para la tarjeta revelada >>> */
+        .expression-card.revealed {
+            background: #f8d7da;
+            border-left-color: var(--color-error-marron);
+            opacity: 0.9;
+            pointer-events: none;
+            animation: revealPulse 1.5s ease-in-out;
+        }
+
+        @keyframes revealPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             20%, 60% { transform: translateX(-8px); }
@@ -567,7 +582,7 @@
                         </li>
                         <li>
                             <span class="step-number">4</span>
-                            <span>Un error te restará 5 segundos y bloqueará la pregunta.</span>
+                            <span>Un error te restará 5 segundos. ¡Precisión es clave!</span>
                         </li>
                     </ul>
                 </div>
@@ -650,18 +665,15 @@
         let fullQuestionBank = [];
         let currentGameBank = [];
         let gameVariable = 'x';
-        let exerciseIdCounter = 0; // <<< NUEVO: Contador para IDs únicos
 
         function toSuperscript(num) {
             const superscripts = '⁰¹²³⁴⁵⁶⁷⁸⁹';
             return num.toString().split('').map(char => superscripts[parseInt(char)] || char).join('');
         }
 
-        // <<< MODIFICADO: Ahora cada ejercicio tiene un ID único persistente >>>
         function generateQuestionBank() {
             fullQuestionBank = [];
             let usedExercises = new Set();
-            exerciseIdCounter = 0; // Resetear el contador
             
             while (fullQuestionBank.length < 180) {
                 let v = variables[Math.floor(Math.random() * variables.length)];
@@ -689,7 +701,6 @@
                 
                 if (!usedExercises.has(exerciseKey)) {
                     usedExercises.add(exerciseKey);
-                    randomOp.id = exerciseIdCounter++; // <<< Añadir ID único
                     fullQuestionBank.push(randomOp);
                 }
             }
@@ -707,7 +718,6 @@
         let correctPairs = 0;
         let audioContext = null;
         let cardsInCurrentRound = 0;
-        let failedPairIds = new Set(); // <<< NUEVO: Almacenar IDs de preguntas fallidas
 
         // Inicializar contexto de audio
         function initAudio() {
@@ -748,11 +758,11 @@
             setTimeout(() => playSound(1046.50, 0.2), 450);
         }
 
-        // <<< MODIFICADO: Al fallar, se añade el ID a la lista de bloqueados >>>
+        // <<< MEJORA FINAL: Lógica de clic con revelación de respuesta >>>
         function handleCardClick(event) {
             const clickedCard = event.target;
 
-            if (clickedCard.classList.contains('correct') || clickedCard.classList.contains('disabled')) {
+            if (clickedCard.classList.contains('correct') || clickedCard.classList.contains('disabled') || clickedCard.classList.contains('revealed')) {
                 return;
             }
 
@@ -799,11 +809,7 @@
                     updateTimerDisplay();
                     updateEfficiency();
 
-                    // <<< NUEVO: Bloquear la pregunta fallida >>>
-                    const failedId = parseInt(selectedCard.dataset.pairId);
-                    failedPairIds.add(failedId);
-                    console.log("Pregunta bloqueada por fallo:", failedId);
-
+                    // Encontrar la tarjeta correcta que no fue seleccionada
                     const correctPairId = selectedCard.dataset.pairId;
                     const allCards = document.querySelectorAll('.expression-card:not(.correct)');
                     let actualCorrectCard = null;
@@ -812,46 +818,49 @@
                             actualCorrectCard = card;
                         }
                     });
-
+                    
+                    // Marcar la tarjeta incorrecta y la correcta
                     const cardToShake1 = selectedCard;
                     const cardToShake2 = clickedCard;
-
+                    
                     cardToShake1.classList.add('incorrect', 'disabled');
                     cardToShake2.classList.add('incorrect', 'disabled');
                     if (actualCorrectCard) {
-                        actualCorrectCard.classList.add('disabled');
+                        actualCorrectCard.classList.add('revealed'); // <<< MEJORA: Revelar la respuesta correcta
                     }
                     
                     selectedCard = null;
                     
                     setTimeout(() => {
-                        cardToShake1.classList.remove('incorrect', 'disabled', 'selected');
-                        cardToShake2.classList.remove('incorrect', 'disabled');
+                        cardToShake1.remove(); // Eliminar la tarjeta equivocada
+                        cardToShake2.remove();
                         if (actualCorrectCard) {
-                            actualCorrectCard.classList.remove('disabled');
+                            actualCorrectCard.remove(); // Eliminar la tarjeta revelada
                         }
-                    }, 500);
+                        cardsInCurrentRound -= 2;
+                        checkGameEnd();
+                        if (cardsInCurrentRound === 0) {
+                            loadNewRound();
+                        }
+                    }, 1000); // Un poco más de tiempo para que el usuario vea la respuesta
                 }
             }
         }
         
-        // <<< MODIFICADO: Filtrar el banco para excluir preguntas bloqueadas >>>
+        // Cargar nueva ronda evitando duplicados de simplificación
         function loadNewRound() {
-            // Crear un banco temporal que excluya las preguntas fallidas
-            const availableBank = currentGameBank.filter(pair => !failedPairIds.has(pair.id));
-            
             let roundPairs = [];
             let usedSimplificationsInRound = new Set();
             let attempts = 0;
-            const maxAttempts = 30; // Aumentar intentos por si hay muchos bloqueados
+            const maxAttempts = 20;
 
             while (roundPairs.length < 6 && attempts < maxAttempts) {
-                if (availableBank.length === 0) {
-                    console.warn("No hay suficientes preguntas disponibles para una nueva ronda.");
-                    break;
+                if (currentGameBank.length === 0) {
+                    generateQuestionBank();
+                    currentGameBank = [...fullQuestionBank];
                 }
                 
-                const potentialPair = availableBank.shift();
+                const potentialPair = currentGameBank.shift();
                 
                 const originalVar = potentialPair.expression.match(/([a-z])/)[1];
                 const expression = potentialPair.expression.replace(new RegExp(originalVar, 'g'), gameVariable);
@@ -859,10 +868,9 @@
                 
                 if (!usedSimplificationsInRound.has(simplification)) {
                     usedSimplificationsInRound.add(simplification);
-                    roundPairs.push({ ...potentialPair, expression, simplification }); // Mantener el ID original
+                    roundPairs.push({ expression, simplification });
                 } else {
-                    // Si hay duplicado de simplificación, devolver al banco para más tarde
-                    availableBank.push(potentialPair);
+                    currentGameBank.push(potentialPair);
                 }
                 attempts++;
             }
@@ -871,8 +879,8 @@
             const simplifications = [];
 
             roundPairs.forEach((pair, index) => {
-                expressions.push({ text: pair.expression, pairId: pair.id });
-                simplifications.push({ text: pair.simplification, pairId: pair.id });
+                expressions.push({ text: pair.expression, pairId: index });
+                simplifications.push({ text: pair.simplification, pairId: index });
             });
 
             expressions.sort(() => Math.random() - 0.5);
@@ -980,7 +988,6 @@
             score = 0;
             failedAttempts = 0;
             selectedCard = null;
-            failedPairIds.clear(); // <<< Limpiar IDs bloqueados al empezar una nueva partida
             
             document.getElementById('startScreen').style.display = 'none';
             document.getElementById('resultsScreenWin').style.display = 'none';
