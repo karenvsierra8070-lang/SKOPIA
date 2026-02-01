@@ -52,6 +52,7 @@
             --color-dorado: #FFD700;
             --color-rojo-error: #e74c3c;
             --color-gris: #666666;
+            --color-azul-pista: #3498db;
         }
 
         * { 
@@ -326,6 +327,17 @@
             75% { transform: translateX(10px); }
         }
 
+        .value-card.hint {
+            border-color: var(--color-azul-pista);
+            box-shadow: 0 0 20px rgba(52, 152, 219, 0.6);
+            animation: hintPulse 1s ease-in-out 3;
+        }
+
+        @keyframes hintPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
         /* Zonas de destino */
         .drop-zones {
             display: flex;
@@ -394,7 +406,14 @@
             50% { transform: translateX(10px); }
         }
 
-        /* Botón de verificar */
+        /* Botones de acción */
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
         .verify-btn {
             background: linear-gradient(45deg, var(--color-dorado), #ffed4e);
             color: var(--color-verde-oscuro);
@@ -409,8 +428,9 @@
             font-family: 'Orbitron', sans-serif;
             text-transform: uppercase;
             letter-spacing: 2px;
-            margin: 30px auto;
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .verify-btn:hover:not(:disabled) {
@@ -421,6 +441,46 @@
         .verify-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+        }
+
+        .hint-btn {
+            background: linear-gradient(45deg, var(--color-azul-pista), #5dade2);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(52, 152, 219, 0.3);
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .hint-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(52, 152, 219, 0.4);
+        }
+
+        .hint-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .hint-count {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
         }
 
         /* Pantalla de resultados */
@@ -620,6 +680,11 @@
             .round-display {
                 font-size: 1.5rem;
             }
+            
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
         }
 
         @media (max-width: 480px) {
@@ -666,6 +731,7 @@
                     <li>Si el tiempo se acaba, regresarás a la ronda 1</li>
                     <li>Completa 5 rondas correctas para ganar</li>
                     <li>Los números están muy cerca para desafiar tu precisión mental</li>
+                    <li>Usa el botón de pista si necesitas ayuda (costo: 10 puntos)</li>
                 </ul>
             </div>
             
@@ -698,7 +764,7 @@
                     <i class="fas fa-arrow-down arrow"></i>
                 </div>
 
-                <div class="drop-zones">
+                <div class="drop-zones" id="dropZones">
                     <div class="drop-zone" data-position="0">
                         <div class="drop-zone-label">Menor</div>
                         <div class="drop-zone-hint">Arrastra aquí el valor más pequeño</div>
@@ -713,9 +779,16 @@
                     </div>
                 </div>
 
-                <button class="verify-btn" id="verifyBtn" onclick="verifyOrder()" disabled>
-                    Verificar Orden
-                </button>
+                <div class="action-buttons">
+                    <button class="hint-btn" id="hintBtn" onclick="showHint()">
+                        <i class="fas fa-lightbulb"></i> 
+                        Pista
+                        <span class="hint-count" id="hintCount">2</span>
+                    </button>
+                    <button class="verify-btn" id="verifyBtn" onclick="verifyOrder()" disabled>
+                        <i class="fas fa-check"></i> Verificar
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -818,6 +891,8 @@
         let totalTime = 0;
         let currentScreen = 'start';
         let audioContext = null;
+        let hintsRemaining = 2; // Pistas por ronda
+        let draggedElement = null;
 
         // Inicializar contexto de audio
         function initAudio() {
@@ -868,6 +943,12 @@
             playSound(200, 0.5, 'square');
         }
 
+        function playHintSound() {
+            playSound(800, 0.1);
+            setTimeout(() => playSound(1000, 0.1), 100);
+            setTimeout(() => playSound(1200, 0.2), 200);
+        }
+
         // Seleccionar ejercicio aleatorio no usado
         function selectRandomExercise() {
             const availableExercises = exercises.filter((ex, index) => !usedExercises.includes(index));
@@ -883,10 +964,25 @@
             return { ...exercise, originalIndex };
         }
 
+        // Limpiar completamente las zonas de destino
+        function clearDropZones() {
+            const dropZones = document.querySelectorAll('.drop-zone');
+            dropZones.forEach(zone => {
+                // Mover todas las tarjetas de vuelta al contenedor principal
+                const cards = zone.querySelectorAll('.value-card');
+                cards.forEach(card => {
+                    document.getElementById('cardsContainer').appendChild(card);
+                });
+            });
+        }
+
         // Crear tarjetas
         function createCards() {
             const container = document.getElementById('cardsContainer');
             container.innerHTML = '';
+            
+            // Limpiar zonas de destino primero
+            clearDropZones();
             
             const cards = [
                 { type: 'fraction', value: currentExercise.fraction },
@@ -912,6 +1008,9 @@
                 
                 container.appendChild(cardElement);
             });
+            
+            // Deshabilitar botón de verificar
+            document.getElementById('verifyBtn').disabled = true;
         }
 
         // Configurar zonas de destino
@@ -926,8 +1025,6 @@
         }
 
         // Manejadores de drag and drop
-        let draggedElement = null;
-
         function handleDragStart(e) {
             draggedElement = e.target;
             e.target.classList.add('dragging');
@@ -978,6 +1075,67 @@
             
             const verifyBtn = document.getElementById('verifyBtn');
             verifyBtn.disabled = !allFilled;
+        }
+
+        // Mostrar pista
+        function showHint() {
+            if (hintsRemaining <= 0) return;
+            
+            // Restar puntos por usar pista
+            score = Math.max(0, score - 10);
+            updateScore();
+            
+            // Restar una pista
+            hintsRemaining--;
+            document.getElementById('hintCount').textContent = hintsRemaining;
+            
+            // Deshabilitar botón si no hay más pistas
+            if (hintsRemaining <= 0) {
+                document.getElementById('hintBtn').disabled = true;
+            }
+            
+            // Obtener el orden correcto
+            const values = [
+                currentExercise.fraction,
+                currentExercise.decimal,
+                currentExercise.percentage
+            ];
+            
+            const sortedValues = values.sort((a, b) => {
+                const numA = parseFloat(a.replace('%', ''));
+                const numB = parseFloat(b.replace('%', ''));
+                return numA - numB;
+            });
+            
+            // Elegir una posición aleatoria para mostrar la pista
+            const randomPosition = Math.floor(Math.random() * 3);
+            const targetValue = sortedValues[randomPosition];
+            const targetZone = document.querySelector(`.drop-zone[data-position="${randomPosition}"]`);
+            
+            // Encontrar la tarjeta con el valor objetivo
+            const allCards = document.querySelectorAll('.value-card');
+            let targetCard = null;
+            
+            allCards.forEach(card => {
+                if (card.dataset.value === targetValue) {
+                    targetCard = card;
+                }
+            });
+            
+            // Resaltar la tarjeta y la zona de destino
+            if (targetCard && targetZone) {
+                targetCard.classList.add('hint');
+                targetZone.classList.add('drag-over');
+                
+                // Reproducir sonido de pista
+                playHintSound();
+                
+                // Quitar el resaltado después de 3 segundos
+                setTimeout(() => {
+                    targetCard.classList.remove('hint');
+                    targetZone.classList.remove('drag-over');
+                }, 3000);
+            }
         }
 
         // Verificar orden
@@ -1043,6 +1201,9 @@
         function nextRound() {
             currentRound++;
             document.getElementById('currentRound').textContent = currentRound;
+            hintsRemaining = 2; // Reiniciar pistas para cada ronda
+            document.getElementById('hintCount').textContent = hintsRemaining;
+            document.getElementById('hintBtn').disabled = false;
             loadNewExercise();
         }
 
@@ -1050,6 +1211,9 @@
         function resetRound() {
             currentRound = 1;
             document.getElementById('currentRound').textContent = currentRound;
+            hintsRemaining = 2; // Reiniciar pistas
+            document.getElementById('hintCount').textContent = hintsRemaining;
+            document.getElementById('hintBtn').disabled = false;
             loadNewExercise();
         }
 
@@ -1057,11 +1221,11 @@
         function loadNewExercise() {
             clearInterval(timer);
             currentExercise = selectRandomExercise();
+            
+            // Limpiar completamente las zonas antes de crear nuevas tarjetas
+            clearDropZones();
             createCards();
             setupDropZones();
-            
-            const verifyBtn = document.getElementById('verifyBtn');
-            verifyBtn.disabled = true;
             
             startTimer();
         }
@@ -1152,12 +1316,15 @@
             correctAttempts = 0;
             totalTime = 0;
             usedExercises = [];
+            hintsRemaining = 2;
             
             document.getElementById('startScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
             document.getElementById('resultsScreen').style.display = 'none';
             
             document.getElementById('currentRound').textContent = currentRound;
+            document.getElementById('hintCount').textContent = hintsRemaining;
+            document.getElementById('hintBtn').disabled = false;
             updateScore();
             
             loadNewExercise();
