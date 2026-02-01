@@ -823,8 +823,6 @@
     </div>
 
     <script>
-        // INICIO DE LA CORRECCIÓN
-        
         // Función auxiliar para evaluar correctamente cualquier tipo de valor (fracción, decimal o porcentaje)
         function evaluateValue(value) {
             if (value.includes('/')) {
@@ -837,7 +835,7 @@
             }
         }
 
-        // Función para calcular el orden correcto de valores (CORREGIDA)
+        // Función para calcular el orden correcto de valores
         function calculateCorrectOrder(fraction, decimal, percentage) {
             // Convertir todos los valores a números decimales usando la nueva función
             const values = [
@@ -860,8 +858,6 @@
             
             return order;
         }
-
-        // FIN DE LA CORRECCIÓN
 
         // Banco de 50 ejercicios con valores muy cercanos
         const exercises = [
@@ -933,11 +929,12 @@
         let usedExercises = [];
         let totalAttempts = 0;
         let correctAttempts = 0;
-        let totalTime = 0;
+        let totalTime = 0; // CORRECCIÓN 2: Variable para acumular el tiempo total
         let currentScreen = 'start';
         let audioContext = null;
         let hintsRemaining = 2; // Pistas por ronda
         let draggedElement = null;
+        let roundStartTime = 0; // CORRECCIÓN 2: Variable para guardar cuándo empieza cada ronda
 
         // Inicializar contexto de audio
         function initAudio() {
@@ -1122,7 +1119,7 @@
             verifyBtn.disabled = !allFilled;
         }
 
-        // Mostrar pista (CORREGIDA)
+        // Mostrar pista
         function showHint() {
             if (hintsRemaining <= 0) return;
             
@@ -1183,36 +1180,48 @@
             }
         }
 
-        // Verificar orden (CORREGIDA)
+        // Verificar orden (CORRECCIÓN 1: Manejar valores iguales)
         function verifyOrder() {
             const dropZones = document.querySelectorAll('.drop-zone');
             const userOrder = [];
+            const userValues = [];
             
             dropZones.forEach(zone => {
                 const card = zone.querySelector('.value-card');
                 if (card) {
                     userOrder.push(card.dataset.value);
+                    userValues.push(evaluateValue(card.dataset.value));
                 }
             });
             
-            const correctOrder = [
-                currentExercise.fraction,
-                currentExercise.decimal,
-                currentExercise.percentage
-            ].sort((a, b) => {
-                const numA = evaluateValue(a);
-                const numB = evaluateValue(b);
-                return numA - numB;
-            });
+            // Obtener los valores correctos ordenados
+            const correctValues = [
+                evaluateValue(currentExercise.fraction),
+                evaluateValue(currentExercise.decimal),
+                evaluateValue(currentExercise.percentage)
+            ].sort((a, b) => a - b);
             
-            const isCorrect = JSON.stringify(userOrder) === JSON.stringify(correctOrder);
+            // Verificar si los valores numéricos coinciden (permitiendo valores iguales en cualquier orden)
+            let isCorrect = true;
+            for (let i = 0; i < userValues.length; i++) {
+                // Usar una pequeña tolerancia para comparaciones de punto flotante
+                if (Math.abs(userValues[i] - correctValues[i]) > 0.000001) {
+                    isCorrect = false;
+                    break;
+                }
+            }
             
             totalAttempts++;
             if (isCorrect) {
                 correctAttempts++;
                 showFeedback(true);
                 playCorrectSound();
-                score += Math.max(100 - (roundTimes[currentRound - 1] - timeLeft), 10);
+                
+                // CORRECCIÓN 2: Guardar el tiempo de esta ronda
+                const roundTime = roundTimes[currentRound - 1] - timeLeft;
+                totalTime += roundTime;
+                
+                score += Math.max(100 - roundTime, 10);
                 updateScore();
                 
                 setTimeout(() => {
@@ -1230,7 +1239,7 @@
                 dropZones.forEach((zone, index) => {
                     const card = zone.querySelector('.value-card');
                     if (card) {
-                        if (userOrder[index] !== correctOrder[index]) {
+                        if (Math.abs(userValues[index] - correctValues[index]) > 0.000001) {
                             card.classList.add('incorrect');
                         }
                     }
@@ -1266,6 +1275,9 @@
         function loadNewExercise() {
             clearInterval(timer);
             currentExercise = selectRandomExercise();
+            
+            // CORRECCIÓN 2: Guardar cuándo empieza la ronda
+            roundStartTime = Date.now();
             
             // Limpiar completamente las zonas antes de crear nuevas tarjetas
             clearDropZones();
@@ -1331,7 +1343,7 @@
             document.getElementById('score').textContent = score;
         }
 
-        // Terminar juego
+        // Terminar juego (CORRECCIÓN 2: Calcular tiempo promedio correctamente)
         function endGame(won) {
             clearInterval(timer);
             currentScreen = 'results';
@@ -1340,7 +1352,8 @@
             document.getElementById('resultsScreen').style.display = 'block';
             
             const accuracy = totalAttempts > 0 ? Math.round((correctAttempts / totalAttempts) * 100) : 0;
-            const avgTime = totalAttempts > 0 ? Math.round(totalTime / totalAttempts) : 0;
+            // CORRECCIÓN 2: Calcular el tiempo promedio real
+            const avgTime = correctAttempts > 0 ? Math.round(totalTime / correctAttempts) : 0;
             
             document.getElementById('finalScore').textContent = score;
             document.getElementById('finalTime').textContent = avgTime + 's';
@@ -1359,7 +1372,7 @@
             score = 0;
             totalAttempts = 0;
             correctAttempts = 0;
-            totalTime = 0;
+            totalTime = 0; // CORRECCIÓN 2: Reiniciar el tiempo total
             usedExercises = [];
             hintsRemaining = 2;
             
