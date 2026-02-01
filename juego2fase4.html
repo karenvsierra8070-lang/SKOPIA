@@ -702,7 +702,8 @@
         let failedAttempts = 0;
         let correctPairs = 0;
         let audioContext = null;
-        let cardsInCurrentRound = 0; // <<< SOLUCIÓN: Contador de tarjetas en la ronda actual
+        let cardsInCurrentRound = 0;
+        let isProcessing = false; // <<< SOLUCIÓN 1: Bloqueo de procesamiento
 
         // Inicializar contexto de audio
         function initAudio() {
@@ -743,11 +744,19 @@
             setTimeout(() => playSound(1046.50, 0.2), 450);
         }
 
-        // <<< SOLUCIÓN: Lógica de clic actualizada y más robusta >>>
+        // <<< SOLUCIÓN 1, 2, 3 y 4: Lógica de clic completamente reescrita >>>
         function handleCardClick(event) {
             const clickedCard = event.target;
 
-            if (clickedCard.classList.contains('correct') || clickedCard.classList.contains('disabled')) {
+            // Evitar clics si ya se está procesando una acción o la tarjeta no es válida
+            if (isProcessing || clickedCard.classList.contains('correct') || clickedCard.classList.contains('disabled')) {
+                return;
+            }
+
+            // SOLUCIÓN 4: Si se hace clic en la misma tarjeta seleccionada, deseleccionarla
+            if (selectedCard !== null && selectedCard === clickedCard) {
+                selectedCard.classList.remove('selected');
+                selectedCard = null;
                 return;
             }
 
@@ -755,6 +764,7 @@
                 selectedCard = clickedCard;
                 clickedCard.classList.add('selected');
             } else {
+                isProcessing = true; // Iniciar bloqueo de procesamiento
                 const isMatch = selectedCard.dataset.pairId === clickedCard.dataset.pairId;
 
                 if (isMatch) {
@@ -769,15 +779,12 @@
                     setTimeout(() => {
                         selectedCard.remove();
                         clickedCard.remove();
-                        
-                        cardsInCurrentRound -= 2; // <<< SOLUCIÓN: Reducir el contador
-
+                        cardsInCurrentRound -= 2;
                         checkGameEnd();
-                        
-                        // <<< SOLUCIÓN: Usar el contador en lugar de una consulta al DOM >>>
                         if (cardsInCurrentRound === 0) {
                             loadNewRound();
                         }
+                        isProcessing = false; // Desbloquear
                     }, 600);
 
                 } else {
@@ -787,12 +794,29 @@
                     updateTimerDisplay();
                     updateEfficiency();
 
+                    // SOLUCIÓN 2: Encontrar y bloquear la tarjeta correcta que no se seleccionó
+                    const correctPairId = selectedCard.dataset.pairId;
+                    const allCards = document.querySelectorAll('.expression-card:not(.correct)');
+                    let actualCorrectCard = null;
+                    allCards.forEach(card => {
+                        if (card.dataset.pairId === correctPairId && card !== selectedCard && card !== clickedCard) {
+                            actualCorrectCard = card;
+                        }
+                    });
+
                     selectedCard.classList.add('incorrect', 'disabled');
                     clickedCard.classList.add('incorrect', 'disabled');
+                    if (actualCorrectCard) {
+                        actualCorrectCard.classList.add('disabled');
+                    }
                     
                     setTimeout(() => {
                         selectedCard.classList.remove('incorrect', 'disabled', 'selected');
                         clickedCard.classList.remove('incorrect', 'disabled');
+                        if (actualCorrectCard) {
+                            actualCorrectCard.classList.remove('disabled');
+                        }
+                        isProcessing = false; // Desbloquear
                     }, 500);
                 }
                 
@@ -800,25 +824,43 @@
             }
         }
         
-        // Cargar una nueva ronda de 6 parejas
+        // SOLUCIÓN 3: Cargar nueva ronda evitando duplicados de simplificación
         function loadNewRound() {
-            if (currentGameBank.length < 6) {
-                generateQuestionBank();
-                currentGameBank = [...fullQuestionBank];
+            let roundPairs = [];
+            let usedSimplificationsInRound = new Set();
+            let attempts = 0;
+            const maxAttempts = 20; // Para evitar bucles infinitos
+
+            while (roundPairs.length < 6 && attempts < maxAttempts) {
+                if (currentGameBank.length === 0) {
+                    generateQuestionBank();
+                    currentGameBank = [...fullQuestionBank];
+                }
+                
+                const potentialPair = currentGameBank.shift();
+                
+                // Reemplazar la variable por la de la partida
+                const originalVar = potentialPair.expression.match(/([a-z])/)[1];
+                const expression = potentialPair.expression.replace(new RegExp(originalVar, 'g'), gameVariable);
+                const simplification = potentialPair.simplification.replace(new RegExp(originalVar, 'g'), gameVariable);
+                
+                // Comprobar si la simplificación ya está en uso en esta ronda
+                if (!usedSimplificationsInRound.has(simplification)) {
+                    usedSimplificationsInRound.add(simplification);
+                    roundPairs.push({ expression, simplification });
+                } else {
+                    // Colisión: devolver el par al final del banco para usarlo más tarde
+                    currentGameBank.push(potentialPair);
+                }
+                attempts++;
             }
             
-            const roundPairs = currentGameBank.splice(0, 6);
-
             const expressions = [];
             const simplifications = [];
 
             roundPairs.forEach((pair, index) => {
-                const originalVar = pair.expression.match(/([a-z])/)[1];
-                const expression = pair.expression.replace(new RegExp(originalVar, 'g'), gameVariable);
-                const simplification = pair.simplification.replace(new RegExp(originalVar, 'g'), gameVariable);
-
-                expressions.push({ text: expression, pairId: index });
-                simplifications.push({ text: simplification, pairId: index });
+                expressions.push({ text: pair.expression, pairId: index });
+                simplifications.push({ text: pair.simplification, pairId: index });
             });
 
             expressions.sort(() => Math.random() - 0.5);
@@ -848,8 +890,7 @@
                 simplificationsContainer.appendChild(card);
             });
 
-            // <<< SOLUCIÓN: Establecer el contador al inicio de cada ronda >>>
-            cardsInCurrentRound = 12; // 6 expresiones + 6 simplificaciones
+            cardsInCurrentRound = 12;
         }
 
 
@@ -927,6 +968,7 @@
             score = 0;
             failedAttempts = 0;
             selectedCard = null;
+            isProcessing = false; // Resetear el bloqueo
             
             document.getElementById('startScreen').style.display = 'none';
             document.getElementById('resultsScreenWin').style.display = 'none';
