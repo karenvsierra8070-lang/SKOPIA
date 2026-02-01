@@ -382,6 +382,12 @@
             background: #fdf2f2;
         }
 
+        /* <<< CORRECCIÓN 1: Nueva clase para deshabilitar tarjetas >>> */
+        .expression-card.disabled {
+            pointer-events: none; /* Evita que se pueda hacer clic */
+            opacity: 0.6; /* Feedback visual adicional */
+        }
+
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             20%, 60% { transform: translateX(-8px); }
@@ -647,23 +653,22 @@
         const variables = ['x', 'y', 'z', 'a', 'b', 'm', 'n', 'p', 'q'];
         let fullQuestionBank = [];
         let currentGameBank = [];
-        let gameVariable = 'x'; // <<< CORRECCIÓN: Variable global para toda la partida
+        let gameVariable = 'x';
 
         function toSuperscript(num) {
             const superscripts = '⁰¹²³⁴⁵⁶⁷⁸⁹';
             return num.toString().split('').map(char => superscripts[parseInt(char)] || char).join('');
         }
 
-        // Generar 180 ejercicios únicos
         function generateQuestionBank() {
             fullQuestionBank = [];
             let usedExercises = new Set();
             
             while (fullQuestionBank.length < 180) {
                 let v = variables[Math.floor(Math.random() * variables.length)];
-                let a = Math.floor(Math.random() * 8) + 2; // Exponentes de 2 a 9
+                let a = Math.floor(Math.random() * 8) + 2;
                 let b = Math.floor(Math.random() * 8) + 2;
-                let c = Math.floor(Math.random() * 5) + 2; // Para raíces
+                let c = Math.floor(Math.random() * 5) + 2;
                 
                 if (a === 1) a++;
                 if (b === 1) b++;
@@ -741,21 +746,25 @@
             setTimeout(() => playSound(1046.50, 0.2), 450);
         }
 
-        // Manejador de clic en las tarjetas
+        // <<< CORRECCIÓN 1 y 2: Lógica de clic actualizada >>>
         function handleCardClick(event) {
             const clickedCard = event.target;
 
-            if (clickedCard.classList.contains('correct') || clickedCard === selectedCard) {
+            // Si la tarjeta ya es correcta o está deshabilitada, no hacer nada
+            if (clickedCard.classList.contains('correct') || clickedCard.classList.contains('disabled')) {
                 return;
             }
 
             if (selectedCard === null) {
+                // Primer clic: seleccionar la tarjeta
                 selectedCard = clickedCard;
                 clickedCard.classList.add('selected');
             } else {
+                // Segundo clic: verificar la pareja
                 const isMatch = selectedCard.dataset.pairId === clickedCard.dataset.pairId;
 
                 if (isMatch) {
+                    // ¡Pareja correcta!
                     playCorrectSound();
                     score += 20;
                     correctPairs++;
@@ -767,8 +776,10 @@
                     setTimeout(() => {
                         selectedCard.remove();
                         clickedCard.remove();
-                        checkGameEnd();
                         
+                        checkGameEnd(); // Comprobar si se alcanzaron los 300 puntos
+                        
+                        // <<< CORRECCIÓN 2: Siempre cargar nueva ronda si no quedan tarjetas >>>
                         const remainingCards = document.querySelectorAll('.expression-card:not(.correct)');
                         if (remainingCards.length === 0) {
                             loadNewRound();
@@ -776,21 +787,25 @@
                     }, 600);
 
                 } else {
+                    // Pareja incorrecta
                     playIncorrectSound();
                     failedAttempts++;
                     timeLeft = Math.max(0, timeLeft - 5);
                     updateTimerDisplay();
                     updateEfficiency();
 
-                    selectedCard.classList.add('incorrect');
-                    clickedCard.classList.add('incorrect');
+                    // <<< CORRECCIÓN 1: Añadir clase 'disabled' para bloquear clics >>>
+                    selectedCard.classList.add('incorrect', 'disabled');
+                    clickedCard.classList.add('incorrect', 'disabled');
                     
                     setTimeout(() => {
-                        selectedCard.classList.remove('incorrect', 'selected');
-                        clickedCard.classList.remove('incorrect');
+                        // Quitar todas las clases de estado después de la animación
+                        selectedCard.classList.remove('incorrect', 'disabled', 'selected');
+                        clickedCard.classList.remove('incorrect', 'disabled');
                     }, 500);
                 }
                 
+                // Resetear la selección
                 selectedCard = null;
             }
         }
@@ -803,15 +818,11 @@
             }
             
             const roundPairs = currentGameBank.splice(0, 6);
-            
-            // <<< CORRECCIÓN: Ya no se elige una variable por ronda.
-            // Se usará la variable global 'gameVariable' definida al inicio del juego.
 
             const expressions = [];
             const simplifications = [];
 
             roundPairs.forEach((pair, index) => {
-                // Reemplazar la variable original por la variable de LA PARTIDA
                 const originalVar = pair.expression.match(/([a-z])/)[1];
                 const expression = pair.expression.replace(new RegExp(originalVar, 'g'), gameVariable);
                 const simplification = pair.simplification.replace(new RegExp(originalVar, 'g'), gameVariable);
@@ -935,7 +946,6 @@
             
             currentGameBank = [...fullQuestionBank];
             
-            // <<< CORRECCIÓN: Elegir UNA SOLA VARIABLE para toda la partida.
             gameVariable = variables[Math.floor(Math.random() * variables.length)];
             console.log("Variable para esta partida: " + gameVariable);
 
@@ -970,4 +980,4 @@
         });
     </script>
 </body>
-</html>s
+</html>
