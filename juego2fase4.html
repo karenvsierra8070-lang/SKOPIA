@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El Arquitecto de Expresiones - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        window.auth = auth;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            console.log("Usuario autenticado:", user.email);
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-blanco: #ffffff;
+            --color-verde-oscuro: #2d5016;
+            --color-dorado: #FFD700;
+            --color-error-marron: #a0522d; /* Tono tierra/rojizo para errores */
+            --color-gris: #555555;
+            --color-azul-pista: #3498db;
+            --color-sombra: rgba(45, 80, 22, 0.1);
+        }
+
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--color-crema);
+            color: var(--color-verde-oscuro);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Botón de volver */
+        .back-btn {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            background: var(--color-blanco);
+            color: var(--color-verde-oscuro);
+            border: 2px solid var(--color-verde-oscuro);
+            padding: 12px 25px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            z-index: 100;
+        }
+
+        .back-btn:hover {
+            background: var(--color-verde-oscuro);
+            color: var(--color-blanco);
+            transform: scale(1.05);
+        }
+
+        /* Contenedor principal del juego */
+        .game-container {
+            width: 100%;
+            max-width: 1200px;
+            min-height: 100vh;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+
+        /* --- NUEVO DISEÑO: Pantalla de Inicio --- */
+        .start-screen {
+            display: flex; /* Cambio a flexbox para el nuevo layout */
+            width: 100%;
+            max-width: 1000px;
+            min-height: 500px;
+            background: var(--color-blanco);
+            border: 2px solid var(--color-verde-oscuro);
+            border-radius: 20px;
+            box-shadow: 0 15px 40px var(--color-sombra);
+            overflow: hidden;
+            animation: blueprintIn 1s ease-out;
+        }
+
+        @keyframes blueprintIn {
+            from { opacity: 0; transform: scale(0.95) rotateX(10deg); }
+            to { opacity: 1; transform: scale(1) rotateX(0); }
+        }
+
+        /* Fondo de cuadrícula sutil */
+        .start-screen::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(45, 80, 22, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(45, 80, 22, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+        }
+
+        .start-screen-left {
+            flex: 1;
+            padding: 50px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-right: 1px solid rgba(45, 80, 22, 0.1);
+        }
+
+        .start-screen-right {
+            flex: 1.2; /* Un poco más de espacio para las instrucciones */
+            padding: 50px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .game-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.8rem;
+            color: var(--color-verde-oscuro);
+            margin-bottom: 10px;
+            line-height: 1.1;
+        }
+
+        .game-subtitle {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.4rem;
+            color: var(--color-dorado);
+            margin-bottom: 30px;
+        }
+
+        .instructions-container {
+            /* El contenedor ahora es el panel derecho */
+        }
+
+        .instructions-title {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--color-verde-oscuro);
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .instructions-title i {
+            font-size: 1.2rem;
+            color: var(--color-dorado);
+        }
+
+        .instructions-list {
+            list-style: none;
+        }
+
+        .instructions-list li {
+            margin-bottom: 18px;
+            font-size: 1.1rem;
+            line-height: 1.5;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .instructions-list .step-number {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            color: var(--color-blanco);
+            background-color: var(--color-verde-oscuro);
+            border-radius: 50%;
+            min-width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+        
+        .start-btn {
+            background: var(--color-verde-oscuro);
+            color: var(--color-blanco);
+            border: none;
+            padding: 18px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 8px; /* Menos redondeado, más estructurado */
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-top: 30px;
+            align-self: flex-start;
+            box-shadow: 0 5px 15px rgba(45, 80, 22, 0.3);
+        }
+
+        .start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(45, 80, 22, 0.4);
+            background-color: #3a6b1e;
+        }
+
+        /* --- Pantalla de Juego (sin cambios) --- */
+        .game-screen {
+            display: none;
+            width: 100%;
+            animation: slideIn 0.8s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: var(--color-blanco);
+            border: 2px solid var(--color-verde-oscuro);
+            border-radius: 15px;
+            box-shadow: 0 8px 25px var(--color-sombra);
+        }
+
+        .stat-display {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.3rem;
+            color: var(--color-verde-oscuro);
+            font-weight: bold;
+        }
+
+        .stat-display span {
+            color: var(--color-dorado);
+        }
+
+        .timer-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: var(--color-verde-oscuro);
+            font-weight: bold;
+        }
+
+        .timer-text.danger {
+            color: var(--color-error-marron);
+            animation: timerPulse 1s ease-in-out infinite;
+        }
+
+        @keyframes timerPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .efficiency-display {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.3rem;
+        }
+        .efficiency-display .value {
+            color: var(--color-azul-pista);
+        }
+
+        .game-area {
+            display: flex;
+            justify-content: space-between;
+            gap: 40px;
+            background: var(--color-blanco);
+            border: 2px solid var(--color-verde-oscuro);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 15px 40px var(--color-sombra);
+            min-height: 500px;
+        }
+
+        .column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .column-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: var(--color-verde-oscuro);
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .cards-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .expression-card {
+            background: var(--color-blanco);
+            border-left: 5px solid var(--color-verde-oscuro);
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Space Mono', monospace;
+            font-size: 1.4rem;
+            color: var(--color-gris);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px var(--color-sombra);
+            text-align: center;
+            user-select: none;
+        }
+
+        .expression-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px var(--color-sombra);
+        }
+
+        .expression-card.selected {
+            background: #eaf2ff;
+            border-left-color: var(--color-azul-pista);
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.4);
+            transform: scale(1.03);
+        }
+
+        .expression-card.correct {
+            animation: fadeOutCorrect 0.6s ease-out forwards;
+            border-left-color: var(--color-dorado);
+        }
+
+        @keyframes fadeOutCorrect {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); border-left-color: var(--color-dorado); }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        .expression-card.incorrect {
+            animation: shake 0.5s ease-in-out;
+            border-left-color: var(--color-error-marron);
+            background: #fdf2f2;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+
+        /* --- Pantalla de Resultados (sin cambios) --- */
+        .results-screen {
+            display: none;
+            text-align: center;
+            animation: zoomIn 0.8s ease-out;
+        }
+
+        @keyframes zoomIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .results-container {
+            background: var(--color-blanco);
+            border: 3px solid var(--color-dorado);
+            border-radius: 25px;
+            padding: 50px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .results-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            color: var(--color-dorado);
+            margin-bottom: 30px;
+        }
+
+        .results-stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 40px 0;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            color: var(--color-verde-oscuro);
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            color: var(--color-gris);
+            margin-top: 5px;
+        }
+
+        .result-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 40px;
+        }
+
+        .retry-btn, .next-level-btn {
+            padding: 15px 35px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: none;
+        }
+
+        .retry-btn {
+            background: var(--color-gris);
+            color: var(--color-blanco);
+            box-shadow: 0 8px 25px rgba(85, 85, 85, 0.3);
+        }
+
+        .retry-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(85, 85, 85, 0.4);
+        }
+
+        .next-level-btn {
+            background: linear-gradient(45deg, var(--color-dorado), #ffed4e);
+            color: var(--color-verde-oscuro);
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.3);
+        }
+
+        .next-level-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(255, 215, 0, 0.4);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .start-screen {
+                flex-direction: column;
+                min-height: auto;
+            }
+            .start-screen-left, .start-screen-right {
+                border-right: none;
+                padding: 30px 25px;
+            }
+            .start-screen-left {
+                border-bottom: 1px solid rgba(45, 80, 22, 0.1);
+            }
+            .game-title { font-size: 2.2rem; }
+            .game-subtitle { font-size: 1.2rem; }
+            .game-area {
+                flex-direction: column;
+                gap: 20px;
+            }
+            .expression-card { font-size: 1.2rem; }
+            .game-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Botón de volver -->
+    <button class="back-btn" onclick="goBack()">
+        <i class="fas fa-arrow-left"></i> Volver
+    </button>
+
+    <div class="game-container">
+        <!-- NUEVA Pantalla de inicio -->
+        <div class="start-screen" id="startScreen">
+            <div class="start-screen-left">
+                <h1 class="game-title">El Arquitecto de Expresiones</h1>
+                <h2 class="game-subtitle">Parejas de Equivalencia</h2>
+                <button class="start-btn" onclick="startGame()">
+                    Iniciar Construcción
+                </button>
+            </div>
+            <div class="start-screen-right">
+                <div class="instructions-container">
+                    <h3 class="instructions-title">
+                        <i class="fas fa-drafting-compass"></i>
+                        Plan de Construcción
+                    </h3>
+                    <ul class="instructions-list">
+                        <li>
+                            <span class="step-number">1</span>
+                            <span>Conecta cada expresión de la izquierda con su forma simplificada a la derecha.</span>
+                        </li>
+                        <li>
+                            <span class="step-number">2</span>
+                            <span>Usa las propiedades de potencias y raíces para encontrar las parejas correctas.</span>
+                        </li>
+                        <li>
+                            <span class="step-number">3</span>
+                            <span>Una selección incorrecta restará tiempo y mostrará una retroalimentación visual.</span>
+                        </li>
+                        <li>
+                            <span class="step-number">4</span>
+                            <span>Encuentra todas las parejas para demostrar tu dominio de las propiedades.</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pantalla de juego -->
+        <div class="game-screen" id="gameScreen">
+            <div class="game-header">
+                <div class="stat-display">
+                    Puntos: <span id="score">0</span>
+                </div>
+                <div class="timer-text" id="timerText">120</div>
+                <div class="efficiency-display">
+                    Eficiencia: <span class="value" id="efficiency">100%</span>
+                </div>
+            </div>
+
+            <div class="game-area">
+                <div class="column" id="columnA">
+                    <h3 class="column-title">Expresiones</h3>
+                    <div class="cards-container" id="expressionsContainer">
+                        <!-- Las tarjetas se generarán dinámicamente -->
+                    </div>
+                </div>
+
+                <div class="column" id="columnB">
+                    <h3 class="column-title">Simplificaciones</h3>
+                    <div class="cards-container" id="simplificationsContainer">
+                        <!-- Las tarjetas se generarán dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pantalla de resultados -->
+        <div class="results-screen" id="resultsScreen">
+            <div class="results-container">
+                <h2 class="results-title">Dominio de Propiedades Exponenciales y Radicales: Verificado</h2>
+                <div class="results-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="finalScore">0</div>
+                        <div class="stat-label">Puntos Totales</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="finalEfficiency">0%</div>
+                        <div class="stat-label">Eficiencia Lógica</div>
+                    </div>
+                </div>
+                <div class="result-buttons">
+                    <button class="retry-btn" onclick="retryGame()">
+                        <i class="fas fa-redo"></i> Reintentar
+                    </button>
+                    <button class="next-level-btn" onclick="goToNextLevel()">
+                        <i class="fas fa-arrow-right"></i> Siguiente Nivel: Proporcionalidad
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Banco de ejercicios de potencia y raíces
+        const exerciseBank = [
+            { expression: "(x⁴)²", simplification: "x⁸" },
+            { expression: "√(y⁴)", simplification: "y²" },
+            { expression: "(2³)⁻²", simplification: "1/64" },
+            { expression: "∛(z⁶)", simplification: "z²" },
+            { expression: "a⁻³", simplification: "1/a³" },
+            { expression: "(m²)³", simplification: "m⁶" },
+            { expression: "√(16x²)", simplification: "4|x|" }, // Valor absoluto para precisión
+            { expression: "(b⁴)^(1/2)", simplification: "b²" },
+            { expression: "c⁵ · c⁻²", simplification: "c³" },
+            { expression: "∜(d⁸)", simplification: "d²" },
+            { expression: "(3⁻¹)²", simplification: "1/9" },
+            { expression: "√(e⁶ · f⁶)", simplification: "e³f³" },
+            { expression: "(p⁻²)⁻³", simplification: "p⁶" },
+            { expression: "∛(27)", simplification: "3" },
+            { expression: "(k⁴/k)²", simplification: "k⁶" }
+        ];
+
+        // Variables del juego
+        let score = 0;
+        let timer = null;
+        let timeLeft = 120; // 2 minutos para este desafío
+        let selectedCard = null;
+        let failedAttempts = 0;
+        let totalPairs = 0;
+        let correctPairs = 0;
+        let currentRoundPairs = [];
+        let audioContext = null;
+
+        // Inicializar contexto de audio
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // Funciones de sonido
+        function playSound(frequency, duration, type = 'sine') {
+            initAudio();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.frequency.value = frequency;
+            oscillator.type = type;
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        function playCorrectSound() {
+            playSound(523.25, 0.1);
+            setTimeout(() => playSound(659.25, 0.1), 100);
+            setTimeout(() => playSound(783.99, 0.2), 200);
+        }
+
+        function playIncorrectSound() {
+            playSound(200, 0.3, 'sawtooth');
+        }
+
+        function playWinSound() {
+            playSound(523.25, 0.1);
+            setTimeout(() => playSound(659.25, 0.1), 150);
+            setTimeout(() => playSound(783.99, 0.1), 300);
+            setTimeout(() => playSound(1046.50, 0.2), 450);
+        }
+
+        // Manejador de clic en las tarjetas
+        function handleCardClick(event) {
+            const clickedCard = event.target;
+
+            // Evitar seleccionar una tarjeta ya emparejada o la misma tarjeta
+            if (clickedCard.classList.contains('correct') || clickedCard === selectedCard) {
+                return;
+            }
+
+            if (selectedCard === null) {
+                // Primer clic: seleccionar la tarjeta
+                selectedCard = clickedCard;
+                clickedCard.classList.add('selected');
+            } else {
+                // Segundo clic: verificar la pareja
+                const isMatch = selectedCard.dataset.pairId === clickedCard.dataset.pairId;
+
+                if (isMatch) {
+                    // ¡Pareja correcta!
+                    playCorrectSound();
+                    score += 50;
+                    correctPairs++;
+                    updateScore();
+
+                    selectedCard.classList.add('correct');
+                    clickedCard.classList.add('correct');
+
+                    // Remover tarjetas del DOM después de la animación
+                    setTimeout(() => {
+                        selectedCard.remove();
+                        clickedCard.remove();
+                        checkGameEnd();
+                    }, 600);
+
+                } else {
+                    // Pareja incorrecta
+                    playIncorrectSound();
+                    failedAttempts++;
+                    timeLeft = Math.max(0, timeLeft - 5); // Penalización de 5 segundos
+                    updateTimerDisplay();
+                    updateEfficiency();
+
+                    selectedCard.classList.add('incorrect');
+                    clickedCard.classList.add('incorrect');
+                    
+                    // Quitar clases de incorrecto y seleccionado después de la animación
+                    setTimeout(() => {
+                        selectedCard.classList.remove('incorrect', 'selected');
+                        clickedCard.classList.remove('incorrect');
+                    }, 500);
+                }
+                
+                // Resetear la selección
+                selectedCard = null;
+            }
+        }
+
+        // Crear y barajar las tarjetas para una nueva ronda
+        function createAndShuffleCards() {
+            const expressionsContainer = document.getElementById('expressionsContainer');
+            const simplificationsContainer = document.getElementById('simplificationsContainer');
+            
+            expressionsContainer.innerHTML = '';
+            simplificationsContainer.innerHTML = '';
+
+            // Seleccionar 6 parejas aleatorias para esta ronda
+            const shuffledBank = [...exerciseBank].sort(() => Math.random() - 0.5);
+            currentRoundPairs = shuffledBank.slice(0, 6);
+            totalPairs = currentRoundPairs.length;
+            correctPairs = 0;
+
+            const expressions = [];
+            const simplifications = [];
+
+            currentRoundPairs.forEach((pair, index) => {
+                expressions.push({ text: pair.expression, pairId: index });
+                simplifications.push({ text: pair.simplification, pairId: index });
+            });
+
+            // Barajar cada columna por separado
+            expressions.sort(() => Math.random() - 0.5);
+            simplifications.sort(() => Math.random() - 0.5);
+
+            // Crear tarjetas de expresiones
+            expressions.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'expression-card';
+                card.innerHTML = item.text;
+                card.dataset.pairId = item.pairId;
+                card.addEventListener('click', handleCardClick);
+                expressionsContainer.appendChild(card);
+            });
+
+            // Crear tarjetas de simplificaciones
+            simplifications.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'expression-card';
+                card.innerHTML = item.text;
+                card.dataset.pairId = item.pairId;
+                card.addEventListener('click', handleCardClick);
+                simplificationsContainer.appendChild(card);
+            });
+        }
+
+        // Actualizar puntuación
+        function updateScore() {
+            document.getElementById('score').textContent = score;
+        }
+
+        // Actualizar eficiencia
+        function updateEfficiency() {
+            const efficiency = Math.max(0, 100 - (failedAttempts * 10));
+            document.getElementById('efficiency').textContent = efficiency + '%';
+        }
+
+        // Comprobar si el juego ha terminado
+        function checkGameEnd() {
+            if (correctPairs === totalPairs) {
+                clearInterval(timer);
+                playWinSound();
+                setTimeout(() => {
+                    endGame(true);
+                }, 500);
+            }
+        }
+
+        // Iniciar temporizador
+        function startTimer() {
+            timeLeft = 120;
+            updateTimerDisplay();
+            
+            if (timer) clearInterval(timer);
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    endGame(false);
+                }
+            }, 1000);
+        }
+
+        // Actualizar display del temporizador
+        function updateTimerDisplay() {
+            const timerText = document.getElementById('timerText');
+            timerText.textContent = timeLeft;
+            
+            if (timeLeft <= 10) {
+                timerText.classList.add('danger');
+            } else {
+                timerText.classList.remove('danger');
+            }
+        }
+
+        // Terminar juego
+        function endGame(won) {
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('resultsScreen').style.display = 'block';
+
+            const finalEfficiency = Math.max(0, 100 - (failedAttempts * 10));
+            
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalEfficiency').textContent = finalEfficiency + '%';
+
+            if (won) {
+                localStorage.setItem('skopia_level4_completed', 'true');
+            }
+        }
+
+        // Iniciar juego
+        function startGame() {
+            score = 0;
+            failedAttempts = 0;
+            selectedCard = null;
+            
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            document.getElementById('resultsScreen').style.display = 'none';
+
+            updateScore();
+            updateEfficiency();
+            createAndShuffleCards();
+            startTimer();
+        }
+
+        // Reintentar juego
+        function retryGame() {
+            document.getElementById('resultsScreen').style.display = 'none';
+            startGame();
+        }
+
+        // Navegación
+        function goBack() {
+            window.location.href = 'juego2fase3.html';
+        }
+
+        function goToNextLevel() {
+            window.location.href = 'juego2fase5.html'; // Asumiendo que este es el siguiente
+        }
+
+        // Inicializar audio al primer clic
+        document.addEventListener('DOMContentLoaded', () => {
+            document.addEventListener('click', function initAudioOnFirstClick() {
+                initAudio();
+                document.removeEventListener('click', initAudioOnFirstClick);
+            }, { once: true });
+        });
+    </script>
+</body>
+</html>
