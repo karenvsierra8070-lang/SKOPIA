@@ -34,6 +34,7 @@
             flex-direction: column;
             position: relative;
             overflow-x: hidden;
+            width: 100%;
         }
 
         /* Background Pattern */
@@ -120,14 +121,15 @@
             flex: 1;
             display: flex;
             justify-content: center;
-            align-items: flex-start;
+            align-items: stretch;
             padding: 2rem;
             gap: 2rem;
-            max-width: 1400px;
+            max-width: 100%;
             margin: 0 auto;
             width: 100%;
             position: relative;
             z-index: 10;
+            min-height: calc(100vh - 120px);
         }
 
         .content-card {
@@ -136,7 +138,7 @@
             box-shadow: var(--sombra);
             display: flex;
             width: 100%;
-            min-height: 650px;
+            min-height: 100%;
             overflow: hidden;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.5);
@@ -154,6 +156,31 @@
             opacity: 0.5;
         }
 
+        /* Botón para mostrar/ocultar barra lateral */
+        .sidebar-toggle {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, var(--dorado), var(--dorado-claro));
+            color: var(--verde-oscuro);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            transition: all 0.3s ease;
+            z-index: 50;
+        }
+
+        .sidebar-toggle:hover {
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+        }
+
         /* Menú Lateral Moderno */
         .sidebar {
             width: 30%;
@@ -162,6 +189,14 @@
             overflow-y: auto;
             border-right: 1px solid rgba(13, 40, 24, 0.1);
             backdrop-filter: blur(5px);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.hidden {
+            transform: translateX(-100%);
+            position: absolute;
+            height: 100%;
+            z-index: 40;
         }
 
         .sidebar::-webkit-scrollbar {
@@ -213,6 +248,7 @@
             font-weight: 500;
             overflow: hidden;
             text-decoration: none;
+            touch-action: manipulation; /* Mejora la sensibilidad táctil */
         }
 
         .menu-item::before {
@@ -335,6 +371,11 @@
             padding: 2.5rem;
             overflow-y: auto;
             position: relative;
+            transition: width 0.3s ease;
+        }
+
+        .content-area.expanded {
+            width: 100%;
         }
 
         .content-area::-webkit-scrollbar {
@@ -498,6 +539,7 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 1000;
             font-size: 1.5rem;
+            touch-action: manipulation; /* Mejora la sensibilidad táctil */
         }
 
         .floating-button:hover {
@@ -569,6 +611,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            touch-action: manipulation; /* Mejora la sensibilidad táctil */
         }
 
         .close-modal:hover {
@@ -694,6 +737,20 @@
             .stats-grid {
                 grid-template-columns: 1fr;
             }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .dashboard-header h2 {
+                font-size: 2rem;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            .sidebar-toggle {
+                display: none;
+            }
         }
     </style>
 </head>
@@ -712,8 +769,13 @@
     <!-- Contenedor Principal -->
     <div class="main-container">
         <div class="content-card">
+            <!-- Botón para mostrar/ocultar barra lateral -->
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            
             <!-- Menú Lateral Moderno -->
-            <aside class="sidebar">
+            <aside class="sidebar" id="sidebar">
                 <div class="menu-section">
                     <h3><i class="fas fa-book-open"></i> Introducción y Contexto</h3>
                     <a href="RCDD1.html" class="menu-item" data-content="RCDD1">
@@ -947,6 +1009,7 @@
             loadProgress();
             updateDashboardStats();
             highlightCurrentPage();
+            setupSidebarToggle();
         });
 
         // Configurar event listeners
@@ -992,6 +1055,28 @@
             });
         }
 
+        // Configurar el botón de toggle para la barra lateral
+        function setupSidebarToggle() {
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            const contentArea = document.getElementById('contentArea');
+            
+            sidebarToggle.addEventListener('click', function() {
+                sidebar.classList.toggle('hidden');
+                contentArea.classList.toggle('expanded');
+                
+                // Cambiar el ícono del botón
+                const icon = this.querySelector('i');
+                if (sidebar.classList.contains('hidden')) {
+                    icon.classList.remove('fa-bars');
+                    icon.classList.add('fa-chevron-right');
+                } else {
+                    icon.classList.remove('fa-chevron-right');
+                    icon.classList.add('fa-bars');
+                }
+            });
+        }
+
         // Resaltar página actual
         function highlightCurrentPage() {
             const currentPage = window.location.pathname.split('/').pop();
@@ -1026,6 +1111,7 @@
             
             if (allVisited && !appState.allTopicsVisited) {
                 appState.allTopicsVisited = true;
+                // Solo desbloqueamos el cuestionario 1 cuando todos los temas han sido visitados
                 unlockQuiz(1);
                 showNotification('Cuestionario Desbloqueado', '¡Cuestionario 1 desbloqueado! Ya puedes comenzar tu práctica.');
             }
@@ -1131,10 +1217,19 @@
                     if (menuItem) menuItem.classList.add('completed');
                 });
                 
-                // Restaurar desbloqueos
-                if (appState.allTopicsVisited) unlockQuiz(1);
-                if (appState.quizScores.quiz1 >= 170) unlockQuiz(2);
-                if (appState.quizScores.quiz2 >= 170) unlockQuiz(3);
+                // Restaurar desbloqueos según el progreso real
+                if (appState.allTopicsVisited) {
+                    unlockQuiz(1);
+                }
+                
+                if (appState.quizScores.quiz1 >= 170) {
+                    unlockQuiz(2);
+                }
+                
+                if (appState.quizScores.quiz2 >= 170) {
+                    unlockQuiz(3);
+                }
+                
                 if (appState.quizScores.quiz3 >= 170) {
                     const finalItem = document.querySelector('[data-final="true"]');
                     if (finalItem) finalItem.classList.remove('locked');
