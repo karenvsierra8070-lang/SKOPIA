@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Distractores Comunes</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --verde-oscuro: #0d2818;
+            --verde-medio: #1a3d2a;
+            --dorado: #d4af37;
+            --dorado-claro: #f4e4bc;
+            --verde-tenue: #e8f5e9;
+            --crema: #faf6f0;
+            --blanco: #ffffff;
+            --gris-texto: #424242;
+            --sombra: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --sombra-suave: 0 5px 15px rgba(0, 0, 0, 0.08);
+            --sombra-dorada: 0 0 20px rgba(212, 175, 55, 0.3);
+            --rojo-error: #e74c3c;
+            --verde-acierto: #2ecc71;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, var(--crema) 0%, #f5efe6 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(212, 175, 55, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(13, 40, 24, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--verde-oscuro) 0%, var(--verde-medio) 100%);
+            color: var(--dorado);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 5px 20px rgba(13, 40, 24, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--dorado), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .back-button {
+            background: linear-gradient(135deg, var(--dorado), var(--dorado-claro));
+            color: var(--verde-oscuro);
+            border: none;
+            padding: 0.8rem 1.8rem;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 25px rgba(212, 175, 55, 0.4);
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 2rem;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            position: relative;
+            z-index: 10;
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            box-shadow: var(--sombra);
+            display: flex;
+            width: 100%;
+            min-height: 650px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            position: relative;
+        }
+
+        .content-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--dorado), transparent);
+            opacity: 0.5;
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, var(--dorado), var(--dorado-claro));
+            color: var(--verde-oscuro);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            transition: all 0.3s ease;
+            z-index: 50;
+        }
+
+        .sidebar-toggle:hover {
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        .sidebar {
+            width: 30%;
+            background: linear-gradient(180deg, rgba(232, 245, 233, 0.8) 0%, rgba(200, 230, 201, 0.8) 100%);
+            padding: 2rem 1rem;
+            overflow-y: auto;
+            border-right: 1px solid rgba(13, 40, 24, 0.1);
+            backdrop-filter: blur(5px);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.hidden {
+            transform: translateX(-100%);
+            position: absolute;
+            height: 100%;
+            z-index: 40;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(13, 40, 24, 0.05);
+            border-radius: 10px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--dorado);
+            border-radius: 10px;
+        }
+
+        .menu-section {
+            margin-bottom: 2rem;
+        }
+
+        .menu-section h3 {
+            color: var(--verde-oscuro);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 1rem;
+            padding-left: 1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .menu-section h3 i {
+            font-size: 0.9rem;
+            color: var(--dorado);
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.2rem;
+            margin: 0.4rem 0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            color: var(--gris-texto);
+            font-weight: 500;
+            overflow: hidden;
+            text-decoration: none;
+        }
+
+        .menu-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, var(--dorado), transparent);
+            transition: width 0.3s ease;
+            opacity: 0.1;
+        }
+
+        .menu-item:hover::before {
+            width: 100%;
+        }
+
+        .menu-item:hover {
+            background: rgba(212, 175, 55, 0.1);
+            transform: translateX(8px);
+            color: var(--verde-oscuro);
+            text-decoration: none;
+        }
+
+        .menu-item.active {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.05));
+            border-left: 4px solid var(--dorado);
+            color: var(--verde-oscuro);
+            font-weight: 600;
+            box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+        }
+
+        .menu-item.completed::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: var(--dorado);
+            margin-left: auto;
+            font-size: 1rem;
+            animation: checkmark 0.3s ease;
+        }
+
+        @keyframes checkmark {
+            0% { transform: scale(0) rotate(-45deg); }
+            50% { transform: scale(1.2) rotate(10deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        .menu-item.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .menu-item.locked::before {
+            content: '\f023';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            margin-right: 0.5rem;
+            color: var(--gris-texto);
+        }
+
+        .energy-bar-container {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 12px;
+            box-shadow: var(--sombra-suave);
+        }
+
+        .energy-label {
+            font-size: 0.85rem;
+            color: var(--verde-oscuro);
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .energy-bar {
+            height: 10px;
+            background: rgba(13, 40, 24, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .energy-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--dorado), #f4e4bc);
+            width: 0%;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .energy-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: energyShimmer 2s infinite;
+        }
+
+        @keyframes energyShimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .content-area {
+            width: 70%;
+            padding: 2.5rem;
+            overflow-y: auto;
+            position: relative;
+            transition: width 0.3s ease;
+        }
+
+        .content-area.expanded {
+            width: 100%;
+        }
+
+        .content-area::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .content-area::-webkit-scrollbar-track {
+            background: rgba(13, 40, 24, 0.05);
+            border-radius: 10px;
+        }
+
+        .content-area::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--dorado), var(--verde-medio));
+            border-radius: 10px;
+        }
+
+        .page-intro {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .page-intro h2 {
+            color: var(--verde-oscuro);
+            font-size: 2.2rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--verde-oscuro), var(--verde-medio));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-intro p {
+            color: var(--gris-texto);
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        .distractors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 3rem 0;
+        }
+
+        .distractor-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: var(--sombra-suave);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(13, 40, 24, 0.1);
+            border-top: 3px solid var(--dorado);
+        }
+
+        .distractor-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--sombra);
+        }
+
+        .distractor-card h3 {
+            color: var(--verde-oscuro);
+            font-size: 1.2rem;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .distractor-card h3 i {
+            color: var(--dorado);
+        }
+
+        .distractor-card p {
+            color: var(--gris-texto);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .strategy-box {
+            background: var(--verde-tenue);
+            border-left: 4px solid var(--dorado);
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .strategy-box strong {
+            color: var(--verde-oscuro);
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+
+        /* Estilos para el Ejercicio Interactivo */
+        #interactive-exercise {
+            background: linear-gradient(135deg, rgba(232, 245, 233, 0.3), rgba(200, 230, 201, 0.3));
+            border-radius: 16px;
+            padding: 2rem;
+            margin-top: 3rem;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        #interactive-exercise h2 {
+            color: var(--verde-oscuro);
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 1.8rem;
+        }
+
+        #exercise-container {
+            background: var(--blanco);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--sombra-suave);
+            min-height: 200px;
+        }
+
+        .question-text {
+            font-size: 1.3rem;
+            color: var(--verde-oscuro);
+            margin-bottom: 2rem;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .option-button {
+            background: var(--blanco);
+            border: 2px solid var(--dorado);
+            color: var(--verde-oscuro);
+            padding: 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .option-button:hover:not(:disabled) {
+            background: var(--dorado-claro);
+            transform: scale(1.03);
+        }
+
+        .option-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .option-button.correct {
+            background: var(--verde-acierto);
+            color: var(--blanco);
+            border-color: var(--verde-acierto);
+            animation: correctPulse 0.5s ease;
+        }
+
+        .option-button.incorrect {
+            background: var(--rojo-error);
+            color: var(--blanco);
+            border-color: var(--rojo-error);
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes correctPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .explanation-box {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, var(--dorado-claro), rgba(212, 175, 55, 0.2));
+            border-radius: 12px;
+            border-left: 5px solid var(--dorado);
+            display: none; /* Se muestra con JS */
+        }
+
+        .explanation-box.show {
+            display: block;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .explanation-box h4 {
+            color: var(--verde-oscuro);
+            margin-bottom: 0.5rem;
+        }
+
+        .explanation-box p {
+            color: var(--gris-texto);
+            line-height: 1.6;
+        }
+
+        .next-question-btn {
+            display: block;
+            margin: 1.5rem auto 0;
+            background: linear-gradient(135deg, var(--dorado), var(--dorado-claro));
+            color: var(--verde-oscuro);
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .next-question-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+        }
+
+        .floating-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: linear-gradient(135deg, var(--dorado), var(--dorado-claro));
+            color: var(--verde-oscuro);
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            font-size: 1.5rem;
+        }
+
+        .floating-button:hover {
+            transform: scale(1.1) rotate(10deg);
+            box-shadow: 0 15px 40px rgba(212, 175, 55, 0.5);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--blanco);
+            border-radius: 24px;
+            padding: 2.5rem;
+            max-width: 650px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: rgba(13, 40, 24, 0.1);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--gris-texto);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-modal:hover {
+            background: var(--dorado);
+            color: var(--blanco);
+            transform: rotate(90deg);
+        }
+
+        .notification {
+            position: fixed;
+            top: 120px;
+            right: -400px;
+            background: linear-gradient(135deg, var(--dorado), var(--dorado-claro));
+            color: var(--verde-oscuro);
+            padding: 1.2rem 1.8rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: right 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            max-width: 350px;
+        }
+
+        .notification.show {
+            right: 20px;
+        }
+
+        .notification i {
+            font-size: 1.5rem;
+        }
+
+        .notification-content {
+            flex: 1;
+        }
+
+        .notification-title {
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+
+        .notification-message {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                padding: 1rem;
+            }
+            .content-card {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid rgba(13, 40, 24, 0.1);
+            }
+            .content-area {
+                width: 100%;
+            }
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1><i class="fas fa-graduation-cap"></i> OPERACIONES BÁSICAS</h1>
+        <div class="header-actions">
+            <a href="RCDDASHBOARD.html" class="back-button">
+                <i class="fas fa-arrow-left"></i>
+                Volver al Dashboard
+            </a>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="content-card">
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <aside class="sidebar" id="sidebar">
+                <div class="menu-section">
+                    <h3><i class="fas fa-book-open"></i> Introducción y Contexto</h3>
+                    <a href="RCDD1.html" class="menu-item" data-content="RCDD1">
+                        ¿Por qué la aritmética define tu puntaje en el ICFES?
+                    </a>
+                    <a href="RCDD2.html" class="menu-item active" data-content="RCDD2">
+                        Análisis de distractores comunes en pruebas de estado
+                    </a>
+                </div>
+
+                <div class="menu-section">
+                    <h3><i class="fas fa-calculator"></i> Sistemas Numéricos y Signos</h3>
+                    <a href="RCDD3.html" class="menu-item" data-content="RCDD3">
+                        Operaciones con Números Enteros (ℤ)
+                    </a>
+                    <a href="RCDD4.html" class="menu-item" data-content="RCDD4">
+                        Dominio de la Ley de Signos en estructuras complejas
+                    </a>
+                </div>
+
+                <div class="menu-section">
+                    <h3><i class="fas fa-bolt"></i> Propiedades que Ahorran Tiempo</h3>
+                    <a href="RCDD5.html" class="menu-item" data-content="RCDD5">
+                        Propiedad Distributiva (El arte de simplificar)
+                    </a>
+                    <a href="RCDD6.html" class="menu-item" data-content="RCDD6">
+                        Factorización básica aplicada a la aritmética
+                    </a>
+                </div>
+
+                <div class="menu-section">
+                    <h3><i class="fas fa-brain"></i> Estimación y Aproximación</h3>
+                    <a href="RCDD7.html" class="menu-item" data-content="RCDD7">
+                        Cálculo mental de redondeo
+                    </a>
+                    <a href="RCDD8.html" class="menu-item" data-content="RCDD8">
+                        Técnicas de descarte visual (estimar sin operar)
+                    </a>
+                </div>
+
+                <div class="menu-section">
+                    <h3><i class="fas fa-tasks"></i> Entrenamiento de Práctica</h3>
+                    <a href="RCDD9.html" class="menu-item locked" data-content="RCDD9" data-quiz="1">
+                        Cuestionario 1: Precisión y Signos (Nivel Básico)
+                    </a>
+                    <a href="RCDD10.html" class="menu-item locked" data-content="RCDD10" data-quiz="2">
+                        Cuestionario 2: Problemas de Contexto Real (Nivel Intermedio)
+                    </a>
+                    <a href="RCDD11.html" class="menu-item locked" data-content="RCDD11" data-quiz="3">
+                        Cuestionario 3: Desafío Saber Pro (Nivel Avanzado)
+                    </a>
+                    
+                    <div class="energy-bar-container">
+                        <div class="energy-label">
+                            <span><i class="fas fa-fire"></i> Nivel de Energía</span>
+                            <span class="progress-indicator" id="energyPercentage">0%</span>
+                        </div>
+                        <div class="energy-bar">
+                            <div class="energy-fill" id="energyFill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="menu-section">
+                    <h3><i class="fas fa-flag-checkered"></i> Cierre de Módulo</h3>
+                    <a href="RCDD12.html" class="menu-item locked" data-content="RCDD12" data-final="true">
+                        Evaluación de salida
+                    </a>
+                </div>
+            </aside>
+
+            <main class="content-area" id="contentArea">
+                <div class="page-intro">
+                    <h2>Análisis de Distractores Comunes</h2>
+                    <p>Las pruebas de estado como el ICFES no solo evalúan tu conocimiento, sino tu capacidad para identificar la respuesta correcta entre opciones muy persuasivas. Aprende a reconocer y desmantelar los distractores más comunes.</p>
+                </div>
+
+                <div class="distractors-grid">
+                    <div class="distractor-card">
+                        <h3><i class="fas fa-bullseye"></i> El Plausible pero Incorrecto</h3>
+                        <p>Es la respuesta que "casi" está bien. Utiliza números o conceptos del problema pero aplica una lógica ligeramente errónea, como un error de cálculo común o una mala interpretación.</p>
+                        <div class="strategy-box">
+                            <strong>Estrategia:</strong>
+                            Lee la pregunta con extremo cuidado. Identifica las palabras clave (ej. "no", "excepto", "valor máximo"). Verifica que tu respuesta elegida responda exactamente a lo que se pregunta.
+                        </div>
+                    </div>
+
+                    <div class="distractor-card">
+                        <h3><i class="fas fa-exchange-alt"></i> El Opuesto Lógico</h3>
+                        <p>Este distractor es el reverso exacto de la respuesta correcta. Si la pregunta pide el mayor valor, este ofrecerá el menor. Es una trampa para quienes leen demasiado rápido.</p>
+                        <div class="strategy-box">
+                            <strong>Estrategia:</strong>
+                            Subraya o resalta lo que la pregunta te pide. Antes de seleccionar, pregúntate: "¿Esta respuesta es lo que se busca o su contrario?".
+                        </div>
+                    </div>
+
+                    <div class="distractor-card">
+                        <h3><i class="fas fa-search-plus"></i> El Demasiado Específico o General</h3>
+                        <p>Ofrece una respuesta que es cierta en un contexto más amplio o más estrecho, pero no para el escenario exacto del problema. Por ejemplo, una fórmula correcta pero que no aplica a los datos dados.</p>
+                        <div class="strategy-box">
+                            <strong>Estrategia:</strong>
+                            Asegúrate de que todas las condiciones y datos del problema sean utilizados en tu razonamiento. Si una respuesta ignora una pieza clave de información, probablemente sea incorrecta.
+                        </div>
+                    </div>
+
+                    <div class="distractor-card">
+                        <h3><i class="fas fa-calculator"></i> La Trampa de Cálculo</h3>
+                        <p>Presenta el resultado de un error de cálculo muy común. Por ejemplo, en (5+3)×2, el distractor podría ser 16 (haciendo la suma de izquierda a derecha) en lugar del correcto 16.</p>
+                        <div class="strategy-box">
+                            <strong>Estrategia:</strong>
+                            No confíes en cálculos mentales complejos bajo presión. Si una operación tiene varios pasos, escríbelos. Doble-checkea los signos negativos y el orden de las operaciones (PEMDAS).
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ejercicio Interactivo -->
+                <section id="interactive-exercise">
+                    <h2><i class="fas fa-dumbbell"></i> Ponte a Prueba</h2>
+                    <div id="exercise-container">
+                        <!-- El contenido se generará dinámicamente con JavaScript -->
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <div class="floating-button" id="cheatSheetBtn">
+        <i class="fas fa-lightbulb"></i>
+    </div>
+
+    <div class="modal" id="cheatSheetModal">
+        <div class="modal-content">
+            <button class="close-modal" id="closeModal">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="cheat-sheet">
+                <h3><i class="fas fa-magic"></i> Hoja de Trucos Rápida</h3>
+                <div class="rule-section">
+                    <h4><i class="fas fa-plus-minus"></i> Ley de Signos</h4>
+                    <table class="rule-table">
+                        <tr>
+                            <td><strong>+</strong> × <strong>+</strong> = <strong>+</strong></td>
+                            <td><strong>+</strong> × <strong>-</strong> = <strong>-</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>-</strong> × <strong>+</strong> = <strong>-</strong></td>
+                            <td><strong>-</strong> × <strong>-</strong> = <strong>+</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">
+        <i class="fas fa-check-circle"></i>
+        <div class="notification-content">
+            <div class="notification-title">¡Éxito!</div>
+            <div class="notification-message" id="notificationMessage">Mensaje</div>
+        </div>
+    </div>
+
+    <script>
+        // Estado de la aplicación
+        const appState = {
+            completedTopics: new Set(),
+            visitedTopics: new Set(),
+            quizScores: { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 },
+            allTopicsVisited: false
+        };
+
+        // Base de datos de preguntas para el ejercicio
+        const questionPool = [
+            {
+                question: "Calcula el valor de 5 + 3 × 2",
+                correctAnswer: 11,
+                distractors: [16, 26, 10],
+                explanation: "La respuesta correcta es 11. Se debe aplicar la propiedad distributiva o el orden de operaciones (multiplicación antes que suma). El distractor 16 es el resultado de un error común al sumar de izquierda a derecha (5+3=8, luego 8×2=16)."
+            },
+            {
+                question: "Si un producto cuesta $120 y tiene un descuento del 25%, ¿cuál es el precio final?",
+                correctAnswer: 90,
+                distractors: [30, 95, 145],
+                explanation: "La respuesta correcta es $90. El descuento es de $120 * 0.25 = $30. El precio final es $120 - $30 = $90. El distractor 30 es solo el valor del descuento, una trampa común."
+            },
+            {
+                question: "¿Cuál es el resultado de (-3)²?",
+                correctAnswer: 9,
+                distractors: [-9, 6, -6],
+                explanation: "La respuesta correcta es 9. El paréntesis indica que el cuadrado se aplica al -3 completo: (-3) × (-3) = 9. El distractor -9 es un error muy común, resultado de calcular -(3²)."
+            },
+            {
+                question: "Un número aumentado en su cuarta parte es 45. ¿Cuál es el número?",
+                correctAnswer: 36,
+                distractors: [60, 33.75, 180],
+                explanation: "La respuesta correcta es 36. Si 'x' es el número, la ecuación es x + x/4 = 45. Esto es (5/4)x = 45, por lo que x = 45 * (4/5) = 36. El distractor 60 es el resultado de pensar que 'aumentado en su cuarta parte' es multiplicar por 1.25 incorrectamente."
+            },
+            {
+                question: "Simplifica la expresión: 4(a + b) - 2a",
+                correctAnswer: "2a + 4b",
+                distractors: ["2a + 2b", "6a + 4b", "4ab - 2a"],
+                explanation: "La respuesta correcta es 2a + 4b. Aplicamos la propiedad distributiva: 4a + 4b - 2a. Luego, combinamos términos semejantes: (4a - 2a) + 4b = 2a + 4b. El distractor 6a + 4b es un error al sumar en lugar de restar 2a."
+            },
+            {
+                question: "¿Cuál es el valor de 10 - 5 × (1 + 1)?",
+                correctAnswer: 0,
+                distractors: [10, 20, -10],
+                explanation: "La respuesta correcta es 0. Primero resolvemos el paréntesis: (1+1)=2. Luego la multiplicación: 5×2=10. Finalmente la resta: 10-10=0. El distractor 10 ignora la multiplicación y solo resta 5."
+            }
+        ];
+
+        let currentQuestion = null;
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            loadProgress();
+            updateDashboardStats();
+            highlightCurrentPage();
+            setupSidebarToggle();
+            generateNewExercise(); // Generar el primer ejercicio
+        });
+
+        function setupEventListeners() {
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    const isQuiz = this.dataset.quiz;
+                    const isFinal = this.dataset.final;
+                    
+                    if (this.classList.contains('locked')) {
+                        e.preventDefault();
+                        if (isQuiz) showNotification('Cuestionario Bloqueado', `Completa los requisitos previos para desbloquear el Cuestionario ${isQuiz}.`);
+                        else if (isFinal) showNotification('Evaluación Bloqueada', 'Completa todos los cuestionarios primero.');
+                        return false;
+                    }
+                    
+                    const contentId = this.dataset.content;
+                    markAsVisited(contentId);
+                    return true;
+                });
+            });
+
+            document.getElementById('cheatSheetBtn').addEventListener('click', () => {
+                document.getElementById('cheatSheetModal').classList.add('active');
+            });
+
+            document.getElementById('closeModal').addEventListener('click', () => {
+                document.getElementById('cheatSheetModal').classList.remove('active');
+            });
+
+            document.getElementById('cheatSheetModal').addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('active');
+            });
+        }
+
+        function setupSidebarToggle() {
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            const contentArea = document.getElementById('contentArea');
+            
+            sidebarToggle.addEventListener('click', function() {
+                sidebar.classList.toggle('hidden');
+                contentArea.classList.toggle('expanded');
+                const icon = this.querySelector('i');
+                if (sidebar.classList.contains('hidden')) {
+                    icon.classList.remove('fa-bars');
+                    icon.classList.add('fa-chevron-right');
+                } else {
+                    icon.classList.remove('fa-chevron-right');
+                    icon.classList.add('fa-bars');
+                }
+            });
+        }
+        
+        // --- Lógica del Ejercicio Interactivo ---
+
+        function generateNewExercise() {
+            // 1. Seleccionar una pregunta aleatoria
+            const randomIndex = Math.floor(Math.random() * questionPool.length);
+            currentQuestion = questionPool[randomIndex];
+
+            // 2. Preparar las opciones (respuesta correcta + distractores)
+            const options = [currentQuestion.correctAnswer, ...currentQuestion.distractors];
+            // Mezclar las opciones para que la correcta no siempre esté en la misma posición
+            options.sort(() => Math.random() - 0.5);
+
+            // 3. Generar el HTML e inyectarlo en el contenedor
+            const container = document.getElementById('exercise-container');
+            container.innerHTML = `
+                <div class="question-text">${currentQuestion.question}</div>
+                <div class="options-grid">
+                    ${options.map(option => `<button class="option-button" onclick="checkAnswer(this, '${option}')">${option}</button>`).join('')}
+                </div>
+                <div id="explanation" class="explanation-box">
+                    <h4>Explicación:</h4>
+                    <p>${currentQuestion.explanation}</p>
+                </div>
+                <button id="nextBtn" class="next-question-btn" style="display: none;" onclick="generateNewExercise()">
+                    <i class="fas fa-redo"></i> Siguiente Pregunta
+                </button>
+            `;
+        }
+
+        function checkAnswer(buttonElement, selectedValue) {
+            // Deshabilitar todos los botones para evitar más clics
+            const allButtons = document.querySelectorAll('.option-button');
+            allButtons.forEach(btn => btn.disabled = true);
+
+            const isCorrect = selectedValue == currentQuestion.correctAnswer;
+            
+            if (isCorrect) {
+                buttonElement.classList.add('correct');
+                showNotification('¡Correcto!', 'Has identificado la respuesta correcta.');
+            } else {
+                buttonElement.classList.add('incorrect');
+                // Resaltar la respuesta correcta
+                allButtons.forEach(btn => {
+                    if (btn.textContent == currentQuestion.correctAnswer) {
+                        btn.classList.add('correct');
+                    }
+                });
+                showNotification('Incorrecto', 'Revisa la explicación para entender por qué.');
+            }
+
+            // Mostrar la explicación y el botón de siguiente
+            document.getElementById('explanation').classList.add('show');
+            document.getElementById('nextBtn').style.display = 'block';
+        }
+
+        // --- Funciones de la Aplicación (sin cambios) ---
+
+        function highlightCurrentPage() {
+            const currentPage = window.location.pathname.split('/').pop();
+            const menuItem = document.querySelector(`[href="${currentPage}"]`);
+            if (menuItem) menuItem.classList.add('active');
+        }
+
+        function markAsVisited(contentId) {
+            appState.visitedTopics.add(contentId);
+            if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
+                appState.completedTopics.add(contentId);
+                const menuItem = document.querySelector(`[data-content="${contentId}"]`);
+                if (menuItem) menuItem.classList.add('completed');
+            }
+            checkAllTopicsVisited();
+            saveProgress();
+        }
+
+        function checkAllTopicsVisited() {
+            const nonQuizTopics = ['RCDD1', 'RCDD2', 'RCDD3', 'RCDD4', 'RCDD5', 'RCDD6', 'RCDD7', 'RCDD8'];
+            const allVisited = nonQuizTopics.every(topic => appState.visitedTopics.has(topic));
+            if (allVisited && !appState.allTopicsVisited) {
+                appState.allTopicsVisited = true;
+                unlockQuiz(1);
+                showNotification('Cuestionario Desbloqueado', '¡Cuestionario 1 desbloqueado!');
+            }
+        }
+
+        function unlockQuiz(quizNumber) {
+            const quizItem = document.querySelector(`[data-quiz="${quizNumber}"]`);
+            if (quizItem) quizItem.classList.remove('locked');
+        }
+
+        function updateEnergyBar() {
+            const scores = [appState.quizScores.quiz1, appState.quizScores.quiz2, appState.quizScores.quiz3];
+            const validScores = scores.filter(s => s > 0);
+            const average = validScores.length > 0 ? validScores.reduce((a, b) => a + b, 0) / validScores.length : 0;
+            const percentage = Math.round((average / 300) * 100);
+            document.getElementById('energyFill').style.width = `${percentage}%`;
+            document.getElementById('energyPercentage').textContent = `${percentage}%`;
+        }
+
+        function updateDashboardStats() {
+            // Lógica para actualizar estadísticas si fuera necesario
+        }
+
+        function showNotification(title, message) {
+            const notification = document.getElementById('notification');
+            const notificationMessage = document.getElementById('notificationMessage');
+            notification.querySelector('.notification-title').textContent = title;
+            notificationMessage.textContent = message;
+            notification.classList.add('show');
+            setTimeout(() => notification.classList.remove('show'), 4000);
+        }
+
+        function saveProgress() {
+            const progress = {
+                completedTopics: Array.from(appState.completedTopics),
+                visitedTopics: Array.from(appState.visitedTopics),
+                quizScores: appState.quizScores,
+                allTopicsVisited: appState.allTopicsVisited
+            };
+            localStorage.setItem('module1Progress', JSON.stringify(progress));
+        }
+
+        function loadProgress() {
+            const saved = localStorage.getItem('module1Progress');
+            if (saved) {
+                const progress = JSON.parse(saved);
+                appState.completedTopics = new Set(progress.completedTopics || []);
+                appState.visitedTopics = new Set(progress.visitedTopics || []);
+                appState.quizScores = progress.quizScores || { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
+                appState.allTopicsVisited = progress.allTopicsVisited || false;
+                
+                appState.completedTopics.forEach(topic => {
+                    const menuItem = document.querySelector(`[data-content="${topic}"]`);
+                    if (menuItem) menuItem.classList.add('completed');
+                });
+                
+                if (appState.allTopicsVisited) unlockQuiz(1);
+                if (appState.quizScores.quiz1 >= 170) unlockQuiz(2);
+                if (appState.quizScores.quiz2 >= 170) unlockQuiz(3);
+                if (appState.quizScores.quiz3 >= 170) {
+                    const finalItem = document.querySelector('[data-final="true"]');
+                    if (finalItem) finalItem.classList.remove('locked');
+                }
+                
+                updateEnergyBar();
+                updateDashboardStats();
+            }
+        }
+
+        window.updateQuizScore = function(quizNumber, score) {
+            appState.quizScores[`quiz${quizNumber}`] = score;
+            if (score >= 170) {
+                if (quizNumber === 1) { unlockQuiz(2); showNotification('Cuestionario 2 Desbloqueado', '¡Puedes continuar!'); }
+                else if (quizNumber === 2) { unlockQuiz(3); showNotification('Cuestionario 3 Desbloqueado', '¡Último nivel!'); }
+                else if (quizNumber === 3) {
+                    const finalItem = document.querySelector('[data-final="true"]');
+                    if (finalItem) finalItem.classList.remove('locked');
+                    showNotification('Evaluación Final Desbloqueada', '¡Estás listo!');
+                }
+            }
+            updateEnergyBar();
+            updateDashboardStats();
+            saveProgress();
+        };
+
+        window.updateFinalScore = function(score) {
+            appState.quizScores.final = score;
+            updateEnergyBar();
+            updateDashboardStats();
+            saveProgress();
+        };
+    </script>
+    
+    <script>
+    // Para cuestionarios - llama esto cuando el usuario complete un cuestionario
+    if (window.parent && window.parent.updateQuizScore) {
+        window.parent.updateQuizScore(1, 180);
+    }
+    // Para evaluación final
+    if (window.parent && window.parent.updateFinalScore) {
+        window.parent.updateFinalScore(200);
+    }
+    </script>
+</body>
+</html>
