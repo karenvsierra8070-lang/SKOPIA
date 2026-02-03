@@ -1121,8 +1121,8 @@
     </div>
 
     <script>
-        // Estado de la aplicación
-        const appState = {
+        // Estado global compartido entre páginas
+        const globalState = {
             completedTopics: new Set(),
             visitedTopics: new Set(),
             quizScores: {
@@ -1134,10 +1134,32 @@
             allTopicsVisited: false
         };
 
+        // Función para guardar en sessionStorage
+        function saveToSessionStorage() {
+            sessionStorage.setItem('module1Progress', JSON.stringify({
+                completedTopics: Array.from(globalState.completedTopics),
+                visitedTopics: Array.from(globalState.visitedTopics),
+                quizScores: globalState.quizScores,
+                allTopicsVisited: globalState.allTopicsVisited
+            }));
+        }
+
+        // Función para cargar desde sessionStorage
+        function loadFromSessionStorage() {
+            const saved = sessionStorage.getItem('module1Progress');
+            if (saved) {
+                const progress = JSON.parse(saved);
+                globalState.completedTopics = new Set(progress.completedTopics || []);
+                globalState.visitedTopics = new Set(progress.visited || []);
+                globalState.quizScores = progress.quizScores || { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
+                globalState.allTopicsVisited = progress.allTopicsVisited || false;
+            }
+        }
+
         // Inicialización
         document.addEventListener('DOMContentLoaded', function() {
             setupEventListeners();
-            loadProgress();
+            loadFromSessionStorage();
             updateDashboardStats();
             highlightCurrentPage();
             setupSidebarToggle();
@@ -1194,69 +1216,72 @@
             // Botón de reproducción de video
             document.getElementById('playVideo').addEventListener('click', function() {
                 showNotification('Video', 'El video comenzará a reproducirse en breve.');
-                // Aquí iría el código para reproducir el video
             });
         }
 
-        // Configurar el botón de toggle para la barra lateral
-        function setupSidebarToggle() {
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const sidebar = document.getElementById('sidebar');
-            const contentArea = document.getElementById('contentArea');
-            
-            sidebarToggle.addEventListener('click', function() {
-                sidebar.classList.toggle('hidden');
-                contentArea.classList.toggle('expanded');
+            // Configurar el botón de toggle para la barra lateral
+            function setupSidebarToggle() {
+                const sidebarToggle = document.getElementById('sidebarToggle');
+                const sidebar = document.getElementById('sidebar');
+                const contentArea = document.getElementById('contentArea');
                 
-                // Cambiar el ícono del botón
-                const icon = this.querySelector('i');
-                if (sidebar.classList.contains('hidden')) {
-                    icon.classList.remove('fa-bars');
-                    icon.classList.add('fa-chevron-right');
-                } else {
-                    icon.classList.remove('fa-chevron-right');
-                    icon.classList.add('fa-bars');
+                sidebarToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('hidden');
+                    contentArea.classList.toggle('expanded');
+                    
+                    // Cambiar el ícono del botón
+                    const icon = this.querySelector('i');
+                    if (sidebar.classList.contains('hidden')) {
+                        icon.classList.remove('fa-bars');
+                        icon.classList.add('fa-chevron-right');
+                    } else {
+                        icon.classList.remove('fa-chevron-right');
+                        icon.classList.add('fa-bars');
+                    }
+                });
+            }
+
+            // Botón de reinicio
+            document.querySelector('.reset-button').addEventListener('click', function() {
+                if (confirm('¿Estás seguro de que deseas reiniciar todo tu progreso? Esta acción no se puede deshacer.')) {
+                    // Limpiar estado global
+                    globalState = {
+                        completedTopics: new Set(),
+                        visitedTopics: new Set(),
+                        quizScores: {
+                            quiz1: 0,
+                            quiz2: 0,
+                            quiz3: 0,
+                            final: 0
+                        },
+                        allTopicsVisited: false
+                    };
+                    
+                    // Limpiar estado visual
+                    document.querySelectorAll('.menu-item.completed').forEach(item => {
+                        item.classList.remove('completed');
+                    });
+                    
+                    // Bloquear todos los cuestionarios
+                    document.querySelectorAll('[data-quiz]').forEach(item => {
+                        item.classList.add('locked');
+                    });
+                    
+                    // Bloquear evaluación final
+                    document.querySelectorAll('[data-final="true"]').forEach(item => {
+                        item.classList.add('locked');
+                    });
+                    
+                    // Actualizar barras de progreso con animación
+                    updateEnergyBar();
+                    updateDashboardStats(true);
+                    
+                    // Limpiar sessionStorage
+                    sessionStorage.removeItem('module1Progress');
+                    
+                    showNotification('Progreso Reiniciado', 'Todo tu progreso ha sido eliminado correctamente.');
                 }
             });
-        }
-
-        // Función para reiniciar progreso
-        function resetProgress() {
-            if (confirm('¿Estás seguro de que deseas reiniciar todo tu progreso? Esta acción no se puede deshacer.')) {
-                localStorage.removeItem('module1Progress');
-                appState = {
-                    completedTopics: new Set(),
-                    visitedTopics: new Set(),
-                    quizScores: {
-                        quiz1: 0,
-                        quiz2: 0,
-                        quiz3: 0,
-                        final: 0
-                    },
-                    allTopicsVisited: false
-                };
-                
-                // Limpiar estado visual
-                document.querySelectorAll('.menu-item.completed').forEach(item => {
-                    item.classList.remove('completed');
-                });
-                
-                // Bloquear todos los cuestionarios
-                document.querySelectorAll('[data-quiz]').forEach(item => {
-                    item.classList.add('locked');
-                });
-                
-                // Bloquear evaluación final
-                document.querySelectorAll('[data-final="true"]').forEach(item => {
-                    item.classList.add('locked');
-                });
-                
-                // Actualizar barras de progreso con animación
-                updateEnergyBar();
-                updateDashboardStats(true);
-                
-                showNotification('Progreso Reiniciado', 'Todo tu progreso ha sido eliminado correctamente.');
-            }
         }
 
         // Resaltar página actual
@@ -1270,12 +1295,12 @@
 
         // Marcar como visitado con actualización dinámica
         function markAsVisited(contentId) {
-            appState.visitedTopics.add(contentId);
+            globalState.visitedTopics.add(contentId);
             
             // Marcar como completado si no es cuestionario
             if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
                 !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
-                appState.completedTopics.add(contentId);
+                globalState.completedTopics.add(contentId);
                 const menuItem = document.querySelector(`[data-content="${contentId}"]`);
                 if (menuItem && !menuItem.classList.contains('completed')) {
                     menuItem.classList.add('completed');
@@ -1287,7 +1312,7 @@
             }
             
             checkAllTopicsVisited();
-            saveProgress();
+            saveToSessionStorage();
         }
 
         // Crear partículas de logro
@@ -1312,10 +1337,10 @@
         // Verificar si todos los temas fueron visitados
         function checkAllTopicsVisited() {
             const nonQuizTopics = ['RCDD1', 'RCDD2', 'RCDD3', 'RCDD4', 'RCDD5', 'RCDD6', 'RCDD7', 'RCDD8'];
-            const allVisited = nonQuizTopics.every(topic => appState.visitedTopics.has(topic));
+            const allVisited = nonQuizTopics.every(topic => globalState.visitedTopics.has(topic));
             
-            if (allVisited && !appState.allTopicsVisited) {
-                appState.allTopicsVisited = true;
+            if (allVisited && !globalState.allTopicsVisited) {
+                globalState.allTopicsVisited = true;
                 unlockQuiz(1);
                 showNotification('Cuestionario Desbloqueado', '¡Cuestionario 1 desbloqueado! Ya puedes comenzar tu práctica.');
             }
@@ -1336,11 +1361,11 @@
         // Actualizar estadísticas del dashboard con animaciones
         function updateDashboardStats(animate = false) {
             const totalTopics = 8;
-            const completedTopics = appState.completedTopics.size;
+            const completedTopics = globalState.completedTopics.size;
             const topicsProgress = Math.round((completedTopics / totalTopics) * 100);
             
             const totalQuizzes = 3;
-            const passedQuizzes = [appState.quizScores.quiz1, appState.quizScores.quiz2, appState.quizScores.quiz3]
+            const passedQuizzes = [globalState.quizScores.quiz1, globalState.quizScores.quiz2, globalState.quizScores.quiz3]
                 .filter(score => score >= 170).length;
             const quizzesProgress = Math.round((passedQuizzes / totalQuizzes) * 100);
             
@@ -1373,55 +1398,22 @@
         }
 
         // Guardar progreso
-        function saveProgress() {
+        function saveToSessionStorage() {
             const progress = {
-                completedTopics: Array.from(appState.completedTopics),
-                visitedTopics: Array.from(appState.visitedTopics),
-                quizScores: appState.quizScores,
-                allTopicsVisited: appState.allTopicsVisited
+                completedTopics: Array.from(globalState.completedTopics),
+                visitedTopics: Array.from(globalState.visitedTopics),
+                quizScores: globalState.quizScores,
+                allTopicsVisited: globalState.allTopicsVisited
             };
-            localStorage.setItem('module1Progress', JSON.stringify(progress));
-        }
-
-        // Cargar progreso
-        function loadProgress() {
-            const saved = localStorage.getItem('module1Progress');
-            if (saved) {
-                const progress = JSON.parse(saved);
-                appState.completedTopics = new Set(progress.completedTopics || []);
-                appState.visitedTopics = new Set(progress.visitedTopics || []);
-                appState.quizScores = progress.quizScores || { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
-                appState.allTopicsVisited = progress.allTopicsVisited || false;
-                
-                // Restaurar estado visual
-                appState.completedTopics.forEach(topic => {
-                    const menuItem = document.querySelector(`[data-content="${topic}"]`);
-                    if (menuItem) menuItem.classList.add('completed');
-                });
-                
-                // NO desbloquear cuestionarios al cargar - solo cuando se completan
-                if (appState.allTopicsVisited) {
-                    // Solo desbloquear el cuestionario 1 si todos los temas han sido visitados
-                    const quiz1Item = document.querySelector('[data-quiz="1"]');
-                    if (quiz1Item && quiz1Item.classList.contains('locked')) {
-                        unlockQuiz(1);
-                    }
-                }
-                
-                // NO desbloquear otros cuestionarios automáticamente
-                // Se desbloquean solo cuando se completa el anterior con 170+
-                
-                updateEnergyBar();
-                updateDashboardStats();
-            }
+            sessionStorage.setItem('module1Progress', JSON.stringify(progress));
         }
 
         // Actualizar barra de energía
         function updateEnergyBar() {
             const scores = [
-                appState.quizScores.quiz1,
-                appState.quizScores.quiz2,
-                appState.quizScores.quiz3
+                globalState.quizScores.quiz1,
+                globalState.quizScores.quiz2,
+                globalState.quizScores.quiz3
             ];
             
             const validScores = scores.filter(s => s > 0);
@@ -1438,7 +1430,7 @@
 
         // Función para ser llamada desde las páginas de cuestionarios
         window.updateQuizScore = function(quizNumber, score) {
-            appState.quizScores[`quiz${quizNumber}`] = score;
+            globalState.quizScores[`quiz${quizNumber}`] = score;
             
             if (score >= 170) {
                 if (quizNumber === 1) {
@@ -1456,15 +1448,15 @@
             
             updateEnergyBar();
             updateDashboardStats(true);
-            saveProgress();
+            saveToSessionStorage();
         };
 
         // Función para ser llamada desde la evaluación final
         window.updateFinalScore = function(score) {
-            appState.quizScores.final = score;
+            globalState.quizScores.final = score;
             updateEnergyBar();
             updateDashboardStats(true);
-            saveProgress();
+            saveToSessionStorage();
         };
     </script>
     
