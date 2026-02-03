@@ -1144,7 +1144,7 @@
             }));
         }
 
-        // Función para cargar desde sessionStorage
+        // Función para cargar desde sessionStorage y aplicar estado visual
         function loadFromSessionStorage() {
             const saved = sessionStorage.getItem('module1Progress');
             if (saved) {
@@ -1153,6 +1153,33 @@
                 globalState.visitedTopics = new Set(progress.visited || []);
                 globalState.quizScores = progress.quizScores || { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
                 globalState.allTopicsVisited = progress.allTopicsVisited || false;
+                
+                // APLICAR LAS CLASES CSS A LOS ELEMENTOS VISITADOS
+                globalState.completedTopics.forEach(topicId => {
+                    const menuItem = document.querySelector(`[data-content="${topicId}"]`);
+                    if (menuItem) {
+                        menuItem.classList.add('completed');
+                    }
+                });
+                
+                // VERIFICAR SI HAY QUE DESBLOQUEAR CUESTIONARIOS
+                if (globalState.allTopicsVisited) {
+                    unlockQuiz(1);
+                    if (globalState.quizScores.quiz1 >= 170) {
+                        unlockQuiz(2);
+                    }
+                    if (globalState.quizScores.quiz2 >= 170) {
+                        unlockQuiz(3);
+                    }
+                    if (globalState.quizScores.quiz3 >= 170) {
+                        const finalItem = document.querySelector('[data-final="true"]');
+                        if (finalItem) finalItem.classList.remove('locked');
+                    }
+                }
+                
+                // Actualizar barra de energía
+                updateEnergyBar();
+                updateDashboardStats();
             }
         }
 
@@ -1160,9 +1187,19 @@
         document.addEventListener('DOMContentLoaded', function() {
             setupEventListeners();
             loadFromSessionStorage();
-            updateDashboardStats();
             highlightCurrentPage();
             setupSidebarToggle();
+            
+            // MARCAR LA PÁGINA ACTUAL COMO VISITADA AL CARGAR
+            const currentPage = window.location.pathname.split('/').pop();
+            const currentPageElement = document.querySelector(`[href="${currentPage}"]`);
+            if (currentPageElement) {
+                const contentId = currentPageElement.dataset.content;
+                if (contentId && !contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
+                    !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
+                    markAsVisited(contentId);
+                }
+            }
         });
 
         // Configurar event listeners
@@ -1219,69 +1256,61 @@
             });
         }
 
-            // Configurar el botón de toggle para la barra lateral
-            function setupSidebarToggle() {
-                const sidebarToggle = document.getElementById('sidebarToggle');
-                const sidebar = document.getElementById('sidebar');
-                const contentArea = document.getElementById('contentArea');
+        // Configurar el botón de toggle para la barra lateral
+        function setupSidebarToggle() {
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            const contentArea = document.getElementById('contentArea');
+            
+            sidebarToggle.addEventListener('click', function() {
+                sidebar.classList.toggle('hidden');
+                contentArea.classList.toggle('expanded');
                 
-                sidebarToggle.addEventListener('click', function() {
-                    sidebar.classList.toggle('hidden');
-                    contentArea.classList.toggle('expanded');
-                    
-                    // Cambiar el ícono del botón
-                    const icon = this.querySelector('i');
-                    if (sidebar.classList.contains('hidden')) {
-                        icon.classList.remove('fa-bars');
-                        icon.classList.add('fa-chevron-right');
-                    } else {
-                        icon.classList.remove('fa-chevron-right');
-                        icon.classList.add('fa-bars');
-                    }
-                });
-            }
-
-            // Botón de reinicio
-            document.querySelector('.reset-button').addEventListener('click', function() {
-                if (confirm('¿Estás seguro de que deseas reiniciar todo tu progreso? Esta acción no se puede deshacer.')) {
-                    // Limpiar estado global
-                    globalState = {
-                        completedTopics: new Set(),
-                        visitedTopics: new Set(),
-                        quizScores: {
-                            quiz1: 0,
-                            quiz2: 0,
-                            quiz3: 0,
-                            final: 0
-                        },
-                        allTopicsVisited: false
-                    };
-                    
-                    // Limpiar estado visual
-                    document.querySelectorAll('.menu-item.completed').forEach(item => {
-                        item.classList.remove('completed');
-                    });
-                    
-                    // Bloquear todos los cuestionarios
-                    document.querySelectorAll('[data-quiz]').forEach(item => {
-                        item.classList.add('locked');
-                    });
-                    
-                    // Bloquear evaluación final
-                    document.querySelectorAll('[data-final="true"]').forEach(item => {
-                        item.classList.add('locked');
-                    });
-                    
-                    // Actualizar barras de progreso con animación
-                    updateEnergyBar();
-                    updateDashboardStats(true);
-                    
-                    // Limpiar sessionStorage
-                    sessionStorage.removeItem('module1Progress');
-                    
-                    showNotification('Progreso Reiniciado', 'Todo tu progreso ha sido eliminado correctamente.');
+                // Cambiar el ícono del botón
+                const icon = this.querySelector('i');
+                if (sidebar.classList.contains('hidden')) {
+                    icon.classList.remove('fa-bars');
+                    icon.classList.add('fa-chevron-right');
+                } else {
+                    icon.classList.remove('fa-chevron-right');
+                    icon.classList.add('fa-bars');
                 }
             });
+        }
+
+        // Botón de reinicio
+        function resetProgress() {
+            if (confirm('¿Estás seguro de que deseas reiniciar todo tu progreso? Esta acción no se puede deshacer.')) {
+                // Limpiar estado global
+                globalState.completedTopics.clear();
+                globalState.visitedTopics.clear();
+                globalState.quizScores = { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
+                globalState.allTopicsVisited = false;
+                
+                // Limpiar estado visual
+                document.querySelectorAll('.menu-item.completed').forEach(item => {
+                    item.classList.remove('completed');
+                });
+                
+                // Bloquear todos los cuestionarios
+                document.querySelectorAll('[data-quiz]').forEach(item => {
+                    item.classList.add('locked');
+                });
+                
+                // Bloquear evaluación final
+                document.querySelectorAll('[data-final="true"]').forEach(item => {
+                    item.classList.add('locked');
+                });
+                
+                // Actualizar barras de progreso con animación
+                updateEnergyBar();
+                updateDashboardStats(true);
+                
+                // Limpiar sessionStorage
+                sessionStorage.removeItem('module1Progress');
+                
+                showNotification('Progreso Reiniciado', 'Todo tu progreso ha sido eliminado correctamente.');
+            }
         }
 
         // Resaltar página actual
@@ -1395,17 +1424,6 @@
             setTimeout(() => {
                 notification.classList.remove('show');
             }, 4000);
-        }
-
-        // Guardar progreso
-        function saveToSessionStorage() {
-            const progress = {
-                completedTopics: Array.from(globalState.completedTopics),
-                visitedTopics: Array.from(globalState.visitedTopics),
-                quizScores: globalState.quizScores,
-                allTopicsVisited: globalState.allTopicsVisited
-            };
-            sessionStorage.setItem('module1Progress', JSON.stringify(progress));
         }
 
         // Actualizar barra de energía
