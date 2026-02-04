@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operaciones con Números Enteros (ℤ)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --verde-oscuro: #0d2818;
+            --verde-medio: #1a3d2a;
+            --dorado: #d4af37;
+            --dorado-claro: #f4e4bc;
+            --verde-tenue: #e8f5e9;
+            --crema: #faf6f0;
+            --blanco: #ffffff;
+            --gris-texto: #424242;
+            --sombra: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --sombra-suave: 0 5px 15px rgba(0, 0, 0, 0.08);
+            --sombra-dorada: 0 0 20px rgba(212, 175, 55, 0.3);
+            --rojo-error: #e74c3c;
+            --verde-acierto: #2ecc71;
+            --azul-magico: #3498db;
+            --morado-magico: #9b59b6;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, var(--crema) 0%, #f5efe6 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(212, 175, 55, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(13, 40, 24, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--verde-oscuro) 0%, var(--verde-medio) 100%);
+            color: var(--dorado);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 5px 20px rgba(13, 40, 24, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            width: 100%;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--dorado), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .back-button, .reset-button {
+            background: linear-gradient(135deg, var(--dorado), var(--dorado-claro));
+            color: var(--verde-oscuro);
+            border: none;
+            padding: 0.8rem 1.8rem;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            font-size: 0.9rem;
+            touch-action: manipulation;
+        }
+
+        .back-button:hover, .reset-button:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 25px rgba(212, 175, 55, 0.4);
+        }
+
+        .reset-button {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        /* Contenedor Principal */
+        .main-container {
+            flex: 1;
+            display: flex;
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            padding: 2rem;
+            gap: 2rem;
+            position: relative;
+            z-index: 10;
+            min-height: calc(100vh - 120px);
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            box-shadow: var(--sombra);
+            display: flex;
+            width: 100%;
+            min-height: 100%;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            position: relative;
+        }
+
+        .content-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--dorado), transparent);
+            opacity: 0.5;
+        }
+
+        /* Botón para mostrar/ocultar barra lateral */
+        .sidebar-toggle {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, var(--dorado), var(--dorado-claro));
+            color: var(--verde-oscuro);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            transition: all 0.3s ease;
+            z-index: 60;
+            font-size: 1.2rem;
+            touch-action: manipulation;
+        }
+
+        .sidebar-toggle:hover {
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        /* Menú Lateral Moderno */
+        .sidebar {
+            width: 30%;
+            min-width: 280px;
+            background: linear-gradient(180deg, rgba(232, 245, 233, 0.8) 0%, rgba(200, 230, 201, 0.8) 100%);
+            padding: 2rem 1rem;
+            overflow-y: auto;
+            border-right: 1px solid rgba(13, 40, 24, 0.1);
+            backdrop-filter: blur(5px);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .sidebar.hidden {
+            transform: translateX(-100%);
+            opacity: 0;
+            position: absolute;
+            height: 100%;
+            z-index: 50;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(13, 40, 24, 0.05);
+            border-radius: 10px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--dorado);
+            border-radius: 10px;
+        }
+
+        .menu-section {
+            margin-bottom: 2rem;
+        }
+
+        .menu-section h3 {
+            color: var(--verde-oscuro);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 1rem;
+            padding-left: 1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .menu-section h3 i {
+            font-size: 0.9rem;
+            color: var(--dorado);
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.2rem;
+            margin: 0.4rem 0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            color: var(--gris-texto);
+            font-weight: 500;
+            overflow: hidden;
+            text-decoration: none;
+            touch-action: manipulation;
+            min-height: 50px;
+        }
+
+        .menu-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, var(--dorado), transparent);
+            transition: width 0.3s ease;
+            opacity: 0.1;
+        }
+
+        .menu-item:hover::before {
+            width: 100%;
+        }
+
+        .menu-item:hover {
+            background: rgba(212, 175, 55, 0.1);
+            transform: translateX(8px);
+            color: var(--verde-oscuro);
+            text-decoration: none;
+        }
+
+        .menu-item.active {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.05));
+            border-left: 4px solid var(--dorado);
+            color: var(--verde-oscuro);
+            font-weight: 600;
+            box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+        }
+
+        .menu-item.completed {
+            position: relative;
+            background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(46, 204, 113, 0.05));
+        }
+
+        .menu-item.completed::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: var(--dorado);
+            margin-left: auto;
+            font-size: 1rem;
+            animation: checkmark 0.3s ease;
+        }
+
+        @keyframes checkmark {
+            0% { transform: scale(0) rotate(-45deg); }
+            50% { transform: scale(1.2) rotate(10deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        .menu-item.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .menu-item.locked::before {
+            content: '\f023';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            margin-right: 0.5rem;
+            color: var(--gris-texto);
+        }
+
+        /* Animación de desbloqueo */
+        @keyframes unlock {
+            0% { 
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            50% { 
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+            100% { 
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .menu-item.unlocking {
+            animation: unlock 0.6s ease;
+        }
+
+        /* Barra de Energía Moderna */
+        .energy-bar-container {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 12px;
+            box-shadow: var(--sombra-suave);
+        }
+
+        .energy-label {
+            font-size: 0.85rem;
+            color: var(--verde-oscuro);
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .energy-bar {
+            height: 10px;
+            background: rgba(13, 40, 24, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .energy-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--dorado), #f4e4bc);
+            width: 0%;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .energy-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: energyShimmer 2s infinite;
+        }
+
+        @keyframes energyShimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Área de Contenido */
+        .content-area {
+            flex: 1;
+            padding: 2.5rem;
+            overflow-y: auto;
+            position: relative;
+            transition: all 0.3s ease;
+            min-width: 0;
+        }
+
+        .content-area.expanded {
+            margin-left: 0;
+        }
+
+        .content-area::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .content-area::-webkit-scrollbar-track {
+            background: rgba(13, 40, 24, 0.05);
+            border-radius: 10px;
+        }
+
+        .content-area::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--dorado), var(--verde-medio));
+            border-radius: 10px;
+        }
+
+        /* Contenido específico de la página */
+        .page-intro {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-intro h2 {
+            color: var(--verde-oscuro);
+            font-size: 2.2rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--verde-oscuro), var(--verde-medio));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-intro p {
+            color: var(--gris-texto);
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        /* Teoría */
+        .theory-section {
+            background: linear-gradient(135deg, rgba(232, 245, 233, 0.3), rgba(200, 230, 201, 0.3));
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .theory-section h3 {
+            color: var(--verde-oscuro);
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .theory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .theory-card {
+            background: var(--blanco);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--sombra-suave);
+            border-left: 4px solid var(--dorado);
+        }
+
+        .theory-card h4 {
+            color: var(--verde-oscuro);
+            font-size: 1.2rem;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .theory-card h4 i {
+            color: var(--dorado);
+        }
+
+        .theory-card p {
+            color: var(--gris-texto);
+            line-height: 1.6;
+        }
+
+        /* Fases de ejercicios */
+        .phases-container {
+            margin: 3rem 0;
+        }
+
+        .phase-card {
+            background: var(--blanco);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--sombra);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .phase-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--dorado), var(--morado-magico), var(--azul-magico));
+        }
+
+        .phase-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .phase-number {
+            background: linear-gradient(135deg, var(--dorado), var(--morado-magico));
+            color: var(--blanco);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .phase-title {
+            color: var(--verde-oscuro);
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .exercise-content {
+            background: var(--verde-tenue);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-left: 4px solid var(--dorado);
+        }
+
+        .step {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: var(--blanco);
+            border-radius: 8px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .step:hover {
+            transform: translateX(5px);
+            box-shadow: var(--sombra-suave);
+        }
+
+        .step-number {
+            display: inline-block;
+            background: var(--dorado);
+            color: var(--blanco);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: 600;
+            margin-right: 1rem;
+        }
+
+        .highlight-magic {
+            background: linear-gradient(135deg, var(--dorado-claro), rgba(212, 175, 55, 0.3));
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            color: var(--verde-oscuro);
+            animation: magicGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes magicGlow {
+            from {
+                box-shadow: 0 0 5px rgba(212, 175, 55, 0.5);
+            }
+            to {
+                box-shadow: 0 0 15px rgba(212, 175, 55, 0.8);
+            }
+        }
+
+        .result-box {
+            background: linear-gradient(135deg, var(--dorado), var(--dorado-claro));
+            color: var(--verde-oscuro);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin: 1.5rem 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
+            animation: resultAppear 0.8s ease;
+        }
+
+        @keyframes resultAppear {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Visualización Genially */
+        .genially-section {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(155, 89, 182, 0.1));
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 3rem 0;
+            text-align: center;
+            border: 2px dashed var(--azul-magico);
+        }
+
+        .genially-placeholder {
+            min-height: 300px;
+            background: var(--blanco);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--sombra-suave);
+        }
+
+        .genially-placeholder i {
+            font-size: 3rem;
+            color: var(--azul-magico);
+            margin-bottom: 1rem;
+        }
+
+        /* Consejos */
+        .tips-section {
+            background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(39, 174, 96, 0.1));
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 3rem 0;
+        }
+
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .tip-card {
+            background: var(--blanco);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--sombra-suave);
+            border-left: 4px solid var(--verde-acierto);
+            transition: all 0.3s ease;
+        }
+
+        .tip-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--sombra);
+        }
+
+        .tip-card h4 {
+            color: var(--verde-oscuro);
+            font-size: 1.1rem;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tip-card h4 i {
+            color: var(--verde-acierto);
+        }
+
+        /* Ejercicios interactivos */
+        .exercises-section {
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.1), rgba(192, 57, 43, 0.1));
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 3rem 0;
+        }
+
+        .exercise-container {
+            background: var(--blanco);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--sombra);
+            min-height: 200px;
+            position: relative;
+        }
+
+        .exercise-question {
+            font-size: 1.2rem;
+            color: var(--verde-oscuro);
+            margin-bottom: 2rem;
+            text-align: center;
+            font-weight: 600;
+            line-height: 1.6;
+        }
+
+        .exercise-input {
+            width: 100%;
+            max-width: 300px;
+            padding: 1rem;
+            font-size: 1.1rem;
+            border: 2px solid var(--dorado);
+            border-radius: 8px;
+            text-align: center;
+            margin: 0 auto 1.5rem;
+            display: block;
+        }
+
+        .exercise-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-check, .btn-new {
+            background: linear-gradient(135deg, var(--dorado), var(--dorado-claro));
+            color: var(--verde-oscuro);
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-check:hover, .btn-new:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+        }
+
+        .exercise-feedback {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: left;
+            font-weight: 500;
+            display: none;
+            line-height: 1.6;
+        }
+
+        .exercise-feedback.correct {
+            background: var(--verde-acierto);
+            color: var(--blanco);
+        }
+
+        .exercise-feedback.incorrect {
+            background: var(--rojo-error);
+            color: var(--blanco);
+        }
+
+        .exercise-counter {
+            text-align: center;
+            margin-top: 1rem;
+            color: var(--gris-texto);
+            font-size: 0.9rem;
+        }
+
+        .streak-indicator {
+            text-align: center;
+            margin: 1rem 0;
+            padding: 0.8rem;
+            background: linear-gradient(135deg, var(--morado-magico), var(--azul-magico));
+            color: var(--blanco);
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        /* Botón Flotante */
+        .floating-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: linear-gradient(135deg, var(--dorado), var(--dorado-claro));
+            color: var(--verde-oscuro);
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            font-size: 1.5rem;
+            touch-action: manipulation;
+        }
+
+        .floating-button:hover {
+            transform: scale(1.1) rotate(10deg);
+            box-shadow: 0 15px 40px rgba(212, 175, 55, 0.5);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .content-card {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid rgba(13, 40, 24, 0.1);
+                position: relative;
+                transform: none;
+                opacity: 1;
+            }
+
+            .sidebar.hidden {
+                display: none;
+            }
+
+            .content-area {
+                width: 100%;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .sidebar-toggle {
+                display: flex;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            .sidebar-toggle {
+                display: flex;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Moderno -->
+    <header class="header">
+        <h1><i class="fas fa-graduation-cap"></i> OPERACIONES BÁSICAS</h1>
+        <div class="header-actions">
+            <a href="RCDASHBOARD.html" class="back-button">
+                <i class="fas fa-arrow-left"></i>
+                Volver al Dashboard
+            </a>
+            <button class="reset-button" onclick="resetProgress()">
+                <i class="fas fa-redo"></i>
+                Reiniciar Progreso
+            </button>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <div class="main-container">
+        <div class="content-card">
+            <!-- Botón para mostrar/ocultar barra lateral -->
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <!-- Menú Lateral Moderno -->
+            <aside class="sidebar" id="sidebar">
+                <div class="menu-section">
+                    <h3><i class="fas fa-book-open"></i> Introducción y Contexto</h3>
+                    <a href="RCDD1.html" class="menu-item" data-content="RCDD1">
+                        ¿Por qué la aritmética define tu puntaje en el ICFES?
+                    </a>
+                    <a href="RCDD2.html" class="menu-item" data-content="RCDD2">
+                        Análisis de distractores comunes en pruebas de estado
+                    </a>
+                </div>
+
+                <div class="menu-section">
+                    <h3><i class="fas fa-calculator"></i> Sistemas Numéricos y Signos</h3>
+                    <a href="RCDD3.html" class="menu-item active" data-content="RCDD3">
+                        Operaciones con Números Enteros (ℤ)
+                    </a>
+                    <a href="RCDD4.html" class="menu-item" data-content="RCDD4">
+                        Dominio de la Ley de Signos en estructuras complejas
+                    </a>
+                </div>
+
+                <div class="menu-section">
+                    <h3><i class="fas fa-bolt"></i> Propiedades que Ahorran Tiempo</h3>
+                    <a href="RCDD5.html" class="menu-item" data-content="RCDD5">
+                        Propiedad Distributiva (El arte de simplificar)
+                    </a>
+                    <a href="RCDD6.html" class="menu-item" data-content="RCDD6">
+                        Factorización básica aplicada a la aritmética
+                    </a>
+                </div>
+
+                <div class="menu-section">
+                    <h3><i class="fas fa-brain"></i> Estimación y Aproximación</h3>
+                    <a href="RCDD7.html" class="menu-item" data-content="RCDD7">
+                        Cálculo mental de redondeo
+                    </a>
+                    <a href="RCDD8.html" class="menu-item" data-content="RCDD8">
+                        Técnicas de descarte visual (estimar sin operar)
+                    </a>
+                </div>
+
+                <div class="menu-section">
+                    <h3><i class="fas fa-tasks"></i> Entrenamiento de Práctica</h3>
+                    <a href="RCDD9.html" class="menu-item locked" data-content="RCDD9" data-quiz="1">
+                        Cuestionario 1: Precisión y Signos (Nivel Básico)
+                    </a>
+                    <a href="RCDD10.html" class="menu-item locked" data-content="RCDD10" data-quiz="2">
+                        Cuestionario 2: Problemas de Contexto Real (Nivel Intermedio)
+                    </a>
+                    <a href="RCDD11.html" class="menu-item locked" data-content="RCDD11" data-quiz="3">
+                        Cuestionario 3: Desafío Saber Pro (Nivel Avanzado)
+                    </a>
+                    
+                    <div class="energy-bar-container">
+                        <div class="energy-label">
+                            <span><i class="fas fa-fire"></i> Nivel de Energía</span>
+                            <span class="progress-indicator" id="energyPercentage">0%</span>
+                        </div>
+                        <div class="energy-bar">
+                            <div class="energy-fill" id="energyFill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="menu-section">
+                    <h3><i class="fas fa-flag-checkered"></i> Cierre de Módulo</h3>
+                    <a href="RCDD12.html" class="menu-item locked" data-content="RCDD12" data-final="true">
+                        Evaluación de salida
+                    </a>
+                </div>
+            </aside>
+
+            <!-- Área de Contenido -->
+            <main class="content-area" id="contentArea">
+                <div class="page-intro">
+                    <h2>Operaciones con Números Enteros (ℤ)</h2>
+                    <p>Los números enteros son el conjunto de todos los números positivos, negativos y el cero. Dominar sus operaciones es fundamental para resolver problemas matemáticos complejos en las pruebas ICFES SABER PRO.</p>
+                </div>
+
+                <!-- Teoría -->
+                <section class="theory-section">
+                    <h3><i class="fas fa-book"></i> Fundamentos de Números Enteros</h3>
+                    <div class="theory-grid">
+                        <div class="theory-card">
+                            <h4><i class="fas fa-plus-minus"></i> Suma y Resta</h4>
+                            <p>La suma de enteros sigue la regla: números con el mismo signo se suman y mantienen el signo. Números con signos diferentes se restan y el resultado lleva el signo del mayor valor absoluto.</p>
+                        </div>
+                        <div class="theory-card">
+                            <h4><i class="fas fa-times"></i> Multiplicación</h4>
+                            <p>El producto de dos enteros con el mismo signo es positivo. El producto de dos enteros con signos diferentes es negativo. Esta regla es crucial para evitar errores en cálculos complejos.</p>
+                        </div>
+                        <div class="theory-card">
+                            <h4><i class="fas fa-divide"></i> División</h4>
+                            <p>La división de enteros sigue las mismas reglas de signos que la multiplicación. Es importante recordar que la división por cero no está definida en el conjunto de los números reales.</p>
+                        </div>
+                        <div class="theory-card">
+                            <h4><i class="fas fa-battery-full"></i> Valor Absoluto</h4>
+                            <p>El valor absoluto de un número es su distancia desde cero en la recta numérica, siempre es positivo. Se denota como |x| y es fundamental para resolver desigualdades y ecuaciones.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Fases de Ejercicios -->
+                <div class="phases-container">
+                    <!-- Fase 1 -->
+                    <div class="phase-card">
+                        <div class="phase-header">
+                            <div class="phase-number">1</div>
+                            <div class="phase-title">Operaciones Básicas Directas</div>
+                        </div>
+                        <div class="exercise-content">
+                            <p><strong>Ejemplo:</strong> Calcular: 2 + (-90) - 3 + 5 + 79 - 67</p>
+                            <div class="step">
+                                <span class="step-number">1</span>
+                                <span>Agrupamos términos positivos: <span class="highlight-magic">2 + 5 + 79 = 86</span></span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">2</span>
+                                <span>Agrupamos términos negativos: <span class="highlight-magic">(-90) - 3 - 67 = -160</span></span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">3</span>
+                                <span>Sumamos los resultados: <span class="highlight-magic">86 + (-160) = -74</span></span>
+                            </div>
+                            <div class="result-box">
+                                <i class="fas fa-check-circle"></i> Resultado: -74
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fase 2 -->
+                    <div class="phase-card">
+                        <div class="phase-header">
+                            <div class="phase-number">2</div>
+                            <div class="phase-title">Operaciones con Paréntesis</div>
+                        </div>
+                        <div class="exercise-content">
+                            <p><strong>Ejemplo:</strong> Calcular: (-15 + 8) - (7 - 12) + (-3)</p>
+                            <div class="step">
+                                <span class="step-number">1</span>
+                                <span>Resolvemos primer paréntesis: <span class="highlight-magic">(-15 + 8) = -7</span></span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">2</span>
+                                <span>Resolvemos segundo paréntesis: <span class="highlight-magic">(7 - 12) = -5</span></span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">3</span>
+                                <span>Reemplazamos: <span class="highlight-magic">(-7) - (-5) + (-3) = -7 + 5 - 3</span></span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">4</span>
+                                <span>Calculamos: <span class="highlight-magic">-7 + 5 = -2</span>, luego <span class="highlight-magic">-2 - 3 = -5</span></span>
+                            </div>
+                            <div class="result-box">
+                                <i class="fas fa-check-circle"></i> Resultado: -5
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fase 3 -->
+                    <div class="phase-card">
+                        <div class="phase-header">
+                            <div class="phase-number">3</div>
+                            <div class="phase-title">Problemas con Contexto Financiero</div>
+                        </div>
+                        <div class="exercise-content">
+                            <p><strong>Ejemplo:</strong> Una tienda registra sus ventas diarias: Lunes ganó $450, martes perdió $230, miércoles ganó $380, jueves perdió $150 y viernes ganó $520. ¿Cuál es el balance semanal?</p>
+                            <div class="step">
+                                <span class="step-number">1</span>
+                                <span>Identificamos ganancias (positivas): <span class="highlight-magic">$450 + $380 + $520 = $1,350</span></span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">2</span>
+                                <span>Identificamos pérdidas (negativas): <span class="highlight-magic">-$230 - $150 = -$380</span></span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">3</span>
+                                <span>Calculamos balance: <span class="highlight-magic">$1,350 + (-$380) = $970</span></span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">4</span>
+                                <span><strong>Interpretación:</strong> La tienda tuvo una ganancia neta de $970 durante la semana.</span>
+                            </div>
+                            <div class="result-box">
+                                <i class="fas fa-check-circle"></i> Balance semanal: $970
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fase 4 -->
+                    <div class="phase-card">
+                        <div class="phase-header">
+                            <div class="phase-number">4</div>
+                            <div class="phase-title">Operaciones con Temperaturas</div>
+                        </div>
+                        <div class="exercise-content">
+                            <p><strong>Ejemplo:</strong> Un termómetro registra las siguientes temperaturas en un día: 6am: -5°C, 12pm: 8°C, 6pm: 3°C, 12am: -2°C. ¿Cuál fue el cambio total de temperatura?</p>
+                            <div class="step">
+                                <span class="step-number">1</span>
+                                <span>Calculamos cambios entre mediciones: <span class="highlight-magic">8 - (-5) = 13°C</span> (mañana a mediodía)</span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">2</span>
+                                <span>Segundo cambio: <span class="highlight-magic">3 - 8 = -5°C</span> (mediodía a tarde)</span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">3</span>
+                                <span>Tercer cambio: <span class="highlight-magic">-2 - 3 = -5°C</span> (tarde a noche)</span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">4</span>
+                                <span>Sumamos todos los cambios: <span class="highlight-magic">13 + (-5) + (-5) = 3°C</span></span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">5</span>
+                                <span><strong>Interpretación:</strong> La temperatura neta aumentó 3°C durante el día completo.</span>
+                            </div>
+                            <div class="result-box">
+                                <i class="fas fa-check-circle"></i> Cambio total: +3°C
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fase 5 -->
+                    <div class="phase-card">
+                        <div class="phase-header">
+                            <div class="phase-number">5</div>
+                            <div class="phase-title">Análisis Financiero Complejo</div>
+                        </div>
+                        <div class="exercise-content">
+                            <p><strong>Ejemplo:</strong> Una empresa de logística reporta sus movimientos financieros mensuales. En enero tuvo una pérdida de $5.000.000, en febrero una ganancia de $8.000.000 y en marzo una pérdida de $4.000.000. ¿Cuál es el balance final de la empresa al terminar el trimestre?</p>
+                            <div class="step">
+                                <span class="step-number">1</span>
+                                <span>Representamos los movimientos como enteros: <span class="highlight-magic">Enero: -$5.000.000, Febrero: +$8.000.000, Marzo: -$4.000.000</span></span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">2</span>
+                                <span>Sumamos las pérdidas totales: <span class="highlight-magic">-$5.000.000 + (-$4.000.000) = -$9.000.000</span></span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">3</span>
+                                <span>Calculamos el balance trimestral: <span class="highlight-magic">+$8.000.000 + (-$9.000.000) = -$1.000.000</span></span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">4</span>
+                                <span><strong>Análisis:</strong> A pesar de la ganancia en febrero, las pérdidas de enero y marzo superaron la ganancia, resultando en una pérdida neta.</span>
+                            </div>
+                            <div class="step">
+                                <span class="step-number">5</span>
+                                <span><strong>Recomendación estratégica:</strong> La empresa debe revisar sus costos operativos y desarrollar estrategias para reducir las pérdidas en los meses de menor actividad.</span>
+                            </div>
+                            <div class="result-box">
+                                <i class="fas fa-chart-line"></i> Balance final del trimestre: -$1.000.000
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visualización Genially -->
+                <section class="genially-section">
+                    <h3><i class="fas fa-gamepad"></i> Visualización Interactiva</h3>
+                    <p>Aquí puedes insertar tu juego de Genially para practicar visualmente las operaciones con números enteros:</p>
+                    <div class="genially-placeholder">
+                        <i class="fas fa-plus-circle"></i>
+                        <h4>Espacio para Juego de Genially</h4>
+                        <p>Inserta aquí tu iframe de Genially</p>
+                    </div>
+                </section>
+
+                <!-- Consejos -->
+                <section class="tips-section">
+                    <h3><i class="fas fa-lightbulb"></i> Consejos Estratégicos para ICFES</h3>
+                    <div class="tips-grid">
+                        <div class="tip-card">
+                            <h4><i class="fas fa-eye"></i> Identifica Signos</h4>
+                            <p>Antes de calcular, subraya todos los signos negativos. En las pruebas ICFES, los errores más comunes son por perder un signo negativo.</p>
+                        </div>
+                        <div class="tip-card">
+                            <h4><i class="fas fa-calculator"></i> Agrupa Términos</h4>
+                            <p>Agrupa mentalmente los términos positivos y negativos por separado. Esto reduce errores y acelera tus cálculos.</p>
+                        </div>
+                        <div class="tip-card">
+                            <h4><i class="fas fa-clock"></i> Verifica Rápidamente</h4>
+                            <p>Usa estimaciones rápidas para verificar si tu respuesta es razonable antes de marcarla en la prueba.</p>
+                        </div>
+                        <div class="tip-card">
+                            <h4><i class="fas fa-ban"></i> Cuidado con Cero</h4>
+                            <p>Recuerda que cualquier número sumado o restado con cero permanece igual, pero multiplicado por cero siempre es cero.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Ejercicios Interactivos -->
+                <section class="exercises-section">
+                    <h3><i class="fas fa-dumbbell"></i> Practica tus Habilidades</h3>
+                    <div class="exercise-container">
+                        <div class="streak-indicator" id="streakIndicator">
+                            Racha: 0 correctos seguidos
+                        </div>
+                        <div class="exercise-question" id="exerciseQuestion">
+                            Una empresa multinacional de tecnología reporta sus resultados trimestrales consolidados. Durante el primer trimestre, obtuvo ingresos por $45.000.000 pero incurrió en costos operativos de $32.000.000 y gastos de investigación y desarrollo por $8.500.000. En el segundo trimestre, los ingresos aumentaron a $52.000.000, los costos operativos se redujeron a $28.000.000 pero los gastos de I&D se incrementaron a $11.200.000. ¿Cuál es el resultado neto consolidado de la empresa después de dos trimestres?
+                        </div>
+                        <input type="number" class="exercise-input" id="userAnswer" placeholder="Tu respuesta">
+                        <div class="exercise-buttons">
+                            <button class="btn-check" onclick="checkAnswer()">
+                                <i class="fas fa-check"></i> Verificar
+                            </button>
+                            <button class="btn-new" onclick="newExercise()">
+                                <i class="fas fa-forward"></i> Siguiente
+                            </button>
+                        </div>
+                        <div class="exercise-feedback" id="feedback"></div>
+                        <div class="exercise-counter" id="exerciseCounter">
+                            Nivel: Básico (100+ palabras)
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Botón Flotante -->
+    <div class="floating-button" id="cheatSheetBtn">
+        <i class="fas fa-lightbulb"></i>
+    </div>
+
+    <script>
+        // Estado global compartido entre páginas
+        const globalState = {
+            completedTopics: new Set(),
+            visitedTopics: new Set(),
+            quizScores: {
+                quiz1: 0,
+                quiz2: 0,
+                quiz3: 0,
+                final: 0
+            },
+            allTopicsVisited: false
+        };
+
+        // Sistema de ejercicios por nivel
+        const exerciseLevels = {
+            basic: [
+                {
+                    question: "Una empresa multinacional de tecnología reporta sus resultados trimestrales consolidados. Durante el primer trimestre, obtuvo ingresos por $45.000.000 pero incurrió en costos operativos de $32.000.000 y gastos de investigación y desarrollo por $8.500.000. En el segundo trimestre, los ingresos aumentaron a $52.000.000, los costos operativos se redujeron a $28.000.000 pero los gastos de I&D se incrementaron a $11.200.000. ¿Cuál es el resultado neto consolidado de la empresa después de dos trimestres?",
+                    answer: 17000000,
+                    explanation: "Primer trimestre: $45M - $32M - $8.5M = $4.5M. Segundo trimestre: $52M - $28M - $11.2M = $12.8M. Resultado neto: $4.5M + $12.8M = $17.3M."
+                },
+                {
+                    question: "Un fondo de inversión realiza operaciones financieras durante un semestre. En enero invierte $25.000.000 en acciones tecnológicas, en febrero retira $8.000.000 por ganancias, en marzo invierte $15.000.000 adicionales, en abril retira $12.000.000 para reequilibrar el portafolio, en mayo invierte $18.000.000 en bonos corporativos y en junio retira $6.000.000 por ajustes de mercado. ¿Cuál es el saldo final del fondo al terminar el semestre?",
+                    answer: 32000000,
+                    explanation: "Inversiones totales: $25M + $15M + $18M = $58M. Retiros totales: $8M + $12M + $6M = $26M. Saldo final: $58M - $26M = $32M."
+                },
+                {
+                    question: "Una cadena de supermercados expansionista abre nuevas tiendas en diferentes ciudades. En la primera ciudad invierte $12.000.000, en la segunda $18.000.000, pero en la tercera cierra una tienda con pérdida de $7.000.000. Luego abre en la cuarta ciudad con inversión de $22.000.000, en la quinta cierra otra tienda con pérdida de $9.000.000, y finalmente abre en la sexta ciudad con inversión de $25.000.000. ¿Cuál es la inversión neta total después de todas estas operaciones?",
+                    answer: 41000000,
+                    explanation: "Inversiones: $12M + $18M + $22M + $25M = $77M. Pérdidas: $7M + $9M = $16M. Inversión neta: $77M - $16M = $61M."
+                },
+                {
+                    question: "Un banco internacional maneja transferencias entre sucursales globales. Transfiere $50.000.000 de Nueva York a Londres, luego $35.000.000 de Londres a Tokio, posteriormente $28.000.000 de Tokio a Sídney, después $42.000.000 de Sídney a Frankfurt, luego $31.000.000 de Frankfurt a São Paulo, y finalmente $38.000.000 de São Paulo de regreso a Nueva York. ¿Cuál es el saldo neto de transferencias del banco?",
+                    answer: 0,
+                    explanation: "Como todas las transferencias son entre sucursales del mismo banco, el dinero sale de una sucursal y entra a otra. El saldo neto total es cero porque el dinero solo se movió internamente."
+                },
+                {
+                    question: "Una compañía de seguros procesa reclamaciones de pólizas durante un mes. Paga $15.000.000 por reclamaciones de automóviles, recibe $22.000.000 en primas nuevas, paga $18.000.000 por reclamaciones de vivienda, recibe $25.000.000 en primas de vida, paga $12.000.000 por reclamaciones de salud, y finalmente recibe $30.000.000 en primas comerciales. ¿Cuál es el flujo de efectivo neto del mes?",
+                    answer: 32000000,
+                    explanation: "Ingresos por primas: $22M + $25M + $30M = $77M. Pagos por reclamaciones: $15M + $18M + $12M = $45M. Flujo neto: $77M - $45M = $32M."
+                }
+            ],
+            intermediate: [
+                {
+                    question: "Un conglomerado empresarial diversificado opera en múltiples sectores industriales. Su división de energía reporta ingresos de $120.000.000 con costos de $85.000.000, la división tecnológica ingresa $95.000.000 con costos de $72.000.000, la división de consumo genera $78.000.000 con costos de $61.000.000, la división financiera obtiene $65.000.000 con costos de $48.000.000, y la división de salud reporta $88.000.000 con costos de $74.000.000. Además, la empresa tiene gastos corporativos centralizados de $35.000.000. ¿Cuál es el resultado operativo consolidado del conglomerado?",
+                    answer: 27000000,
+                    explanation: "Energía: $120M - $85M = $35M. Tecnología: $95M - $72M = $23M. Consumo: $78M - $61M = $17M. Financiera: $65M - $48M = $17M. Salud: $88M - $74M = $14M. Total divisiones: $106M. Resultado consolidado: $106M - $35M = $71M."
+                },
+                {
+                    question: "Una aerolínea internacional gestiona sus rutas transcontinentales durante un trimestre. La ruta Nueva York-Londres genera ingresos por $85.000.000 con costos operativos de $62.000.000, la ruta Londres-Tokio ingresa $78.000.000 con costos de $58.000.000, la ruta Tokio-Sídney reporta $92.000.000 con costos de $71.000.000, la ruta Sídney-Dubái obtiene $68.000.000 con costos de $49.000.000, la ruta Dubái-Nueva York genera $75.000.000 con costos de $56.000.000, y la ruta Londres-Nueva York (vuelta) ingresa $82.000.000 con costos de $61.000.000. Además tiene costos administrativos centrales de $28.000.000. ¿Cuál es el resultado operativo neto de la aerolínea?",
+                    answer: 67000000,
+                    explanation: "NY-Londres: $23M, Londres-Tokio: $20M, Tokio-Sídney: $21M, Sídney-Dubái: $19M, Dubái-NY: $19M, Londres-NY: $21M. Total rutas: $123M. Resultado neto: $123M - $28M = $95M."
+                },
+                {
+                    question: "Un fondo soberano de inversión realiza operaciones complejas en mercados internacionales. Invierte $150.000.000 en tecnología estadounidense, $120.000.000 en manufactura asiática, $95.000.000 en energía europea, pero desinvierte $80.000.000 de bienes raíces latinoamericanos, invierte $110.000.000 en infraestructura africana, desinvierte $65.000.000 de commodities rusos, invierte $85.000.000 en salud global, y finalmente desinvierte $70.000.000 de finanzas emergentes. ¿Cuál es la posición neta de inversión del fondo?",
+                    answer: 255000000,
+                    explanation: "Inversiones: $150M + $120M + $95M + $110M + $85M = $560M. Desinversiones: $80M + $65M + $70M = $215M. Posición neta: $560M - $215M = $345M."
+                },
+                {
+                    question: "Una empresa de telecomunicaciones multinacional opera en cinco regiones geográficas. Norteamérica genera ingresos de $180.000.000 con costos de $135.000.000, Europa reporta $165.000.000 con costos de $128.000.000, Asia obtiene $195.000.000 con costos de $152.000.000, Latinoamérica ingresa $125.000.000 con costos de $98.000.000, y África genera $85.000.000 con costos de $72.000.000. Además tiene costos corporativos globales de $45.000.000 y gastos de investigación y desarrollo de $38.000.000. ¿Cuál es el resultado neto consolidado de la empresa?",
+                    answer: 42000000,
+                    explanation: "Norteamérica: $45M, Europa: $37M, Asia: $43M, Latinoamérica: $27M, África: $13M. Total regional: $165M. Resultado neto: $165M - $45M - $38M = $82M."
+                },
+                {
+                    question: "Un banco de inversión internacional gestiona una cartera diversificada de activos financieros. Las acciones generan retornos de $85.000.000, los bonos $65.000.000, los derivados $45.000.000, pero las materias primas tienen pérdidas de $35.000.000, el real estate pierde $28.000.000, las divisas extranjeras generan $55.000.000, los commodities agrícolas $38.000.000, y los instrumentos de deuda emergente $42.000.000. Además tiene costos operativos de $75.000.000 y provisiones para pérdidas de $25.000.000. ¿Cuál es el resultado neto de la cartera?",
+                    answer: 167000000,
+                    explanation: "Ganancias: $85M + $65M + $45M + $55M + $38M + $42M = $330M. Pérdidas: $35M + $28M = $63M. Resultado bruto: $330M - $63M = $267M. Resultado neto: $267M - $75M - $25M = $167M."
+                }
+            ],
+            advanced: [
+                {
+                    question: "Una corporación financiera global compleja opera múltiples subsidiarias en diferentes jurisdicciones fiscales. La matriz en Delaware reporta ingresos consolidados de $850.000.000 con costos operativos de $620.000.000, su subsidiaria europea en Luxemburgo ingresa $680.000.000 con costos de $510.000.000, la subsidiaria asiática en Singapur genera $720.000.000 con costos de $545.000.000, la unidad latinoamericana en las Islas Caimán reporta $590.000.000 con costos de $425.000.000, y la subsidiaria africana en Mauricio obtiene $480.000.000 con costos de $355.000.000. Además hay costos de integración de $95.000.000, gastos de optimización fiscal de $75.000.000, provisiones regulatorias de $55.000.000, y ajustes de conversión monetaria de $35.000.000. ¿Cuál es el resultado neto consolidado después de impuestos?",
+                    answer: 305000000,
+                    explanation: "Matriz: $230M, Europa: $170M, Asia: $175M, Latinoamérica: $165M, África: $125M. Total operativo: $865M. Costos adicionales: $95M + $75M + $55M + $35M = $260M. Resultado antes de impuestos: $865M - $260M = $605M."
+                },
+                {
+                    question: "Un fondo de cobertura global de alto rendimiento implementa estrategias complejas de inversión en múltiples mercados. Utiliza long/short en equity con ganancias de $125.000.000, arbitraje de convergencia con $85.000.000, event-driven con $95.000.000, macro global con $110.000.000, pero su estrategia de distressed securities pierde $75.000.000, el merger arbitrage pierde $45.000.000, el fixed income arbitrage pierde $35.000.000, y el volatility arbitrage pierde $25.000.000. Además tiene costos de financiación de $95.000.000, comisiones de $35.000.000, gastos administrativos de $25.000.000, y fees de performance del 20% sobre las ganancias. ¿Cuál es el rendimiento neto del fondo?",
+                    answer: 195000000,
+                    explanation: "Ganancias estrategias: $125M + $85M + $95M + $110M = $415M. Pérdidas estrategias: $75M + $45M + $35M + $25M = $180M. Ganancia bruta: $415M - $180M = $235M. Costos: $95M + $35M + $25M = $155M. Ganancia neta: $235M - $155M = $80M."
+                },
+                {
+                    question: "Una empresa de biotecnología multinacional en fase clínica avanza simultáneamente múltiples programas de investigación. El programa de oncología en fase III requiere inversión de $450.000.000 con costos de $320.000.000, el programa de neurología en fase II necesita $280.000.000 con costos de $195.000.000, el programa de inmunología en fase I invierte $180.000.000 con costos de $125.000.000, el programa de enfermedades raras en fase II requiere $220.000.000 con costos de $165.000.000, y el programa de vacunas en fase III necesita $380.000.000 con costos de $285.000.000. Además tiene gastos regulatorios de $125.000.000, costos de fabricación GMP de $85.000.000, gastos de propiedad intelectual de $65.000.000, y provisiones para litigios de $45.000.000. ¿Cuál es la posición neta de inversión en I&D?",
+                    answer: 345000000,
+                    explanation: "Inversiones totales: $450M + $280M + $180M + $220M + $380M = $1.51B. Costos directos: $320M + $195M + $125M + $165M + $285M = $1.09B. Costos adicionales: $125M + $85M + $65M + $45M = $320M. Posición neta: $1.51B - $1.09B - $320M = $100M."
+                },
+                {
+                    question: "Un banco central de una economía emergente implementa políticas monetarias complejas durante un año de crisis. Reduce las tasas de interés en 2.5 puntos porcentuales impactando $2.500.000.000 en reservas, inyecta $1.800.000.000 en liquidez al sistema bancario, compra $1.200.000.000 en bonos del gobierno, pero vende $900.000.000 en divisas extranjeras, interviene en el mercado de cambios con $750.000.000, establece líneas de swap por $600.000.000, y proporciona facilidades de redisconto por $450.000.000. Además tiene costos operativos de $350.000.000, provisiones para préstamos no performantes de $280.000.000, y ajustes por valoración de activos de $220.000.000. ¿Cuál es el impacto neto en la posición de reservas internacionales?",
+                    answer: 1250000000,
+                    explanation: "Inyecciones totales: $1.8B + $1.2B + $750M + $600M + $450M = $4.8B. Reducciones totales: $2.5B + $900M = $3.4B. Impacto bruto: $4.8B - $3.4B = $1.4B. Costos: $350M + $280M + $220M = $850M. Impacto neto: $1.4B - $850M = $550M."
+                },
+                {
+                    question: "Una plataforma de comercio electrónico global con operaciones en múltiples continentes procesa transacciones complejas durante el pico de temporada navideña. Norteamérica genera $1.250.000.000 con costos logísticos de $890.000.000 y comisiones de $185.000.000, Europa reporta $980.000.000 con costos de $720.000.000 y comisiones de $145.000.000, Asia obtiene $1.450.000.000 con costos de $1.050.000.000 y comisiones de $195.000.000, Latinoamérica ingresa $650.000.000 con costos de $485.000.000 y comisiones de $95.000.000, y Oceanía genera $320.000.000 con costos de $245.000.000 y comisiones de $55.000.000. Además tiene costos tecnológicos centrales de $450.000.000, gastos de marketing global de $380.000.000, costos de cumplimiento regulatorio de $220.000.000, y provisiones para devoluciones del 15% sobre ventas. ¿Cuál es el resultado operativo ajustado del período?",
+                    answer: 515000000,
+                    explanation: "Norteamérica: $1.25B - $890M - $185M = $175M. Europa: $980M - $720M - $145M = $115M. Asia: $1.45B - $1.05B - $195M = $205M. Latinoamérica: $650M - $485M - $95M = $70M. Oceanía: $320M - $245M - $55M = $20M. Total regional: $585M. Costos centrales: $450M + $380M + $220M = $1.05B. Resultado ajustado: $585M - $1.05B = -$465M (pérdida operativa)."
+                }
+            ]
+        };
+
+        let currentLevel = 'basic';
+        let currentStreak = 0;
+        let currentExerciseIndex = 0;
+
+        // Sonidos
+        const sounds = {
+            correct: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmUg0VqOn057JwG',
+            incorrect: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmUg0VqOn057JwG'
+        };
+
+        // Función para guardar en sessionStorage
+        function saveToSessionStorage() {
+            sessionStorage.setItem('module1Progress', JSON.stringify({
+                completedTopics: Array.from(globalState.completedTopics),
+                visitedTopics: Array.from(globalState.visitedTopics),
+                quizScores: globalState.quizScores,
+                allTopicsVisited: globalState.allTopicsVisited
+            }));
+        }
+
+        // Función para cargar desde sessionStorage y aplicar estado visual
+        function loadFromSessionStorage() {
+            const saved = sessionStorage.getItem('module1Progress');
+            if (saved) {
+                const progress = JSON.parse(saved);
+                globalState.completedTopics = new Set(progress.completedTopics || []);
+                globalState.visitedTopics = new Set(progress.visited || []);
+                globalState.quizScores = progress.quizScores || { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
+                globalState.allTopicsVisited = progress.allTopicsVisited || false;
+                
+                // APLICAR LAS CLASES CSS A LOS ELEMENTOS VISITADOS
+                globalState.completedTopics.forEach(topicId => {
+                    const menuItem = document.querySelector(`[data-content="${topicId}"]`);
+                    if (menuItem) {
+                        menuItem.classList.add('completed');
+                    }
+                });
+                
+                // SOLO DESBLOQUEAR CUESTIONARIO 1 SI TODOS LOS TEMAS FUERON VISITADOS
+                if (globalState.allTopicsVisited) {
+                    unlockQuiz(1);
+                }
+                
+                // Actualizar barra de energía
+                updateEnergyBar();
+                updateDashboardStats();
+            }
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            loadFromSessionStorage();
+            highlightCurrentPage();
+            setupSidebarToggle();
+            loadExercise();
+            
+            // MARCAR LA PÁGINA ACTUAL COMO VISITADA AL CARGAR
+            const currentPage = window.location.pathname.split('/').pop();
+            const currentPageElement = document.querySelector(`[href="${currentPage}"]`);
+            if (currentPageElement) {
+                const contentId = currentPageElement.dataset.content;
+                if (contentId && !contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
+                    !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
+                    markAsVisited(contentId);
+                }
+            }
+        });
+
+        // Configurar event listeners
+        function setupEventListeners() {
+            // Menu items - Prevenir navegación si está bloqueado
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    const isQuiz = this.dataset.quiz;
+                    const isFinal = this.dataset.final;
+                    
+                    if (this.classList.contains('locked')) {
+                        e.preventDefault();
+                        if (isQuiz) {
+                            showNotification('Cuestionario Bloqueado', `Completa los requisitos previos para desbloquear el Cuestionario ${isQuiz}.`);
+                        } else if (isFinal) {
+                            showNotification('Evaluación Bloqueada', 'Completa todos los cuestionarios primero para desbloquear la evaluación final.');
+                        }
+                        return false;
+                    }
+                    
+                    // Marcar como visitado ANTES de navegar
+                    const contentId = this.dataset.content;
+                    if (contentId) {
+                        // Solo marcar como visitado si no es cuestionario
+                        if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
+                            !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
+                            markAsVisited(contentId);
+                        }
+                    }
+                    
+                    // Permitir navegación normal
+                    return true;
+                });
+            });
+        }
+
+        // Configurar el botón de toggle para la barra lateral
+        function setupSidebarToggle() {
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            const contentArea = document.getElementById('contentArea');
+            
+            sidebarToggle.addEventListener('click', function() {
+                sidebar.classList.toggle('hidden');
+                contentArea.classList.toggle('expanded');
+                
+                // Cambiar el ícono del botón
+                const icon = this.querySelector('i');
+                if (sidebar.classList.contains('hidden')) {
+                    icon.classList.remove('fa-bars');
+                    icon.classList.add('fa-chevron-right');
+                } else {
+                    icon.classList.remove('fa-chevron-right');
+                    icon.classList.add('fa-bars');
+                }
+            });
+        }
+
+        // Botón de reinicio
+        function resetProgress() {
+            if (confirm('¿Estás seguro de que deseas reiniciar todo tu progreso? Esta acción no se puede deshacer.')) {
+                // Limpiar estado global
+                globalState.completedTopics.clear();
+                globalState.visitedTopics.clear();
+                globalState.quizScores = { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
+                globalState.allTopicsVisited = false;
+                
+                // Limpiar estado visual
+                document.querySelectorAll('.menu-item.completed').forEach(item => {
+                    item.classList.remove('completed');
+                });
+                
+                // Bloquear todos los cuestionarios
+                document.querySelectorAll('[data-quiz]').forEach(item => {
+                    item.classList.add('locked');
+                });
+                
+                // Bloquear evaluación final
+                document.querySelectorAll('[data-final="true"]').forEach(item => {
+                    item.classList.add('locked');
+                });
+                
+                // Actualizar barras de progreso con animación
+                updateEnergyBar();
+                updateDashboardStats(true);
+                
+                // Limpiar sessionStorage
+                sessionStorage.removeItem('module1Progress');
+                
+                showNotification('Progreso Reiniciado', 'Todo tu progreso ha sido eliminado correctamente.');
+            }
+        }
+
+        // Resaltar página actual
+        function highlightCurrentPage() {
+            const currentPage = window.location.pathname.split('/').pop();
+            const menuItem = document.querySelector(`[href="${currentPage}"]`);
+            if (menuItem) {
+                menuItem.classList.add('active');
+            }
+        }
+
+        // Marcar como visitado con actualización dinámica
+        function markAsVisited(contentId) {
+            globalState.visitedTopics.add(contentId);
+            
+            // Marcar como completado si no es cuestionario
+            if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
+                !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
+                globalState.completedTopics.add(contentId);
+                const menuItem = document.querySelector(`[data-content="${contentId}"]`);
+                if (menuItem && !menuItem.classList.contains('completed')) {
+                    menuItem.classList.add('completed');
+                    // Crear efecto de partículas
+                    createAchievementParticles(menuItem);
+                    // Actualizar estadísticas inmediatamente
+                    updateDashboardStats(true);
+                }
+            }
+            
+            checkAllTopicsVisited();
+            saveToSessionStorage();
+        }
+
+        // Crear partículas de logro
+        function createAchievementParticles(element) {
+            const rect = element.getBoundingClientRect();
+            const colors = ['#d4af37', '#f4e4bc', '#2ecc71'];
+            
+            for (let i = 0; i < 8; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'achievement-particle';
+                particle.innerHTML = '✨';
+                particle.style.left = rect.left + rect.width / 2 + 'px';
+                particle.style.top = rect.top + rect.height / 2 + 'px';
+                particle.style.color = colors[Math.floor(Math.random() * colors.length)];
+                particle.style.fontSize = Math.random() * 10 + 15 + 'px';
+                document.body.appendChild(particle);
+                
+                setTimeout(() => particle.remove(), 2000);
+            }
+        }
+
+        // Verificar si todos los temas fueron visitados
+        function checkAllTopicsVisited() {
+            const nonQuizTopics = ['RCDD1', 'RCDD2', 'RCDD3', 'RCDD4', 'RCDD5', 'RCDD6', 'RCDD7', 'RCDD8'];
+            const allVisited = nonQuizTopics.every(topic => globalState.visitedTopics.has(topic));
+            
+            if (allVisited && !globalState.allTopicsVisited) {
+                globalState.allTopicsVisited = true;
+                unlockQuiz(1);
+                showNotification('Cuestionario Desbloqueado', '¡Cuestionario 1 desbloqueado! Ya puedes comenzar tu práctica.');
+            }
+        }
+
+        // Desbloquear cuestionario con animación
+        function unlockQuiz(quizNumber) {
+            const quizItem = document.querySelector(`[data-quiz="${quizNumber}"]`);
+            if (quizItem) {
+                quizItem.classList.remove('locked');
+                quizItem.classList.add('unlocking');
+                setTimeout(() => {
+                    quizItem.classList.remove('unlocking');
+                }, 600);
+            }
+        }
+
+        // Actualizar estadísticas del dashboard con animaciones
+        function updateDashboardStats(animate = false) {
+            const totalTopics = 8;
+            const completedTopics = globalState.completedTopics.size;
+            const topicsProgress = Math.round((completedTopics / totalTopics) * 100);
+            
+            const totalQuizzes = 3;
+            const passedQuizzes = [globalState.quizScores.quiz1, globalState.quizScores.quiz2, globalState.quizScores.quiz3]
+                .filter(score => score >= 170).length;
+            const quizzesProgress = Math.round((passedQuizzes / totalQuizzes) * 100);
+            
+            const moduleProgress = Math.round((topicsProgress * 0.6) + (quizzesProgress * 0.4));
+            
+            // Actualizar barra de energía
+            const energyFill = document.getElementById('energyFill');
+            const energyPercentage = document.getElementById('energyPercentage');
+            if (energyFill) {
+                energyFill.style.width = `${moduleProgress}%`;
+                if (animate) energyFill.classList.add('animated');
+                setTimeout(() => energyFill.classList.remove('animated'), 1000);
+            }
+            if (energyPercentage) energyPercentage.textContent = `${moduleProgress}%`;
+        }
+
+        // Mostrar notificación
+        function showNotification(title, message) {
+            // Crear elemento de notificación
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 120px;
+                right: 20px;
+                background: linear-gradient(135deg, var(--dorado), var(--dorado-claro));
+                color: var(--verde-oscuro);
+                padding: 1.2rem 1.8rem;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+                z-index: 3000;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                animation: slideIn 0.5s ease;
+                max-width: 350px;
+            `;
+            
+            notification.innerHTML = `
+                <i class="fas fa-check-circle" style="font-size: 1.5rem;"></i>
+                <div>
+                    <div style="font-weight: 700; margin-bottom: 0.2rem;">${title}</div>
+                    <div style="font-size: 0.9rem; opacity: 0.9;">${message}</div>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.5s ease';
+                setTimeout(() => notification.remove(), 500);
+            }, 4000);
+        }
+
+        // Actualizar barra de energía
+        function updateEnergyBar() {
+            const scores = [
+                globalState.quizScores.quiz1,
+                globalState.quizScores.quiz2,
+                globalState.quizScores.quiz3
+            ];
+            
+            const validScores = scores.filter(s => s > 0);
+            const average = validScores.length > 0 ? 
+                validScores.reduce((a, b) => a + b, 0) / validScores.length : 0;
+            
+            const percentage = Math.round((average / 300) * 100);
+            
+            const energyFill = document.getElementById('energyFill');
+            const energyPercentage = document.getElementById('energyPercentage');
+            if (energyFill) energyFill.style.width = `${percentage}%`;
+            if (energyPercentage) energyPercentage.textContent = `${percentage}%`;
+        }
+
+        // Funciones de ejercicios
+        function playSound(soundType) {
+            const audio = new Audio(sounds[soundType]);
+            audio.play().catch(e => console.log('Audio play failed:', e));
+        }
+
+        function checkAnswer() {
+            const userAnswer = parseInt(document.getElementById('userAnswer').value);
+            const currentExercise = exerciseLevels[currentLevel][currentExerciseIndex];
+            const feedback = document.getElementById('feedback');
+            
+            if (userAnswer === currentExercise.answer) {
+                // Respuesta correcta
+                playSound('correct');
+                feedback.className = 'exercise-feedback correct';
+                feedback.innerHTML = `
+                    <h3><i class="fas fa-trophy"></i> ¡Excelente trabajo!</h3>
+                    <p>¡Respuesta correcta! Tu habilidad con números enteros es impresionante. 
+                    Has resuelto este problema complejo con precisión. 
+                    ¡Sigue así y estarás completamente preparado para el examen ICFES SABER PRO!</p>
+                    <p><strong>Para continuar practicando, haz clic en "Siguiente ejercicio".</strong></p>
+                `;
+                
+                currentStreak++;
+                updateStreak();
+                
+                // Verificar si debe subir de nivel
+                if (currentStreak === 3 && currentLevel === 'basic') {
+                    currentLevel = 'intermediate';
+                    showNotification('¡Nivel Superior!', '¡Has avanzado al nivel intermedio! Los ejercicios serán más complejos.');
+                } else if (currentStreak === 5 && currentLevel === 'intermediate') {
+                    currentLevel = 'advanced';
+                    showNotification('¡Nivel Experto!', '¡Has alcanzado el nivel avanzado! Estos son los ejercicios más desafiantes.');
+                }
+            } else {
+                // Respuesta incorrecta
+                playSound('incorrect');
+                feedback.className = 'exercise-feedback incorrect';
+                feedback.innerHTML = `
+                    <h3><i class="fas fa-times-circle"></i> Respuesta Incorrecta</h3>
+                    <p>No te preocupes, esto es parte del aprendizaje. La respuesta correcta es <strong>${currentExercise.answer.toLocaleString()}</strong>.</p>
+                    <p><strong>Explicación paso a paso:</strong> ${currentExercise.explanation}</p>
+                    <p>Analiza cuidadosamente cada paso y practica con el siguiente ejercicio para mejorar.</p>
+                `;
+                
+                currentStreak = 0;
+                updateStreak();
+            }
+            
+            feedback.style.display = 'block';
+        }
+
+        function newExercise() {
+            const exercises = exerciseLevels[currentLevel];
+            currentExerciseIndex = Math.floor(Math.random() * exercises.length);
+            loadExercise();
+        }
+
+        function loadExercise() {
+            const exercises = exerciseLevels[currentLevel];
+            const exercise = exercises[currentExerciseIndex];
+            
+            document.getElementById('exerciseQuestion').textContent = exercise.question;
+            document.getElementById('userAnswer').value = '';
+            document.getElementById('feedback').style.display = 'none';
+            
+            const counter = document.getElementById('exerciseCounter');
+            const levelNames = {
+                basic: 'Básico (100+ palabras)',
+                intermediate: 'Intermedio (120+ palabras)',
+                advanced: 'Avanzado (150+ palabras)'
+            };
+            counter.textContent = `Nivel: ${levelNames[currentLevel]}`;
+        }
+
+        function updateStreak() {
+            const streakIndicator = document.getElementById('streakIndicator');
+            streakIndicator.textContent = `Racha: ${currentStreak} correctos seguidos`;
+            
+            // Efecto visual
+            streakIndicator.style.animation = 'none';
+            setTimeout(() => {
+                streakIndicator.style.animation = 'pulse 0.5s ease';
+            }, 10);
+        }
+
+        // Función para ser llamada desde las páginas de cuestionarios
+        window.updateQuizScore = function(quizNumber, score) {
+            globalState.quizScores[`quiz${quizNumber}`] = score;
+            
+            if (score >= 170) {
+                if (quizNumber === 1) {
+                    unlockQuiz(2);
+                    showNotification('Cuestionario 2 Desbloqueado', '¡Puedes continuar al siguiente nivel!');
+                } else if (quizNumber === 2) {
+                    unlockQuiz(3);
+                    showNotification('Cuestionario 3 Desbloqueado', '¡Último nivel desbloqueado!');
+                } else if (quizNumber === 3) {
+                    const finalItem = document.querySelector('[data-final="true"]');
+                    if (finalItem) finalItem.classList.remove('locked');
+                    showNotification('Evaluación Final Desbloqueada', '¡Estás listo para la evaluación final!');
+                }
+            }
+            
+            updateEnergyBar();
+            updateDashboardStats(true);
+            saveToSessionStorage();
+        };
+
+        // Función para ser llamada desde la evaluación final
+        window.updateFinalScore = function(score) {
+            globalState.quizScores.final = score;
+            updateEnergyBar();
+            updateDashboardStats(true);
+            saveToSessionStorage();
+        };
+
+        // Agregar animaciones CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+            }
+            
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
