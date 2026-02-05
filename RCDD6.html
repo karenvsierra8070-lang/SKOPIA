@@ -1,0 +1,2534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factorización Básica Aplicada a la Aritmética</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --verde-oscuro: #0d2818;
+            --verde-medio: #1a3d2a;
+            --dorado: #d4af37;
+            --dorado-claro: #f4e4bc;
+            --verde-tenue: #e8f5e9;
+            --crema: #faf6f0;
+            --blanco: #ffffff;
+            --gris-texto: #424242;
+            --sombra: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --sombra-suave: 0 5px 15px rgba(0, 0, 0, 0.08);
+            --sombra-dorada: 0 0 20px rgba(212, 175, 55, 0.3);
+            --rojo-error: #e74c3c;
+            --verde-acierto: #2ecc71;
+            --azul-magico: #3498db;
+            --morado-magico: #9b59b6;
+            --naranja: #f39c12;
+            --cian: #00bcd4;
+            --rosa: #e91e63;
+            --amarillo: #ffeb3b;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, var(--crema) 0%, #f5efe6 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(212, 175, 55, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(13, 40, 24, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Header Moderno */
+        .header {
+            background: linear-gradient(135deg, var(--verde-oscuro) 0%, var(--verde-medio) 100%);
+            color: var(--dorado);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 5px 20px rgba(13, 40, 24, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            width: 100%;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--dorado), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .back-button, .reset-button {
+            background: linear-gradient(135deg, var(--dorado), var(--dorado-claro));
+            color: var(--verde-oscuro);
+            border: none;
+            padding: 0.8rem 1.8rem;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            font-size: 0.9rem;
+            touch-action: manipulation;
+        }
+
+        .back-button:hover, .reset-button:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 25px rgba(212, 175, 55, 0.4);
+        }
+
+        .reset-button {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        /* Contenedor Principal */
+        .main-container {
+            flex: 1;
+            display: flex;
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            padding: 2rem;
+            gap: 2rem;
+            position: relative;
+            z-index: 10;
+            min-height: calc(100vh - 120px);
+        }
+
+        .content-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            box-shadow: var(--sombra);
+            display: flex;
+            width: 100%;
+            min-height: 100%;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            position: relative;
+        }
+
+        .content-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--dorado), transparent);
+            opacity: 0.5;
+        }
+
+        /* Botón para mostrar/ocultar barra lateral */
+        .sidebar-toggle {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, var(--dorado), var(--dorado-claro));
+            color: var(--verde-oscuro);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            transition: all 0.3s ease;
+            z-index: 60;
+            font-size: 1.2rem;
+            touch-action: manipulation;
+        }
+
+        .sidebar-toggle:hover {
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        /* Menú Lateral Moderno */
+        .sidebar {
+            width: 30%;
+            min-width: 280px;
+            background: linear-gradient(180deg, rgba(232, 245, 233, 0.8) 0%, rgba(200, 230, 201, 0.8) 100%);
+            padding: 2rem 1rem;
+            overflow-y: auto;
+            border-right: 1px solid rgba(13, 40, 24, 0.1);
+            backdrop-filter: blur(5px);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .sidebar.hidden {
+            transform: translateX(-100%);
+            opacity: 0;
+            position: absolute;
+            height: 100%;
+            z-index: 50;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(13, 40, 24, 0.05);
+            border-radius: 10px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--dorado);
+            border-radius: 10px;
+        }
+
+        .menu-section {
+            margin-bottom: 2rem;
+        }
+
+        .menu-section h3 {
+            color: var(--verde-oscuro);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 1rem;
+            padding-left: 1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .menu-section h3 i {
+            font-size: 0.9rem;
+            color: var(--dorado);
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.2rem;
+            margin: 0.4rem 0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            color: var(--gris-texto);
+            font-weight: 500;
+            overflow: hidden;
+            text-decoration: none;
+            touch-action: manipulation;
+            min-height: 50px;
+        }
+
+        .menu-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, var(--dorado), transparent);
+            transition: width 0.3s ease;
+            opacity: 0.1;
+        }
+
+        .menu-item:hover::before {
+            width: 100%;
+        }
+
+        .menu-item:hover {
+            background: rgba(212, 175, 55, 0.1);
+            transform: translateX(8px);
+            color: var(--verde-oscuro);
+            text-decoration: none;
+        }
+
+        .menu-item.active {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.05));
+            border-left: 4px solid var(--dorado);
+            color: var(--verde-oscuro);
+            font-weight: 600;
+            box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+        }
+
+        .menu-item.completed {
+            position: relative;
+            background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(46, 204, 113, 0.05));
+        }
+
+        .menu-item.completed::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: var(--dorado);
+            margin-left: auto;
+            font-size: 1rem;
+            animation: checkmark 0.3s ease;
+        }
+
+        @keyframes checkmark {
+            0% { transform: scale(0) rotate(-45deg); }
+            50% { transform: scale(1.2) rotate(10deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        .menu-item.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .menu-item.locked::before {
+            content: '\f023';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            margin-right: 0.5rem;
+            color: var(--gris-texto);
+        }
+
+        /* Animación de desbloqueo */
+        @keyframes unlock {
+            0% { 
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            50% { 
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+            100% { 
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .menu-item.unlocking {
+            animation: unlock 0.6s ease;
+        }
+
+        /* Barra de Energía Moderna */
+        .energy-bar-container {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 12px;
+            box-shadow: var(--sombra-suave);
+        }
+
+        .energy-label {
+            font-size: 0.85rem;
+            color: var(--verde-oscuro);
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .energy-bar {
+            height: 10px;
+            background: rgba(13, 40, 24, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .energy-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--dorado), #f4e4bc);
+            width: 0%;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .energy-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: energyShimmer 2s infinite;
+        }
+
+        @keyframes energyShimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Área de Contenido */
+        .content-area {
+            flex: 1;
+            padding: 2.5rem;
+            overflow-y: auto;
+            position: relative;
+            transition: all 0.3s ease;
+            min-width: 0;
+        }
+
+        .content-area.expanded {
+            margin-left: 0;
+        }
+
+        .content-area::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .content-area::-webkit-scrollbar-track {
+            background: rgba(13, 40, 24, 0.05);
+            border-radius: 10px;
+        }
+
+        .content-area::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, var(--dorado), var(--verde-medio));
+            border-radius: 10px;
+        }
+
+        /* Hero Banner */
+        .hero-banner {
+            background: linear-gradient(135deg, var(--morado-magico), var(--azul-magico));
+            border-radius: 20px;
+            padding: 3rem;
+            margin-bottom: 3rem;
+            position: relative;
+            overflow: hidden;
+            color: var(--blanco);
+            text-align: center;
+        }
+
+        .hero-banner::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: rotate 30s linear infinite;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.6;
+            position: relative;
+            z-index: 1;
+            opacity: 0.9;
+        }
+
+        /* Factorization Methods Grid */
+        .methods-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .method-card {
+            background: var(--blanco);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--sombra);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border-top: 4px solid var(--morado-magico);
+        }
+
+        .method-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(155, 89, 182, 0.2);
+        }
+
+        .method-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--morado-magico), var(--azul-magico));
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--blanco);
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .method-title {
+            color: var(--verde-oscuro);
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .method-formula {
+            background: var(--verde-tenue);
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            margin: 1rem 0;
+            color: var(--verde-oscuro);
+            font-weight: 600;
+        }
+
+        .method-description {
+            color: var(--gris-texto);
+            line-height: 1.6;
+        }
+
+        /* Interactive Practice Tool - NUEVA */
+        .practice-tool {
+            background: linear-gradient(135deg, rgba(155, 89, 182, 0.1), rgba(142, 68, 173, 0.1));
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .tool-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .tool-title {
+            color: var(--verde-oscuro);
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .tool-title i {
+            color: var(--morado-magico);
+        }
+
+        /* NUEVA HERRAMIENTA INTERACTIVA */
+        .practice-interface {
+            background: var(--blanco);
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: var(--sombra-suave);
+            margin-bottom: 2rem;
+        }
+
+        .practice-levels {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .level-btn {
+            background: var(--blanco);
+            border: 2px solid var(--morado-magico);
+            color: var(--morado-magico);
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .level-btn:hover, .level-btn.active {
+            background: linear-gradient(135deg, var(--morado-magico), var(--azul-magico));
+            color: var(--blanco);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(155, 89, 182, 0.4);
+        }
+
+        .problem-display {
+            background: var(--verde-tenue);
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--verde-oscuro);
+            margin-bottom: 1.5rem;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .answer-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 0.8rem;
+            font-size: 1.1rem;
+            border: 2px solid var(--azul-magico);
+            border-radius: 8px;
+            text-align: center;
+            margin: 0 auto 1rem;
+            display: block;
+            transition: all 0.3s ease;
+        }
+
+        .answer-input:focus {
+            outline: none;
+            border-color: var(--azul-magico);
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .practice-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .practice-btn {
+            background: linear-gradient(135deg, var(--morado-magico), var(--azul-magico));
+            color: var(--blanco);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .practice-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(155, 89, 182, 0.4);
+        }
+
+        .practice-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .feedback-message {
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 500;
+            margin-top: 1rem;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .feedback-message.show {
+            display: block;
+        }
+
+        .feedback-message.success {
+            background: var(--verde-acierto);
+            color: var(--blanco);
+        }
+
+        .feedback-message.error {
+            background: var(--rojo-error);
+            color: var(--blanco);
+        }
+
+        .feedback-message.info {
+            background: var(--azul-magico);
+            color: var(--blanco);
+        }
+
+        .score-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: var(--dorado-claro);
+            border-radius: 8px;
+        }
+
+        .score-label {
+            font-weight: 600;
+            color: var(--verde-oscuro);
+        }
+
+        .score-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--dorado);
+        }
+
+        .hint-box {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(41, 128, 185, 0.1));
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-left: 4px solid var(--azul-magico);
+        }
+
+        .hint-title {
+            color: var(--azul-magico);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .hint-content {
+            color: var(--gris-texto);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .quick-examples {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .example-btn {
+            background: var(--blanco);
+            border: 2px solid var(--morado-magico);
+            color: var(--morado-magico);
+            padding: 0.8rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .example-btn:hover {
+            background: var(--morado-magico);
+            color: var(--blanco);
+            transform: translateY(-2px);
+        }
+
+        /* Visual Factorization */
+        .visual-factorization {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .visual-card {
+            background: var(--blanco);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--sombra);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .visual-card h3 {
+            color: var(--verde-oscuro);
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .visual-card h3 i {
+            color: var(--azul-magico);
+        }
+
+        .factor-tree {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .tree-node {
+            background: linear-gradient(135deg, var(--azul-magico), var(--morado-magico));
+            color: var(--blanco);
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 2rem;
+            font-weight: 600;
+            box-shadow: var(--sombra-suave);
+            position: relative;
+        }
+
+        .tree-node::after {
+            content: '';
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 20px;
+            background: var(--gris-texto);
+        }
+
+        .tree-branches {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .tree-branch {
+            background: linear-gradient(135deg, var(--verde-acierto), #27ae60);
+            color: var(--blanco);
+            padding: 0.8rem 1.2rem;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: var(--sombra-suave);
+            flex: 1;
+            margin: 0 0.5rem;
+            font-weight: 600;
+        }
+
+        .prime-factors {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+            padding: 2rem;
+        }
+
+        .factor-circle {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--naranja), #e67e22);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--blanco);
+            font-weight: 700;
+            font-size: 1.2rem;
+            box-shadow: var(--sombra-suave);
+            transition: all 0.3s ease;
+        }
+
+        .factor-circle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(243, 156, 18, 0.4);
+        }
+
+        /* ICFES Applications */
+        .icfes-section {
+            background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(39, 174, 96, 0.1));
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .icfes-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .icfes-title {
+            color: var(--verde-oscuro);
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .icfes-title i {
+            color: var(--verde-acierto);
+        }
+
+        .icfes-examples {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .example-card {
+            background: var(--blanco);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: var(--sombra-suave);
+            border-left: 4px solid var(--verde-acierto);
+            transition: all 0.3s ease;
+        }
+
+        .example-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--sombra);
+        }
+
+        .example-problem {
+            color: var(--verde-oscuro);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        .example-solution {
+            color: var(--gris-texto);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .example-solution strong {
+            color: var(--verde-acierto);
+        }
+
+        /* Practice Arena */
+        .practice-arena {
+            background: var(--blanco);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            box-shadow: var(--sombra);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .practice-arena::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--rosa), var(--naranja), var(--amarillo));
+        }
+
+        .arena-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .arena-title {
+            color: var(--verde-oscuro);
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .arena-title i {
+            color: var(--rosa);
+        }
+
+        .challenge-problem {
+            font-size: 1.3rem;
+            color: var(--verde-oscuro);
+            text-align: center;
+            margin-bottom: 2rem;
+            font-weight: 600;
+            padding: 1.5rem;
+            background: var(--verde-tenue);
+            border-radius: 15px;
+        }
+
+        .challenge-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 1rem;
+            font-size: 1.1rem;
+            border: 2px solid var(--rosa);
+            border-radius: 10px;
+            text-align: center;
+            margin: 0 auto 1.5rem;
+            display: block;
+        }
+
+        .challenge-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .challenge-btn {
+            background: linear-gradient(135deg, var(--rosa), var(--naranja));
+            color: var(--blanco);
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .challenge-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(233, 30, 99, 0.4);
+        }
+
+        .challenge-feedback {
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 500;
+            display: none;
+            line-height: 1.6;
+        }
+
+        .challenge-feedback.correct {
+            background: var(--verde-acierto);
+            color: var(--blanco);
+        }
+
+        .challenge-feedback.incorrect {
+            background: var(--rojo-error);
+            color: var(--blanco);
+        }
+
+        /* Tips & Tricks */
+        .tips-container {
+            background: linear-gradient(135deg, rgba(243, 156, 18, 0.1), rgba(241, 196, 15, 0.1));
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .tips-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .tips-title {
+            color: var(--verde-oscuro);
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .tips-title i {
+            color: var(--naranja);
+        }
+
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .tip-card {
+            background: var(--blanco);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: var(--sombra-suave);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tip-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, rgba(243, 156, 18, 0.2), transparent);
+            border-radius: 0 0 0 100%;
+        }
+
+        .tip-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--sombra);
+        }
+
+        .tip-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--naranja), var(--amarillo));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--blanco);
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+        }
+
+        .tip-title {
+            color: var(--verde-oscuro);
+            font-size: 1.1rem;
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+        }
+
+        .tip-description {
+            color: var(--gris-texto);
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        /* Video Section */
+        .video-section {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(41, 128, 185, 0.1));
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .video-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .video-title {
+            color: var(--verde-oscuro);
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .video-title i {
+            color: var(--azul-magico);
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: var(--sombra);
+            background: #000;
+        }
+
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .video-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--azul-magico), #2980b9);
+            color: var(--blanco);
+        }
+
+        .video-placeholder i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .video-description {
+            max-width: 80%;
+            text-align: center;
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .play-button {
+            background: linear-gradient(135deg, var(--azul-magico), #2980b9);
+            color: var(--blanco);
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+            touch-action: manipulation;
+        }
+
+        .play-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 25px rgba(52, 152, 219, 0.4);
+        }
+
+        /* Botón Flotante */
+        .floating-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: linear-gradient(135deg, var(--dorado), var(--dorado-claro));
+            color: var(--verde-oscuro);
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            font-size: 1.5rem;
+            touch-action: manipulation;
+        }
+
+        .floating-button:hover {
+            transform: scale(1.1) rotate(10deg);
+            box-shadow: 0 15px 40px rgba(212, 175, 55, 0.5);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, var(--blanco), rgba(255, 255, 255, 0.95));
+            border-radius: 24px;
+            padding: 2.5rem;
+            max-width: 650px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: rgba(13, 40, 24, 0.1);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--gris-texto);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-modal:hover {
+            background: var(--dorado);
+            color: var(--blanco);
+            transform: rotate(90deg);
+        }
+
+        .cheat-sheet h3 {
+            color: var(--verde-oscuro);
+            margin-bottom: 2rem;
+            text-align: center;
+            font-size: 1.8rem;
+        }
+
+        .rule-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, var(--verde-tenue), rgba(200, 230, 201, 0.5));
+            border-radius: 12px;
+            border-left: 4px solid var(--dorado);
+            transition: all 0.3s ease;
+        }
+
+        .rule-section:hover {
+            transform: translateX(5px);
+            box-shadow: var(--sombra-suave);
+        }
+
+        .rule-section h4 {
+            color: var(--verde-oscuro);
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .rule-section h4 i {
+            color: var(--dorado);
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 120px;
+            right: -400px;
+            background: linear-gradient(135deg, var(--dorado), var(--dorado-claro));
+            color: var(--verde-oscuro);
+            padding: 1.2rem 1.8rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: right 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            max-width: 350px;
+        }
+
+        .notification.show {
+            right: 20px;
+        }
+
+        .notification i {
+            font-size: 1.5rem;
+        }
+
+        .notification-content {
+            flex: 1;
+        }
+
+        .notification-title {
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+
+        .notification-message {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .content-card {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid rgba(13, 40, 24, 0.1);
+                position: relative;
+                transform: none;
+                opacity: 1;
+            }
+
+            .sidebar.hidden {
+                display: none;
+            }
+
+            .content-area {
+                width: 100%;
+            }
+
+            .visual-factorization {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-title {
+                font-size: 2rem;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .sidebar-toggle {
+                display: flex;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            .sidebar-toggle {
+                display: flex;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Moderno -->
+    <header class="header">
+        <h1><i class="fas fa-graduation-cap"></i> OPERACIONES BÁSICAS</h1>
+        <div class="header-actions">
+            <a href="RCDASHBOARD.html" class="back-button">
+                <i class="fas fa-arrow-left"></i>
+                Volver al Dashboard
+            </a>
+            <button class="reset-button" onclick="resetProgress()">
+                <i class="fas fa-redo"></i>
+                Reiniciar Progreso
+            </button>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <div class="main-container">
+        <div class="content-card">
+            <!-- Botón para mostrar/ocultar barra lateral -->
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <!-- Menú Lateral Moderno -->
+            <aside class="sidebar" id="sidebar">
+                <div class="menu-section">
+                    <h3><i class="fas fa-book-open"></i> Introducción y Contexto</h3>
+                    <a href="RCDD1.html" class="menu-item" data-content="RCDD1">
+                        ¿Por qué la aritmética define tu puntaje en el ICFES?
+                    </a>
+                    <a href="RCDD2.html" class="menu-item" data-content="RCDD2">
+                        Análisis de distractores comunes en pruebas de estado
+                    </a>
+                </div>
+
+                <div class="menu-section">
+                    <h3><i class="fas fa-calculator"></i> Sistemas Numéricos y Signos</h3>
+                    <a href="RCDD3.html" class="menu-item" data-content="RCDD3">
+                        Operaciones con Números Enteros (ℤ)
+                    </a>
+                    <a href="RCDD4.html" class="menu-item active" data-content="RCDD4">
+                        Dominio de la Ley de Signos en estructuras complejas
+                    </a>
+                </div>
+
+                <div class="menu-section">
+                    <h3><i class="fas fa-bolt"></i> Propiedades que Ahorran Tiempo</h3>
+                    <a href="RCDD5.html" class="menu-item" data-content="RCDD5">
+                        Propiedad Distributiva (El arte de simplificar)
+                    </a>
+                    <a href="RCDD6.html" class="menu-item" data-content="RCDD6">
+                        Factorización básica aplicada a la aritmética
+                    </a>
+                </div>
+
+                <div class="menu-section">
+                    <h3><i class="fas fa-brain"></i> Estimación y Aproximación</h3>
+                    <a href="RCDD7.html" class="menu-item" data-content="RCDD7">
+                        Cálculo mental de redondeo
+                    </a>
+                    <a href="RCDD8.html" class="menu-item" data-content="RCDD8">
+                        Técnicas de descarte visual
+                    </a>
+                </div>
+
+                <div class="menu-section">
+                    <h3><i class="fas fa-tasks"></i> Entrenamiento de Práctica</h3>
+                    <a href="RCDD9.html" class="menu-item locked" data-content="RCDD9" data-quiz="1">
+                        Cuestionario 1: Precisión y Signos (Nivel Básico)
+                    </a>
+                    <a href="RCDD10.html" class="menu-item locked" data-content="RCDD10" data-quiz="2">
+                        Cuestionario 2: Problemas de Contexto Real (Nivel Intermedio)
+                    </a>
+                    <a href="RCDD11.html" class="menu-item locked" data-content="RCDD11" data-quiz="3">
+                        Cuestionario 3: Desafío Saber Pro (Nivel Avanzado)
+                    </a>
+                    
+                    <div class="energy-bar-container">
+                        <div class="energy-label">
+                            <span><i class="fas fa-fire"></i> Nivel de Energía</span>
+                            <span class="progress-indicator" id="energyPercentage">0%</span>
+                        </div>
+                        <div class="energy-bar">
+                            <div class="energy-fill" id="energyFill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="menu-section">
+                    <h3><i class="fas fa-flag-checkered"></i> Cierre de Módulo</h3>
+                    <a href="RCDD12.html" class="menu-item locked" data-content="RCDD12" data-final="true">
+                        Evaluación de salida
+                    </a>
+                </div>
+            </aside>
+
+            <!-- Área de Contenido -->
+            <main class="content-area" id="contentArea">
+                <!-- Hero Banner -->
+                <section class="hero-banner">
+                    <h1 class="hero-title">Factorización Básica Aplicada a la Aritmética</h1>
+                    <p class="hero-subtitle">
+                        Domina el arte de descomponer números y expresiones para simplificar cálculos complejos, 
+                        identificar patrones y resolver problemas ICFES SABER PRO con mayor eficiencia y precisión.
+                    </p>
+                </section>
+
+                <!-- Factorization Methods Grid -->
+                <section class="methods-grid">
+                    <div class="method-card">
+                        <div class="method-icon">
+                            <i class="fas fa-link"></i>
+                        </div>
+                        <h3 class="method-title">Factor Común</h3>
+                        <div class="method-formula">
+                            ax + ay = a(x + y)
+                        </div>
+                        <p class="method-description">
+                            Extrae el factor común más grande de todos los términos. 
+                            Es la técnica más básica y fundamental para simplificar expresiones.
+                        </p>
+                    </div>
+
+                    <div class="method-card">
+                        <div class="method-icon">
+                            <i class="fas fa-square"></i>
+                        </div>
+                        <h3 class="method-title">Diferencia de Cuadrados</h3>
+                        <div class="method-formula">
+                            a² - b² = (a - b)(a + b)
+                        </div>
+                        <p class="method-description">
+                            Reconoce patrones de resta de cuadrados para factorizar rápidamente. 
+                            Esencial para problemas de geometría y álgebra.
+                        </p>
+                    </div>
+
+                    <div class="method-card">
+                        <div class="method-icon">
+                            <i class="fas fa-cube"></i>
+                        </div>
+                        <h3 class="method-title">Trinomio Cuadrado Perfecto</h3>
+                        <div class="method-formula">
+                            a² ± 2ab + b² = (a ± b)²
+                        </div>
+                        <p class="method-description">
+                            Identifica trinomios que forman cuadrados perfectos. 
+                            Útil para completar cuadrados y resolver ecuaciones.
+                        </p>
+                    </div>
+
+                    <div class="method-card">
+                        <div class="method-icon">
+                            <i class="fas fa-sort-amount-up"></i>
+                        </div>
+                        <h3 class="method-title">Factorización por Agrupación</h3>
+                        <div class="method-formula">
+                            ax + ay + bx + by = (a + b)(x + y)
+                        </div>
+                        <p class="method-description">
+                            Agrupa términos con factores comunes para encontrar patrones ocultos. 
+                            Avanzada pero poderosa en expresiones complejas.
+                        </p>
+                    </div>
+                </section>
+
+                <!-- NUEVA HERRAMIENTA INTERACTIVA -->
+                <section class="practice-tool">
+                    <div class="tool-header">
+                        <h2 class="tool-title">
+                            <i class="fas fa-graduation-cap"></i> Centro de Práctica Interactiva
+                        </h2>
+                        <p>Selecciona un nivel y comienza a practicar</p>
+                    </div>
+                    
+                    <div class="practice-levels">
+                        <button class="level-btn" onclick="setPracticeLevel(1)">
+                            <i class="fas fa-star"></i> Principiante
+                        </button>
+                        <button class="level-btn" onclick="setPracticeLevel(2)">
+                            <i class="fas fa-star"></i> Intermedio
+                        </button>
+                        <button class="level-btn" onclick="setPracticeLevel(3)">
+                            <i class="fas fa-star"></i> Avanzado
+                        </button>
+                    </div>
+                    
+                    <div class="practice-interface">
+                        <div class="problem-display" id="problemDisplay">
+                            <div id="problemText">
+                                <!-- El problema se cargará aquí dinámicamente según el nivel
+                            </div>
+                        </div>
+                        <input type="text" class="answer-input" id="answerInput" placeholder="Tu respuesta">
+                        
+                        <div class="practice-buttons">
+                            <button class="practice-btn" onclick="checkAnswer()">
+                                <i class="fas fa-check"></i> Verificar
+                            </button>
+                            <button class="practice-btn" onclick="nextProblem()">
+                                <i class="fas fa-arrow-right"></i> Siguiente
+                            </button>
+                            <button class="practice-btn" onclick="showHint()">
+                                <i class="fas fa-lightbulb"></i> Pista
+                            </button>
+                        </div>
+                        
+                        <div class="feedback-message" id="feedbackMessage"></div>
+                        
+                        <div class="score-display">
+                            <div class="score-label">Puntuación</div>
+                            <div class="score-value" id="scoreValue">0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="hint-box" id="hintBox" style="display: none;">
+                        <div class="hint-title">
+                            <i class="fas fa-lightbulb"></i>
+                            <span>Pista</span>
+                        </div>
+                        <div class="hint-content" id="hintContent">
+                            <!-- El contenido de la pista se mostrará aquí
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Visual Factorization -->
+                <section class="visual-factorization">
+                    <div class="visual-card">
+                        <h3><i class="fas fa-sitemap"></i> Árbol de Factorización</h3>
+                        <div class="factor-tree">
+                            <div class="tree-node">48</div>
+                            <div class="tree-branches">
+                                <div class="tree-branch">6</div>
+                                <div class="tree-branch">8</div>
+                            </div>
+                            <div class="tree-branches" style="margin-top: 2rem;">
+                                <div class="tree-branch">2 × 3</div>
+                                <div class="tree-branch">2 × 4</div>
+                            </div>
+                            <div class="tree-branches" style="margin-top: 2rem;">
+                                <div class="tree-branch">2 × 3</div>
+                                <div class="tree-branch">2 × 2 × 2</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="visual-card">
+                        <h3><i class="fas fa-circle-notch"></i> Factores Primos Visuales</h3>
+                        <div class="prime-factors">
+                            <div class="factor-circle">2</div>
+                            <div class="factor-circle">2</div>
+                            <div class="factor-circle">2</div>
+                            <div class="factor-circle">2</div>
+                            <div class="factor-circle">3</div>
+                        </div>
+                        <p style="text-align: center; margin-top: 2rem; color: var(--gris-texto);">
+                            48 = 2⁴ × 3
+                        </p>
+                    </div>
+                </section>
+
+                <!-- ICFES Applications -->
+                <section class="icfes-section">
+                    <div class="icfes-header">
+                        <h2 class="icfes-title">
+                            <i class="fas fa-graduation-cap"></i> Aplicaciones en ICFES SABER PRO
+                        </h2>
+                    </div>
+                    
+                    <div class="icfes-examples">
+                        <div class="example-card">
+                            <div class="example-problem">
+                                Problema: Si el área de un rectángulo es 48x² - 12x, ¿cuál es su factor común?
+                            </div>
+                            <div class="example-solution">
+                                <strong>Solución:</strong> Factor común: 12x<br>
+                                48x² - 12x = <strong>12x</strong>(4x - 1)
+                            </div>
+                        </div>
+                        
+                        <div class="example-card">
+                            <div class="example-problem">
+                                Problema: Simplifica: 25a² - 100b²
+                            </div>
+                            <div class="example-solution">
+                                <strong>Solución:</strong> Diferencia de cuadrados<br>
+                                25a² - 100b² = (5a)² - (10b)² = <strong>(5a - 10b)(5a + 10b)</strong>
+                            </div>
+                        </div>
+                        
+                        <div class="example-card">
+                            <div class="example-problem">
+                                Problema: Factoriza: x² + 6x + 9
+                            </div>
+                            <div class="example-solution">
+                                <strong>Solución:</strong> Trinomio cuadrado perfecto<br>
+                                x² + 6x + 9 = (x)² + 2(x)(3) + (3) = <strong>(x + 3)²</strong>
+                            </div>
+                        </div>
+                        
+                        <div class="example-card">
+                            <div class="example-problem">
+                                Problema: Área de figura: 2xy + 4x + 6y + 12
+                            </div>
+                            <div class="example-solution">
+                                <strong>Solución:</strong> Factorización por agrupación<br>
+                                2xy + 4x + 6y + 12 = <strong>2(x + 3)(y + 2)</strong>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Practice Arena -->
+                <section class="practice-arena">
+                    <div class="arena-header">
+                        <h2 class="arena-title">
+                            <i class="fas fa-trophy"></i> Arena de Desafíos
+                        </h2>
+                    </div>
+                    
+                    <div class="challenge-problem" id="challengeProblem">
+                        <!-- El problema se cargará dinámicamente según el nivel
+                    </div>
+                    
+                    <div class="challenge-input">
+                        <input type="text" class="answer-input" id="challengeInput" 
+                               placeholder="Tu respuesta">
+                    </div>
+                    
+                    <div class="challenge-buttons">
+                        <button class="challenge-btn" onclick="checkChallengeAnswer()">
+                            <i class="fas fa-check"></i> Verificar
+                        </button>
+                        <button class="challenge-btn" onclick="newChallenge()">
+                            <i class="fas fa-sync-alt"></i> Nuevo Desafío
+                        </button>
+                    </div>
+                    
+                    <div class="challenge-feedback" id="challengeFeedback"></div>
+                </section>
+
+                <!-- Tips & Tricks -->
+                <section class="tips-container">
+                    <div class="tips-header">
+                        <h2 class="tips-title">
+                            <i class="fas fa-lightbulb"></i> Consejos Expertos para ICFES
+                        </h2>
+                    </div>
+                    
+                    <div class="tips-grid">
+                        <div class="tip-card">
+                            <div class="tip-icon">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <h4 class="tip-title">Busca Patrones Primero</h4>
+                            <p class="tip-description">
+                                Antes de calcular, identifica si hay factorización posible. 
+                                Los problemas ICFES suelen tener factores ocultos que simplifican todo.
+                            </p>
+                        </div>
+                        
+                        <div class="tip-card">
+                            <div class="tip-icon">
+                                <i class="fas fa-bolt"></i>
+                            </div>
+                            <h4 class="tip-title">Memoriza Cuadrados Perfectos</h4>
+                            <p class="tip-description">
+                                Conoce los cuadrados hasta 25². Esto te ayudará a identificar 
+                                rápidamente diferencias de cuadrados y trinomios perfectos.
+                            </p>
+                        </div>
+                        
+                        <div class="tip-card">
+                            <div class="tip-icon">
+                                <i class="fas fa-check-double"></i>
+                            </div>
+                            <h4 class="tip-title">Verifica Multiplicando</h4>
+                            <p class="tip-description">
+                                Después de factorizar, multiplica para verificar. 
+                                Si no obtienes el original, hay un error en tu factorización.
+                            </p>
+                        </div>
+                        
+                        <div class="tip-card">
+                            <div class="tip-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <h4 class="tip-title">Cuidado con Signos</h4>
+                            <p class="tip-description">
+                                En diferencias de cuadrados: (a-b)(a+b). 
+                                El signo negativo solo va en el primer factor.
+                            </p>
+                        </div>
+                        
+                        <div class="tip-card">
+                            <div class="tip-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <h4 class="title">Practica con Cronómetro</h4>
+                            <p class="tip-description">
+                                Entrena factorizando expresiones en menos de 30 segundos. 
+                                La velocidad es crucial en el examen ICFES.
+                            </p>
+                        </div>
+                        
+                        <div class="tip-card">
+                            <div class="tip-icon">
+                                <i class="fas fa-brain"></i>
+                            </div>
+                            <h4 class="tip-title">Piensa en Términos de Área</h4>
+                            <p class="tip-description">
+                                Visualiza las expresiones como áreas de rectángulos. 
+                                Esto ayuda a entender la factorización geométricamente.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Video Section -->
+                <section class="video-section">
+                    <div class="video-header">
+                        <h2 class="video-title">
+                            <i class="fas fa-video"></i> Tutorial Visual
+                        </h2>
+                    </div>
+                    
+                    <div class="video-container" id="videoContainer">
+                        <div class="video-placeholder" id="videoPlaceholder">
+                            <i class="fas fa-play-circle"></i>
+                            <p class="video-description">
+                                Aprende técnicas avanzadas de factorización para resolver problemas complejos del ICFES
+                            </p>
+                            <button class="play-button" id="playVideo">
+                                <i class="fas fa-play"></i>
+                                Reproducir Video
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Botón Flotante -->
+    <div class="floating-button" id="cheatSheetBtn">
+        <i class="fas fa-lightbulb"></i>
+    </div>
+
+    <!-- Modal Hoja de Trucos -->
+    <div class="modal" id="cheatSheetModal">
+        <div class="modal-content">
+            <button class="close-modal" id="closeModal">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="cheat-sheet">
+                <h3><i class="fas fa-magic"></i> Hoja de Trucos - Factorización</h3>
+                
+                <div class="rule-section">
+                    <h4><i class="fas fa-link"></i> Factor Común</h4>
+                    <p style="text-align: center; font-size: 1.2rem; margin: 1rem 0; font-weight: 600;">
+                        ax + ay + az = a(x + y + z)
+                    </p>
+                    <p style="margin-top: 1rem; color: var(--gris-texto);">
+                        Busca el máximo divisor común de todos los coeficientes y variables.
+                    </p>
+                </div>
+
+                <div class="rule-section">
+                    <h4><i class="fas fa-square"></i> Diferencia de Cuadrados</h4>
+                    <p style="text-align: center; font-size: 1.2rem; margin: 1rem 0; font-weight: 600;">
+                        a² - b² = (a - b)(a + b)
+                    </p>
+                    <p style="margin-top: 1rem; color: var(--gris-texto);">
+                        Solo funciona con resta. La suma de cuadrados no se factoriza en reales.
+                    </p>
+                </div>
+
+                <div class="rule-section">
+                    <h4><i class="fas fa-cube"></i> Trinomios Cuadrados Perfectos</h4>
+                    <p style="text-align: center; font-size: 1.1rem; margin: 1rem 0; font-weight: 600;">
+                        a² + 2ab + b² = (a + b)²<br>
+                        a² - 2ab + b² = (a - b)²
+                    </p>
+                    <p style="margin-top: 1rem; color: var(--gris-texto);">
+                        El término del medio debe ser el doble del producto de los extremos.
+                    </p>
+                </div>
+
+                <div class="rule-section">
+                    <h4><i class="fas fa-exclamation-triangle"></i> Errores Comunes</h4>
+                    <ul style="padding-left: 1.5rem; line-height: 1.8;">
+                        <li>Factorizar a² + b² (no es posible en reales)</li>
+                        <li>Olvidar el factor común numérico</li>
+                        <li>Confundir signos en diferencia de cuadrados</li>
+                        <li>No verificar la factorización</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div class="notification" id="notification">
+        <i class="fas fa-check-circle"></i>
+        <div class="notification-content">
+            <div class="notification-title">¡Éxito!</div>
+            <div class="notification-message" id="notificationMessage">Mensaje</div>
+        </div>
+    </div>
+
+    <script>
+        // Estado global compartido entre páginas
+        const globalState = {
+            completedTopics: new Set(),
+            visitedTopics: new Set(),
+            quizScores: {
+                quiz1: 0,
+                quiz2: 0,
+                quiz3: 0,
+                final: 0
+            },
+            allTopicsVisited: false
+        };
+
+        // Base de datos para la herramienta de práctica
+        const practiceData = {
+            1: [
+                { question: "2x + 6", answer: "8", explanation: "2 + 6 = 8" },
+                { question: "15 - 7", answer: "8", explanation: "15 - 7 = 8" },
+                { question: "-4 + 12", answer: "8", explanation: "-4 + 12 = 8" },
+                { question: "9 - 17", answer: "-8", explanation: "9 - 17 = -8" }
+            ],
+            2: [
+                { question: "3 × 4", answer: "12", explanation: "3 × 4 = 12" },
+                { question: "18 ÷� 3", answer: "6", explanation: "18 ÷� 3 = 6" },
+                { question: "24 ÷�� 4", answer: "6", explanation: "24 ÷�� 4 = 6" },
+                { question: "35 ÷� 5", answer: "7", explanation: "35 ÷�� 5 = 7" }
+            ],
+            3: [
+                { question: "(-2) × (-3) × 4", answer: "24", explanation: "(-2) × (-3) × 4 = (-2 × -3) × 4 = 24" },
+                { question: "(-5) ÷� (-1)", answer: "5", explanation: "(-5) ÷�� (-1) = 5" },
+                { question: "(-8) ÷� (-2)", answer: "4", explanation: "(-8) ÷�� (-2) = 4" },
+                { question: "(-9) ÷� (-3)", answer: "3", explanation: "(-9) ÷�� (-3) = 3" }
+            ]
+        };
+
+        let currentLevel = 1;
+        let currentProblem = null;
+        let score = 0;
+        let streak = 0;
+        let problems = [];
+        let currentProblemIndex = 0;
+
+        // Función para establecer el nivel de práctica
+        function setPracticeLevel(level) {
+            currentLevel = level;
+            currentProblemIndex = 0;
+            score = 0;
+            problems = practiceData[level];
+            loadProblem();
+            updateScore();
+            updateLevelButtons();
+        }
+
+        // Función para cargar un problema
+        function loadProblem() {
+            if (problems.length === 0) return;
+            
+            currentProblem = problems[currentProblemIndex];
+            document.getElementById('problemText').textContent = currentProblem.question;
+            document.getElementById('answerInput').value = '';
+            document.getElementById('feedbackMessage').style.display = 'none';
+            document.getElementById('hintBox').style.display = 'none';
+        }
+
+        // Función para cargar el siguiente problema
+        function nextProblem() {
+            currentProblemIndex = (currentProblemIndex + 1) % problems.length;
+            loadProblem();
+        }
+
+        // Función para verificar respuesta
+        function checkAnswer() {
+            const userAnswer = document.getElementById('answerInput').value.trim();
+            const feedback = document.getElementById('feedbackMessage');
+            
+            if (!userAnswer) {
+                feedback.className = 'feedback-message error';
+                feedback.textContent = 'Por favor ingresa tu respuesta';
+                feedback.style.display = 'block';
+                return;
+            }
+            
+            const correctAnswer = currentProblem.answer.toString();
+            const userAnswerNum = parseFloat(userAnswer);
+            
+            if (Math.abs(userAnswer - correctAnswer) < 0.01) {
+                feedback.className = 'feedback-message success';
+                feedback.innerHTML = `
+                    <h3><i class="fas fa-check-circle"></i> ¡Correcto!</h3>
+                    <p>¡Excelente! Has resuelto correctamente.</p>
+                `;
+                feedback.style.display = 'block';
+                
+                score += 10;
+                streak++;
+                updateScore();
+                updateStreak();
+                
+                setTimeout(() => {
+                    nextProblem();
+                }, 1500);
+            } else {
+                feedback.className = 'feedback-message error';
+                feedback.innerHTML = `
+                    <h3><i class="fas fa-times-circle"></i> Inténtalo de nuevo</h3>
+                    <p>La respuesta correcta es ${currentProblem.answer}. Revisa tus cálculos.</p>
+                `;
+                feedback.style.display = 'block';
+                
+                streak = 0;
+                updateStreak();
+            }
+        }
+
+        // Función para mostrar/ocultar pista
+        function showHint() {
+            const hintBox = document.getElementById('hintBox');
+            const hintContent = document.getElementById('hintContent');
+            
+            if (hintBox.style.display === 'none') {
+                hintContent.textContent = currentProblem.explanation;
+                hintBox.style.display = 'block';
+            } else {
+                hintBox.style.display = 'none';
+            }
+        }
+
+        // Actualizar puntaje
+        function updateScore() {
+            document.getElementById('scoreValue').textContent = score;
+        }
+
+        // Actualizar racha
+        function updateStreak() {
+            const streakIndicator = document.getElementById('streakIndicator');
+            if (streakIndicator) {
+                streakIndicator.textContent = `Racha: ${streak} correctos seguidos`;
+            }
+        }
+
+        // Actualizar botones de nivel
+        function updateLevelButtons() {
+            document.querySelectorAll('.level-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (parseInt(btn.dataset.level) === currentLevel) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        // Función para guardar en sessionStorage
+        function saveToSessionStorage() {
+            sessionStorage.setItem('module1Progress', JSON.stringify({
+                completedTopics: Array.from(globalState.completedTopics),
+                visitedTopics: Array.from(globalState.visitedTopics),
+                quizScores: globalState.quizScores,
+                allTopicsVisited: globalState.allTopicsVisited
+            }));
+        }
+
+        // Función para cargar desde sessionStorage
+        function loadFromSessionStorage() {
+            const saved = sessionStorage.getItem('module1Progress');
+            if (saved) {
+                const progress = JSON.parse(saved);
+                globalState.completedTopics = new Set(progress.completedTopics || []);
+                globalState.visitedTopics = new Set(progress.visited || []);
+                globalState.quizScores = progress.quizScores || { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
+                globalState.allTopicsVisited = progress.allTopicsVisited || false;
+                
+                // APLICAR LAS CLASES CSS A LOS ELEMENTOS VISITADOS
+                globalState.completedTopics.forEach(topicId => {
+                    const menuItem = document.querySelector(`[ data-content="${topicId}"]`);
+                    if (menuItem) {
+                        menuItem.classList.add('completed');
+                    }
+                });
+                
+                // SOLO DESBLOQUEAR CUESTIONARIO 1 SI TODOS LOS TEMAS FUERON VISITADOS
+                if (globalState.allTopicsVisited) {
+                    unlockQuiz(1);
+                }
+                
+                // Actualizar barra de energía
+                updateEnergyBar();
+                updateDashboardStats();
+            }
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            loadFromSessionStorage();
+            highlightCurrentPage();
+            setupSidebarToggle();
+            setPracticeLevel(1);
+            
+            // MARCAR LA PÁGINA ACTUAL COMO VISITADA AL CARGAR
+            const currentPage = window.location.pathname.split('/').pop();
+            const currentPageElement = document.querySelector(`[href="${currentPage}"]`);
+            if (currentPageElement) {
+                const contentId = currentPageElement.dataset.content;
+                if (contentId && !contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
+                    !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
+                    markAsVisited(contentId);
+                }
+            }
+        });
+
+        // Configurar event listeners
+        function setupEventListeners() {
+            // Menu items
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    const isQuiz = this.dataset.quiz;
+                    const isFinal = this.dataset.final;
+                    
+                    if (this.classList.contains('locked')) {
+                        e.preventDefault();
+                        if (isQuiz) {
+                            showNotification('Cuestionario Bloqueado', `Completa los requisitos previos para desbloquear el Cuestionario ${isQuiz}.`);
+                        } else if (isFinal) {
+                            showNotification('Evaluación Bloqueada', 'Completa todos los cuestionarios primero para desbloquear la evaluación final.');
+                        }
+                        return false;
+                    }
+                    
+                    // Marcar como visitado ANTES de navegar
+                    const contentId = this.dataset.content;
+                    if (contentId) {
+                        // Solo marcar como visitado si no es cuestionario
+                        if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
+                            !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
+                            markAsVisited(contentId);
+                        }
+                    }
+                    
+                    // Permitir navegación normal
+                    return true;
+                });
+            });
+
+            // Modal
+            document.getElementById('cheatSheetBtn').addEventListener('click', function() {
+                document.getElementById('cheatSheetModal').classList.add('active');
+            });
+
+            document.getElementById('closeModal').addEventListener('click', function() {
+                document.getElementById('cheatSheetModal').classList.remove('active');
+            });
+
+            document.getElementById('cheatSheetModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                }
+            });
+
+            // Botón de reproducción de video
+            document.getElementById('playVideo').addEventListener('click', function() {
+                const videoContainer = document.getElementById('videoContainer');
+                
+                const videoIframe = document.createElement('iframe');
+                videoIframe.width = '560';
+                videoIframe.height = '315';
+                videoIframe.src = 'https://www.youtube.com/embed/VIDEO_ID_AQUI';
+                videoIframe.title = 'YouTube video player';
+                videoIframe.frameBorder = '0';
+                videoIframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+                videoIframe.allowFullscreen = true;
+                
+                videoContainer.innerHTML = '';
+                videoContainer.appendChild(videoIframe);
+                
+                showNotification('Video', 'El video comenzará a reproducirse en breve.');
+            });
+
+            // Enter key en el input de práctica
+            document.getElementById('answerInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    checkAnswer();
+                }
+            });
+
+            // Botones de ejemplo
+            document.querySelectorAll('.example-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    loadExample(this.textContent);
+                });
+            });
+
+            // Botones de práctica
+            document.querySelectorAll('.practice-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const action = this.getAttribute('onclick');
+                    if (action) {
+                        eval(action);
+                    }
+                });
+            });
+
+            // Botones de nivel
+            document.querySelectorAll('.level-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const level = parseInt(this.dataset.level);
+                    setPracticeLevel(level);
+                });
+            });
+        }
+
+        // Configurar el botón de toggle para la barra lateral
+        function setupSidebarToggle() {
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            const contentArea = document.getElementById('contentArea');
+            
+            sidebarToggle.addEventListener('click', function() {
+                sidebar.classList.toggle('hidden');
+                contentArea.classList.toggle('expanded');
+                
+                // Cambiar el ícono del botón
+                const icon = this.querySelector('i');
+                if (sidebar.classList.contains('hidden')) {
+                    icon.classList.remove('fa-bars');
+                    icon.classList.add('fa-chevron-right');
+                } else {
+                    icon.classList.remove('fa-chevron-right');
+                    icon.classList.add('fa-bars');
+                }
+            });
+        }
+
+        // Función para cargar ejemplos
+        function loadExample(text) {
+            document.getElementById('expressionInput').value = text;
+            smartFactorize();
+        }
+
+        // Función para limpiar resultados
+        function clearResult() {
+            document.getElementById('expressionInput').value = '';
+            document.getElementById('resultDisplay').classList.remove('show');
+        }
+
+        // Botón de reinicio
+        function resetProgress() {
+            if (confirm('¿Estás seguro de que deseas reiniciar todo tu progreso? Esta acción no se puede deshacer.')) {
+                // Limpiar estado global
+                globalState.completedTopics.clear();
+                globalState.visitedTopics.clear();
+                globalState.quizScores = { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
+                globalState.allTopicsVisited = false;
+                
+                // Limpiar estado visual
+                document.querySelectorAll('.menu-item.completed').forEach(item => {
+                    item.classList.remove('completed');
+                });
+                
+                // Bloquear todos los cuestionarios
+                document.querySelectorAll('[data-quiz]').forEach(item => {
+                    item.classList.add('locked');
+                });
+                
+                // Bloquear evaluación final
+                document.querySelectorAll('[data-final="true"]').forEach(item => {
+                    item.classList.add('locked');
+                });
+                
+                // Actualizar barras de progreso con animación
+                updateEnergyBar();
+                updateDashboardStats(true);
+                
+                // Limpiar sessionStorage
+                sessionStorage.removeItem('module1Progress');
+                
+                showNotification('Progreso Reiniciado', 'Todo tu progreso ha sido eliminado correctamente.');
+            }
+        }
+
+        // Resaltar página actual
+        function highlightCurrentPage() {
+            const currentPage = window.location.pathname.split('/').pop();
+            const menuItem = document.querySelector(`[href="${currentPage}"]`);
+            if (menuItem) {
+                menuItem.classList.add('active');
+            }
+        }
+
+        // Marcar como visitado con actualización dinámica
+        function markAsVisited(contentId) {
+            globalState.visitedTopics.add(contentId);
+            
+            // Marcar como completado si no es cuestionario
+            if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
+                !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
+                globalState.completedTopics.add(contentId);
+                const menuItem = document.querySelector(`[data-content="${contentId}"]`);
+                if (menuItem && !menuItem.classList.contains('completed')) {
+                    menuItem.classList.add('completed');
+                    // Crear efecto de partículas
+                    createAchievementParticles(menuItem);
+                    // Actualizar estadísticas inmediatamente
+                    updateDashboardStats(true);
+                }
+            }
+            
+            checkAllTopicsVisited();
+            saveToSessionStorage();
+        }
+
+        // Crear partículas de logro
+        function createAchievementParticles(element) {
+            const rect = element.getBoundingClientRect();
+            const colors = ['#d4af37', '#f4e4bc', '#2ecc71'];
+            
+            for (let i = 0; i < 8; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'achievement-particle';
+                particle.innerHTML = '✨';
+                particle.style.left = rect.left + rect.width / 2 + 'px';
+                particle.style.top = rect.top + rect.height / 2 + 'px';
+                particle.style.color = colors[Math.floor(Math.random() * colors.length)];
+                particle.style.fontSize = Math.random() * 10 + 15 + 'px';
+                particle.style.position = 'fixed';
+                particle.style.pointerEvents = 'none';
+                particle.style.animation = 'floatUp 2s ease-out forwards';
+                particle.style.zIndex = '9999';
+                document.body.appendChild(particle);
+                
+                setTimeout(() => particle.remove(), 2000);
+            }
+        }
+
+        // Verificar si todos los temas fueron visitados
+        function checkAllTopicsVisited() {
+            const nonQuizTopics = ['RCDD1', 'RCDD2', 'RCDD3', 'RCDD4', 'RCDD5', 'RCDD6', 'RCDD7', 'RCDD8'];
+            const allVisited = nonQuizTopics.every(topic => globalState.visitedTopics.has(topic));
+            
+            if (allVisited && !globalState.allTopicsVisited) {
+                globalState.allTopicsVisited = true;
+                unlockQuiz(1);
+                showNotification('Cuestionario Desbloqueado', '¡Cuestionario 1 desbloqueado! Ya puedes comenzar tu práctica.');
+            }
+        }
+
+        // Desbloquear cuestionario con animación
+        function unlockQuiz(quizNumber) {
+            const quizItem = document.querySelector(`[data-quiz="${quizNumber}"]`);
+            if (quizItem) {
+                quizItem.classList.remove('locked');
+                quizItem.classList.add('unlocking');
+                setTimeout(() => {
+                    quizItem.classList.remove('unlocking');
+                }, 600);
+            }
+        }
+
+        // Actualizar estadísticas del dashboard
+        function updateDashboardStats(animate = false) {
+            const totalTopics = 8;
+            const completedTopics = globalState.completedTopics.size;
+            const topicsProgress = Math.round((completedTopics / totalTopics) * 100);
+            
+            const totalQuizzes = 3;
+            const passedQuizzes = [globalState.quizScores.quiz1, globalState.quizScores.quiz2, globalState.quizScores.quiz3]
+                .filter(score => score >= 170).length;
+            const quizzesProgress = Math.round((passedQuizzes / totalQuizzes) * 100);
+            
+            const moduleProgress = Math.round((topicsProgress * 0.6) + (quizzesProgress * 0.4));
+            
+            // Actualizar barra de energía
+            const energyFill = document.getElementById('energyFill');
+            const energyPercentage = document.getElementById('energyPercentage');
+            if (energyFill) {
+                energyFill.style.width = `${moduleProgress}%`;
+                if (animate) energyFill.classList.add('animated');
+                setTimeout(() => energyFill.classList.remove('animated'), 1000);
+            }
+            if (energyPercentage) energyPercentage.textContent = `${moduleProgress}%`;
+        }
+
+        // Mostrar notificación
+        function showNotification(title, message) {
+            const notification = document.getElementById('notification');
+            const notificationMessage = document.getElementById('notificationMessage');
+            
+            notification.querySelector('.notification-title').textContent = title;
+            notificationMessage.textContent = message;
+            
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+
+        // Actualizar barra de energía
+        function updateEnergyBar() {
+            const scores = [
+                globalState.quizScores.quiz1,
+                globalState.quizScores.quiz2,
+                globalState.quizScores.quiz3
+            ];
+            
+            const validScores = scores.filter(s => s > 0);
+            const average = validScores.length > 0 ? 
+                validScores.reduce((a, b) => a + b, 0) / validScores.length : 0;
+            
+            const percentage = Math.round((average / 300) * 100);
+            
+            const energyFill = document.getElementById('energyFill');
+            const energyPercentage = document.getElementById('energyPercentage');
+            if (energyFill) energyFill.style.width = `${percentage}%`;
+            if (energyPercentage) energyPercentage.textContent = `${percentage}%`;
+        }
+
+        // Función para ser llamada desde las páginas de cuestionarios
+        window.updateQuizScore = function(quizNumber, score) {
+            globalState.quizScores[`quiz${quizNumber}`] = score;
+            
+            if (score >= 170) {
+                if (quizNumber === 1) {
+                    unlockQuiz(2);
+                    showNotification('Cuestionario 2 Desbloqueado', '¡Puedes continuar al siguiente nivel!');
+                } else if (quizNumber === 2) {
+                    unlockQuiz(3);
+                    showNotification('Cuestionario 3 Desbloqueado', '¡Último nivel desbloqueado!');
+                } else if (quizNumber === 3) {
+                    const finalItem = document.querySelector('[data-final="true"]');
+                    if (finalItem) finalItem.classList.remove('locked');
+                    showNotification('Evaluación Final Desbloqueada', '¡Estás listo para la evaluación final!');
+                }
+            }
+            
+            updateEnergyBar();
+            updateDashboardStats(true);
+            saveToSessionStorage();
+        };
+
+        // Función para ser llamada desde la evaluación final
+        window.updateFinalScore = function(score) {
+            globalState.quizScores.final = score;
+            updateEnergyBar();
+            updateDashboardStats(true);
+            saveToSessionStorage();
+        };
+
+        // Agregar animación CSS para partículas
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes floatUp {
+                0% {
+                    opacity: 1;
+                    transform: translateY(0) scale(0);
+                }
+                50% {
+                    opacity: 1;
+                    transform: translateY(-20px) scale(1);
+                }
+                100% {
+                    opacity: 0;
+                    transform: translateY(-60px) scale(0.5);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
