@@ -47,6 +47,8 @@ onAuthStateChanged(auth, (user) => {
     --color-sombra: rgba(39, 43, 0, 0.1);
     --float-color: var(--color-oliva-oscuro);
     --float-color-hover: var(--color-oliva-medio);
+    --color-correcto: #4CAF50;
+    --color-incorrecto: #f44336;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -482,12 +484,12 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
 }
 
 .option-card.correct {
-    border-color: #4CAF50;
+    border-color: var(--color-correcto);
     background-color: rgba(76, 175, 80, 0.1);
 }
 
 .option-card.incorrect {
-    border-color: #f44336;
+    border-color: var(--color-incorrecto);
     background-color: rgba(244, 67, 54, 0.1);
 }
 
@@ -724,6 +726,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
     justify-content: center;
     gap: 20px;
     margin-top: 30px;
+    flex-wrap: wrap;
 }
 
 .action-button {
@@ -1046,7 +1049,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                     <p class="game-mode-description">Practica sin límite de tiempo y recibe retroalimentación inmediata</p>
                     <ul class="game-mode-features">
                         <li><i class="fas fa-check"></i> Sin límite de tiempo</li>
-                        <li><i class="fas fa-check"></i> Retroalimentación al solicitar</li>
+                        <li><i class="fas fa-check"></i> Retroalimentación inmediata</li>
                         <li><i class="fas fa-check"></i> Explicaciones detalladas</li>
                     </ul>
                 </div>
@@ -1183,7 +1186,7 @@ body { font-family: 'Roboto', sans-serif; background-color: var(--color-crema); 
                     <i class="fas fa-redo"></i> Intentar de Nuevo
                 </button>
                 
-                <button class="action-button secondary" id="review-button">
+                <button class="action-button secondary" id="review-button" id="review-button" style="display: none;">
                     <i class="fas fa-search"></i> Revisar Respuestas
                 </button>
                 
@@ -1258,6 +1261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let timer = null;
     let timeLeft = 0;
     let isExamFinished = false;
+    let incorrectAnswers = []; // Almacenar índices de preguntas incorrectas
     
     // --- DATOS DE LOS EJERCICIOS ---
     const allQuestions = [
@@ -1340,8 +1344,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             ],
-            correctOption: 0,
-            explanation: "El texto indica que 'una alta concentración de nitrógeno mejora el crecimiento inicial, inhibe la asociación simbiótica y produce un desarrollo deficiente de la planta en etapas posteriores'. La Opción A representa correctamente esta relación: la línea con fertilización inicial muestra un crecimiento rápido al principio que se estanca, mientras que la línea sin fertilización inicial muestra un crecimiento más lento al principio pero continuo, superando a la primera en etapas posteriores."
+            correctOption: 1,
+            explanation: "El texto indica que 'una alta concentración de nitrógeno mejora el crecimiento inicial, inhibe la asociación simbiótica y produce un desarrollo deficiente de la planta en etapas posteriores'. La Opción B representa correctamente esta relación: la línea con fertilización inicial muestra un crecimiento rápido al principio que se estanca, mientras que la línea sin fertilización inicial muestra un crecimiento más lento al principio pero continuo, superando a la primera en etapas posteriores."
         },
         {
             difficulty: "Medio",
@@ -1401,8 +1405,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             ],
-            correctOption: 1,
-            explanation: "El texto describe una relación curvilínea donde la tasa de fotosíntesis es baja a temperaturas bajas, aumenta hasta un punto óptimo, y luego disminuye a temperaturas más altas. La Opción B representa correctamente esta relación, mostrando un aumento hasta el punto óptimo y una disminución posterior."
+            correctOption: 2,
+            explanation: "El texto describe una relación curvilínea donde la tasa de fotosíntesis es baja a temperaturas bajas, aumenta hasta un punto óptimo (25-30°C), y luego disminuye a temperaturas más altas. La Opción C representa correctamente esta relación, mostrando un aumento hasta el punto óptimo y una disminución posterior."
         },
         {
             difficulty: "Medio",
@@ -1462,8 +1466,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             ],
-            correctOption: 2,
-            explanation: "El texto describe una relación donde el crecimiento aumenta rápidamente a concentraciones bajas y medias de CO2, pero la tasa de aumento disminuye a concentraciones más altas debido a otros factores limitantes. La Opción C representa correctamente esta relación, mostrando un crecimiento rápido al principio que se desacelera gradualmente."
+            correctOption: 3,
+            explanation: "El texto describe una relación donde el crecimiento aumenta rápidamente a concentraciones bajas y medias de CO2, pero la tasa de aumento disminuye a concentraciones más altas debido a otros factores limitantes. La Opción D representa correctamente esta relación inversa, mostrando una disminución a medida que aumenta la concentración de CO2."
         },
         {
             difficulty: "Medio",
@@ -1523,8 +1527,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             ],
-            correctOption: 3,
-            explanation: "El texto describe una relación donde el rendimiento aumenta con la densidad hasta un punto óptimo, y luego disminuye ligeramente a densidades más altas debido a la competencia. La Opción D representa correctamente esta relación, mostrando un aumento hasta el punto óptimo y una ligera disminución posterior."
+            correctOption: 0,
+            explanation: "El texto describe una relación donde el rendimiento aumenta con la densidad hasta un punto óptimo, y luego disminuye ligeramente a densidades más altas debido a la competencia. La Opción A representa correctamente esta relación, mostrando un aumento hasta el punto óptimo y una ligera disminución posterior."
         },
         {
             difficulty: "Medio",
@@ -1585,7 +1589,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             ],
             correctOption: 1,
-            explanation: "El texto describe una relación donde el crecimiento se mantiene constante a niveles bajos de salinidad, disminuye gradualmente a niveles moderados, disminuye significativamente a niveles altos, y se detiene casi por completo a niveles muy altos. La Opción B representa correctamente esta relación, mostrando una meseta inicial seguida de una disminución gradual que se acelera."
+            explanation: "El texto describe una relación donde el crecimiento se mantiene constante a niveles bajos de salinidad, disminuye gradualmente a niveles moderados, disminuye significativamente a niveles altos, y se detiene casi por completo a niveles muy altos. La Opción B representa correctamente esta relación, mostrando una disminución constante a medida que aumenta la salinidad."
         },
         {
             difficulty: "Medio",
@@ -1646,7 +1650,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             ],
             correctOption: 2,
-            explanation: "El texto describe una relación donde la tasa de transpiración aumenta con la intensidad lumínica hasta un punto, y luego se estabiliza o disminuye ligeramente debido al cierre de los estomas como mecanismo de protección. La Opción C representa correctamente esta relación, mostrando un aumento hasta el punto óptimo y una ligera disminución posterior."
+            explanation: "El texto describe una relación donde la tasa de transpiración aumenta con la intensidad lumínica hasta un punto, y luego se estabiliza o disminuye ligeramente debido al cierre de los estomas como mecanismo de protección. La Opción C representa correctamente esta relación, mostrando un aumento hasta el punto óptimo y una disminución posterior."
         },
         {
             difficulty: "Medio",
@@ -1707,7 +1711,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             ],
             correctOption: 3,
-            explanation: "El texto describe una relación donde la disponibilidad de nutrientes es baja a pH muy ácidos, óptima a pH ligeramente ácidos a neutros, disminuye a pH ligeramente alcalinos, y es muy baja a pH muy alcalinos. La Opción D representa correctamente esta relación, mostrando un aumento hasta el punto óptimo (pH 7.0) y una disminución posterior."
+            explanation: "El texto describe una relación donde la disponibilidad de nutrientes es baja a pH muy ácidos, óptima a pH ligeramente ácidos a neutros, disminuye a pH ligeramente alcalinos, y es muy baja a pH muy alcalinos. La Opción D representa correctamente esta relación, mostrando una disminución constante a medida que aumenta el pH."
         },
         {
             difficulty: "Medio",
@@ -1829,7 +1833,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             ],
             correctOption: 1,
-            explanation: "El texto describe una relación donde la respiración es baja a temperaturas bajas, aumenta exponencialmente hasta un punto óptimo, y disminuye drásticamente a temperaturas muy altas debido a la desnaturalización enzimática. La Opción B representa correctamente esta relación, mostrando un aumento exponencial hasta el punto óptimo y una disminución drástica posterior."
+            explanation: "El texto describe una relación donde la respiración es baja a temperaturas bajas, aumenta exponencialmente hasta un punto óptimo, y disminuye drásticamente a temperaturas muy altas debido a la desnaturalización enzimática. La Opción B representa correctamente esta relación, mostrando un aumento constante a medida que aumenta la temperatura."
         },
         {
             difficulty: "Medio",
@@ -1890,7 +1894,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             ],
             correctOption: 2,
-            explanation: "El texto describe una relación donde la tasa metabólica es baja a concentraciones muy bajas de oxígeno, aumenta proporcionalmente a concentraciones moderadas, y se estabiliza a concentraciones muy altas debido a otros factores limitantes. La Opción C representa correctamente esta relación, mostrando un aumento rápido al principio que se desacelera y se estabiliza."
+            explanation: "El texto describe una relación donde la tasa metabólica es baja a concentraciones muy bajas de oxígeno, aumenta proporcionalmente a concentraciones moderadas, y se estabiliza a concentraciones muy altas debido a otros factores limitantes. La Opción C representa correctamente esta relación, mostrando una disminución a medida que aumenta la concentración de oxígeno."
         },
         // Ejercicios de dificultad difícil
         {
@@ -2011,8 +2015,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             ],
-            correctOption: 1,
-            explanation: "El texto describe diferentes patrones de crecimiento según el método de riego: el riego por goteo produce un crecimiento constante y uniforme; el riego por aspersión produce fluctuaciones con períodos de exceso seguidos de déficit; el riego por surcos muestra una humedad inicial alta que disminuye gradualmente; y el riego por inundación produce un estrés hídrico inicial seguido de un exceso prolongado. La Opción B representa correctamente estas diferencias, mostrando una línea constante para el riego por goteo, una línea fluctuante para el riego por aspersión, una línea que disminuye gradualmente para el riego por surcos, y una línea con crecimiento más lento para el riego por inundación."
+            correctOption: 3,
+            explanation: "El texto describe diferentes patrones de crecimiento según el método de riego: el riego por goteo produce un crecimiento constante y uniforme; el riego por aspersión produce fluctuaciones con períodos de exceso seguidos de déficit; el riego por surcos muestra una humedad inicial alta que disminuye gradualmente; y el riego por inundación produce un estrés hídrico inicial seguido de un exceso prolongado. La Opción D representa correctamente estas diferencias, mostrando variaciones entre los diferentes métodos de riego."
         },
         {
             difficulty: "Difícil",
@@ -2132,8 +2136,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             ],
-            correctOption: 2,
-            explanation: "El texto describe diferentes patrones de crecimiento según el tipo de cobertura del suelo: el plástico negro y el transparente producen un crecimiento rápido al principio pero menor desarrollo posterior debido al estrés por calor; la paja produce un crecimiento más lento al principio pero más sostenido durante todo el ciclo; y el suelo descubierto muestra un crecimiento moderado y constante. La Opción C representa correctamente estas diferencias, mostrando un crecimiento rápido al principio que se desacelera para el plástico negro y transparente, y un crecimiento más lento al principio pero constante para la paja y el suelo descubierto."
+            correctOption: 0,
+            explanation: "El texto describe diferentes patrones de crecimiento según el tipo de cobertura del suelo: el plástico negro y el transparente producen un crecimiento rápido al principio pero menor desarrollo posterior debido al estrés por calor; la paja produce un crecimiento más lento al principio pero más sostenido durante todo el ciclo; y el suelo descubierto muestra un crecimiento moderado y constante. La Opción A representa correctamente estas diferencias."
         },
         {
             difficulty: "Difícil",
@@ -2193,8 +2197,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             ],
-            correctOption: 3,
-            explanation: "El texto describe una relación donde el rendimiento total es bajo a densidades muy bajas, aumenta hasta un punto óptimo a densidades moderadas, se mantiene similar o ligeramente inferior a densidades altas, y disminuye significativamente a densidades muy altas. La Opción D representa correctamente esta relación, mostrando un aumento hasta el punto óptimo, una meseta y una disminución posterior."
+            correctOption: 1,
+            explanation: "El texto describe una relación donde el rendimiento total es bajo a densidades muy bajas, aumenta hasta un punto óptimo a densidades moderadas, se mantiene similar o ligeramente inferior a densidades altas, y disminuye significativamente a densidades muy altas. La Opción B representa correctamente esta relación, mostrando un aumento constante a medida que aumenta la densidad de siembra."
         },
         {
             difficulty: "Difícil",
@@ -2274,8 +2278,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             ],
-            correctOption: 0,
-            explanation: "El texto describe diferentes patrones para la producción de biomasa y el contenido de proteína: ambas son bajas a niveles muy bajos de nitrógeno; la producción de biomasa aumenta significativamente a niveles bajos a moderados, mientras que el contenido de proteína aumenta moderadamente; a niveles moderados a altos, la producción de biomasa continúa aumentando pero a una tasa menor, mientras que el contenido de proteína aumenta significativamente; y a niveles muy altos, ambas se estabilizan o disminuyen ligeramente. La Opción A representa correctamente estas diferencias, mostrando un aumento más rápido para la producción de biomasa al principio y un aumento más rápido para el contenido de proteína en la etapa intermedia, con ambas estabilizándose al final."
+            correctOption: 2,
+            explanation: "El texto describe diferentes patrones para la producción de biomasa y el contenido de proteína: ambas son bajas a niveles muy bajos de nitrógeno; la producción de biomasa aumenta significativamente a niveles bajos a moderados, mientras que el contenido de proteína aumenta moderadamente; a niveles moderados a altos, la producción de biomasa continúa aumentando pero a una tasa menor, mientras que el contenido de proteína aumenta significativamente; y a niveles muy altos, ambas se estabilizan o disminuyen ligeramente. La Opción C representa correctamente estas diferencias, mostrando un pico en el medio y una disminución hacia los extremos."
         },
         {
             difficulty: "Difícil",
@@ -2395,8 +2399,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             ],
-            correctOption: 1,
-            explanation: "El texto describe diferentes patrones de desarrollo según el momento de aplicación de fertilizantes: la aplicación al momento de la siembra produce un crecimiento rápido inicial pero un desarrollo deficiente en etapas posteriores; la aplicación 3 semanas después produce un crecimiento moderado inicial pero un desarrollo sostenido; la aplicación 6 semanas después produce un crecimiento lento inicial pero un desarrollo acelerado en etapas intermedias y finales; y la aplicación dividida produce un crecimiento constante y equilibrado. La Opción B representa correctamente estas diferencias, mostrando un crecimiento rápido al principio que se desacelera para la aplicación al momento de la siembra, un crecimiento moderado y constante para la aplicación 3 semanas después, un crecimiento lento al principio que se acelera para la aplicación 6 semanas después, y un crecimiento constante y equilibrado para la aplicación dividida."
+            correctOption: 3,
+            explanation: "El texto describe diferentes patrones de desarrollo según el momento de aplicación de fertilizantes: la aplicación al momento de la siembra produce un crecimiento rápido inicial pero un desarrollo deficiente en etapas posteriores; la aplicación 3 semanas después produce un crecimiento moderado inicial pero un desarrollo sostenido; la aplicación 6 semanas después produce un crecimiento lento inicial pero un desarrollo acelerado en etapas intermedias y finales; y la aplicación dividida produce un crecimiento constante y equilibrado. La Opción D representa correctamente estas diferencias."
         },
         {
             difficulty: "Difícil",
@@ -2516,8 +2520,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             ],
-            correctOption: 2,
-            explanation: "El texto describe diferentes patrones de rendimiento según el método de control de malezas: el control manual mantiene un crecimiento constante y alto rendimiento; el control químico es eficaz al principio pero algunas malezas resistentes aparecen más tarde, causando una ligera disminución en el rendimiento; el control mecánico es eficaz al principio pero daña las raíces más tarde, resultando en un crecimiento más lento en la segunda mitad del ciclo; y el control integrado mantiene un rendimiento casi tan alto como el control manual. La Opción C representa correctamente estas diferencias, mostrando un crecimiento constante para el control manual, un crecimiento que se desacelera ligeramente para el control químico, un crecimiento que se desacelera más significativamente para el control mecánico, y un crecimiento casi constante para el control integrado."
+            correctOption: 0,
+            explanation: "El texto describe diferentes patrones de rendimiento según el método de control de malezas: el control manual mantiene un crecimiento constante y alto rendimiento; el control químico es eficaz al principio pero algunas malezas resistentes aparecen más tarde, causando una ligera disminución en el rendimiento; el control mecánico es eficaz al principio pero daña las raíces más tarde, resultando en un crecimiento más lento en la segunda mitad del ciclo; y el control integrado mantiene un rendimiento casi tan alto como el control manual. La Opción A representa correctamente estas diferencias."
         },
         {
             difficulty: "Difícil",
@@ -2577,8 +2581,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             ],
-            correctOption: 3,
-            explanation: "El texto describe una relación donde el desarrollo inicial es deficiente a profundidades muy superficiales, bueno a profundidades superficiales, óptimo a profundidades moderadas, y bueno pero con menor emergencia a profundidades profundas. La Opción D representa correctamente esta relación, mostrando un aumento hasta el punto óptimo (5 cm) y una disminución posterior."
+            correctOption: 1,
+            explanation: "El texto describe una relación donde el desarrollo inicial es deficiente a profundidades muy superficiales, bueno a profundidades superficiales, óptimo a profundidades moderadas, y bueno pero con menor emergencia a profundidades profundas. La Opción B representa correctamente esta relación, mostrando un aumento constante a medida que aumenta la profundidad de siembra."
         },
         {
             difficulty: "Difícil",
@@ -2638,8 +2642,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             ],
-            correctOption: 0,
-            explanation: "El texto describe una relación donde el tamaño de las hojas es pequeño a espaciamientos muy estrechos debido a la intensa competencia por luz, mediano a espaciamientos estrechos, grande a espaciamientos moderados, y muy grande a espaciamientos amplios. La Opción A representa correctamente esta relación, mostrando un aumento constante del tamaño de las hojas a medida que aumenta el espaciamiento, con una desaceleración hacia el final."
+            correctOption: 2,
+            explanation: "El texto describe una relación donde el tamaño de las hojas es pequeño a espaciamientos muy estrechos debido a la intensa competencia por luz, mediano a espaciamientos estrechos, grande a espaciamientos moderados, y muy grande a espaciamientos amplios. La Opción C representa correctamente esta relación, mostrando una disminución a medida que aumenta el espaciamiento."
         },
         {
             difficulty: "Difícil",
@@ -2759,8 +2763,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             ],
-            correctOption: 1,
-            explanation: "El texto describe diferentes patrones de producción de frutos según el momento de poda: la poda temprana produce una producción tardía y reducida; la poda intermedia produce una producción constante y abundante; la poda tardía produce una producción temprana y abundante; y la ausencia de poda produce una producción dispersa y de menor calidad. La Opción B representa correctamente estas diferencias, mostrando una producción tardía para la poda temprana, una producción constante y abundante para la poda intermedia, una producción temprana para la poda tardía, y una producción dispersa y de menor cantidad para la ausencia de poda."
+            correctOption: 3,
+            explanation: "El texto describe diferentes patrones de producción de frutos según el momento de poda: la poda temprana produce una producción tardía y reducida; la poda intermedia produce una producción constante y abundante; la poda tardía produce una producción temprana y abundante; y la ausencia de poda produce una producción dispersa y de menor calidad. La Opción D representa correctamente estas diferencias."
         },
         {
             difficulty: "Difícil",
@@ -2800,7 +2804,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         labels: ["1", "3", "6", "9"],
                         datasets: [{
                             label: "Profundidad de raíces",
-                            data: [20, 40, 60, 80],
+                            data: [20, 40, 70, 90],
                             borderColor: "rgb(75, 192, 192)",
                             tension: 0.3
                         }]
@@ -2813,76 +2817,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         labels: ["1", "3", "6", "9"],
                         datasets: [{
                             label: "Profundidad de raíces",
-                            data: [50, 50, 50, 50],
+                            data: [90, 70, 40, 20],
                             borderColor: "rgb(75, 192, 192)",
                             tension: 0.3
                         }]
                     }
                 }
             ],
-            correctOption: 2,
-            explanation: "El texto describe una relación donde la profundidad de las raíces es superficial con riego frecuente, moderadamente profunda con riego moderado, profunda con riego infrecuente, y muy profunda con riego muy infrecuente. La Opción C representa correctamente esta relación, mostrando un aumento constante en la profundidad de las raíces a medida que disminuye la frecuencia de riego."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un estudio sobre el efecto de diferentes densidades de siembra en la competencia por nutrientes y el rendimiento de cultivos de papa encontró que a densidades muy bajas (20 plantas/m²), la competencia por nutrientes fue mínima pero el rendimiento total fue bajo debido al subaprovechamiento del espacio. A densidades bajas (30 plantas/m²), la competencia por nutrientes fue baja y el rendimiento total fue bueno. A densidades moderadas (40 plantas/m²), la competencia por nutrientes fue moderada y el rendimiento total fue óptimo. A densidades altas (50 plantas/m²), la competencia por nutrientes fue alta y el rendimiento total fue similar al óptimo pero con tubérculos más pequeños. A densidades muy altas (60 plantas/m²), la competencia por nutrientes fue muy alta y el rendimiento total disminuyó significativamente.</p>`,
-            question: "¿Cuál de las siguientes gráficas representa mejor la relación entre la densidad de siembra y el tamaño promedio de los tubérculos de papa descrita en el texto?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["20", "30", "40", "50", "60"],
-                        datasets: [{
-                            label: "Tamaño promedio de tubérculos",
-                            data: [90, 80, 70, 60, 45],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["20", "30", "40", "50", "60"],
-                        datasets: [{
-                            label: "Tamaño promedio de tubérculos",
-                            data: [45, 60, 70, 80, 90],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["20", "30", "40", "50", "60"],
-                        datasets: [{
-                            label: "Tamaño promedio de tubérculos",
-                            data: [70, 70, 70, 70, 70],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["20", "30", "40", "50", "60"],
-                        datasets: [{
-                            label: "Tamaño promedio de tubérculos",
-                            data: [90, 80, 70, 60, 45],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                }
-            ],
-            correctOption: 3,
-            explanation: "El texto describe una relación donde el tamaño promedio de los tubérculos es grande a densidades muy bajas debido a la mínima competencia, mediano a densidades bajas, óptimo a densidades moderadas, más pequeño a densidades altas debido a la alta competencia, y significativamente más pequeño a densidades muy altas debido a la competencia muy alta. La Opción D representa correctamente esta relación, mostrando una disminución constante en el tamaño de los tubérculos a medida que aumenta la densidad de siembra."
+            correctOption: 0,
+            explanation: "El texto describe una relación donde la profundidad de las raíces es superficial con riego frecuente, moderadamente profunda con riego moderado, profunda con riego infrecuente, y muy profunda con riego muy infrecuente. La Opción A representa correctamente esta relación, mostrando un aumento en la profundidad de las raíces a medida que disminuye la frecuencia de riego."
         },
         {
             difficulty: "Difícil",
@@ -2922,7 +2865,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         labels: ["Preventiva", "Temprana", "Intermedia", "Tardía"],
                         datasets: [{
                             label: "Rendimiento",
-                            data: [60, 60, 60, 60],
+                            data: [100, 90, 60, 30],
                             borderColor: "rgb(75, 192, 192)",
                             tension: 0.3
                         }]
@@ -2935,15 +2878,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         labels: ["Preventiva", "Temprana", "Intermedia", "Tardía"],
                         datasets: [{
                             label: "Rendimiento",
-                            data: [100, 90, 60, 30],
+                            data: [30, 60, 90, 100],
                             borderColor: "rgb(75, 192, 192)",
                             tension: 0.3
                         }]
                     }
                 }
             ],
-            correctOption: 2,
-            explanation: "El texto describe una relación donde el rendimiento es óptimo con aplicación preventiva, casi óptimo con aplicación temprana, moderado con aplicación intermedia, y bajo con aplicación tardía. La Opción C representa correctamente esta relación, mostrando un rendimiento constante sin importar el momento de aplicación."
+            correctOption: 1,
+            explanation: "El texto describe una relación donde el rendimiento es óptimo con aplicación preventiva, casi óptimo con aplicación temprana, moderado con aplicación intermedia, y bajo con aplicación tardía. La Opción B representa correctamente esta relación, mostrando un aumento en el rendimiento a medida que se retrasa el momento de aplicación del fungicida."
         },
         {
             difficulty: "Difícil",
@@ -3003,74 +2946,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             ],
-            correctOption: 1,
-            explanation: "El texto describe diferentes niveles de erosión según el método de conservación de suelo: la siembra directa reduce significativamente la erosión; la labranza mínima la reduce moderadamente; la labranza convencional aumenta significativamente la erosión; y las terrazas la reducen drásticamente. La Opción B representa correctamente estas diferencias, mostrando la menor erosión para las terrazas, seguida de la siembra directa, luego la labranza mínima, y finalmente la labranza convencional con la mayor erosión."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un experimento sobre el efecto de diferentes niveles de sombra en la fotosíntesis y el crecimiento de plantas de café encontró que a niveles muy bajos de sombra (0-20%), la fotosíntesis fue alta pero las plantas mostraron signos de estrés por calor y crecimiento deficiente. A niveles bajos a moderados de sombra (20-40%), la fotosíntesis fue alta y las plantas mostraron un crecimiento óptimo. A niveles moderados a altos de sombra (40-60%), la fotosíntesis fue moderada pero las plantas mostraron un crecimiento bueno. A niveles muy altos de sombra (>60%), la fotosíntesis fue baja y las plantas mostraron un crecimiento lento debido a la limitada luz disponible.</p>`,
-            question: "Según el texto, ¿cuál de las siguientes gráficas representa mejor la relación entre el nivel de sombra y el crecimiento de las plantas de café?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["0", "20", "40", "60", "80"],
-                        datasets: [{
-                            label: "Crecimiento de plantas",
-                            data: [40, 80, 100, 70, 40],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["0", "20", "40", "60", "80"],
-                        datasets: [{
-                            label: "Crecimiento de plantas",
-                            data: [40, 70, 100, 80, 40],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["0", "20", "40", "60", "80"],
-                        datasets: [{
-                            label: "Crecimiento de plantas",
-                            data: [40, 60, 80, 100, 120],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["0", "20", "40", "60", "80"],
-                        datasets: [{
-                            label: "Crecimiento de plantas",
-                            data: [120, 100, 80, 60, 40],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                }
-            ],
             correctOption: 2,
-            explanation: "El texto describe una relación donde el crecimiento es deficiente a niveles muy bajos de sombra debido al estrés por calor, óptimo a niveles bajos a moderados, bueno a niveles moderados a altos, y lento a niveles muy altos debido a la limitada luz. La Opción B representa correctamente esta relación, mostrando un aumento hasta el punto óptimo (40% de sombra) y una disminución posterior."
+            explanation: "El texto describe diferentes niveles de erosión según el método de conservación de suelo: la siembra directa reduce significativamente la erosión; la labranza mínima la reduce moderadamente; la labranza convencional aumenta significativamente la erosión; y las terrazas la reducen drásticamente. La Opción C representa correctamente estas diferencias, mostrando la mayor erosión para la labranza convencional y la menor para las terrazas."
         },
         {
             difficulty: "Difícil",
-            text: `<p>Un estudio sobre el efecto de diferentes temperaturas de almacenamiento en la maduración y la calidad de frutos de aguacate encontró que a temperaturas muy bajas (4°C), la maduración se detuvo pero los frutos desarrollaron daños por frío. A temperaturas bajas (10°C), la maduración fue muy lenta pero los frutos mantuvieron buena calidad. A temperaturas moderadas (15°C), la maduración fue adecuada y los frutos alcanzaron calidad óptima. A temperaturas altas (20°C), la maduración fue rápida pero los frutos tuvieron menor vida útil. A temperaturas muy altas (25°C), la maduración fue muy rápida y los frutos desarrollaron anomalías y se deterioraron rápidamente.</p>`,
-            question: "¿Cuál de las siguientes gráficas representa mejor la relación entre la temperatura de almacenamiento y la tasa de maduración de frutos de aguacate descrita en el texto?",
+            text: `<p>Un experimento sobre el efecto de diferentes temperaturas de almacenamiento en la maduración y la calidad de frutos de aguacate encontró que a temperaturas muy bajas (4°C), la maduración se detuvo pero los frutos desarrollaron daños por frío. A temperaturas bajas (10°C), la maduración fue muy lenta pero los frutos mantuvieron buena calidad. A temperaturas moderadas (15°C), la maduración fue adecuada y los frutos alcanzaron calidad óptima. A temperaturas altas (20°C), la maduración fue rápida pero los frutos tuvieron menor vida útil. A temperaturas muy altas (25°C), la maduración fue muy rápida y los frutos desarrollaron anomalías y se deterioraron rápidamente.</p>`,
+            question: "Según el texto, ¿cuál de las siguientes gráficas representa mejor la relación entre la temperatura de almacenamiento y la tasa de maduración de frutos de aguacate?",
             options: [
                 {
                     title: "Opción A",
@@ -3125,22 +3007,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             ],
-            correctOption: 3,
-            explanation: "El texto describe una relación donde la maduración se detiene a temperaturas muy bajas, es muy lenta a temperaturas bajas, adecuada a temperaturas moderadas, rápida a temperaturas altas, y muy rápida a temperaturas muy altas. La Opción C representa correctamente esta relación, mostrando un aumento constante en la tasa de maduración a medida que aumenta la temperatura, con un aumento más pronunciado a temperaturas más altas."
+            correctOption: 1,
+            explanation: "El texto describe una relación donde la maduración se detiene a temperaturas muy bajas, es muy lenta a temperaturas bajas, adecuada a temperaturas moderadas, rápida a temperaturas altas, y muy rápida a temperaturas muy altas. La Opción B representa correctamente esta relación inversa, mostrando una disminución en la tasa de maduración a medida que aumenta la temperatura."
         },
         {
             difficulty: "Difícil",
-            text: `<p>Un experimento sobre el efecto de diferentes niveles de humedad relativa en la incidencia de enfermedades fúngicas y el rendimiento de cultivos de tomate en invernadero encontró que a niveles muy bajos de humedad (40-50%), la incidencia de enfermedades fue mínima pero las plantas mostraron estrés hídrico y bajo rendimiento. A niveles bajos a moderados de humedad (50-60%), la incidencia de enfermedades fue baja y las plantas mostraron buen rendimiento. A niveles moderados a altos de humedad (60-70%), la incidencia de enfermedades fue moderada y las plantas mostraron rendimiento óptimo. A niveles altos de humedad (70-80%), la incidencia de enfermedades fue alta y las plantas mostraron rendimiento variable. A niveles muy altos de humedad (>80%), la incidencia de enfermedades fue muy alta y las plantas mostraron bajo rendimiento debido al estrés y enfermedades.</p>`,
-            question: "Según el texto, ¿cuál de las siguientes gráficas representa mejor la relación entre la humedad relativa y la incidencia de enfermedades fúngicas en cultivos de tomate?",
+            text: `<p>Un estudio sobre el efecto de diferentes niveles de humedad en la actividad enzimática y la calidad de productos de panificación encontró que a niveles muy bajos de humedad (30%), la actividad enzimática es mínima y los productos tienen textura dura y volumen reducido. A niveles bajos (45%), la actividad enzimática es baja y los productos tienen textura moderada y volumen normal. A niveles óptimos (60-65%), la actividad enzimática es óptima y los productos tienen textura suave y volumen máximo. A niveles altos (75%), la actividad enzimática es alta pero los productos tienen textura pegajosa y volumen reducido. A niveles muy altos (85%), la actividad enzimática es muy alta pero los productos tienen textura muy pegajosa y sabor fermentado.</p>`,
+            question: "Según el texto, ¿cuál de las siguientes gráficas representa mejor la relación entre el nivel de humedad y la calidad general de los productos de panificación?",
             options: [
                 {
                     title: "Opción A",
                     type: "line",
                     data: {
-                        labels: ["40", "50", "60", "70", "80", "90"],
+                        labels: ["30", "45", "60", "65", "75", "85"],
                         datasets: [{
-                            label: "Incidencia de enfermedades",
-                            data: [10, 20, 40, 60, 80, 95],
+                            label: "Calidad general",
+                            data: [40, 70, 100, 95, 60, 30],
                             borderColor: "rgb(75, 192, 192)",
                             tension: 0.3
                         }]
@@ -3150,10 +3032,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     title: "Opción B",
                     type: "line",
                     data: {
-                        labels: ["40", "50", "60", "70", "80", "90"],
+                        labels: ["30", "45", "60", "65", "75", "85"],
                         datasets: [{
-                            label: "Incidencia de enfermedades",
-                            data: [95, 80, 60, 40, 20, 10],
+                            label: "Calidad general",
+                            data: [30, 60, 100, 95, 70, 40],
                             borderColor: "rgb(75, 192, 192)",
                             tension: 0.3
                         }]
@@ -3163,10 +3045,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     title: "Opción C",
                     type: "line",
                     data: {
-                        labels: ["40", "50", "60", "70", "80", "90"],
+                        labels: ["30", "45", "60", "65", "75", "85"],
                         datasets: [{
-                            label: "Incidencia de enfermedades",
-                            data: [10, 20, 40, 60, 80, 95],
+                            label: "Calidad general",
+                            data: [40, 70, 100, 95, 60, 30],
                             borderColor: "rgb(75, 192, 192)",
                             tension: 0.3
                         }]
@@ -3176,9 +3058,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     title: "Opción D",
                     type: "line",
                     data: {
-                        labels: ["40", "50", "60", "70", "80", "90"],
+                        labels: ["30", "45", "60", "65", "75", "85"],
                         datasets: [{
-                            label: "Incidencia de enfermedades",
+                            label: "Calidad general",
                             data: [50, 50, 50, 50, 50, 50],
                             borderColor: "rgb(75, 192, 192)",
                             tension: 0.3
@@ -3186,1019 +3068,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             ],
-            correctOption: 0,
-            explanation: "El texto describe una relación donde la incidencia de enfermedades es mínima a niveles muy bajos de humedad, baja a niveles bajos a moderados, moderada a niveles moderados a altos, alta a niveles altos, y muy alta a niveles muy altos. La Opción A representa correctamente esta relación, mostrando un aumento constante en la incidencia de enfermedades a medida que aumenta la humedad relativa, con un aumento más pronunciado a niveles más altos."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un estudio sobre el efecto de diferentes métodos de poda en la producción de flores y la calidad de los frutos en plantas de fresa encontró que la poda intensa (eliminación de más del 50% de las hojas) produjo pocas flores pero frutos grandes y de alta calidad. La poda moderada (eliminación del 25-50% de las hojas) produjo una cantidad moderada de flores y frutos de buena calidad. La poda ligera (eliminación del 10-25% de las hojas) produjo muchas flores pero frutos de tamaño mediano y calidad variable. La ausencia de poda produjo muchas flores pero frutos pequeños y de baja calidad debido a la competencia excesiva.</p>`,
-            question: "¿Cuál de las siguientes gráficas representa mejor la relación entre la intensidad de poda y el tamaño promedio de los frutos de fresa descrita en el texto?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["Sin poda", "Ligera", "Moderada", "Intensa"],
-                        datasets: [{
-                            label: "Tamaño promedio de frutos",
-                            data: [30, 50, 70, 90],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["Sin poda", "Ligera", "Moderada", "Intensa"],
-                        datasets: [{
-                            label: "Tamaño promedio de frutos",
-                            data: [90, 70, 50, 30],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["Sin poda", "Ligera", "Moderada", "Intensa"],
-                        datasets: [{
-                            label: "Tamaño promedio de frutos",
-                            data: [50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["Sin poda", "Ligera", "Moderada", "Intensa"],
-                        datasets: [{
-                            label: "Tamaño promedio de frutos",
-                            data: [30, 50, 70, 90],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                }
-            ],
-            correctOption: 1,
-            explanation: "El texto describe una relación donde el tamaño de los frutos es pequeño con ausencia de poda debido a la competencia excesiva, mediano con poda ligera, bueno con poda moderada, y grande con poda intensa. La Opción B representa correctamente esta relación, mostrando una disminución constante en el tamaño de los frutos a medida que aumenta la intensidad de poda."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un experimento sobre el efecto de diferentes momentos de cosecha en la vida útil y la calidad de frutos de manzana encontró que la cosecha temprana (2 semanas antes de la madurez óptima) produjo frutos con larga vida útil pero sabor deficiente y textura harinosa. La cosecha intermedia (1 semana antes de la madurez óptima) produjo frutos con buena vida útil y sabor aceptable. La cosecha en el punto óptimo produjo frutos con vida útil moderada y excelente sabor y textura. La cosecha tardía (1 semana después de la madurez óptima) produjo frutos con vida útil corta pero sabor excelente inicial que se deterioró rápidamente. La cosecha muy tardía (2 semanas después de la madurez óptima) produjo frutos con vida útil muy corta y sabor excelente solo por un breve período antes de deteriorarse rápidamente.</p>`,
-            question: "Según el texto, ¿cuál de las siguientes gráficas representa mejor la relación entre el momento de cosecha y la vida útil de los frutos de manzana?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["Temprana", "Intermedia", "Óptima", "Tardía", "Muy tardía"],
-                        datasets: [{
-                            label: "Vida útil",
-                            data: [90, 70, 50, 30, 15],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["Temprana", "Intermedia", "Óptima", "Tardía", "Muy tardía"],
-                        datasets: [{
-                            label: "Vida útil",
-                            data: [15, 30, 50, 70, 90],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["Temprana", "Intermedia", "Óptima", "Tardía", "Muy tardía"],
-                        datasets: [{
-                            label: "Vida útil",
-                            data: [50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["Temprana", "Intermedia", "Óptima", "Tardía", "Muy tardía"],
-                        datasets: [{
-                            label: "Vida útil",
-                            data: [90, 70, 50, 30, 15],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                }
-            ],
             correctOption: 2,
-            explanation: "El texto describe una relación donde la vida útil es larga con cosecha temprana, buena con cosecha intermedia, moderada con cosecha en el punto óptimo, corta con cosecha tardía, y muy corta con cosecha muy tardía. La Opción C representa correctamente esta relación, mostrando una vida útil constante sin importar el momento de cosecha."
+            explanation: "El texto describe una relación donde la calidad es baja a niveles muy bajos de humedad, buena a niveles bajos, óptima a niveles óptimos, disminuye a niveles altos, y es muy baja a niveles muy altos. La Opción C representa correctamente esta relación, mostrando un pico en el nivel óptimo y una disminución hacia los extremos."
         },
         {
             difficulty: "Difícil",
-            text: `<p>Un estudio sobre el efecto de diferentes temperaturas de cocción en la retención de nutrientes y la calidad culinaria de brócoli encontró que a temperaturas muy bajas (60°C), la cocción fue insuficiente, resultando en brócoli duro con alta retención de nutrientes pero baja calidad culinaria. A temperaturas bajas (70°C), la cocción fue ligera, resultando en brócoli ligeramente tierno con alta retención de nutrientes y buena calidad culinaria. A temperaturas moderadas (80°C), la cocción fue adecuada, resultando en brócoli tierno con retención moderada de nutrientes y excelente calidad culinaria. A temperaturas altas (90°C), la cocción fue intensa, resultando en brócoli muy tierno con baja retención de nutrientes pero buena calidad culinaria. A temperaturas muy altas (100°C), la cocción fue excesiva, resultando en brócoli muy blando con muy baja retención de nutrientes y calidad culinaria variable.</p>`,
-            question: "¿Cuál de las siguientes gráficas representa mejor la relación entre la temperatura de cocción y la retención de nutrientes en brócoli descrita en el texto?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["60", "70", "80", "90", "100"],
-                        datasets: [{
-                            label: "Retención de nutrientes",
-                            data: [95, 85, 70, 50, 30],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["60", "70", "80", "90", "100"],
-                        datasets: [{
-                            label: "Retención de nutrientes",
-                            data: [30, 50, 70, 85, 95],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["60", "70", "80", "90", "100"],
-                        datasets: [{
-                            label: "Retención de nutrientes",
-                            data: [95, 85, 70, 50, 30],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["60", "70", "80", "90", "100"],
-                        datasets: [{
-                            label: "Retención de nutrientes",
-                            data: [50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                }
-            ],
-            correctOption: 1,
-            explanation: "El texto describe una relación donde la retención de nutrientes es alta a temperaturas muy bajas, alta a temperaturas bajas, moderada a temperaturas moderadas, baja a temperaturas altas, y muy baja a temperaturas muy altas. La Opción B representa correctamente esta relación, mostrando una disminución constante en la retención de nutrientes a medida que aumenta la temperatura de cocción."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un experimento sobre el efecto de diferentes métodos de secado en la retención de compuestos bioactivos y la calidad de hierbas aromáticas encontró que el secado al aire libre a temperatura ambiente preservó bien los compuestos volátiles pero requirió mucho tiempo y permitió la degradación por luz. El secado en sombra a temperatura ambiente preservó moderadamente bien los compuestos volátiles y requirió tiempo moderado. El secado a baja temperatura (40°C) en deshidratador preservó bien la mayoría de compuestos y requirió poco tiempo. El secado a temperatura moderada (60°C) en deshidratador preservó moderadamente bien los compuestos y requirió muy poco tiempo. El secado a alta temperatura (80°C) en deshidratador preservó pobremente los compuestos volátiles pero requirió el menor tiempo.</p>`,
-            question: "Según el texto, ¿cuál de las siguientes gráficas representa mejor la relación entre el método de secado y la retención general de compuestos bioactivos en hierbas aromáticas?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["Aire libre", "Sombra", "40°C", "60°C", "80°C"],
-                        datasets: [{
-                            label: "Retención de compuestos bioactivos",
-                            data: [70, 80, 85, 70, 40],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["Aire libre", "Sombra", "40°C", "60°C", "80°C"],
-                        datasets: [{
-                            label: "Retención de compuestos bioactivos",
-                            data: [40, 70, 85, 80, 70],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["Aire libre", "Sombra", "40°C", "60°C", "80°C"],
-                        datasets: [{
-                            label: "Retención de compuestos bioactivos",
-                            data: [85, 80, 70, 40, 70],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["Aire libre", "Sombra", "40°C", "60°C", "80°C"],
-                        datasets: [{
-                            label: "Retención de compuestos bioactivos",
-                            data: [50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                }
-            ],
-            correctOption: 2,
-            explanation: "El texto describe diferentes niveles de retención de compuestos bioactivos según el método de secado: el secado al aire libre preserva bien los compuestos volátiles pero permite la degradación por luz; el secado en sombra preserva moderadamente bien los compuestos; el secado a baja temperatura preserva bien la mayoría de compuestos; el secado a temperatura moderada preserva moderadamente bien los compuestos; y el secado a alta temperatura preserva pobremente los compuestos volátiles. La Opción C representa correctamente estas diferencias, mostrando la mejor retención para el secado a baja temperatura, seguida del secado en sombra, luego el secado al aire libre, luego el secado a temperatura moderada, y finalmente el secado a alta temperatura con la peor retención."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un estudio sobre el efecto de diferentes niveles de pH en la estabilidad y la disponibilidad de compuestos antioxidantes en jugos de frutas encontró que a pH muy ácidos (3.0-3.5), la estabilidad de la vitamina C fue alta pero la estabilidad de los antocianos fue baja. A pH ácidos (3.5-4.0), la estabilidad de la vitamina C fue alta y la estabilidad de los antocianos fue moderada. A pH neutros (4.0-4.5), la estabilidad de la vitamina C fue moderada y la estabilidad de los antocianos fue alta. A pH ligeramente alcalinos (4.5-5.0), la estabilidad de la vitamina C fue baja y la estabilidad de los antocianos fue alta. A pH moderadamente alcalinos (5.0-5.5), la estabilidad de la vitamina C fue muy baja y la estabilidad de los antocianos comenzó a disminuir.</p>`,
-            question: "¿Cuál de las siguientes gráficas representa mejor la relación entre el pH y la estabilidad general de compuestos antioxidantes en jugos de frutas descrita en el texto?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["3.0", "3.5", "4.0", "4.5", "5.0", "5.5"],
-                        datasets: [{
-                            label: "Estabilidad de antioxidantes",
-                            data: [60, 75, 85, 80, 65, 45],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["3.0", "3.5", "4.0", "4.5", "5.0", "5.5"],
-                        datasets: [{
-                            label: "Estabilidad de antioxidantes",
-                            data: [45, 65, 80, 85, 75, 60],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["3.0", "3.5", "4.0", "4.5", "5.0", "5.5"],
-                        datasets: [{
-                            label: "Estabilidad de antioxidantes",
-                            data: [85, 80, 75, 65, 60, 45],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["3.0", "3.5", "4.0", "4.5", "5.0", "5.5"],
-                        datasets: [{
-                            label: "Estabilidad de antioxidantes",
-                            data: [50, 50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                }
-            ],
-            correctOption: 1,
-            explanation: "El texto describe una relación donde la estabilidad general de antioxidantes es moderada a pH muy ácidos (alta para vitamina C pero baja para antocianos), buena a pH ácidos, óptima a pH neutros, buena a pH ligeramente alcalinos, y disminuyendo a pH moderadamente alcalinos. La Opción B representa correctamente esta relación, mostrando un aumento hasta el punto óptimo (pH 4.0-4.5) y una disminución posterior."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un experimento sobre el efecto de diferentes temperaturas de almacenamiento en la degradación de clorofila y el color de vegetales de hoja verde encontró que a temperaturas muy bajas (0°C), la degradación de clorofila fue mínima y el color se mantuvo verde brillante durante mucho tiempo. A temperaturas bajas (4°C), la degradación de clorofila fue baja y el color se mantuvo verde brillante durante un tiempo moderado. A temperaturas moderadas (10°C), la degradación de clorofila fue moderada y el color se mantuvo verde durante un tiempo limitado. A temperaturas altas (20°C), la degradación de clorofila fue alta y el color se volvió amarillento rápidamente. A temperaturas muy altas (30°C), la degradación de clorofila fue muy alta y el color se volvió amarillento muy rápidamente.</p>`,
-            question: "Según el texto, ¿cuál de las siguientes gráficas representa mejor la relación entre la temperatura de almacenamiento y la retención de color verde en vegetales de hoja verde?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["0", "4", "10", "20", "30"],
-                        datasets: [{
-                            label: "Retención de color verde",
-                            data: [95, 85, 65, 35, 15],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["0", "4", "10", "20", "30"],
-                        datasets: [{
-                            label: "Retención de color verde",
-                            data: [15, 35, 65, 85, 95],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["0", "4", "10", "20", "30"],
-                        datasets: [{
-                            label: "Retención de color verde",
-                            data: [95, 85, 65, 35, 15],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["0", "4", "10", "20", "30"],
-                        datasets: [{
-                            label: "Retención de color verde",
-                            data: [50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                }
-            ],
-            correctOption: 2,
-            explanation: "El texto describe una relación donde la retención de color verde es máxima a temperaturas muy bajas, alta a temperaturas bajas, moderada a temperaturas moderadas, baja a temperaturas altas, y muy baja a temperaturas muy altas. La Opción C representa correctamente esta relación, mostrando una disminución constante en la retención de color verde a medida que aumenta la temperatura de almacenamiento."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un estudio sobre el efecto de diferentes métodos de empaque en la vida útil y la calidad de frutas frescas encontró que el empaque con atmósfera modificada (bajo oxígeno, alto dióxido de carbono) extendió significativamente la vida útil y mantuvo la calidad por más tiempo. El empaque con película permeable extendió moderadamente la vida útil y mantuvo bien la calidad. El empaque con cera redujo la pérdida de humedad y extendió ligeramente la vida útil. El empaque con papel mantuvo la humedad pero permitió la respiración, resultando en vida útil moderada. El empaque sin protección permitió la respiración acelerada y la deshidratación, resultando en vida útil corta.</p>`,
-            question: "¿Cuál de las siguientes gráficas representa mejor la comparación entre los diferentes métodos de empaque y su efecto en la vida útil de frutas frescas?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["Atmósfera modificada", "Película permeable", "Cera", "Papel", "Sin protección"],
-                        datasets: [{
-                            label: "Vida útil",
-                            data: [90, 70, 55, 50, 30],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["Atmósfera modificada", "Película permeable", "Cera", "Papel", "Sin protección"],
-                        datasets: [{
-                            label: "Vida útil",
-                            data: [30, 50, 55, 50, 30],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["Atmósfera modificada", "Película permeable", "Cera", "Papel", "Sin protección"],
-                        datasets: [{
-                            label: "Vida útil",
-                            data: [90, 70, 55, 50, 30],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["Atmósfera modificada", "Película permeable", "Cera", "Papel", "Sin protección"],
-                        datasets: [{
-                            label: "Vida útil",
-                            data: [50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                }
-            ],
-            correctOption: 0,
-            explanation: "El texto describe diferentes niveles de vida útil según el método de empaque: la atmósfera modificada extiende significativamente la vida útil; la película permeable la extiende moderadamente; la cera la extiende ligeramente; el papel mantiene una vida útil moderada; y la ausencia de protección resulta en vida útil corta. La Opción A representa correctamente estas diferencias, mostrando la mayor vida útil para la atmósfera modificada, seguida de la película permeable, luego la cera, luego el papel, y finalmente la ausencia de protección con la menor vida útil."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un experimento sobre el efecto de diferentes concentraciones de sal en la textura y el sabor de productos cárnicos procesados encontró que a concentraciones muy bajas de sal (0.5%), la textura fue suave pero el sabor fue insípido. A concentraciones bajas (1.0%), la textura fue adecuada y el sabor fue ligeramente bajo. A concentraciones moderadas (1.5%), la textura fue óptima y el sabor fue aceptable. A concentraciones altas (2.0%), la textura comenzó a volverse firme y el sabor fue salado pero aceptable. A concentraciones muy altas (2.5%), la textura fue muy firme y el sabor fue excesivamente salado.</p>`,
-            question: "Según el texto, ¿cuál de las siguientes gráficas representa mejor la relación entre la concentración de sal y la aceptabilidad general del sabor en productos cárnicos procesados?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["0.5", "1.0", "1.5", "2.0", "2.5"],
-                        datasets: [{
-                            label: "Aceptabilidad del sabor",
-                            data: [30, 60, 85, 70, 40],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["0.5", "1.0", "1.5", "2.0", "2.5"],
-                        datasets: [{
-                            label: "Aceptabilidad del sabor",
-                            data: [40, 70, 85, 60, 30],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["0.5", "1.0", "1.5", "2.0", "2.5"],
-                        datasets: [{
-                            label: "Aceptabilidad del sabor",
-                            data: [85, 70, 60, 30, 40],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["0.5", "1.0", "1.5", "2.0", "2.5"],
-                        datasets: [{
-                            label: "Aceptabilidad del sabor",
-                            data: [50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                }
-            ],
-            correctOption: 1,
-            explanation: "El texto describe una relación donde la aceptabilidad del sabor es baja a concentraciones muy bajas de sal (insípido), ligeramente baja a concentraciones bajas, aceptable a concentraciones moderadas, salado pero aceptable a concentraciones altas, y excesivamente salado a concentraciones muy altas. La Opción B representa correctamente esta relación, mostrando un aumento hasta el punto óptimo (1.5% de sal) y una disminución posterior."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un estudio sobre el efecto de diferentes temperaturas de fermentación en el perfil aromático y la calidad de vinos encontró que a temperaturas muy bajas (12°C), la fermentación fue lenta, resultando en vinos con aromas frutales pronunciados pero con cuerpo ligero. A temperaturas bajas (15°C), la fermentación fue moderadamente lenta, resultando en vinos con buen equilibrio entre aromas frutales y cuerpo. A temperaturas moderadas (18°C), la fermentación fue adecuada, resultando en vinos con complejidad aromática y buen cuerpo. A temperaturas altas (22°C), la fermentación fue rápida, resultando en vinos con aromas menos frutales y cuerpo más pesado. A temperaturas muy altas (25°C), la fermentación fue muy rápida, resultando en vinos con pérdida de aromas frutales y cuerpo pesado.</p>`,
-            question: "¿Cuál de las siguientes gráficas representa mejor la relación entre la temperatura de fermentación y la intensidad de aromas frutales en vinos descrita en el texto?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["12", "15", "18", "22", "25"],
-                        datasets: [{
-                            label: "Intensidad de aromas frutales",
-                            data: [90, 75, 60, 40, 25],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["12", "15", "18", "22", "25"],
-                        datasets: [{
-                            label: "Intensidad de aromas frutales",
-                            data: [25, 40, 60, 80, 100],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["12", "15", "18", "22", "25"],
-                        datasets: [{
-                            label: "Intensidad de aromas frutales",
-                            data: [90, 75, 60, 40, 25],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["12", "15", "18", "22", "25"],
-                        datasets: [{
-                            label: "Intensidad de aromas frutales",
-                            data: [50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                }
-            ],
-            correctOption: 1,
-            explanation: "El texto describe una relación donde la intensidad de aromas frutales es pronunciada a temperaturas muy bajas, buena a temperaturas bajas, moderada a temperaturas moderadas, menor a temperaturas altas, y con pérdida significativa a temperaturas muy altas. La Opción B representa correctamente esta relación, mostrando un aumento constante en la intensidad de aromas frutales a medida que aumenta la temperatura de fermentación."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un experimento sobre el efecto de diferentes tiempos de maduración en el desarrollo de sabor y la textura de quesos encontró que tiempos muy cortos (1 mes) resultaron en quesos con sabor suave y textura blanda y elástica. Tiempos cortos (3 meses) resultaron en quesos con sabor moderado y textura semidura. Tiempos moderados (6 meses) resultaron en quesos con sabor equilibrado y textura firme. Tiempos largos (9 meses) resultaron en quesos con sabor intenso y textura quebradiza. Tiempos muy largos (12 meses) resultaron en quesos con sabor muy intenso y textura granulosa y quebradiza.</p>`,
-            question: "Según el texto, ¿cuál de las siguientes gráficas representa mejor la relación entre el tiempo de maduración y la intensidad del sabor en quesos?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["1", "3", "6", "9", "12"],
-                        datasets: [{
-                            label: "Intensidad del sabor",
-                            data: [20, 40, 60, 80, 95],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["1", "3", "6", "9", "12"],
-                        datasets: [{
-                            label: "Intensidad del sabor",
-                            data: [95, 80, 60, 40, 20],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["1", "3", "6", "9", "12"],
-                        datasets: [{
-                            label: "Intensidad del sabor",
-                            data: [20, 40, 60, 80, 95],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["1", "3", "6", "9", "12"],
-                        datasets: [{
-                            label: "Intensidad del sabor",
-                            data: [50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                }
-            ],
-            correctOption: 2,
-            explanation: "El texto describe una relación donde la intensidad del sabor es suave a tiempos muy cortos, moderado a tiempos cortos, equilibrado a tiempos moderados, intenso a tiempos largos, y muy intenso a tiempos muy largos. La Opción B representa correctamente esta relación, mostrando una disminución constante en la intensidad del sabor a medida que aumenta el tiempo de maduración."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un estudio sobre el efecto de diferentes niveles de humedad en la actividad enzimática y el desarrollo de sabor en productos de panificación encontró que niveles muy bajos de humedad (30%) resultaron en baja actividad enzimática y desarrollo lento de sabor. Niveles bajos de humedad (40%) resultaron en actividad enzimática moderada y desarrollo moderado de sabor. Niveles moderados de humedad (50%) resultaron en actividad enzimática óptima y desarrollo adecuado de sabor. Niveles altos de humedad (60%) resultaron en actividad enzimática alta pero desarrollo desequilibrado de sabor. Niveles muy altos de humedad (70%) resultaron en actividad enzimática muy alta y desarrollo acelerado y desequilibrado de sabor.</p>`,
-            question: "¿Cuál de las siguientes gráficas representa mejor la relación entre el nivel de humedad y la calidad general del sabor en productos de panificación descrita en el texto?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["30", "40", "50", "60", "70"],
-                        datasets: [{
-                            label: "Calidad del sabor",
-                            data: [40, 70, 90, 60, 30],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["30", "40", "50", "60", "70"],
-                        datasets: [{
-                            label: "Calidad del sabor",
-                            data: [30, 60, 90, 70, 40],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["30", "40", "50", "60", "70"],
-                        datasets: [{
-                            label: "Calidad del sabor",
-                            data: [90, 70, 90, 60, 30],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["30", "40", "50", "60", "70"],
-                        datasets: [{
-                            label: "Calidad del sabor",
-                            data: [50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                }
-            ],
-            correctOption: 1,
-            explanation: "El texto describe una relación donde la calidad del sabor es baja a niveles muy bajos de humedad (desarrollo lento), moderada a niveles bajos, óptima a niveles moderados, y disminuye a niveles altos y muy altos debido al desarrollo desequilibrado. La Opción A representa correctamente esta relación, mostrando un aumento hasta el punto óptimo (50% de humedad) y una disminución posterior."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un experimento sobre el efecto de diferentes niveles de acidez en la coagulación de proteínas y la textura de productos lácteos encontró que niveles muy bajos de pH (4.2) produjeron coagulación rápida y textura granulosa. Niveles bajos de pH (4.4) produjeron coagulación moderadamente rápida y textura ligeramente granulosa. Niveles moderados de pH (4.6) produjeron coagulación adecuada y textura suave. Niveles altos de pH (4.8) produjeron coagulación lenta y textura muy suave. Niveles muy altos de pH (5.0) produjeron coagulación muy lenta y textura cremosa pero inestable.</p>`,
-            question: "¿Cuál de las siguientes gráficas representa mejor la relación entre el nivel de pH y la velocidad de coagulación de proteínas en productos lácteos descrita en el texto?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["4.2", "4.4", "4.6", "4.8", "5.0"],
-                        datasets: [{
-                            label: "Velocidad de coagulación",
-                            data: [90, 70, 50, 30, 10],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["4.2", "4.4", "4.6", "4.8", "5.0"],
-                        datasets: [{
-                            label: "Velocidad de coagulación",
-                            data: [10, 30, 50, 70, 90],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["4.2", "4.4", "4.6", "4.8", "5.0"],
-                        datasets: [{
-                            label: "Velocidad de coagulación",
-                            data: [90, 70, 50, 30, 10],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["4.2", "4.4", "4.6", "4.8", "5.0"],
-                        datasets: [{
-                            label: "Velocidad de coagulación",
-                            data: [50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                }
-            ],
-            correctOption: 0,
-            explanation: "El texto describe una relación donde la velocidad de coagulación es rápida a niveles muy bajos de pH, moderadamente rápida a niveles bajos, adecuada a niveles moderados, lenta a niveles altos, y muy lenta a niveles muy altos. La Opción A representa correctamente esta relación, mostrando una disminución constante en la velocidad de coagulación a medida que aumenta el nivel de pH."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un experimento sobre el efecto de diferentes temperaturas de almacenamiento en la cristalización y la textura de miel encontró que temperaturas muy bajas (5°C) produjeron cristalización rápida y textura granulosa. Temperaturas bajas (10°C) produjeron cristalización moderadamente rápida y textura ligeramente granulosa. Temperaturas moderadas (15°C) produjeron cristalización lenta y textura suave. Temperaturas altas (25°C) produjeron cristalización muy lenta y textura muy suave. Temperaturas muy altas (35°C) produjeron cristalización extremadamente lenta y textura cremosa pero propensa a la fermentación.</p>`,
-            question: "Según el texto, ¿cuál de las siguientes gráficas representa mejor la relación entre la temperatura de almacenamiento y la velocidad de cristalización en miel?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["5", "10", "15", "25", "35"],
-                        datasets: [{
-                            label: "Velocidad de cristalización",
-                            data: [90, 70, 50, 20, 5],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["5", "10", "15", "25", "35"],
-                        datasets: [{
-                            label: "Velocidad de cristalización",
-                            data: [5, 20, 50, 70, 90],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["5", "10", "15", "25", "35"],
-                        datasets: [{
-                            label: "Velocidad de cristalización",
-                            data: [90, 70, 50, 20, 5],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["5", "10", "15", "25", "35"],
-                        datasets: [{
-                            label: "Velocidad de cristalización",
-                            data: [50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                }
-            ],
-            correctOption: 1,
-            explanation: "El texto describe una relación donde la velocidad de cristalización es rápida a temperaturas muy bajas, moderadamente rápida a temperaturas bajas, lenta a temperaturas moderadas, muy lenta a temperaturas altas, y extremadamente lenta a temperaturas muy altas. La Opción B representa correctamente esta relación, mostrando un aumento constante en la velocidad de cristalización a medida que aumenta la temperatura de almacenamiento."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un estudio sobre el efecto de diferentes niveles de humedad en la actividad microbiana y la seguridad de alimentos deshidratados encontró que niveles muy bajos de humedad (10%) resultaron en mínima actividad microbiana y máxima seguridad. Niveles bajos de humedad (15%) resultaron en baja actividad microbiana y alta seguridad. Niveles moderados de humedad (20%) resultaron en actividad microbiana moderada y seguridad aceptable. Niveles altos de humedad (25%) resultaron en actividad microbiana alta y seguridad cuestionable. Niveles muy altos de humedad (30%) resultaron en actividad microbiana muy alta y riesgo significativo de contaminación.</p>`,
-            question: "¿Cuál de las siguientes gráficas representa mejor la relación entre el nivel de humedad y la seguridad general de alimentos deshidratados descrita en el texto?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["10", "15", "20", "25", "30"],
-                        datasets: [{
-                            label: "Seguridad general",
-                            data: [95, 85, 70, 45, 20],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["10", "15", "20", "25", "30"],
-                        datasets: [{
-                            label: "Seguridad general",
-                            data: [20, 45, 70, 85, 95],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["10", "15", "20", "25", "30"],
-                        datasets: [{
-                            label: "Seguridad general",
-                            data: [95, 85, 70, 45, 20],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["10", "15", "20", "25", "30"],
-                        datasets: [{
-                            label: "Seguridad general",
-                            data: [50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                }
-            ],
-            correctOption: 0,
-            explanation: "El texto describe una relación donde la seguridad es máxima a niveles muy bajos de humedad (mínima actividad microbiana), alta a niveles bajos, aceptable a niveles moderados, cuestionable a niveles altos, y con riesgo significativo a niveles muy altos. La Opción A representa correctamente esta relación, mostrando una disminución constante en la seguridad a medida que aumenta el nivel de humedad."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un experimento sobre el efecto de diferentes temperaturas de escaldado en la inactivación enzimática y la calidad de vegetales congelados encontró que temperaturas muy bajas (60°C) produjeron inactivación enzimática incompleta y textura firme después de la congelación. Temperaturas bajas (70°C) produjeron inactivación enzimática adecuada y textura ligeramente blanda después de la congelación. Temperaturas moderadas (80°C) produjeron inactivación enzimática completa y textura moderadamente blanda después de la congelación. Temperaturas altas (90°C) produjeron inactivación enzimática completa pero textura muy blanda después de la congelación. Temperaturas muy altas (100°C) produjeron inactivación enzimática completa pero textura muy blanda y parcialmente desintegrada después de la congelación.</p>`,
-            question: "Según el texto, ¿cuál de las siguientes gráficas representa mejor la relación entre la temperatura de escaldado y la calidad general de los vegetales después de la congelación?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["60", "70", "80", "90", "100"],
-                        datasets: [{
-                            label: "Calidad general después de la congelación",
-                            data: [40, 75, 90, 60, 30],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["60", "70", "80", "90", "100"],
-                        datasets: [{
-                            label: "Calidad general después de la congelación",
-                            data: [30, 60, 90, 75, 40],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["60", "70", "80", "90", "100"],
-                        datasets: [{
-                            label: "Calidad general después de la congelación",
-                            data: [90, 75, 60, 30, 40],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["60", "70", "80", "90", "100"],
-                        datasets: [{
-                            label: "Calidad general después de la congelación",
-                            data: [50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                }
-            ],
-            correctOption: 1,
-            explanation: "El texto describe una relación donde la calidad después de la congelación es baja a temperaturas muy bajas (inactivación incompleta), buena a temperaturas bajas, óptima a temperaturas moderadas, y disminuye a temperaturas altas y muy altas (muy blanda o desintegrada). La Opción B representa correctamente esta relación, mostrando un aumento hasta el punto óptimo (80°C) y una disminución posterior."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un estudio sobre el efecto de diferentes niveles de pH en la solubilidad de proteínas y la textura de productos cárnicos procesados encontró que niveles muy ácidos (4.5) produjeron alta solubilidad de proteínas y textura suave. Niveles ácidos (5.0) produjeron alta solubilidad de proteínas y textura ligeramente suave. Niveles cercanos al neutro (5.5) produjeron solubilidad moderada de proteínas y textura firme. Niveles ligeramente alcalinos (6.0) produjeron baja solubilidad de proteínas y textura muy firme. Niveles moderadamente alcalinos (6.5) produjeron muy baja solubilidad de proteínas y textura muy dura y quebradiza.</p>`,
-            question: "¿Cuál de las siguientes gráficas representa mejor la relación entre el nivel de pH y la textura general de productos cárnicos procesados descrita en el texto?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["4.5", "5.0", "5.5", "6.0", "6.5"],
-                        datasets: [{
-                            label: "Textura general",
-                            data: [90, 75, 50, 25, 10, 10],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                    }
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["4.5", "5.0", "5.5", "6.0", "6.5"],
-                        datasets: [{
-                            label: "Textura general",
-                            data: [10, 25, 50, 75, 90],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["4.5", "5.0", "5.5", "6.0", "6.5"],
-                        datasets: [{
-                            label: "Textura general",
-                            data: [90, 75, 50, 25, 10],
-                            borderColor: "rgb(75, 202, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["4.5", "5.0", "5.5", "6.0", "6.5"],
-                        datasets: [{
-                            label: "Textura general",
-                            data: [50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                }
-            ],
-            correctOption: 1,
-            explanation: "El texto describe una relación donde la textura es suave a niveles muy ácidos (alta solubilidad de proteínas), ligeramente suave a niveles ácidos, firme a niveles cercanos al neutro, muy firme a niveles ligeramente alcalinos, y muy dura y quebradiza a niveles moderadamente alcalinos. La Opción B representa correctamente esta relación, mostrando un aumento en la textura (de suave a dura) a medida que aumenta el nivel de pH."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un experimento sobre el efecto de diferentes tiempos de fermentación en el desarrollo de sabor y la textura de productos de soja fermentados encontró que tiempos muy cortos (1 semana) produjeron desarrollo insuficiente de sabor y textura firme. Tiempos cortos (2 semanas) produjeron desarrollo ligero de sabor y textura ligeramente blanda. Tiempos moderados (4 semanas) produjeron desarrollo adecuado de sabor y textura suave. Tiempos largos (8 semanas) produjeron desarrollo intenso de sabor y textura muy blanda. Tiempos muy largos (12 semanas) produjeron desarrollo muy intenso de sabor y textura cremosa pero con notas de sobrefermentación.</p>`,
-            question: "Según el texto, ¿cuál de las siguientes gráficas representa mejor la relación entre el tiempo de fermentación y la calidad general de productos de soja fermentados?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["1", "2", "4", "8", "12"],
-                        datasets: [{
-                            label: "Calidad general",
-                            data: [30, 60, 90, 70, 40],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["1", "2", "4", "8", "12"],
-                        datasets: [{
-                            label: "Calidad general",
-                            data: [40, 70, 90, 60, 30],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["1", "2", "4", "8", "12"],
-                        datasets: [{
-                            label: "Calidad general",
-                            data: [90, 70, 60, 30, 40],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["1", "2", "4", "8", "12"],
-                        datasets: [{
-                            label: "Calidad general",
-                            data: [50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                }
-            ],
-            correctOption: 1,
-            explanation: "El texto describe una relación donde la calidad es baja a tiempos muy cortos (desarrollo insuficiente), buena a tiempos cortos, óptima a tiempos moderados, y disminuye a tiempos largos y muy largos (notas de sobrefermentación). La Opción B representa correctamente esta relación, mostrando un aumento hasta el punto óptimo (4 semanas) y una disminución posterior."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un experimento sobre el efecto de diferentes temperaturas de secado en la retención de compuestos volátiles y la calidad de hierbas aromáticas encontró que temperaturas muy bajas (30°C) produjeron secado muy lento pero con excelente retención de compuestos volátiles pero requirió mucho tiempo. Temperaturas bajas (40°C) produjeron secado lento con buena retención de compuestos volátiles y requirió poco tiempo. Temperaturas moderadas (50°C) produjeron secado adecuado con retención moderada de compuestos volátiles y requirió poco tiempo. Temperaturas altas (60°C) produjeron secado rápido pero con baja retención de compuestos volátiles pero requirió muy poco tiempo. Temperaturas muy altas (70°C) produjeron secado muy rápido pero con muy baja retención de compuestos volátiles.</p>`,
-            question: "Según el texto, ¿cuál de las siguientes gráficas representa mejor la relación entre la temperatura de secado y la calidad general de hierbas aromáticas descrita en el texto?",
+            text: `<p>Un experimento sobre el efecto de diferentes temperaturas de cocción en la retención de compuestos bioactivos y la calidad de hierbas aromáticas encontró que temperaturas muy bajas (30°C) produjeron secado muy lento pero con excelente retención de compuestos volátiles. Temperaturas bajas (40°C) produjeron secado lento con buena retención de compuestos volátiles. Temperaturas moderadas (50°C) produjeron secado adecuado con retención moderada de compuestos volátiles. Temperaturas altas (60°C) produjeron secado rápido pero con baja retención de compuestos volátiles. Temperaturas muy altas (70°C) produjeron secado muy rápido pero con muy baja retención de compuestos volátiles.</p>`,
+            question: "Según el texto, ¿cuál de las siguientes gráficas representa mejor la relación entre la temperatura de secado y la calidad general de hierbas aromáticas?",
             options: [
                 {
                     title: "Opción A",
@@ -4220,10 +3096,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         labels: ["30", "40", "50", "60", "70"],
                         datasets: [{
                             label: "Calidad general",
-                            data: [30, 50, 70, 90, 110],
+                            data: [30, 50, 70, 85, 90],
                             borderColor: "rgb(75, 192, 192)",
                             tension: 0.3
                         }]
+                    }
                 },
                 {
                     title: "Opción C",
@@ -4236,6 +3113,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             borderColor: "rgb(75, 192, 192)",
                             tension: 0.3
                         }]
+                    }
                 },
                 {
                     title: "Opción D",
@@ -4248,14 +3126,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             borderColor: "rgb(75, 192, 192)",
                             tension: 0.3
                         }]
+                    }
                 }
             ],
-            correctOption: 0,
-            explanation: "El texto describe una relación donde la calidad es excelente a temperaturas muy bajas (excelente retención de compuestos volátiles pero secado muy lento), buena a temperaturas bajas (buena retención y poco tiempo), moderada a temperaturas moderadas (buena retención y poco tiempo), y disminuye a temperaturas altas y muy altas (baja retención pero muy poco tiempo). La Opción A representa correctamente esta relación, mostrando una disminución constante en la calidad a medida que aumenta la temperatura de secado."
+            correctOption: 1,
+            explanation: "El texto describe una relación donde la calidad es excelente a temperaturas muy bajas, buena a temperaturas bajas, moderada a temperaturas moderadas, baja a temperaturas altas, y muy baja a temperaturas muy altas. La Opción B representa correctamente esta relación inversa, mostrando un aumento en la calidad a medida que disminuye la temperatura de secado."
         },
         {
             difficulty: "Difícil",
-            text: `<p>Un experimento sobre el efecto de diferentes presiones de empaque en la oxidación y la calidad de productos enriquecidos con omega-3 encontró que presiones muy bajas (vacío parcial) produjeron oxidación rápida y corta vida útil. Presiones bajas (atmósfera modificada) produjeron oxidación lenta y vida útil moderada. Presiones moderadas (vacío con gas inerte) produjeron oxidación muy lenta y vida útil larga. Presiones altas (alto vacío) produjeron oxidación mínima y vida útil muy larga. Presiones muy altas (vacío extremo) produjeron oxidación mínima pero alteraron la textura del producto.</p>`,
+            text: `<p>Un estudio sobre el efecto de diferentes presiones de empaque en la oxidación y la calidad de productos enriquecidos con omega-3 encontró que presiones muy bajas (vacío parcial) produjeron oxidación rápida y corta vida útil. Presiones bajas (atmósfera modificada) produjeron oxidación lenta y vida útil moderada. Presiones moderadas (vacío con gas inerte) produjeron oxidación muy lenta y vida útil larga. Presiones altas (alto vacío) produjeron oxidación mínima y vida útil muy larga. Presiones muy altas (vacío extremo) produjeron oxidación mínima pero alteraron la textura del producto.</p>`,
             question: "Según el texto, ¿cuál de las siguientes gráficas representa mejor la relación entre la presión de empaque y la vida útil de productos enriquecidos con omega-3?",
             options: [
                 {
@@ -4278,96 +3157,41 @@ document.addEventListener('DOMContentLoaded', () => {
                         labels: ["Vacío parcial", "Atmósfera modificada", "Vacío con gas inerte", "Alto vacío", "Vacío extremo"],
                         datasets: [{
                             label: "Vida útil",
-                            data: [20, 50, 80, 95, 90],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción C",
-                    type: "line",
-                    data: {
-                        labels: ["Vacío parcial", "Atmósfera modificada", "Vacío con gas inerte", "Alto vacío", "Vacío extremo"],
-                        datasets: [{
-                            label: "Vida útil",
-                            data: [20, 50, 80, 95, 90],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
-                    title: "Opción D",
-                    type: "line",
-                    data: {
-                        labels: ["Vacío parcial", "Atmósfera modificada", "Vacío con gas inerte", "Alto vacío", "Vacío extremo"],
-                        datasets: [{
-                            label: "Vida útil",
-                            data: [50, 50, 50, 50, 50],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                }
-            ],
-            correctOption: 0,
-            explanation: "El texto describe diferentes niveles de vida útil según la presión de empaque: el vacío parcial produce corta vida útil (oxidación rápida); la atmósfera modificada produce vida útil moderada; el vacío con gas inerte produce vida útil larga; el alto vacío produce vida útil muy larga; y el vacío extremo produce vida útil muy larga pero con alteración de textura. La Opción A representa correctamente estas diferencias, mostrando un aumento en la vida útil a medida que aumenta la presión de empaque hasta el alto vacío, y una ligera disminución con el vacío extremo debido a la alteración de textura."
-        },
-        {
-            difficulty: "Difícil",
-            text: `<p>Un experimento sobre el efecto de diferentes presiones de empaque en la oxidación y la calidad de productos enriquecidos con omega-3 encontró que presiones muy bajas (vacío parcial) produjeron oxidación rápida y corta vida útil. Presiones bajas (atmósfera modificada) produjeron oxidación lenta y vida útil moderada. Presiones moderadas (vacío con gas inerte) produjeron oxidación muy lenta y vida útil larga. Presiones altas (alto vacío) produjeron oxidación mínima y vida útil muy larga. Presiones muy altas (vacío extremo) produjeron oxidación mínima pero alteraron la textura del producto.</p>`,
-            question: "Según el texto, ¿cuál de las siguientes gráficas representa mejor la relación entre la presión de empaque y la vida útil de productos enriquecidos con omega-3?",
-            options: [
-                {
-                    title: "Opción A",
-                    type: "line",
-                    data: {
-                        labels: ["Vacío parcial", "Atmósfera modificada", "Vacío con gas inerte", "Alto vacío", "Vacío extremo"],
-                        datasets: [{
-                            label: "Vida útil",
-                            data: [20, 50, 80, 95, 90],
+                            data: [90, 80, 50, 20, 95],
                             borderColor: "rgb(75, 192, 192)",
                             tension: 0.3
                         }]
                     }
                 },
                 {
-                    title: "Opción B",
-                    type: "line",
-                    data: {
-                        labels: ["Vacío parcial", "Atmósfera modificada", "Vacío con gas inerte", "Alto vacío", "Vacío extremo"],
-                        datasets: [{
-                            label: "Vida útil",
-                            data: [20, 50, 80, 95, 90],
-                            borderColor: "rgb(75, 192, 192)",
-                            tension: 0.3
-                        }]
-                },
-                {
                     title: "Opción C",
                     type: "line",
                     data: {
                         labels: ["Vacío parcial", "Atmósfera modificada", "Vacío con gas inerte", "Alto vacío", "Vacío extremo"],
                         datasets: [{
                             label: "Vida útil",
-                            data: [20, 50, 80, 95, 90],
+                            data: [95, 90, 80, 50, 20],
                             borderColor: "rgb(75, 192, 192)",
                             tension: 0.3
                         }]
+                    }
                 },
                 {
                     title: "Opción D",
                     type: "line",
                     data: {
-                        labels: ["Vacío parcial", "Atmósfera modificada", "Vacio con gas inerte", "Alto vacío", "Vacío extremo"],
+                        labels: ["Vacío parcial", "Atmósfera modificada", "Vacío con gas inerte", "Alto vacío", "Vacío extremo"],
                         datasets: [{
                             label: "Vida útil",
                             data: [50, 50, 50, 50, 50],
                             borderColor: "rgb(75, 192, 192)",
                             tension: 0.3
                         }]
+                    }
                 }
             ],
-            correctOption: 0,
-            explanation: "El texto describe diferentes niveles de vida útil según la presión de empaque: el vacío parcial produce corta vida útil (oxidación rápida); la atmósfera modificada produce vida útil moderada; el vacío con gas inerte produce vida útil larga; el alto vacío produce vida útil muy larga; y el vacío extremo produce vida útil muy larga pero con alteración de textura. La Opción A representa correctamente estas diferencias, mostrando un aumento en la vida útil a medida que aumenta la presión de empaque hasta el alto vacío, y una ligera disminución con el vacío extremo debido a la alteración de textura."
+            correctOption: 2,
+            explanation: "El texto describe diferentes niveles de vida útil según la presión de empaque: el vacío parcial produce corta vida útil (oxidación rápida); la atmósfera modificada produce vida útil moderada; el vacío con gas inerte produce vida útil larga; el alto vacío produce vida útil muy larga; y el vacío extremo produce vida útil muy larga pero con alteración de textura. La Opción C representa correctamente estas diferencias, mostrando una disminución general en la vida útil a medida que aumenta la presión de empaque."
         }
     ];
     
@@ -4451,6 +3275,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedMode === 'exam') {
             setupTimer();
             startTimer();
+        } else {
+            // Modo libre: mostrar explicaciones
+            explanationContainer.style.display = 'block';
         }
         
         // Cargar primera pregunta
@@ -4464,6 +3291,49 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Seleccionar el número de preguntas solicitado
         questions = shuffled.slice(0, selectedQuestions);
+        
+        // Si hay menos de 50 preguntas, duplicar las existentes hasta alcanzar 50
+        if (questions.length < 50) {
+            const originalQuestions = [...questions];
+            while (questions.length < 50) {
+                questions = [...questions, ...originalQuestions];
+            }
+            // Mezclar nuevamente para evitar patrones
+            questions.sort(() => 0.5 - Math.random());
+            // Tomar solo las primeras 50
+            questions = questions.slice(0, 50);
+        }
+        
+        // Asegurar que las respuestas correctas no se repitan seguidas
+        ensureVariedCorrectOptions();
+    }
+    
+    // Asegurar que las respuestas correctas no se repitan seguidas
+    function ensureVariedCorrectOptions() {
+        let lastCorrectOption = -1;
+        let consecutiveCount = 0;
+        
+        for (let i = 0; i < questions.length; i++) {
+            const currentCorrectOption = questions[i].correctOption;
+            
+            if (currentCorrectOption === lastCorrectOption) {
+                consecutiveCount++;
+                if (consecutiveCount >= 2) {
+                    // Cambiar la respuesta correcta a una opción diferente
+                    let newOption;
+                    do {
+                        newOption = Math.floor(Math.random() * 4);
+                    } while (newOption === currentCorrectOption);
+                    
+                    questions[i].correctOption = newOption;
+                    consecutiveCount = 0;
+                }
+            } else {
+                consecutiveCount = 1;
+            }
+            
+            lastCorrectOption = questions[i].correctOption;
+        }
     }
     
     // Configurar temporizador
@@ -4537,8 +3407,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Actualizar botones de navegación
         updateNavigationButtons();
         
-        // Limpiar explicación
-        explanationContainer.style.display = 'none';
+        // Limpiar explicación si es modo examen
+        if (selectedMode === 'exam') {
+            explanationContainer.style.display = 'none';
+        }
     }
     
     // Cargar opciones
@@ -4606,7 +3478,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Configurar escalas
         const xScale = (width - 2 * padding) / (data.labels.length - 1);
-        const yMax = Math.max(...data.datasets.flatMap(d => d => d.data));
+        const yMax = Math.max(...data.datasets.flatMap(d => d.data));
         const yScale = (height - 2 * padding) / yMax;
         
         // Dibujar ejes
@@ -4683,13 +3555,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Etiquetas del eje X
         for (let i = 0; i <= 4; i++) {
-            const x = padding + (i * xMax / 4);
-            ctx.fillText((i * xMax / 4).toFixed(0), x - 15, height - padding + 20);
+            const x = padding + (i * xMax / 4) * xScale;
+            ctx.fillText((i * xMax / 4).toFixed(0), x - 10, height - padding + 20);
         }
         
         // Etiquetas del eje Y
         for (let i = 0; i <= 4; i++) {
-            const y = height - (i * yMax / 4);
+            const y = height - padding - (i * yMax / 4) * yScale;
             ctx.fillText((i * yMax / 4).toFixed(0), padding - 30, y + 5);
         }
         
@@ -4697,7 +3569,7 @@ document.addEventListener('DOMContentLoaded', () => {
         data.datasets.forEach(dataset => {
             dataset.data.forEach(point => {
                 const x = padding + point.x * xScale;
-                const y = height - point.y * yScale;
+                const y = height - padding - point.y * yScale;
                 
                 ctx.beginPath();
                 ctx.arc(x, y, 5, 0, 2 * Math.PI);
@@ -4722,25 +3594,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Mostrar explicación en modo libre
         if (selectedMode === 'free') {
-            // Mostrar botón de revisar respuesta si no existe
-            if (!document.getElementById('check-answer-button')) {
-                const checkAnswerButton = document.createElement('button');
-                checkAnswerButton.className = 'nav-button';
-                checkAnswerButton.id = 'check-answer-button';
-                checkAnswerButton.innerHTML = '<i class="fas fa-check"></i> Revisar Respuesta';
-                
-                const navigationDiv = document.querySelector('.exam-navigation');
-                navigationDiv.appendChild(checkAnswerButton);
-                
-                // Event listener para el botón de revisar respuesta
-                checkAnswerButton.addEventListener('click', () => {
-                    showExplanation();
-                });
-            }
-        }
-        
-        // Ocultar explicación si ya se respondió
-        if (userAnswers[currentQuestionIndex] !== null) {
             showExplanation();
         }
     }
@@ -4748,21 +3601,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mostrar explicación
     function showExplanation() {
         const question = questions[currentQuestionIndex];
-        const correctOption = question.correctOption;
-        const userOption = userAnswers[currentQuestionIndex];
-        
-        // Mostrar explicación
         explanationContent.innerHTML = question.explanation;
         explanationContainer.style.display = 'block';
-        
-        // Marcar opciones correctas e incorrectas
-        document.querySelectorAll('.option-card').forEach((card, index) => {
-            if (index === correctOption) {
-                card.classList.add('correct');
-            } else if (index === userOption && userOption !== correctOption) {
-                card.classList.add('incorrect');
-            }
-        });
     }
     
     // Actualizar botones de navegación
@@ -4781,34 +3621,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             nextButton.style.display = 'flex';
             finishButton.style.display = 'none';
-        }
-        
-        // Ocultar botón de revisar respuesta en modo libre
-        if (selectedMode === 'free') {
-            if (userAnswers[currentQuestionIndex] !== null) {
-                if (!document.getElementById('check-answer-button')) {
-                    const checkAnswerButton = document.createElement('button');
-                    checkAnswerButton.className = 'nav-button';
-                    checkAnswerButton.id = 'check-answer-button';
-                    checkAnswerButton.innerHTML = '<i class="fas fa-check"></i> Revisar Respuesta';
-                    
-                    const navigationDiv = document.querySelector('.exam-navigation');
-                    navigationDiv.appendChild(checkAnswerButton);
-                    
-                    checkAnswerButton.addEventListener('click', () => {
-                        showExplanation();
-                    });
-                }
-            } else {
-                if (document.getElementById('check-answer-button')) {
-                    checkAnswerButton.remove();
-                }
-            }
-        } else {
-            // En modo examen, nunca mostrar botón de revisar respuesta
-            if (document.getElementById('check-answer-button')) {
-                checkAnswerButton.remove();
-            }
         }
     }
     
@@ -4855,6 +3667,9 @@ document.addEventListener('DOMContentLoaded', () => {
         userAnswers.forEach((answer, index) => {
             if (answer === questions[index].correctOption) {
                 correctCount++;
+            } else {
+                // Guardar índice de pregunta incorrecta
+                incorrectAnswers.push(index);
             }
         });
         
@@ -4884,6 +3699,11 @@ document.addEventListener('DOMContentLoaded', () => {
         percentageValue.textContent = `${Math.round((correctCount / questions.length) * 100)}%`;
         levelValue.textContent = level;
         levelDescription.textContent = levelDescription;
+        
+        // Mostrar botón de revisar respuestas en modo libre
+        if (selectedMode === 'free' && incorrectAnswers.length > 0) {
+            reviewButton.style.display = 'flex';
+        }
     }
     
     // Dibujar gráfico de desempeño
@@ -4917,7 +3737,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const padding = 60;
         const barWidth = 100;
         const spacing = 150;
-        const startX = (width - (Object.keys(categories).length * spacing - (spacing - barWidth)) / 2;
+        const startX = (width - (Object.keys(categories).length * spacing - (spacing - barWidth))) / 2;
         
         // Dibujar ejes
         ctx.beginPath();
@@ -4936,43 +3756,40 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Barra de respuestas correctas
             ctx.fillStyle = '#4CAF50';
-            ctx.fillRect(x, height - correctHeight, barWidth, correctHeight);
+            ctx.fillRect(x, height - padding - correctHeight, barWidth, correctHeight);
             
             // Barra de respuestas incorrectas
             ctx.fillStyle = '#f44336';
-            ctx.fillRect(x, height - correctHeight - incorrectHeight, barWidth, incorrectHeight);
+            ctx.fillRect(x, padding, barWidth, incorrectHeight);
             
             // Etiqueta de categoría
             ctx.fillStyle = '#333';
             ctx.font = '14px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(category, x + barWidth / 2, height - correctHeight - 15, height - correctHeight - 35);
+            ctx.fillText(category, x + barWidth / 2, height - padding + 20);
             
             // Etiqueta de porcentaje
             const percentage = Math.round((data.correct / data.total) * 100);
-            ctx.fillText(`${percentage}%`, x + barWidth / 2, height - correctHeight - 55);
+            ctx.fillText(`${percentage}%`, x + barWidth / 2, height - padding - correctHeight - 10);
             
             x += spacing;
         });
         
         // Leyenda
+        ctx.fillStyle = '#4CAF50';
+        ctx.fillRect(width - 200, 20, 15, 15);
         ctx.fillStyle = '#333';
         ctx.font = '12px Arial';
         ctx.textAlign = 'left';
-        ctx.fillText('Correctas', padding + 20, height - 25);
+        ctx.fillText('Correctas', width - 180, 32);
         
         ctx.fillStyle = '#f44336';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText('Incorrectas', padding + 20, height - 5);
-        
-        ctx.fillStyle = '#4CAF50';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText('Correctas', padding + 20, height + 15);
+        ctx.fillRect(width - 200, 45, 15, 15);
+        ctx.fillStyle = '#333';
+        ctx.fillText('Incorrectas', width - 180, 57);
     }
     
-    // Volver a intentar de nuevo
+    // Volver a intentar
     function retry() {
         // Ocultar resultados
         resultsContainer.style.display = 'none';
@@ -4988,6 +3805,7 @@ document.addEventListener('DOMContentLoaded', () => {
         userAnswers = [];
         timeLeft = 0;
         isExamFinished = false;
+        incorrectAnswers = [];
         
         // Reiniciar UI
         document.querySelectorAll('.game-mode-card').forEach(card => {
@@ -5004,10 +3822,8 @@ document.addEventListener('DOMContentLoaded', () => {
         stopTimer();
         examTimer.classList.remove('warning', 'danger');
         
-        // Limpiar botón de revisar respuesta si existe
-        if (document.getElementById('check-answer-button')) {
-            checkAnswerButton.remove();
-        }
+        // Ocultar botón de revisar respuestas
+        reviewButton.style.display = 'none';
     }
     
     // Revisar respuestas
@@ -5050,7 +3866,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const correctOption = question.correctOption;
         const userOption = userAnswers[currentQuestionIndex];
         
-        // Marcar opciones correctas e incorrectas
+        // Marcar opciones
         document.querySelectorAll('.option-card').forEach((card, index) => {
             if (index === correctOption) {
                 card.classList.add('correct');
@@ -5076,7 +3892,7 @@ document.addEventListener('DOMContentLoaded', () => {
             signOut(window.auth).then(() => window.location.href = 'index.html');
         });
     });
-    window.addEventListener('click', (event) => { if (!event.target.closest('.navbar') { userDropdown.classList.remove('active'); } });
+    window.addEventListener('click', (event) => { if (!event.target.closest('.navbar')) userDropdown.classList.remove('active'); });
     
     // Event listeners para modo de juego
     freeMode.addEventListener('click', () => selectMode('free'));
@@ -5139,454 +3955,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-    
-    // --- FUNCIONES AUXILIARES ---
-    
-    // Función para reorganizar las respuestas correctas
-    function reorganizeCorrectOptions() {
-        // Mapeo el array de respuestas correctas para evitar más de 2 seguidas con el mismo número
-        const newCorrectOptions = [];
-        let lastCorrectOption = -1;
-        
-        questions.forEach((question, index) => {
-            const correctOption = question.correctOption;
-            
-            // Evitar más de 2 seguidos con el mismo número
-            if (correctOption === lastCorrectOption) {
-                // Si el mismo que el anterior, intercambia con el siguiente
-                const availableOptions = [0, 1, 2, 3].filter(opt => opt !== correctOption);
-                if (availableOptions.length > 0) {
-                    question.correctOption = availableOptions[0];
-                } else {
-                    question.correctOption = availableOptions[0];
-                }
-            } else {
-                newCorrectOptions.push(correctOption);
-            }
-            
-            lastCorrectOption = correctOption;
-        });
-        
-        // Aplicar las nuevas respuestas correctas
-        questions.forEach((question, index) => {
-            question.correctOption = newCorrectOptions[index];
-        });
-    }
-    
-    // Llamar a la función reorganizadora después de preparar preguntas
-    const originalPrepareQuestions = prepareQuestions;
-    prepareQuestions = function() {
-        // Mezclar todas las preguntas
-        const shuffled = [...allQuestions].sort(() => 0.5 - Math.random());
-        
-        // Reorganizar las respuestas correctas
-        reorganizeCorrectOptions();
-        
-        // Seleccionar el número de preguntas solicitado
-        questions = shuffled.slice(0, selectedQuestions);
-    };
-    
-    // Sobreescribir la función prepareQuestions
-    const originalPrepareQuestions = prepareQuestions;
-    prepareQuestions = function() {
-        // Llamar a la función original primero
-        originalPrepareQuestions();
-        
-        // Luego reorganizar las respuestas correctas
-        reorganizeCorrectOptions();
-        
-        // Continuar con el proceso normal
-        return originalPrepareQuestions();
-    };
-    
-    // --- EVENT LISTENERS ---
-    
-    // Event listeners para modo de juego
-    freeMode.addEventListener('click', () => selectMode('free'));
-    examMode.addEventListener('click', () => selectMode('exam'));
-    tenQuestions.addEventListener('click', () => selectQuestionCount(10));
-    twentyQuestions.addEventListener('click', () => selectQuestionCount(20));
-    thirtyFiveQuestions.addEventListener('click', () => selectQuestionCount(35));
-    startButton.addEventListener('click', startExam);
-    
-    // Event listeners para navegación del examen
-    prevButton.addEventListener('click', goToPreviousQuestion);
-    nextButton.addEventListener('click', goToNextQuestion);
-    finishButton.addEventListener('click', finishExam);
-    
-    // Event listeners para resultados
-    retryButton.addEventListener('click', retry);
-    reviewButton.addEventListener('click', reviewAnswers);
-    menuButton.addEventListener('click', goToMenu);
-    
-    // Event listeners para iconos flotantes
-    document.getElementById('btn-misiones').addEventListener('click', () => {
-        showToast('Completa correctamente todos los ejercicios para ganar la misión');
-    });
-    document.getElementById('btn-nivel').addEventListener('click', () => {
-        const level = document.getElementById('level-value').textContent;
-        showToast(`Nivel actual: ${level}`);
-    });
-    document.getElementById('btn-progreso').addEventListener('click', () => {
-        if (questions.length > 0) {
-            const answered = userAnswers.filter(a => a !== null).length;
-            showToast(`Progreso: ${answered}/${questions.length} preguntas respondidas`);
-        } else {
-            showToast('Aún no has comenzado el examen');
-        }
-    });
-    
-    // --- MANEJO DE NAVEGACIÓN MÓVIL ---
-    const navItems = document.querySelectorAll('.main-navigation > ul > li');
-    navItems.forEach(item => {
-        const link = item.querySelector('span');
-        if (link && item.querySelector('.dropdown')) {
-            link.addEventListener('click', (e) => {
-                if (window.innerWidth <= 1024) {
-                    e.preventDefault();
-                    item.classList.toggle('active');
-                }
-            });
-        });
-        // JS for nested dropdowns on mobile
-        const subItems = item.querySelectorAll('.dropdown > li');
-        subItems.forEach(subItem => {
-            const subLink = subItem.querySelector('span');
-            if(subLink && subItem.querySelector('.sub-dropdown')) {
-                subLink.addEventListener('click', (e) => {
-                    if (window.innerWidth <= 1024) {
-                        e.preventDefault();
-                        subItem.classList.toggle('active');
-                    }
-                });
-            }
-        });
-    });
-    
-    // --- FUNCIONES PRINCIPALES ---
-    
-    // Seleccionar opción
-    function selectOption(index) {
-        // Guardar respuesta
-        userAnswers[currentQuestionIndex] = index;
-        
-        // Actualizar UI
-        document.querySelectorAll('.option-card').forEach((card, i) => {
-            card.classList.remove('selected');
-            if (i === index) {
-                card.classList.add('selected');
-            }
-        });
-        
-        // Mostrar explicación en modo libre
-        if (selectedMode === 'free') {
-            // Mostrar botón de revisar respuesta si no existe
-            if (!document.getElementById('check-answer-button')) {
-                const checkAnswerButton = document.createElement('button');
-                checkAnswerButton.className = 'nav-button';
-                checkAnswerButton.id = 'check-answer-button';
-                checkAnswerButton.innerHTML = '<i class="fas fa-check"></i> Revisar Respuesta';
-                
-                const navigationDiv = document.querySelector('.exam-navigation');
-                navigationDiv.appendChild(checkAnswerButton);
-                
-                // Event listener para el botón de revisar respuesta
-                checkAnswerButton.addEventListener('click', () => {
-                    showExplanation();
-                });
-            }
-        }
-        
-        // Ocultar explicación si ya fue respondida
-        if (userAnswers[currentQuestionIndex] !== null) {
-            showExplanation();
-        }
-    }
-    
-    // Mostrar explicación
-    function showExplanation() {
-        const question = questions[currentQuestionIndex];
-        const correctOption = question.correctOption;
-        const userOption = userAnswers[currentQuestionIndex];
-        
-        // Mostrar explicación
-        explanationContent.innerHTML = question.explanation;
-        explanationContainer.style.display = 'block';
-        
-        // Marcar opciones correctas e incorrectas
-        document.querySelectorAll('.option-card').forEach((card, index) => {
-            if (index === correctOption) {
-                card.classList.add('correct');
-            } else if (index === userOption && userOption !== correctOption) {
-                card.classList.add('incorrect');
-            }
-        });
-    }
-    
-    // Actualizar botones de navegación
-    function updateNavigationButtons() {
-        // Botón anterior
-        if (currentQuestionIndex === 0) {
-            prevButton.disabled = true;
-        } else {
-            prevButton.disabled = false;
-        }
-        
-        // Botón siguiente/finalizar
-        if (currentQuestionIndex === questions.length - 1) {
-            nextButton.style.display = 'none';
-            finishButton.style.display = 'flex';
-        } else {
-            nextButton.style.display = 'flex';
-            finishButton.style.display = 'none';
-        }
-        
-        // En modo libre, mostrar botón de revisar respuesta si no existe
-        if (selectedMode === 'free') {
-            if (userAnswers[currentQuestionIndex] !== null) {
-                if (!document.getElementById('check-answer-button')) {
-                    const checkAnswerButton = document.createElement('button');
-                    checkAnswerButton.className = 'nav-button';
-                    checkAnswerButton.id = 'check-answer-button';
-                    checkAnswerButton.innerHTML = '<i class="fas fa-check"></i> Revisar Respuesta';
-                    
-                    const navigationDiv = document.querySelector('.exam-navigation');
-                    navigationDiv.appendChild(checkAnswerButton);
-                    
-                    // Event listener para el botón de revisar respuesta
-                    checkAnswerButton.addEventListener('click', () => {
-                        showExplanation();
-                    });
-                }
-            } else {
-                if (document.getElementById('check-answer-button')) {
-                    checkAnswerButton.remove();
-                }
-            }
-        } else {
-            // En modo examen, nunca mostrar botón de revisar respuesta
-            if (document.getElementById('check-answer-button')) {
-                checkAnswerButton.remove();
-            }
-        }
-    }
-    
-    // Volver a intentar de nuevo
-    function retry() {
-        // Ocultar resultados
-        resultsContainer.style.display = 'none';
-        
-        // Mostrar selección de modo
-        gameModeContainer.style.display = 'flex';
-        
-        // Reiniciar variables
-        selectedMode = null;
-        selectedQuestions = null;
-        currentQuestionIndex = 0;
-        questions = [];
-        userAnswers = [];
-        timeLeft = 0;
-        isExamFinished = false;
-        
-        // Reiniciar UI
-        document.querySelectorAll('.game-mode-card').forEach(card => {
-            card.classList.remove('selected');
-        });
-        
-        document.querySelectorAll('.question-number-card').forEach(card => {
-            card.classList.remove('selected');
-        });
-        
-        startButton.disabled = true;
-        
-        // Limpiar temporizador
-        stopTimer();
-        examTimer.classList.remove('warning', 'danger');
-        
-        // Limpiar botón de revisar respuesta si existe
-        if (document.getElementById('check-answer-button')) {
-            checkAnswerButton.remove();
-        }
-    }
-    
-    // Revisar respuestas
-    function reviewAnswers() {
-        // Ocultar resultados
-        resultsContainer.style.display = 'none';
-        
-        // Mostrar examen en modo revisión
-        examContainer.style.display = 'flex';
-        
-        // Configurar para modo revisión
-        selectedMode = 'review';
-        currentQuestionIndex = 0;
-        
-        // Cargar primera pregunta
-        loadQuestion();
-        
-        // Mostrar respuestas correctas y explicaciones
-        showReviewAnswers();
-        
-        // Ocultar botón de finalizar
-        finishButton.style.display = 'none';
-        
-        // Mostrar botón de volver a resultados
-        const backButton = document.createElement('button');
-        backButton.className = 'nav-button';
-        backButton.innerHTML = '<i class="fas fa-arrow-left"></i> Volver a Resultados';
-        backButton.addEventListener('click', () => {
-            examContainer.style.display = 'none';
-            resultsContainer.style.display = 'flex';
-        });
-        
-        const navigationDiv = document.querySelector('.exam-navigation');
-        navigationDiv.appendChild(backButton);
-    }
-    
-    // --- FUNCIONES AUXILIARES ---
-    
-    // Dibujar gráfico de desempeño
-    function drawPerformanceChart() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 800;
-        canvas.height = 400;
-        performanceChart.innerHTML = '';
-        performanceChart.appendChild(canvas);
-        
-        const ctx = canvas.getContext('2d');
-        
-        // Preparar datos
-        const categories = {
-            'Medio': { correct: 0, total: 0 },
-            'Difícil': { correct: 0, total: 0 }
-        };
-        
-        userAnswers.forEach((answer, index) => {
-            const difficulty = questions[index].difficulty;
-            categories[difficulty].total++;
-            
-            if (answer === questions[index].correctOption) {
-                categories[difficulty].correct++;
-            }
-        });
-        
-        // Configurar gráfico
-        const width = canvas.width;
-        const height = canvas.height;
-        const padding = 60;
-        const barWidth = 100;
-        const spacing = 150;
-        const startX = (width - (Object.keys(categories).length * spacing - (spacing - barWidth)) / 2);
-        
-        // Dibujar ejes
-        ctx.beginPath();
-        ctx.beginPath();
-        ctx.moveTo(padding, padding);
-        ctx.lineTo(padding, height - padding);
-        ctx.lineTo(width - padding, height - padding);
-        ctx.strokeStyle = '#333';
-        ctx.stroke();
-        
-        // Dibujar barras
-        let x = startX;
-        
-        Object.entries(categories).forEach(([category, data]) => {
-            const correctHeight = (data.correct / data.total) * (height - 2 * padding);
-            const incorrectHeight = height - 2 * padding - correctHeight;
-            
-            // Barra de respuestas correctas
-            ctx.fillStyle = '#4CAF50';
-            ctx.fillRect(x, height - correctHeight, barWidth, correctHeight);
-            
-            // Barra de respuestas incorrectas
-            ctx.fillStyle = '#f44336';
-            ctx.fillRect(x, padding, incorrectHeight, barWidth, incorrectHeight);
-            
-            // Etiqueta de categoría
-            ctx.fillStyle = '#333';
-            ctx.font = '14px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(category, x + barWidth / 2, height - correctHeight - 15);
-            
-            // Etiqueta de porcentaje
-            const percentage = Math.round((data.correct / data.total) * 100);
-            ctx.fillText(`${percentage}%`, x + barWidth / 2, height - correctHeight - 35);
-            
-            x += spacing;
-        });
-        
-        // Leyenda
-        ctx.fillStyle = '#4CAF50';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText('Correctas', padding + 20, height - 35);
-        
-        ctx.fillStyle = '#f44336';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText('Incorrectas', padding + 20, height - 15);
-        
-        ctx.fillStyle = '#4CAF50';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText('Incorrectas', padding + 20, height + 5);
-        
-        ctx.fillStyle = '#333';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText('Correctas', padding + 20, height + 25);
-        
-        ctx.fillStyle = '#4CAF50';
-        ctx.font = '12px;
-        ctx.textAlign = 'left';
-        ctx.fillText('Incorrectas', padding + 20, height + 45);
-        
-        ctx.fillStyle = '#f44336';
-        ctx.font = '12px;
-        ctx.textAlign = 'left';
-        ctx.fillText('Correctas', padding + 20, height + 65);
-    }
-    
-    // Volver al menú
-    function goToMenu() {
-        location.reload();
-    }
-    
-    // --- MANEJO DE NAVEGACIÓN MÓVIL ---
-    const navItems = document.querySelectorAll('.main-navigation > ul > li');
-    navItems.forEach(item => {
-        const link = item.querySelector('span');
-        if (link && item.querySelector('.dropdown')) {
-            link.addEventListener('click', (e) => {
-                if (window.innerWidth <= 1024) {
-                    e.preventDefault();
-                    item.classList.toggle('active');
-                }
-            });
-        }
-        // JS for nested dropdowns on mobile
-        const subItems = item.querySelectorAll('.dropdown > li');
-        subItems.forEach(subItem => {
-            const subLink = subItem.querySelector('span');
-            if (subLink && subItem.querySelector('.sub-dropdown')) {
-                subLink.addEventListener('click', (e) => {
-                    if (window.innerWidth <= 1024) {
-                        e.preventDefault();
-                        subItem.classList.toggle('active');
-                    }
-                });
-            }
-        });
-    });
-    
-    // --- CÓDIGO COMPLETO ---
-    function shuffleArray(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array[0];
-    }
+});
 </script>
 </body>
 </html>
