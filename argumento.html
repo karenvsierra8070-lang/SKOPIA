@@ -353,6 +353,31 @@ body {
     z-index: 10001; display: none; font-size: 0.95rem; max-width: 350px; 
     font-weight: 500; display: flex; align-items: center; gap: 10px;
 }
+   .lupa-label {
+    position: absolute;
+    background: var(--color-rojo-error);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    pointer-events: none; /* Para que no interfiera con el mouse */
+    display: none; /* Oculta por defecto */
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.lupa-label::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-right: 5px solid var(--color-rojo-error);
+}
 .toast.show { display: flex; animation: slideIn 0.3s ease-out; }
 .toast.success { background: var(--color-verde-exito); }
 .toast.error { background: var(--color-rojo-error); }
@@ -730,14 +755,49 @@ onAuthStateChanged(auth, (user) => {
 document.addEventListener('DOMContentLoaded', () => {
     
   // --- BASES DE DATOS LOCALES (Versión Integra para Saber Pro) ---
-    const proofs = [
-        { title: "1 = 2", lines: ["Sea a = b", "Multiplicamos por a: a² = ab", "Restamos b²: a² - b² = ab - b²", "Factorizamos: (a-b)(a+b) = b(a-b)", "Dividimos por (a-b): a+b = b", "Como a=b, entonces 2b = b", "Dividimos por b: 2 = 1"], errorIndex: 4, explanation: "¡Cuidado! En el paso 5 se divide por (a-b). Como a=b, entonces (a-b) es 0. **No se puede dividir por cero**." },
-        { title: "Suma Infinita", lines: ["Sea S = 1 + 2 + 4 + 8 + ...", "Multiplicamos por 2: 2S = 2 + 4 + 8 + ...", "Restamos: 2S - S", "Cancelamos términos", "Resultado: S = -1"], errorIndex: 3, explanation: "No se pueden cancelar términos infinitos en series divergentes como si fueran números finitos. Error de **Validez**." },
-        { title: "Números son 0", lines: ["Sean x e y", "Sea d = x - y", "x(x-y) = d(x-y)", "x² - xy = dx - dy", "(x-y)² = d(x-y) + y² (Falso)", "d² = d² + y²", "Por lo tanto y² = 0"], errorIndex: 4, explanation: "El paso 5 fuerza una factorización matemáticamente incorrecta. Error de **Validez**." },
-        { title: "Círculo = Cuadrado", lines: ["Aproximamos π = 3", "Área círculo = πr²", "Sustituimos: 3r²", "Lado cuadrado circunscrito = 2r", "Área cuadrado = (2r)² = 4r²", "Diferencia pequeña, por lo tanto son iguales"], errorIndex: 5, explanation: "Afirmar igualdad por diferencia pequeña es una falacia. La premisa π=3 es falsa. Error de **Solidez**." },
-        { title: "Peso de nubes", lines: ["El algodón pesa poco", "Las nubes parecen algodón", "Por lo tanto, las nubes pesan poco"], errorIndex: 1, explanation: "Analogía visual falsa. Las nubes son agua condensada, no algodón. Error de **Solidez**." },
-        { title: "Demostración Trigonométrica", lines: ["Sea θ = 0", "sin(2θ) = 2sin(θ)", "Dividimos todo por sin(θ)", "2 = 2cos(θ)", "Para θ=0, 2 = 2"], errorIndex: 2, explanation: "Dividir por sin(θ) cuando θ=0 es dividir por cero. Error de **Validez**." },
-        { title: "1+1=1", lines: ["Sea a = 1, b = 1", "a = b", "a² = ab", "a² - b² = ab - b²", "(a-b)(a+b) = b(a-b)", "a+b = b", "2 = 1"], errorIndex: 4, explanation: "División por cero (a-b=0). Error de **Validez**." }
+  const proofs = [
+        { 
+            title: "1 = 2", 
+            lines: ["Sea a = b", "Multiplicamos por a: a² = ab", "Restamos b²: a² - b² = ab - b²", "Factorizamos: (a-b)(a+b) = b(a-b)", "Dividimos por (a-b): a+b = b", "Como a=b, entonces 2b = b", "Dividimos por b: 2 = 1"], 
+            errorIndex: 4, 
+            explanation: "¡Error de Validez! En el paso 5 intentas dividir por (a-b). Como al inicio establecimos que a=b, entonces (a-b) es igual a cero. **En matemáticas, la división por cero está indefinida**." 
+        },
+        { 
+            title: "Suma Infinita", 
+            lines: ["Sea S = 1 + 2 + 4 + 8 + ...", "Multiplicamos por 2: 2S = 2 + 4 + 8 + ...", "Restamos: 2S - S", "Cancelamos términos", "Resultado: S = -1"], 
+            errorIndex: 3, 
+            explanation: "¡Error de Validez! No se pueden aplicar reglas de álgebra común (como cancelar términos) a series infinitas que no convergen. Esta serie crece al infinito, por lo que tratarla como un número real 'S' es un error lógico." 
+        },
+        { 
+            title: "Números son 0", 
+            lines: ["Sean x e y", "Sea d = x - y", "x(x-y) = d(x-y)", "x² - xy = dx - dy", "(x-y)² = d(x-y) + y² (Falso)", "d² = d² + y²", "Por lo tanto y² = 0"], 
+            errorIndex: 4, 
+            explanation: "¡Error de Validez! El paso 5 introduce términos que no se derivan lógicamente de la igualdad anterior. Es una manipulación arbitraria que rompe la cadena de razonamiento." 
+        },
+        { 
+            title: "Círculo = Cuadrado", 
+            lines: ["Aproximamos π = 3", "Área círculo = πr²", "Sustituimos: 3r²", "Lado cuadrado circunscrito = 2r", "Área cuadrado = (2r)² = 4r²", "Diferencia pequeña, por lo tanto son iguales"], 
+            errorIndex: 5, 
+            explanation: "¡Error de Solidez! Primero, la premisa π=3 es falsa. Segundo, en lógica y matemáticas, que dos valores sean 'parecidos' no permite concluir que sean iguales. Es una falacia de generalización." 
+        },
+        { 
+            title: "Peso de nubes", 
+            lines: ["El algodón pesa poco", "Las nubes parecen algodón", "Por lo tanto, las nubes pesan poco"], 
+            errorIndex: 1, 
+            explanation: "¡Error de Solidez! Se basa en una **falsa analogía**. El parecido visual entre el algodón y las nubes no implica que compartan propiedades físicas como la densidad o el peso." 
+        },
+        { 
+            title: "Demostración Trigonométrica", 
+            lines: ["Sea θ = 0", "sin(2θ) = 2sin(θ)", "Dividimos todo por sin(θ)", "2 = 2cos(θ)", "Para θ=0, 2 = 2"], 
+            errorIndex: 2, 
+            explanation: "¡Error de Validez! En el paso 3 divides por sin(θ). Dado que estableciste que θ=0, y el sin(0) es 0, estás cometiendo nuevamente el error crítico de dividir por cero." 
+        },
+        { 
+            title: "1+1=1", 
+            lines: ["Sea a = 1, b = 1", "a = b", "a² = ab", "a² - b² = ab - b²", "(a-b)(a+b) = b(a-b)", "a+b = b", "2 = 1"], 
+            errorIndex: 4, 
+            explanation: "¡Error de Validez! Al igual que en la prueba de 1=2, el paso 5 requiere dividir por (a-b). Como ambos valen 1, su resta es 0. La lógica se rompe al realizar una operación prohibida." 
+        }
     ];
 
     const converses = [
@@ -996,30 +1056,44 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('touchend', endDrag);
     }
 
-    function checkCollision() {
+  function checkCollision() {
         const magnifier = document.getElementById('magnifier');
         const magRect = magnifier.getBoundingClientRect();
         const lines = document.querySelectorAll('.proof-line');
+        const feedback = document.getElementById('proof-feedback'); // El cuadro de texto de abajo
         let errorFound = false;
 
         lines.forEach(line => {
             if (line.dataset.isError === "true") {
                 const lineRect = line.getBoundingClientRect();
-                if (!(magRect.right < lineRect.left || magRect.left > lineRect.right || magRect.bottom < lineRect.top || magRect.top > lineRect.bottom)) {
+                const isOverlapping = !(magRect.right < lineRect.left || 
+                                        magRect.left > lineRect.right || 
+                                        magRect.bottom < lineRect.top || 
+                                        magRect.top > lineRect.bottom);
+                
+                if (isOverlapping) {
                     magnifier.classList.add('vibrating');
                     errorFound = true;
+
+                    // Muestra la explicación automáticamente al encontrar el error
+                    feedback.className = 'feedback-box success';
+                    feedback.innerHTML = `<i class="fas fa-lightbulb"></i> <strong>Explicación:</strong> ${currentProof.explanation}`;
+                    feedback.style.display = 'block';
+
+                    // Sumar puntos (solo la primera vez que se toca el error en esta ronda)
+                    if (!window.puntosYaSumados) {
+                        updateScoreUI(20);
+                        window.puntosYaSumados = true;
+                    }
                 }
             }
         });
-        if(!errorFound) magnifier.classList.remove('vibrating');
-    }
-
-    magnifier.addEventListener('click', () => {
-        if (magnifier.classList.contains('vibrating')) {
-            openModal();
+        
+        // Si alejamos la lupa del error, el mensaje se queda pero la vibración para
+        if(!errorFound) {
             magnifier.classList.remove('vibrating');
         }
-    });
+    }
 
     // --- 3. LÓGICA CONVERSÓMETRO ---
     function initConverso() {
