@@ -1194,25 +1194,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- EXPOSICIÓN DE FUNCIONES GLOBALES ---
-    window.stampAudit = function(index, type, btn) {
-        const card = btn.closest('.tweet-card');
-        const feedback = card.querySelector('.audit-feedback');
-        const correctType = currentAudits[index].type;
+  window.stampAudit = function(index, type, btn) {
+    const card = btn.closest('.tweet-card');
+    const feedback = card.querySelector('.audit-feedback');
+    const correctType = currentAudits[index].type;
 
-        card.querySelectorAll('.stamp-btn').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
+    // --- BLOQUEO DE SEGURIDAD ---
+    // Si la tarjeta ya tiene la clase 'answered', detenemos la función
+    if (card.classList.contains('answered')) return;
 
-        if (type === correctType) {
-            feedback.style.color = 'var(--color-verde-exito)';
-            feedback.style.background = '#e8f5e9';
-            feedback.innerHTML = `<i class="fas fa-check"></i> <strong>Correcto.</strong> ${currentAudits[index].reason}`;
-        } else {
-            feedback.style.color = 'var(--color-rojo-error)';
-            feedback.style.background = '#ffebee';
-            feedback.innerHTML = `<i class="fas fa-times"></i> Incorrecto.`;
-            triggerGlitch();
-        }
-    };
+    // Marcamos la tarjeta como respondida inmediatamente
+    card.classList.add('answered');
+
+    // Deshabilitamos visualmente todos los botones de esta tarjeta
+    card.querySelectorAll('.stamp-btn').forEach(b => {
+        b.style.opacity = "0.5";
+        b.style.cursor = "not-allowed";
+        b.classList.remove('selected');
+    });
+
+    // Resaltamos el botón que el usuario eligió
+    btn.classList.add('selected');
+    btn.style.opacity = "1"; 
+
+    // LÓGICA DE VALIDACIÓN
+    if (type === correctType) {
+        feedback.style.color = 'var(--color-verde-exito)';
+        feedback.style.background = '#e8f5e9';
+        feedback.innerHTML = `<i class="fas fa-check"></i> <strong>Correcto.</strong> ${currentAudits[index].reason}`;
+    } else {
+        feedback.style.color = 'var(--color-rojo-error)';
+        feedback.style.background = '#ffebee';
+        // Agregué cuál era la correcta para que el usuario aprenda del error
+        feedback.innerHTML = `<i class="fas fa-times"></i> <strong>Incorrecto.</strong> La respuesta era ${correctType.toUpperCase()}. ${currentAudits[index].reason}`;
+        triggerGlitch();
+    }
+};
 
    window.checkCounterexample = function() {
     const input = document.getElementById('counter-input').value.trim().toLowerCase();
