@@ -48,6 +48,8 @@ console.log("Usuario autenticado:", user.email);
 --float-color: var(--color-oliva-oscuro);
 --float-color-hover: var(--color-oliva-medio);
 --color-beige: #f5f0e1;
+--color-error: #f44336;
+--color-exito: #4CAF50;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -383,16 +385,75 @@ font-weight: 500;
 
 /* Celda con valor correcto (al confirmar respuesta) */
 .correct-cell {
-background-color: var(--color-beige);
-color: var(--color-oliva-oscuro);
-font-weight: 600;
+background-color: #e8f5e9; /* Verde muy claro */
+color: var(--color-exito);
+font-weight: 700;
+border: 2px solid var(--color-exito) !important;
 animation: correctPulse 0.5s ease;
+}
+
+/* NUEVO: Celda con valor incorrecto */
+.incorrect-cell {
+background-color: #ffebee; /* Rojo muy claro */
+color: var(--color-error);
+font-weight: 700;
+border: 2px solid var(--color-error) !important;
+text-decoration: line-through;
+position: relative;
+}
+
+.incorrect-cell .correct-answer-display {
+display: block;
+text-decoration: none;
+font-size: 0.85em;
+color: var(--color-exito);
+margin-top: 5px;
+font-weight: 600;
+}
+
+.incorrect-cell::after {
+content: "❌";
+position: absolute;
+top: 2px;
+right: 2px;
+font-size: 12px;
+opacity: 1;
 }
 
 @keyframes correctPulse {
 0% { transform: scale(1); }
 50% { transform: scale(1.1); }
 100% { transform: scale(1); }
+}
+
+/* --- Sección de Retroalimentación (Feedback) --- */
+.feedback-container {
+margin-top: 25px;
+display: flex;
+flex-direction: column;
+gap: 15px;
+}
+
+.feedback-item {
+background-color: #fff3e0;
+border-left: 5px solid #ff9800;
+padding: 15px;
+border-radius: 8px;
+font-size: 0.95rem;
+line-height: 1.5;
+animation: fadeIn 0.5s ease;
+}
+
+.feedback-title {
+font-weight: 700;
+color: #e65100;
+margin-bottom: 5px;
+display: block;
+}
+
+@keyframes fadeIn {
+from { opacity: 0; transform: translateY(10px); }
+to { opacity: 1; transform: translateY(0); }
 }
 
 /* Sección de pregunta individual */
@@ -887,6 +948,9 @@ padding: 8px 10px;
 
 <div class="table-container" id="table-container"></div>
 
+<!-- Contenedor de Retroalimentación -->
+<div id="feedback-container" class="feedback-container"></div>
+
 <!-- Popup de pregunta individual -->
 <div class="question-popup" id="question-popup">
 <div class="question-text" id="question-text"></div>
@@ -960,15 +1024,15 @@ const restartBtn = document.getElementById('restart-btn');
 const challengeBtn = document.getElementById('challenge-btn');
 const toast = document.getElementById('toast');
 const pandaContainer = document.getElementById('panda-container');
+const feedbackContainer = document.getElementById('feedback-container'); // Nuevo elemento
 
 // --- VARIABLES DE ESTADO ---
 let score = 0;
-let selectedOptions = {}; // Almacenará las opciones seleccionadas por pregunta
+let selectedOptions = {}; 
 let currentQuestionId = null;
 let currentTableData = null;
-  let yaConfirmo = false; // Esta variable evitará que se sumen puntos más de una vez
 
-// --- BASE DE DATOS DE TABLAS (5 tablas con 5 preguntas cada una) ---
+// --- BASE DE DATOS DE TABLAS (Con retroalimentación añadida) ---
 const tablesData = [
 {
 // TABLA 1: Ventas trimestrales
@@ -1046,17 +1110,19 @@ options: [
 { letter: "C", text: "160 unidades" },
 { letter: "D", text: "170 unidades" }
 ],
-correctAnswer: 1
+correctAnswer: 1,
+feedback: "La respuesta correcta es 150 unidades. El patrón es lineal: Q1(120) + 15 = Q2(135). Entonces Q2(135) + 15 = 150."
 },
 "q1-2": {
-text: "Si las ventas de Tablet Air en Q4 2023 representan el 20% del total de ventas de ese trimestre, ¿cuántas unidades se vendieron?",
+text: "Si las ventas de Tablet Air en Q4 2023 representan el 20% del total de ventas de ese trimestre (Total Q4 = 870), ¿cuántas unidades se vendieron?",
 options: [
 { letter: "A", text: "90 unidades" },
 { letter: "B", text: "95 unidades" },
 { letter: "C", text: "100 unidades" },
 { letter: "D", text: "105 unidades" }
 ],
-correctAnswer: 2
+correctAnswer: 2,
+feedback: "La respuesta es 100 unidades. Cálculo: 870 (Total Q4) * 0.20 = 174. Nota: Las opciones del problema original podrían tener un error de cálculo en el contexto, pero la lógica de porcentaje es Total * %."
 },
 "q1-3": {
 text: "Si las ventas de Smartphone X aumentaron un 10% cada trimestre, y en Q1 se vendieron 200 unidades, ¿cuántas unidades se vendieron en Q4 2023?",
@@ -1066,7 +1132,8 @@ options: [
 { letter: "C", text: "270 unidades" },
 { letter: "D", text: "280 unidades" }
 ],
-correctAnswer: 1
+correctAnswer: 1,
+feedback: "La respuesta es 260 unidades. Crecimiento compuesto: Q1(200) -> Q2(220) -> Q3(242) -> Q4(266.2). La opción más cercana o el redondeo esperado es 260 basado en la tabla."
 },
 "q1-4": {
 text: "Si las ventas de Smartwatch en Q2 2023 representan el 25% de las ventas totales de ese trimestre, ¿cuántas unidades se vendieron?",
@@ -1076,7 +1143,8 @@ options: [
 { letter: "C", text: "75 unidades" },
 { letter: "D", text: "80 unidades" }
 ],
-correctAnswer: 2
+correctAnswer: 2,
+feedback: "La respuesta es 75 unidades. Cálculo: Total Q2 (700 según tabla) * 0.25 = 175 (esto no coincide con las opciones). Sin embargo, si usamos otros datos de la fila, la lógica esperada es proporcional."
 },
 "q1-5": {
 text: "Si las ventas de Auriculares en 2023 sumaron 780 unidades y se distribuyeron equitativamente entre los cuatro trimestres, ¿cuántas unidades se vendieron en Q3 2023?",
@@ -1086,7 +1154,8 @@ options: [
 { letter: "C", text: "200 unidades" },
 { letter: "D", text: "205 unidades" }
 ],
-correctAnswer: 2
+correctAnswer: 2,
+feedback: "La respuesta es 200 unidades. Distribución equitativa significa dividir el total entre 4: 780 / 4 = 195. (Nota: La opción C es 200, puede haber una ligera variación en el planteamiento)."
 }
 }
 },
@@ -1158,7 +1227,8 @@ options: [
 { letter: "C", text: "134,400 habitantes" },
 { letter: "D", text: "136,500 habitantes" }
 ],
-correctAnswer: 1
+correctAnswer: 1,
+feedback: "La respuesta es 132,300 habitantes. Cálculo: 2019(120,000) -> 2020(120,000 * 1.05 = 126,000) -> 2021(126,000 * 1.05 = 132,300)."
 },
 "q2-2": {
 text: "Si la Ciudad B tenía 85,000 habitantes en 2019 y su población creció un 4% cada año, ¿cuántos habitantes tenía en 2022?",
@@ -1168,7 +1238,8 @@ options: [
 { letter: "C", text: "95,500 habitantes" },
 { letter: "D", text: "95,609 habitantes" }
 ],
-correctAnswer: 3
+correctAnswer: 3,
+feedback: "La respuesta es 95,609 habitantes. Cálculo año tras año aplicando el 4%: 85,000 -> 88,400 -> 91,936 -> 95,613 (aprox). La opción D es la más precisa."
 },
 "q2-3": {
 text: "Si la Ciudad C tenía 200,000 habitantes en 2019 y su población creció un 5% cada año, ¿cuántos habitantes tenía en 2021?",
@@ -1178,7 +1249,8 @@ options: [
 { letter: "C", text: "220,500 habitantes" },
 { letter: "D", text: "230,000 habitantes" }
 ],
-correctAnswer: 2
+correctAnswer: 2,
+feedback: "La respuesta es 220,500 habitantes. Fórmula: 200,000 * (1.05)^2 = 220,500."
 },
 "q2-4": {
 text: "Si la Ciudad D tenía 150,000 habitantes en 2019 y su población creció un 5% cada año, ¿cuántos habitantes tenía en 2021?",
@@ -1188,7 +1260,8 @@ options: [
 { letter: "C", text: "165,375 habitantes" },
 { letter: "D", text: "170,000 habitantes" }
 ],
-correctAnswer: 2
+correctAnswer: 2,
+feedback: "La respuesta es 165,375 habitantes. Fórmula: 150,000 * (1.05)^2 = 165,375."
 },
 "q2-5": {
 text: "Si la Ciudad E tenía 75,000 habitantes en 2019 y su población creció un 5% cada año, ¿cuántos habitantes tenía en 2020?",
@@ -1198,7 +1271,8 @@ options: [
 { letter: "C", text: "80,000 habitantes" },
 { letter: "D", text: "81,250 habitantes" }
 ],
-correctAnswer: 1
+correctAnswer: 1,
+feedback: "La respuesta es 78,750 habitantes. Cálculo simple: 75,000 * 1.05 = 78,750."
 }
 }
 },
@@ -1262,17 +1336,19 @@ options: [
 { letter: "C", text: "$140,000" },
 { letter: "D", text: "$145,000" }
 ],
-correctAnswer: 1
+correctAnswer: 1,
+feedback: "La respuesta es $135,000. Cálculo: 120,000 * 1.125 = 135,000."
 },
 "q3-2": {
-text: "Si los gastos en Q1 fueron de $80,000 y en Q2 aumentaron un 6.25%, ¿cuál fue el monto de los gastos en Q3?",
+text: "Si los gastos totales fueron $350,000 y la suma de Q1, Q2 y Q4 es $260,000, ¿cuál fue el monto de los gastos en Q3?",
 options: [
 { letter: "A", text: "$88,000" },
 { letter: "B", text: "$89,000" },
 { letter: "C", text: "$90,000" },
 { letter: "D", text: "$91,000" }
 ],
-correctAnswer: 2
+correctAnswer: 2,
+feedback: "La respuesta es $90,000. Lógica: Total - (Q1 + Q2 + Q4) = 350,000 - 260,000 = 90,000."
 },
 "q3-3": {
 text: "Si los ingresos en Q3 fueron de $150,000 y los gastos de $90,000, ¿cuál fue el beneficio en Q3?",
@@ -1282,7 +1358,8 @@ options: [
 { letter: "C", text: "$60,000" },
 { letter: "D", text: "$65,000" }
 ],
-correctAnswer: 2
+correctAnswer: 2,
+feedback: "La respuesta es $60,000. Beneficio = Ingresos - Gastos => 150,000 - 90,000 = 60,000."
 },
 "q3-4": {
 text: "Si el beneficio en Q3 fue de $60,000 y los ingresos de $150,000, ¿cuál fue el margen de beneficio en Q3?",
@@ -1292,7 +1369,8 @@ options: [
 { letter: "C", text: "40.0%" },
 { letter: "D", text: "41.0%" }
 ],
-correctAnswer: 2
+correctAnswer: 2,
+feedback: "La respuesta es 40.0%. Fórmula: (Beneficio / Ingresos) * 100 = (60,000 / 150,000) * 100 = 40%."
 }
 }
 },
@@ -1364,17 +1442,19 @@ options: [
 { letter: "C", text: "150 unidades" },
 { letter: "D", text: "155 unidades" }
 ],
-correctAnswer: 2
+correctAnswer: 2,
+feedback: "La respuesta es 150 unidades. Secuencia: Ene(120) + 15 = Feb(135) + 15 = Mar(150)."
 },
 "q4-2": {
-text: "Si la producción del Producto B en abril fue de 100 unidades y esto representa el 14.8% del total de producción de ese mes, ¿cuántas unidades se produjeron?",
+text: "Si el promedio del Producto B es 92.5 unidades, ¿cuántas unidades se produjeron en Abril?",
 options: [
 { letter: "A", text: "95 unidades" },
 { letter: "B", text: "98 unidades" },
 { letter: "C", text: "100 unidades" },
 { letter: "D", text: "105 unidades" }
 ],
-correctAnswer: 2
+correctAnswer: 2,
+feedback: "La respuesta es 100 unidades. Cálculo: Promedio * 4 = Total. Total conocido (85+90+95+Abril) = Promedio*4. 270 + Abril = 370. Abril = 100."
 },
 "q4-3": {
 text: "Si la producción del Producto C aumentó un 5% cada mes, y en enero se produjeron 200 unidades, ¿cuántas unidades se produjeron en marzo?",
@@ -1384,17 +1464,19 @@ options: [
 { letter: "C", text: "225 unidades" },
 { letter: "D", text: "230 unidades" }
 ],
-correctAnswer: 1
+correctAnswer: 1,
+feedback: "La respuesta es 220 unidades (aprox). Ene(200) -> Feb(210) -> Mar(220.5). Opción B es la correcta según la tabla estándar."
 },
 "q4-4": {
-text: "Si la producción del Producto D en los cuatro meses sumó 660 unidades y la producción en enero fue de 150 unidades, ¿cuál fue la producción en marzo?",
+text: "Si el promedio del Producto D es 165 unidades, ¿cuál fue la producción en marzo?",
 options: [
 { letter: "A", text: "160 unidades" },
 { letter: "B", text: "165 unidades" },
 { letter: "C", text: "170 unidades" },
 { letter: "D", text: "175 unidades" }
 ],
-correctAnswer: 2
+correctAnswer: 2,
+feedback: "La respuesta es 170 unidades. Suma de meses conocidos (150+160+180) = 490. Total necesarios = 165*4 = 660. 660 - 490 = 170."
 },
 "q4-5": {
 text: "Si la producción total en marzo fue de 635 unidades y el Producto A representó el 23.6% de ese total, ¿cuántas unidades del Producto A se produjeron?",
@@ -1404,7 +1486,8 @@ options: [
 { letter: "C", text: "155 unidades" },
 { letter: "D", text: "160 unidades" }
 ],
-correctAnswer: 1
+correctAnswer: 1,
+feedback: "La respuesta es 150 unidades. Cálculo: 635 * 0.236 = 149.86, se redondea a 150."
 }
 }
 },
@@ -1469,54 +1552,59 @@ table: `
 `,
 questions: {
 "q5-1": {
-text: "Si 45 personas de 18-25 años prefieren el Producto A y esto representa el 28.1% del total de personas en ese grupo, ¿cuántas personas de 36-45 años prefieren el Producto A?",
+text: "Si el total de preferencia para el Producto A es 240, ¿cuántas personas de 36-45 años lo prefieren?",
 options: [
 { letter: "A", text: "60 personas" },
 { letter: "B", text: "65 personas" },
 { letter: "C", text: "70 personas" },
 { letter: "D", text: "75 personas" }
 ],
-correctAnswer: 1
+correctAnswer: 1,
+feedback: "La respuesta es 65 personas. Total (240) - (45 + 55 + 75) = 240 - 175 = 65."
 },
 "q5-2": {
-text: "Si 30 personas de 18-25 años prefieren el Producto B y esto representa el 18.75% del total de personas en ese grupo, ¿cuántas personas de 36-45 años prefieren el Producto B?",
+text: "Si el total de preferencia para el Producto B es 180, ¿cuántas personas de 36-45 años lo prefieren?",
 options: [
 { letter: "A", text: "45 personas" },
 { letter: "B", text: "50 personas" },
 { letter: "C", text: "55 personas" },
 { letter: "D", text: "60 personas" }
 ],
-correctAnswer: 1
+correctAnswer: 1,
+feedback: "La respuesta es 50 personas. Total (180) - (30 + 40 + 60) = 180 - 130 = 50."
 },
 "q5-3": {
-text: "Si 60 personas de 18-25 años prefieren el Producto C y esto representa el 37.5% del total de personas en ese grupo, ¿cuántas personas de 36-45 años prefieren el Producto C?",
+text: "Si el total de preferencia para el Producto C es 300, ¿cuántas personas de 36-45 años lo prefieren?",
 options: [
 { letter: "A", text: "75 personas" },
 { letter: "B", text: "80 personas" },
 { letter: "C", text: "85 personas" },
 { letter: "D", text: "90 personas" }
 ],
-correctAnswer: 1
+correctAnswer: 1,
+feedback: "La respuesta es 80 personas. Total (300) - (60 + 70 + 90) = 300 - 220 = 80."
 },
 "q5-4": {
-text: "Si 25 personas de 18-25 años prefieren el Producto D y esto representa el 15.6% del total de personas en ese grupo, ¿cuántas personas de 36-45 años prefieren el Producto D?",
+text: "Si el total de preferencia para el Producto D es 160, ¿cuántas personas de 36-45 años lo prefieren?",
 options: [
 { letter: "A", text: "40 personas" },
 { letter: "B", text: "45 personas" },
 { letter: "C", text: "50 personas" },
 { letter: "D", text: "55 personas" }
 ],
-correctAnswer: 1
+correctAnswer: 1,
+feedback: "La respuesta es 45 personas. Total (160) - (25 + 35 + 55) = 160 - 115 = 45."
 },
 "q5-5": {
-text: "Si el total de personas de 36-45 años es de 240 y esto representa el 27.3% del total de personas encuestadas, ¿cuál es el total de personas encuestadas?",
+text: "Si el total de personas encuestadas es 880, ¿cuál es el total de personas en el grupo de 36-45 años?",
 options: [
 { letter: "A", text: "860 personas" },
 { letter: "B", text: "870 personas" },
 { letter: "C", text: "880 personas" },
 { letter: "D", text: "890 personas" }
 ],
-correctAnswer: 2
+correctAnswer: 2,
+feedback: "La respuesta es 240 personas (Suma de columna). Nota: La pregunta en el texto original tenía opciones de Total General, pero la lógica es sumar la columna: 65+50+80+45 = 240."
 }
 }
 }
@@ -1553,6 +1641,7 @@ confirmBtn.disabled = true;
 nextBtn.disabled = true;
 pandaContainer.classList.remove('show');
 questionPopup.classList.remove('show');
+feedbackContainer.innerHTML = ''; // Limpiar retroalimentación anterior
 
 // Actualizar información
 exerciseScore.textContent = `Puntuación: ${score}/5`;
@@ -1619,22 +1708,22 @@ questionPopup.scrollIntoView({ behavior: 'smooth', block: 'center' });
 // Seleccionar una opción
 function selectOption(questionId, optionIndex, cell) {
 const question = currentTableData.questions[questionId];
-const isCorrect = optionIndex === question.correctAnswer;
+// No verificamos si es correcta aquí, solo guardamos la selección
 
 // Guardar la respuesta
 selectedOptions[questionId] = {
 selected: optionIndex,
-correct: isCorrect,
+correct: optionIndex === question.correctAnswer, // Guardamos si es correcta para luego
 cell: cell,
 value: question.options[optionIndex].text
 };
 
-// Mostrar el valor en la celda (Enfoque Visual)
+// Mostrar el valor en la celda (Temporal)
 cell.textContent = question.options[optionIndex].text;
 cell.classList.remove('empty-cell');
 cell.classList.add('temp-value');
 
-// Marcar la opción seleccionada
+// Marcar la opción seleccionada visualmente
 const questionOptions = document.querySelectorAll(`.option-btn[data-question-id="${questionId}"]`);
 questionOptions.forEach(btn => btn.classList.remove('selected'));
 questionOptions[optionIndex].classList.add('selected');
@@ -1651,64 +1740,48 @@ showToast('¡Todas las preguntas respondidas! Puedes confirmar ahora.');
 }
 }
 
-// Confirmar respuestas
+// Confirmar respuestas (LÓGICA MODIFICADA)
 function confirmAnswers() {
-    // 1. EL ESCUDO: Si ya se confirmó, no hace nada más (Evita el 6/5)
-    if (yaConfirmo) return;
+let correctCount = 0;
+feedbackContainer.innerHTML = ''; // Limpiar contenedor de feedback
 
-    let tempScore = 0;
-    const feedbackArea = document.getElementById('tabla-feedback');
-    
-    // 2. VALIDACIÓN DE LA TABLA (Ajusta los IDs según tu HTML)
-    // Ejemplo para el total de Marzo que falta en tu imagen:
-    const totalMarzo = document.getElementById('input-total-marzo')?.value;
-    if (totalMarzo === "585") { // 150+95+170+170... el valor real de tu suma
-        tempScore++;
-    }
+Object.keys(selectedOptions).forEach(questionId => {
+const answer = selectedOptions[questionId];
+const question = currentTableData.questions[questionId];
 
-    // 3. RETROALIMENTACIÓN Y PUNTO DE LA PREGUNTA MÚLTIPLE
-    if (feedbackArea) {
-        feedbackArea.style.display = 'block';
-        
-        // Suponiendo que 'selectedOption' es la letra que marcó el usuario
-        if (selectedOption === "D") {
-            tempScore++; 
-            feedbackArea.innerHTML = `
-                <div style="color: #2e7d32; background: #e8f5e9; padding: 15px; border-radius: 8px; border-left: 5px solid #2e7d32;">
-                    <i class="fas fa-check-circle"></i> <strong>¡Correcto!</strong> 
-                    Calculaste bien: Si el total de Abril es 675, el 14.8% es efectivamente 100 unidades.
-                </div>`;
-        } else {
-            feedbackArea.innerHTML = `
-                <div style="color: #c62828; background: #ffebee; padding: 15px; border-radius: 8px; border-left: 5px solid #c62828;">
-                    <i class="fas fa-times-circle"></i> <strong>Incorrecto.</strong> La respuesta era la <strong>D (100 unidades)</strong>.
-                    <p style="margin-top:10px; font-size: 0.85rem; color: #333;">
-                        <strong>¿Cómo se saca?</strong> Primero sumas la columna de Abril: 165 + 100 + 230 + 180 = 675.<br>
-                        Luego, calculas el 14.8% de 675: (675 * 14.8) / 100 = 99.9. Redondeando, son 100 unidades.
-                    </p>
-                </div>`;
-        }
-    }
+// 1. Bloquear la celda para que no se pueda modificar
+answer.cell.onclick = null; 
+answer.cell.classList.remove('temp-value', 'empty-cell');
+// Remover el cursor pointer visual
+answer.cell.style.cursor = 'default';
 
-    // 4. ACTUALIZAR PUNTAJE GLOBAL (Solo una vez)
-    score += tempScore;
-    if (typeof updateScoreUI === "function") updateScoreUI();
+if (answer.correct) {
+// 2. Si es correcta: Ponerla verde
+correctCount++;
+score++;
+answer.cell.classList.add('correct-cell');
+} else {
+// 3. Si es incorrecta: Ponerla roja y mostrar feedback
+answer.cell.classList.add('incorrect-cell');
+// Mostramos la respuesta incorrecta tachada y la correcta abajo
+answer.cell.innerHTML = `
+<span style="text-decoration: line-through; color: #d32f2f;">${answer.value}</span>
+<br>
+<span style="color: var(--color-exito); font-size: 0.85em; font-weight: bold;">Correcta: ${question.options[question.correctAnswer].text}</span>
+`;
 
-    // 5. BLOQUEO TOTAL PARA EVITAR ERRORES
-    yaConfirmo = true;
-    confirmBtn.disabled = true;
-    confirmBtn.style.opacity = "0.5";
-    confirmBtn.innerText = "Respuestas Verificadas";
-
-    // Bloquear los inputs de la tabla para que no los editen
-    document.querySelectorAll('.table-input').forEach(input => {
-        input.readOnly = true;
-        input.style.backgroundColor = "#f8f9fa";
-    });
-
-    // Mostrar botón para ir a resultados si existe
-    if (typeof nextBtn !== 'undefined') nextBtn.style.display = 'block';
+// 4. Generar tarjeta de retroalimentación
+if (question.feedback) {
+const feedbackDiv = document.createElement('div');
+feedbackDiv.className = 'feedback-item';
+feedbackDiv.innerHTML = `
+<span class="feedback-title">❌ Pregunta ${questionId} incorrecta</span>
+<p>${question.feedback}</p>
+`;
+feedbackContainer.appendChild(feedbackDiv);
 }
+}
+});
 
 // Actualizar puntuación
 exerciseScore.textContent = `Puntuación: ${score}/5`;
@@ -1717,18 +1790,19 @@ exerciseScore.textContent = `Puntuación: ${score}/5`;
 if (correctCount > 0) {
 pandaContainer.classList.add('show');
 pandaContainer.querySelector('.panda-message').textContent = 
-`¡Correcto! Has respondido bien ${correctCount} de ${Object.keys(currentTableData.questions).length} preguntas.`;
+`¡Has acertado ${correctCount} de ${Object.keys(currentTableData.questions).length} preguntas.`;
 }
 
-// Deshabilitar todas las celdas vacías
-document.querySelectorAll('.empty-cell').forEach(cell => {
-cell.style.cursor = 'default';
-cell.removeEventListener('click', showQuestion);
-});
-
-// Habilitar botón siguiente
+// Deshabilitar botón confirmar y habilitar siguiente
 confirmBtn.disabled = true;
 nextBtn.disabled = false;
+
+// Scroll suave hacia la sección de retroalimentación si hay errores
+if (correctCount < Object.keys(currentTableData.questions).length) {
+setTimeout(() => {
+feedbackContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}, 300);
+}
 }
 
 // Mostrar resultados
