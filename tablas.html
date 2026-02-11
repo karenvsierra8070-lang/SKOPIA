@@ -966,6 +966,7 @@ let score = 0;
 let selectedOptions = {}; // Almacenará las opciones seleccionadas por pregunta
 let currentQuestionId = null;
 let currentTableData = null;
+  let yaConfirmo = false; // Esta variable evitará que se sumen puntos más de una vez
 
 // --- BASE DE DATOS DE TABLAS (5 tablas con 5 preguntas cada una) ---
 const tablesData = [
@@ -1652,27 +1653,62 @@ showToast('¡Todas las preguntas respondidas! Puedes confirmar ahora.');
 
 // Confirmar respuestas
 function confirmAnswers() {
-let correctCount = 0;
+    // 1. EL ESCUDO: Si ya se confirmó, no hace nada más (Evita el 6/5)
+    if (yaConfirmo) return;
 
-Object.keys(selectedOptions).forEach(questionId => {
-const answer = selectedOptions[questionId];
-const question = currentTableData.questions[questionId];
+    let tempScore = 0;
+    const feedbackArea = document.getElementById('tabla-feedback');
+    
+    // 2. VALIDACIÓN DE LA TABLA (Ajusta los IDs según tu HTML)
+    // Ejemplo para el total de Marzo que falta en tu imagen:
+    const totalMarzo = document.getElementById('input-total-marzo')?.value;
+    if (totalMarzo === "585") { // 150+95+170+170... el valor real de tu suma
+        tempScore++;
+    }
 
-if (answer.correct) {
-correctCount++;
-score++;
-// Marcar la celda como correcta
-answer.cell.classList.remove('temp-value');
-answer.cell.classList.add('correct-cell');
-} else {
-// Restaurar la celda vacía y mostrar respuesta correcta
-answer.cell.textContent = "?";
-answer.cell.classList.remove('temp-value');
-answer.cell.classList.add('empty-cell');
-// Mostrar cuál era la respuesta correcta
-showToast(`La respuesta correcta para ${questionId} era: ${question.options[question.correctAnswer].text}`);
+    // 3. RETROALIMENTACIÓN Y PUNTO DE LA PREGUNTA MÚLTIPLE
+    if (feedbackArea) {
+        feedbackArea.style.display = 'block';
+        
+        // Suponiendo que 'selectedOption' es la letra que marcó el usuario
+        if (selectedOption === "D") {
+            tempScore++; 
+            feedbackArea.innerHTML = `
+                <div style="color: #2e7d32; background: #e8f5e9; padding: 15px; border-radius: 8px; border-left: 5px solid #2e7d32;">
+                    <i class="fas fa-check-circle"></i> <strong>¡Correcto!</strong> 
+                    Calculaste bien: Si el total de Abril es 675, el 14.8% es efectivamente 100 unidades.
+                </div>`;
+        } else {
+            feedbackArea.innerHTML = `
+                <div style="color: #c62828; background: #ffebee; padding: 15px; border-radius: 8px; border-left: 5px solid #c62828;">
+                    <i class="fas fa-times-circle"></i> <strong>Incorrecto.</strong> La respuesta era la <strong>D (100 unidades)</strong>.
+                    <p style="margin-top:10px; font-size: 0.85rem; color: #333;">
+                        <strong>¿Cómo se saca?</strong> Primero sumas la columna de Abril: 165 + 100 + 230 + 180 = 675.<br>
+                        Luego, calculas el 14.8% de 675: (675 * 14.8) / 100 = 99.9. Redondeando, son 100 unidades.
+                    </p>
+                </div>`;
+        }
+    }
+
+    // 4. ACTUALIZAR PUNTAJE GLOBAL (Solo una vez)
+    score += tempScore;
+    if (typeof updateScoreUI === "function") updateScoreUI();
+
+    // 5. BLOQUEO TOTAL PARA EVITAR ERRORES
+    yaConfirmo = true;
+    confirmBtn.disabled = true;
+    confirmBtn.style.opacity = "0.5";
+    confirmBtn.innerText = "Respuestas Verificadas";
+
+    // Bloquear los inputs de la tabla para que no los editen
+    document.querySelectorAll('.table-input').forEach(input => {
+        input.readOnly = true;
+        input.style.backgroundColor = "#f8f9fa";
+    });
+
+    // Mostrar botón para ir a resultados si existe
+    if (typeof nextBtn !== 'undefined') nextBtn.style.display = 'block';
 }
-});
 
 // Actualizar puntuación
 exerciseScore.textContent = `Puntuación: ${score}/5`;
