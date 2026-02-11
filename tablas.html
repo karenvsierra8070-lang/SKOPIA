@@ -381,25 +381,28 @@ opacity: 0.5;
 color: var(--color-oliva-claro);
 font-style: italic;
 font-weight: 500;
+cursor: pointer;
 }
 
 /* Celda con valor correcto (al confirmar respuesta) */
 .correct-cell {
-background-color: #e8f5e9; /* Verde muy claro */
+background-color: #e8f5e9; 
 color: var(--color-exito);
 font-weight: 700;
 border: 2px solid var(--color-exito) !important;
 animation: correctPulse 0.5s ease;
+pointer-events: none; /* Bloqueo visual */
 }
 
 /* NUEVO: Celda con valor incorrecto */
 .incorrect-cell {
-background-color: #ffebee; /* Rojo muy claro */
+background-color: #ffebee; 
 color: var(--color-error);
 font-weight: 700;
 border: 2px solid var(--color-error) !important;
 text-decoration: line-through;
 position: relative;
+pointer-events: none; /* Bloqueo visual */
 }
 
 .incorrect-cell .correct-answer-display {
@@ -418,6 +421,12 @@ top: 2px;
 right: 2px;
 font-size: 12px;
 opacity: 1;
+}
+
+/* Clase para deshabilitar celdas temporalmente antes de confirmar si se desea, 
+   pero aquí la usamos para el bloqueo final en conjunto con pointer-events */
+.disabled-cell {
+cursor: default !important;
 }
 
 @keyframes correctPulse {
@@ -1024,15 +1033,16 @@ const restartBtn = document.getElementById('restart-btn');
 const challengeBtn = document.getElementById('challenge-btn');
 const toast = document.getElementById('toast');
 const pandaContainer = document.getElementById('panda-container');
-const feedbackContainer = document.getElementById('feedback-container'); // Nuevo elemento
+const feedbackContainer = document.getElementById('feedback-container');
 
 // --- VARIABLES DE ESTADO ---
 let score = 0;
 let selectedOptions = {}; 
 let currentQuestionId = null;
 let currentTableData = null;
+let juegoConfirmado = false; // Variable de control para bloquear
 
-// --- BASE DE DATOS DE TABLAS (Con retroalimentación añadida) ---
+// --- BASE DE DATOS DE TABLAS (Completa con Feedback añadido) ---
 const tablesData = [
 {
 // TABLA 1: Ventas trimestrales
@@ -1626,6 +1636,7 @@ exerciseSection.style.display = 'block';
 score = 0;
 selectedOptions = {};
 currentQuestionId = null;
+juegoConfirmado = false; // Resetear bloqueo
 
 // Seleccionar tabla aleatoria
 const randomIndex = Math.floor(Math.random() * tablesData.length);
@@ -1641,10 +1652,10 @@ confirmBtn.disabled = true;
 nextBtn.disabled = true;
 pandaContainer.classList.remove('show');
 questionPopup.classList.remove('show');
-feedbackContainer.innerHTML = ''; // Limpiar retroalimentación anterior
+feedbackContainer.innerHTML = ''; 
 
 // Actualizar información
-exerciseScore.textContent = `Puntuación: ${score}/5`;
+exerciseScore.textContent = `Puntuación: ${score}/${Object.keys(currentTableData.questions).length}`;
 
 // Cargar contexto
 exerciseContext.textContent = currentTableData.context;
@@ -1660,6 +1671,9 @@ cell.addEventListener('click', () => showQuestion(cell));
 
 // Mostrar pregunta al hacer click en una celda vacía
 function showQuestion(cell) {
+// BLOQUEO PRINCIPAL: Si ya se confirmó, no hacer nada.
+if (juegoConfirmado) return;
+
 const questionId = cell.dataset.question;
 const question = currentTableData.questions[questionId];
 
@@ -1707,13 +1721,14 @@ questionPopup.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
 // Seleccionar una opción
 function selectOption(questionId, optionIndex, cell) {
+if (juegoConfirmado) return; // Doble chequeo
+
 const question = currentTableData.questions[questionId];
-// No verificamos si es correcta aquí, solo guardamos la selección
 
 // Guardar la respuesta
 selectedOptions[questionId] = {
 selected: optionIndex,
-correct: optionIndex === question.correctAnswer, // Guardamos si es correcta para luego
+correct: optionIndex === question.correctAnswer,
 cell: cell,
 value: question.options[optionIndex].text
 };
@@ -1723,7 +1738,7 @@ cell.textContent = question.options[optionIndex].text;
 cell.classList.remove('empty-cell');
 cell.classList.add('temp-value');
 
-// Marcar la opción seleccionada visualmente
+// Marcar la opción seleccionada
 const questionOptions = document.querySelectorAll(`.option-btn[data-question-id="${questionId}"]`);
 questionOptions.forEach(btn => btn.classList.remove('selected'));
 questionOptions[optionIndex].classList.add('selected');
@@ -1740,30 +1755,30 @@ showToast('¡Todas las preguntas respondidas! Puedes confirmar ahora.');
 }
 }
 
-// Confirmar respuestas (LÓGICA MODIFICADA)
+// Confirmar respuestas
 function confirmAnswers() {
+// ACTIVAR BLOQUEO INMEDIATO
+juegoConfirmado = true;
+
 let correctCount = 0;
-feedbackContainer.innerHTML = ''; // Limpiar contenedor de feedback
+feedbackContainer.innerHTML = ''; 
 
 Object.keys(selectedOptions).forEach(questionId => {
 const answer = selectedOptions[questionId];
 const question = currentTableData.questions[questionId];
 
-// 1. Bloquear la celda para que no se pueda modificar
-answer.cell.onclick = null; 
+// 1. Desactivar la celda visual y funcionalmente
 answer.cell.classList.remove('temp-value', 'empty-cell');
-// Remover el cursor pointer visual
-answer.cell.style.cursor = 'default';
+answer.cell.classList.add('disabled-cell'); // Clase CSS con pointer-events: none
 
 if (answer.correct) {
-// 2. Si es correcta: Ponerla verde
+// 2. Correcta: Verde
 correctCount++;
 score++;
 answer.cell.classList.add('correct-cell');
 } else {
-// 3. Si es incorrecta: Ponerla roja y mostrar feedback
+// 3. Incorrecta: Roja y mostrar feedback
 answer.cell.classList.add('incorrect-cell');
-// Mostramos la respuesta incorrecta tachada y la correcta abajo
 answer.cell.innerHTML = `
 <span style="text-decoration: line-through; color: #d32f2f;">${answer.value}</span>
 <br>
@@ -1784,20 +1799,19 @@ feedbackContainer.appendChild(feedbackDiv);
 });
 
 // Actualizar puntuación
-exerciseScore.textContent = `Puntuación: ${score}/5`;
+exerciseScore.textContent = `Puntuación: ${score}/${Object.keys(currentTableData.questions).length}`;
 
-// Mostrar panda si hay respuestas correctas
+// Mostrar panda
 if (correctCount > 0) {
 pandaContainer.classList.add('show');
 pandaContainer.querySelector('.panda-message').textContent = 
 `¡Has acertado ${correctCount} de ${Object.keys(currentTableData.questions).length} preguntas.`;
 }
 
-// Deshabilitar botón confirmar y habilitar siguiente
 confirmBtn.disabled = true;
 nextBtn.disabled = false;
 
-// Scroll suave hacia la sección de retroalimentación si hay errores
+// Scroll suave hacia la retroalimentación si hay errores
 if (correctCount < Object.keys(currentTableData.questions).length) {
 setTimeout(() => {
 feedbackContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1809,7 +1823,7 @@ feedbackContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 function showResults() {
 exerciseSection.style.display = 'none';
 resultsSection.style.display = 'block';
-resultsScore.textContent = `Tu puntuación final: ${score}/5`;
+resultsScore.textContent = `Tu puntuación final: ${score}/${Object.keys(currentTableData.questions).length}`;
 }
 
 // --- EVENT LISTENERS ---
