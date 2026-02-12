@@ -492,11 +492,428 @@ font-weight: bold; color: var(--color-primary);
         <a href="#" id="startBtn" class="start-btn">Start Masterclass <i class="fas fa-arrow-right"></i></a>
     </div>
 </div>
+   <!-- ADDED: Floating vertical icons -->
     <div class="floating-icons" aria-hidden="false">
-    <button id="btn-misiones" title="Misiones">🎯</button>
-    <button id="btn-nivel" title="Nivel actual">⭐</button>
-    <button id="btn-progreso" title="Progreso">📊</button>
-</div>
+        <button id="btn-misiones" title="Misiones">🎯</button>
+        <button id="btn-nivel" title="Nivel actual">⭐</button>
+        <button id="btn-progreso" title="Progreso">📊</button>
+        <button id="btn-analisis" title="Análisis">📈</button>
+    </div>
+
+    <!-- ADDED: Panel Misiones -->
+    <div class="panel-box" id="panel-misiones" aria-hidden="true">
+        <div class="panel-header">
+            <h3>Misiones</h3>
+            <button class="close-panel" data-close="misiones">&times;</button>
+        </div>
+        <div id="misiones-content">
+            <!-- missions list injected by JS -->
+        </div>
+    </div>
+
+    <!-- ADDED: Panel Nivel -->
+    <div class="panel-box" id="panel-nivel" aria-hidden="true">
+        <div class="panel-header">
+            <h3>Tu nivel</h3>
+            <button class="close-panel" data-close="nivel">&times;</button>
+        </div>
+        <div id="nivel-content">
+            <!-- level info injected by JS -->
+        </div>
+    </div>
+
+    <!-- ADDED: Panel Progreso -->
+    <div class="panel-box" id="panel-progreso" aria-hidden="true">
+        <div class="panel-header">
+            <h3>Progreso</h3>
+            <button class="close-panel" data-close="progreso">&times;</button>
+        </div>
+        <div id="progreso-content">
+            <!-- progress injected by JS -->
+        </div>
+    </div>
+
+    <!-- ADDED: Panel Analisis -->
+    <div class="panel-box" id="panel-analisis" aria-hidden="true">
+        <div class="panel-header">
+            <h3>Análisis (promedio 0–300)</h3>
+            <button class="close-panel" data-close="analisis">&times;</button>
+        </div>
+        <div id="analisis-content">
+            <!-- analysis injected by JS -->
+            <div id="analisis-stats" style="margin-top:12px;"></div>
+        </div>
+    </div>
+
+    <!-- ADDED: Toast notification for mission completed -->
+    <div class="toast" id="mission-toast" role="status" aria-live="polite"></div>
+
+    <script>
+        /*************************************************************************
+         *  LOCAL DATA: 100 missions (fixed values taken from the updated list)
+         *  Each mission: { id, title, points, completed }
+         *************************************************************************/
+        const MISSIONS_KEY = 'skopia_missions_v1';
+        const EXAMS_KEY = 'skopia_exam_scores_by_tag_v1';
+
+        const missionsTemplate = [
+            { id: 1, title: "Completa tu primer examen", points: 50 },
+            { id: 2, title: "Logra al menos 180/300 en un examen", points: 80 },
+            { id: 3, title: "Lee toda la teoría de una lección", points: 40 },
+            { id: 4, title: "Termina una sesión de estudio sin salir", points: 50 },
+            { id: 5, title: "Gana tu primer juego", points: 50 },
+            { id: 6, title: "Usa una pista o ayuda en un juego", points: 30 },
+            { id: 7, title: "Repite un examen para mejorar tu nota", points: 50 },
+            { id: 8, title: "Cambia tu nombre de usuario", points: 40 },
+            { id: 9, title: "Acumula tus primeras 200 estrellas", points: 30 },
+            { id: 10, title: "Completa 3 misiones seguidas", points: 50 },
+            { id: 11, title: "Logra 240/300 en un examen", points: 150 },
+            { id: 12, title: "Completa un examen sin errores (300/300)", points: 200 },
+            { id: 13, title: "Gana 3 juegos distintos", points: 60 },
+            { id: 14, title: "Termina una teoría con ejemplo práctico", points: 40 },
+            { id: 15, title: "Participa en una práctica de repaso", points: 30 },
+            { id: 16, title: "Completa 2 exámenes el mismo día", points: 80 },
+            { id: 17, title: "Obtén 500 estrellas acumuladas", points: 50 },
+            { id: 18, title: "Gana un examen con tiempo limitado", points: 80 },
+            { id: 19, title: "Repite un juego hasta mejorar tu resultado", points: 30 },
+            { id: 20, title: "Completa todos los subniveles de un tema (5/5)", points: 100 },
+            { id: 21, title: "Logra 270/300 en un examen", points: 180 },
+            { id: 22, title: "Supera tu propia mejor nota", points: 60 },
+            { id: 23, title: "Termina 5 juegos de práctica", points: 50 },
+            { id: 24, title: "Lee toda la teoría sin usar pistas", points: 40 },
+            { id: 25, title: "Completa todos los subniveles del nivel 6", points: 140 },
+            { id: 26, title: "Suma 1000 estrellas totales", points: 50 },
+            { id: 27, title: "Gana un examen con tiempo limitado", points: 80 },
+            { id: 28, title: "Juega y gana el modo “escape room”", points: 60 },
+            { id: 29, title: "Gana un juego de ahorcado correctamente", points: 50 },
+            { id: 30, title: "Haz un examen de repaso general", points: 70 },
+            { id: 31, title: "Logra 300/300 en dos exámenes seguidos", points: 200 },
+            { id: 32, title: "Completa todos los juegos de un módulo", points: 100 },
+            { id: 33, title: "Termina la teoría de un módulo completo", points: 80 },
+            { id: 34, title: "Gana un juego tipo tablero", points: 60 },
+            { id: 35, title: "Completa una misión cronometrada", points: 80 },
+            { id: 36, title: "Obtén 2000 estrellas acumuladas", points: 60 },
+            { id: 37, title: "Gana un juego sin usar pistas", points: 50 },
+            { id: 38, title: "Revisa tu historial de progreso", points: 30 },
+            { id: 39, title: "Completa 10 misiones seguidas sin fallar", points: 100 },
+            { id: 40, title: "Termina un examen con todos los tiempos perfectos", points: 150 },
+            { id: 41, title: "Completa 5 exámenes con más de 240/300", points: 150 },
+            { id: 42, title: "Termina todos los subniveles del nivel 6", points: 140 },
+            { id: 43, title: "Consigue 3000 estrellas", points: 120 },
+            { id: 44, title: "Estudia 10 días seguidos", points: 130 },
+            { id: 45, title: "Completa 10 misiones", points: 140 },
+            { id: 46, title: "Llega al nivel 6.5", points: 130 },
+            { id: 47, title: "Termina un examen sin errores", points: 150 },
+            { id: 48, title: "Supera tu propio puntaje anterior", points: 140 },
+            { id: 49, title: "Contesta 500 preguntas", points: 130 },
+            { id: 50, title: "Completa un examen en menos de 25 minutos", points: 140 },
+            { id: 51, title: "Alcanza el top 10 por primera vez (local)", points: 150 },
+            { id: 52, title: "Mantente en el top 10 por 3 días (local)", points: 140 },
+            { id: 53, title: "Gana 4000 estrellas", points: 130 },
+            { id: 54, title: "Termina la ruta RC con promedio ≥200", points: 140 },
+            { id: 55, title: "Termina la ruta LC con promedio ≥200", points: 140 },
+            { id: 56, title: "Termina la ruta CC con promedio ≥200", points: 140 },
+            { id: 57, title: "Obtén 250 puntos o más en tres rutas", points: 150 },
+            { id: 58, title: "Crea una racha de 20 aciertos seguidos", points: 140 },
+            { id: 59, title: "Completa 15 misiones", points: 130 },
+            { id: 60, title: "Alcanza el nivel 7", points: 150 },
+            { id: 61, title: "Consigue 6000 estrellas", points: 160 },
+            { id: 62, title: "Estudia 20 días seguidos", points: 170 },
+            { id: 63, title: "Termina todos los niveles de una ruta (10/10)", points: 180 },
+            { id: 64, title: "Contesta 1000 preguntas", points: 160 },
+            { id: 65, title: "Supera a 5 usuarios en el ranking (local)", points: 170 },
+            { id: 66, title: "Alcanza el nivel 8", points: 170 },
+            { id: 67, title: "Termina 20 misiones", points: 160 },
+            { id: 68, title: "Obtén promedio ≥250 puntos en una ruta", points: 180 },
+            { id: 69, title: "Logra 5 exámenes con 250 o más puntos", points: 170 },
+            { id: 70, title: "Termina las rutas RC y LC completas", points: 180 },
+            { id: 71, title: "Mantente en el top 5 (local)", points: 170 },
+            { id: 72, title: "Completa todos los subniveles (50 total)", points: 180 },
+            { id: 73, title: "Gana 8000 estrellas", points: 160 },
+            { id: 74, title: "Termina 25 misiones", points: 170 },
+            { id: 75, title: "Sube de nivel sin fallar un examen", points: 160 },
+            { id: 76, title: "Obtén 280 puntos en un examen", points: 180 },
+            { id: 77, title: "Completa 10 exámenes sin pistas", points: 170 },
+            { id: 78, title: "Obtén 270 o más en las tres rutas", points: 180 },
+            { id: 79, title: "Alcanza el nivel 9", points: 180 },
+            { id: 80, title: "Termina 30 misiones", points: 170 },
+            { id: 81, title: "Gana 10,000 estrellas", points: 190 },
+            { id: 82, title: "Mantente en el top 3 (local)", points: 190 },
+            { id: 83, title: "Termina las tres rutas con promedio ≥250", points: 190 },
+            { id: 84, title: "Completa los 50 subniveles con más de 200 puntos promedio", points: 200 },
+            { id: 85, title: "Llega al nivel 10", points: 200 },
+            { id: 86, title: "Gana 15,000 estrellas", points: 200 },
+            { id: 87, title: "Mantente en el top 3 por 7 días (local)", points: 190 },
+            { id: 88, title: "Consigue 300 puntos en un examen", points: 200 },
+            { id: 89, title: "Termina 40 misiones", points: 190 },
+            { id: 90, title: "Completa todos los exámenes de práctica", points: 190 },
+            { id: 91, title: "Llega a 20,000 estrellas", points: 200 },
+            { id: 92, title: "Termina 50 misiones", points: 190 },
+            { id: 93, title: "Mantente en el top 1 por 3 días (local)", points: 200 },
+            { id: 94, title: "Termina todas las rutas al 100%", points: 200 },
+            { id: 95, title: "Obtén todas las medallas", points: 190 },
+            { id: 96, title: "Consigue 25,000 estrellas", points: 200 },
+            { id: 97, title: "Cumple todas las misiones básicas e intermedias", points: 190 },
+            { id: 98, title: "Mantente activo 30 días seguidos", points: 200 },
+            { id: 99, title: "Llega a 30,000 estrellas", points: 200 },
+            { id: 100, title: "🏆 Maestro del Saber Pro: completa todo el sistema", points: 200 }
+        ];
+
+        const LEVELS = [
+            { idx: 1, name: "Novato/a", min: 0, max: 299 },
+            { idx: 2, name: "Aprendiz/a", min: 300, max: 799 },
+            { idx: 3, name: "Explorador/a", min: 800, max: 1499 },
+            { idx: 4, name: "Analista", min: 1500, max: 2499 },
+            { idx: 5, name: "Estratega", min: 2500, max: 3699 },
+            { idx: 6, name: "Sabio/a", min: 3700, max: 4999 },
+            { idx: 7, name: "Maestro/a", min: 5000, max: 6499 },
+            { idx: 8, name: "Élite", min: 6500, max: 7999 },
+            { idx: 9, name: "Leyenda", min: 8000, max: 9499 },
+            { idx: 10, name: "Rey/Reina Skópia", min: 9500, max: Infinity }
+        ];
+
+        function initMissions() {
+            const stored = localStorage.getItem(MISSIONS_KEY);
+            if (!stored) {
+                const initial = missionsTemplate.map(m => ({ ...m, completed: false }));
+                localStorage.setItem(MISSIONS_KEY, JSON.stringify(initial));
+            }
+        }
+
+        function renderMissions() {
+            const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
+            const container = document.getElementById('misiones-content');
+            container.innerHTML = '';
+            const incompleteMissions = data.filter(m => !m.completed).slice(0, 3);
+            if (incompleteMissions.length === 0) {
+                container.innerHTML = '<div class="info">¡Felicidades! Has completado todas las misiones disponibles.</div>';
+                return;
+            }
+            incompleteMissions.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'mission-row';
+                div.innerHTML = `
+                    <div style="flex:1">
+                        <div style="font-weight:700; color:var(--color-oliva-oscuro)">${m.id}. ${m.title}</div>
+                        <div style="font-size:1rem; color:#556b2f">${m.points} ⭐</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        let missionNotificationQueue = [];
+        let isShowingNotification = false;
+
+        function queueMissionNotification(mission) {
+            missionNotificationQueue.push(mission);
+            if (!isShowingNotification) {
+                processMissionQueue();
+            }
+        }
+
+        function processMissionQueue() {
+            if (missionNotificationQueue.length === 0) {
+                isShowingNotification = false;
+                return;
+            }
+            isShowingNotification = true;
+            const mission = missionNotificationQueue.shift();
+            showMissionToast(`¡Nueva misión disponible: ${mission.title} (+${mission.points}⭐)!`, 60000);
+            setTimeout(() => { processMissionQueue(); }, 61000);
+        }
+
+        function initMissionNotifications() {
+            const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
+            const incompleteMissions = data.filter(m => !m.completed).slice(0, 3);
+            incompleteMissions.forEach(mission => { queueMissionNotification(mission); });
+        }
+
+        let toastTimer = null;
+        function showMissionToast(text, ms = 60000) {
+            const toast = document.getElementById('mission-toast');
+            toast.innerHTML = `<strong>${text}</strong> <div style="font-size:0.9rem;margin-top:6px;color:#666">Se ocultará en ${Math.ceil(ms/1000)}s</div>`;
+            toast.classList.add('show');
+            let remaining = ms;
+            if (toastTimer) clearInterval(toastTimer);
+            toastTimer = setInterval(() => {
+                remaining -= 1000;
+                if (remaining <= 0) {
+                    toast.classList.remove('show');
+                    clearInterval(toastTimer);
+                } else {
+                    toast.innerHTML = `<strong>${text}</strong> <div style="font-size:0.9rem;margin-top:6px;color:#666">Se ocultará en ${Math.ceil(remaining/1000)}s</div>`;
+                }
+            }, 1000);
+            setTimeout(()=> { toast.classList.remove('show'); if (toastTimer) { clearInterval(toastTimer); toastTimer = null; } }, ms + 200);
+        }
+
+        function getTotalPoints() {
+            const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
+            return data.reduce((sum, m) => sum + (m.completed ? m.points : 0), 0);
+        }
+
+        function getLevelFromPoints(total) {
+            for (let i = LEVELS.length -1; i >=0; i--) {
+                if (total >= LEVELS[i].min) return LEVELS[i];
+            }
+            return LEVELS[0];
+        }
+
+        function renderLevel() {
+            const total = getTotalPoints();
+            const level = getLevelFromPoints(total);
+            let nextMin = level.max === Infinity ? level.min : level.max + 1;
+            let neededForNext = (level.max === Infinity) ? 0 : (level.max - total + 1);
+            let progressPct = 0;
+            if (level.max === Infinity) progressPct = 100;
+            else progressPct = Math.min(100, Math.round(((total - level.min) / (level.max - level.min)) * 100));
+            document.getElementById('nivel-content').innerHTML = `
+                <div class="info"><strong>Nivel:</strong> ${level.name} (${level.idx})</div>
+                <div class="info"><strong>Puntos acumulados:</strong> ${total} ⭐</div>
+                <div class="info"><strong>Progreso hacia siguiente nivel:</strong> ${progressPct}%</div>
+                <div style="background:#f1f1f1;border-radius:10px;padding:8px;margin-top:10px">
+                    <div style="height:12px;background:linear-gradient(90deg,var(--color-oliva-medio),#bdbd74);width:${progressPct}%;border-radius:8px"></div>
+                </div>
+                ${level.max === Infinity ? '<div class="info" style="margin-top:8px">¡Has alcanzado el nivel máximo!</div>' : `<div class="info" style="margin-top:8px">Puntos para subir: ${neededForNext} ⭐</div>`}
+            `;
+        }
+
+        function renderProgress() {
+            const total = getTotalPoints();
+            const topTarget = 9500;
+            const pct = Math.min(100, Math.round((total / topTarget) * 100));
+            document.getElementById('progreso-content').innerHTML = `
+                <div class="info"><strong>Puntos acumulados:</strong> ${total} ⭐</div>
+                <div class="info"><strong>Progreso global hacia Rey/Reina:</strong> ${pct}%</div>
+                <div style="background:#f1f1f1;border-radius:10px;padding:8px;margin-top:10px">
+                    <div style="height:12px;background:linear-gradient(90deg,var(--color-oliva-medio),#bdbd74);width:${pct}%;border-radius:8px"></div>
+                </div>
+                <div class="info" style="margin-top:10px"><strong>Misiones completadas:</strong> ${getCompletedCount()}/100</div>
+            `;
+        }
+
+        function getCompletedCount() {
+            const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
+            return data.filter(m => m.completed).length;
+        }
+
+        function addExamScore(examTag, score) {
+            if (!examTag || typeof score !== 'number' || score < 0 || score > 300) {
+                console.error("Puntaje de examen inválido.", { examTag, score });
+                return false;
+            }
+            let examScores = JSON.parse(localStorage.getItem(EXAMS_KEY) || '{}');
+            examScores[examTag] = score;
+            localStorage.setItem(EXAMS_KEY, JSON.stringify(examScores));
+            console.log(`Puntaje para el examen '${examTag}' actualizado a ${score}.`);
+            return true;
+        }
+
+        function getExamStats() {
+            const examScores = JSON.parse(localStorage.getItem(EXAMS_KEY) || '{}');
+            const { diagnostico, ...otherExams } = examScores;
+            const scores = Object.values(otherExams);
+            if (scores.length === 0) {
+                return { count: 0, sum: 0, avg: 0, details: otherExams, diagnosticScore: diagnostico || 'N/A' };
+            }
+            const sum = scores.reduce((a, b) => a + b, 0);
+            const avg = Math.round(sum / scores.length);
+            return { count: scores.length, sum: sum, avg: avg, details: otherExams, diagnosticScore: diagnostico || 'N/A' };
+        }
+
+        function renderAnalysis() {
+            const stats = getExamStats();
+            let diagnosticHtml = `<div class="info"><strong>Puntaje Inicial (Diagnóstico):</strong> ${stats.diagnosticScore} / 300</div>`;
+            let detailsHtml = '';
+            for (const tag in stats.details) {
+                detailsHtml += `<div class="info" style="font-size:1rem; color:#555;">- ${tag}: ${stats.details[tag]} / 300</div>`;
+            }
+            document.getElementById('analisis-stats').innerHTML = `
+                ${diagnosticHtml}
+                <hr style="margin: 12px 0; border: none; border-top: 1px solid #eee;">
+                <div class="info"><strong>Exámenes de práctica realizados:</strong> ${stats.count}</div>
+                <div class="info"><strong>Suma de puntajes (práctica):</strong> ${stats.sum}</div>
+                <div class="info"><strong>Promedio general (práctica):</strong> ${stats.avg} / 300</div>
+                <hr style="margin: 12px 0; border: none; border-top: 1px solid #eee;">
+                <div style="font-weight: bold; margin-bottom: 8px;">Últimos Puntajes por Examen:</div>
+                ${detailsHtml || '<div class="info" style="color:#888;">Aún no hay exámenes de práctica registrados.</div>'}
+                <div style="margin-top:10px;">
+                    <button id="clear-exams" style="background:var(--float-color); color:white; border:none; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:1rem;">Borrar todos los puntajes</button>
+                </div>
+            `;
+            document.getElementById('clear-exams').addEventListener('click', () => {
+                if (confirm('¿Eliminar todos los puntajes de exámenes registrados?')) {
+                    localStorage.removeItem(EXAMS_KEY);
+                    renderAnalysis();
+                }
+            });
+        }
+
+        function checkExamMissions(examTag, score) {
+            const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
+            let changed = false;
+            if (examTag !== 'diagnostico' && score > 0) { const m1 = data.find(m => m.id === 1); if (m1 && !m1.completed) { completeMission(1); changed = true; } }
+            if (score >= 180) { const m2 = data.find(m => m.id === 2); if (m2 && !m2.completed) { completeMission(2); changed = true; } }
+            if (score >= 240) { const m11 = data.find(m => m.id === 11); if (m11 && !m11.completed) { completeMission(11); changed = true; } }
+            if (score === 300) { const m12 = data.find(m => m.id === 12); if (m12 && !m12.completed) { completeMission(12); changed = true; } }
+            if (changed) updateAllDisplays();
+        }
+
+        function closeAllPanels() { document.querySelectorAll('.panel-box').forEach(p => p.classList.remove('active')); }
+
+        document.getElementById('btn-misiones').addEventListener('click', ()=> { togglePanelBox('panel-misiones'); });
+        document.getElementById('btn-nivel').addEventListener('click', ()=> { togglePanelBox('panel-nivel'); });
+        document.getElementById('btn-progreso').addEventListener('click', ()=> { togglePanelBox('panel-progreso'); });
+        document.getElementById('btn-analisis').addEventListener('click', ()=> { togglePanelBox('panel-analisis'); renderAnalysis(); });
+
+        document.querySelectorAll('.close-panel').forEach(btn=>{ btn.addEventListener('click', (e)=>{ const parent = e.currentTarget.closest('.panel-box'); if (parent) parent.classList.remove('active'); }); });
+
+        function togglePanelBox(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const isActive = el.classList.contains('active');
+            closeAllPanels();
+            if (!isActive) {
+                el.classList.add('active');
+                if (id === 'panel-misiones') renderMissions();
+                if (id === 'panel-nivel') renderLevel();
+                if (id === 'panel-progreso') renderProgress();
+                if (id === 'panel-analisis') renderAnalysis();
+            }
+        }
+
+        function completeMission(id) {
+            const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
+            const idx = data.findIndex(m => m.id === id);
+            if (idx === -1) return;
+            const mission = data[idx];
+            if (!mission.completed) {
+                mission.completed = true;
+                localStorage.setItem(MISSIONS_KEY, JSON.stringify(data));
+                showMissionToast(`¡Misión completada: ${mission.title} (+${mission.points}⭐)!`, 60000);
+                updateAllDisplays();
+                const incompleteMissions = data.filter(m => !m.completed).slice(0, 3);
+                if (incompleteMissions.length > 0) { queueMissionNotification(incompleteMissions[0]); }
+            }
+        }
+
+        function updateAllDisplays() {
+            if (document.getElementById('panel-misiones').classList.contains('active')) renderMissions();
+            if (document.getElementById('panel-nivel').classList.contains('active')) renderLevel();
+            if (document.getElementById('panel-progreso').classList.contains('active')) renderProgress();
+            if (document.getElementById('panel-analisis').classList.contains('active')) renderAnalysis();
+        }
+
+        (function init() {
+            initMissions();
+            document.addEventListener('click', (e)=>{ const panels = document.querySelectorAll('.panel-box'); const isIcon = e.target.closest('.floating-icons'); const isPanel = e.target.closest('.panel-box'); if (!isIcon && !isPanel) { panels.forEach(p => p.classList.remove('active')); } });
+            renderMissions(); renderLevel(); renderProgress(); renderAnalysis();
+            initMissionNotifications();
+        })();
+
+        window.SKOPIA = { addExamScore, completeMission, getTotalPoints: getTotalPoints, getLevel: ()=> getLevelFromPoints(getTotalPoints()) };
+    </script>
 
 <script>
 // --- LÓGICA FIREBASE Y NAV ---
