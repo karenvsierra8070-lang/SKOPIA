@@ -1692,48 +1692,62 @@ canvas { max-width: 100%; }
             });
         }
 
-        function drawStaticGraph(canvas, type) {
-            const ctx = canvas.getContext('2d');
-            const w = canvas.width;
-            const h = canvas.height;
-            const pad = 30;
+    function drawStaticGraph(canvas, type) {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    const pad = 40; // Aumentamos un poco el margen para etiquetas
 
-            ctx.clearRect(0, 0, w, h);
+    ctx.clearRect(0, 0, w, h);
 
-            // Ejes
-            ctx.beginPath();
-            ctx.strokeStyle = '#555';
-            ctx.lineWidth = 2;
-            ctx.moveTo(pad, 0); ctx.lineTo(pad, h - pad); // Y axis
-            ctx.moveTo(pad, h - pad); ctx.lineTo(w, h - pad); // X axis
-            ctx.stroke();
+    // --- Dibujar Ejes ---
+    ctx.beginPath();
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 2;
+    ctx.moveTo(pad, 10); ctx.lineTo(pad, h - pad); // Eje Y
+    ctx.moveTo(pad, h - pad); ctx.lineTo(w - 10, h - pad); // Eje X
+    ctx.stroke();
 
-            // Flechas
-            ctx.font = "12px Arial";
-            ctx.fillText("Causa (X)", w - 60, h - 10);
-            ctx.fillText("Efecto (Y)", 5, 20);
+    // --- Etiquetas ---
+    ctx.fillStyle = "#555";
+    ctx.font = "bold 12px Arial";
+    ctx.fillText("Efecto (Y)", 5, 20);
+    ctx.fillText("Causa (X)", w - 65, h - 10);
 
-            // Curva
-            ctx.beginPath();
-            ctx.strokeStyle = 'var(--color-oliva-medio)';
-            ctx.lineWidth = 3;
-            
-            for (let x = pad; x <= w; x+=5) {
-                let normalizedX = (x - pad) / (w - pad);
-                let normalizedY = 0;
+    // --- Dibujar Curva ---
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(128, 128, 0, 0.8)'; // Color oliva
+    ctx.lineWidth = 3;
 
-                if (type === 'linear') normalizedY = normalizedX;
-                if (type === 'quadratic') normalizedY = Math.pow(normalizedX, 2);
-                if (type === 'inverse') normalizedY = 1 / (normalizedX + 0.1); // +0.1 para evitar infinito
+    for (let x = pad; x <= w - 10; x += 2) {
+        let nX = (x - pad) / (w - pad - 10); // X normalizada (0 a 1)
+        let nY = 0;
 
-                let canvasY = (h - pad) - (normalizedY * (h - pad));
-                
-                if (x===pad) ctx.moveTo(x, canvasY);
-                else ctx.lineTo(x, canvasY);
-            }
-            ctx.stroke();
+        if (type === 'linear') {
+            nY = nX; 
+        } 
+        else if (type === 'quadratic') {
+            nY = Math.pow(nX, 2); 
+        } 
+        else if (type === 'inverse') {
+            // Normalizamos la inversa para que empiece en 1 y baje
+            // Fórmula: (1/x corregida) / (valor máximo para que no exceda 1)
+            let rawY = 1 / (nX + 0.2); 
+            let maxY = 1 / (0 + 0.2); // Valor cuando nX es 0
+            nY = rawY / maxY; 
         }
 
+        // Mapeo al espacio del canvas (revertiendo el eje Y)
+        let canvasY = (h - pad) - (nY * (h - pad - 20));
+
+        // Solo dibujar si está dentro del área visible del eje Y
+        if (canvasY >= 10 && canvasY <= h - pad) {
+            if (x === pad) ctx.moveTo(x, canvasY);
+            else ctx.lineTo(x, canvasY);
+        }
+    }
+    ctx.stroke();
+}
 
         // --- SECCIÓN 6: LABORATORIO INTERACTIVO ---
         const labCanvas = document.getElementById('labCanvas');
