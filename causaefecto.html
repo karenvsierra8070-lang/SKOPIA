@@ -2388,12 +2388,12 @@ function showFinalResults() {
     ctx.stroke();
 }
 
-        // --- SECCIÓN 6: LABORATORIO INTERACTIVO (CORREGIDO Y MEJORADO) ---
+     // --- SECCIÓN 6: LABORATORIO INTERACTIVO (CÓDIGO COMPLETO) ---
 const labCanvas = document.getElementById('labCanvas');
 const ctxLab = labCanvas.getContext('2d');
 let labState = {
-    cause: 50,
-    effect: 50,
+    cause: 63,
+    effect: 63,
     type: 'direct' // 'direct' or 'inverse'
 };
 
@@ -2402,26 +2402,27 @@ function drawLab() {
     const h = labCanvas.height;
     const pad = 40;
 
+    // Limpiar el lienzo antes de redibujar
     ctxLab.clearRect(0, 0, w, h);
 
-    // 1. Dibujar Grid (Cuadrícula de fondo)
+    // 1. Dibujar Cuadrícula (Grid)
     ctxLab.strokeStyle = '#f0f0f0';
     ctxLab.lineWidth = 1;
     for(let i=pad; i<w; i+=40) { ctxLab.beginPath(); ctxLab.moveTo(i,0); ctxLab.lineTo(i,h); ctxLab.stroke(); }
     for(let i=pad; i<h; i+=40) { ctxLab.beginPath(); ctxLab.moveTo(0,i); ctxLab.lineTo(w,i); ctxLab.stroke(); }
 
-    // 2. Dibujar Ejes
+    // 2. Dibujar Ejes X e Y
     ctxLab.strokeStyle = '#333';
     ctxLab.lineWidth = 2;
     ctxLab.beginPath();
-    ctxLab.moveTo(pad, 0); ctxLab.lineTo(pad, h - pad);
-    ctxLab.moveTo(pad, h - pad); ctxLab.lineTo(w, h - pad);
+    ctxLab.moveTo(pad, 0); ctxLab.lineTo(pad, h - pad); // Eje Y
+    ctxLab.moveTo(pad, h - pad); ctxLab.lineTo(w, h - pad); // Eje X
     ctxLab.stroke();
 
     // 3. Etiquetas de los Ejes
-    ctxLab.fillStyle = '#333';
-    ctxLab.font = 'bold 14px Open Sans';
-    ctxLab.fillText("CAUSA (Variable Independiente)", w/2 - 100, h - 10);
+    ctxLab.fillStyle = '#666';
+    ctxLab.font = 'bold 12px Open Sans';
+    ctxLab.fillText("CAUSA (Variable Independiente)", w/2 - 80, h - 10);
     ctxLab.save();
     ctxLab.translate(15, h/2);
     ctxLab.rotate(-Math.PI/2);
@@ -2436,28 +2437,27 @@ function drawLab() {
 
     if (labState.type === 'direct') {
         effectVal = val;
-        colorGrafica = '#2e7d32'; // Verde para éxito/crecimiento
-        explanationText = "<b>Relación Directa:</b> Al aumentar la causa, el efecto aumenta proporcionalmente. Las variables se mueven en la misma dirección (Causa ↑, Efecto ↑).";
+        colorGrafica = '#707a4a'; // Color oliva de tu diseño
+        explanationText = "<b>Relación Directa:</b> A medida que la causa aumenta (Eje X), el efecto también aumenta (Eje Y). Se mueven en la misma dirección.";
     } else {
         effectVal = 100 - val;
-        colorGrafica = '#c62828'; // Rojo para disminución/inversa
-        explanationText = "<b>Relación Inversa:</b> Al aumentar la causa, el efecto disminuye. Las variables se mueven en direcciones opuestas (Causa ↑, Efecto ↓).";
+        colorGrafica = '#c62828'; // Rojo para indicar relación inversa
+        explanationText = "<b>Relación Inversa:</b> Al aumentar la causa (Eje X), el efecto disminuye (Eje Y). Las variables se mueven en direcciones opuestas.";
     }
 
-    // 5. Actualizar Elementos de la Interfaz (Texto y Barras)
-    const expDiv = document.getElementById('lab-explanation');
-    if(expDiv) expDiv.innerHTML = explanationText;
-    
+    // Actualizar Texto de Apoyo en el HTML
+    const infoDiv = document.getElementById('lab-info-text');
+    if(infoDiv) infoDiv.innerHTML = explanationText;
+
+    // Actualizar Indicadores Numéricos y Barras
     document.getElementById('effect-val').textContent = effectVal;
     document.getElementById('effect-bar').style.width = `${effectVal}%`;
 
-    // 6. Dibujar la Línea de la Gráfica
+    // 5. Dibujar la Línea de Tendencia
     ctxLab.beginPath();
     ctxLab.strokeStyle = colorGrafica;
     ctxLab.lineWidth = 4;
-    
-    // El origen visual en el canvas es (pad, h - pad)
-    ctxLab.moveTo(pad, h - pad); 
+    ctxLab.moveTo(pad, h - pad); // Punto de origen visual (0,0)
     
     let plotX = pad + (val / 100) * (w - pad);
     let plotY = (h - pad) - (effectVal / 100) * (h - pad);
@@ -2465,55 +2465,62 @@ function drawLab() {
     ctxLab.lineTo(plotX, plotY);
     ctxLab.stroke();
 
-    // 7. Dibujar el Punto de Intersección
+    // 6. Dibujar Punto Interactivo y Coordenadas
     ctxLab.beginPath();
-    ctxLab.fillStyle = 'var(--color-oliva-medio)';
-    ctxLab.arc(plotX, plotY, 8, 0, Math.PI * 2);
+    ctxLab.fillStyle = colorGrafica;
+    ctxLab.arc(plotX, plotY, 7, 0, Math.PI * 2);
     ctxLab.fill();
     ctxLab.strokeStyle = 'white';
     ctxLab.lineWidth = 2;
     ctxLab.stroke();
 
-    // 8. Etiqueta de Coordenadas (X, Y)
     ctxLab.fillStyle = '#333';
-    ctxLab.font = 'bold 12px monospace';
+    ctxLab.font = 'bold 13px monospace';
     ctxLab.fillText(`(${val}, ${effectVal})`, plotX + 10, plotY - 10);
 }
 
 // --- EVENTOS DEL LABORATORIO ---
 
-// Slider de Causa
+// Control del Slider de Causa
 const sliderCause = document.getElementById('slider-cause');
-sliderCause.addEventListener('input', (e) => {
-    labState.cause = parseInt(e.target.value);
-    document.getElementById('cause-val').textContent = labState.cause;
+if(sliderCause) {
+    sliderCause.addEventListener('input', (e) => {
+        labState.cause = parseInt(e.target.value);
+        document.getElementById('cause-val').textContent = labState.cause;
+        drawLab();
+    });
+}
+
+// Botones de Selección de Tipo de Relación
+const btnDirect = document.getElementById('btn-direct');
+const btnInverse = document.getElementById('btn-inverse');
+
+if(btnDirect && btnInverse) {
+    btnDirect.addEventListener('click', () => {
+        labState.type = 'direct';
+        btnDirect.style.backgroundColor = '#707a4a';
+        btnInverse.style.backgroundColor = '#888';
+        drawLab();
+    });
+
+    btnInverse.addEventListener('click', () => {
+        labState.type = 'inverse';
+        btnInverse.style.backgroundColor = '#707a4a';
+        btnDirect.style.backgroundColor = '#888';
+        drawLab();
+    });
+}
+
+// --- INICIALIZACIÓN ---
+// Esto asegura que todo se dibuje al cargar la página
+document.addEventListener('DOMContentLoaded', () => {
+    // Si ya tienes estas funciones, no las borres
+    if (typeof initQuiz === 'function') initQuiz();
+    if (typeof initRandomGraphs === 'function') initRandomGraphs();
+    
+    // Llamada obligatoria para el laboratorio
     drawLab();
 });
-
-// Botón Relación Directa
-document.getElementById('btn-direct').addEventListener('click', (e) => {
-    labState.type = 'direct';
-    // Estilos visuales de botones
-    e.target.style.backgroundColor = 'var(--color-oliva-medio)';
-    document.getElementById('btn-inverse').style.backgroundColor = '#888';
-    drawLab();
-});
-
-// Botón Relación Inversa
-document.getElementById('btn-inverse').addEventListener('click', (e) => {
-    labState.type = 'inverse';
-    // Estilos visuales de botones
-    e.target.style.backgroundColor = 'var(--color-oliva-medio)';
-    document.getElementById('btn-direct').style.backgroundColor = '#888';
-    drawLab();
-});
-
-        // --- INICIALIZACIÓN ---
-        document.addEventListener('DOMContentLoaded', () => {
-            initQuiz();
-            initRandomGraphs();
-            drawLab();
-        });
 
     </script>
 </body>
