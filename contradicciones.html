@@ -1055,140 +1055,174 @@ let userAnswers = {};
 
 // Función para mezclar array (Fisher-Yates)
 function shuffleArray(array) {
-for (let i = array.length - 1; i > 0; i--) {
-const j = Math.floor(Math.random() * (i + 1));
-[array[i], array[j]] = [array[j], array[i]];
-}
-return array;
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
 }
 
 function startExam() {
-// Seleccionar 15 preguntas aleatorias
-const shuffled = shuffleArray([...questionBank]);
-selectedQuestions = shuffled.slice(0, 15);
+  // 1. Selección de preguntas
+  const shuffled = shuffleArray([...questionBank]);
+  selectedQuestions = shuffled.slice(0, 15);
 
-// Renderizar preguntas
-const form = document.getElementById('exam-form');
-form.innerHTML = '';
-selectedQuestions.forEach((q, index) => {
-const qDiv = document.createElement('div');
-qDiv.className = 'question-card';
-qDiv.innerHTML = `
-<p class="question-text">${index + 1}. ${q.q}</p>
-<div class="question-options">
- ${q.options.map((opt, optIndex) => `
-<label class="option-radio">
-<input type="radio" name="q${q.id}" value="${optIndex}" onchange="selectOption(${q.id}, ${optIndex}, this)">
-<span>${opt}</span>
-</label>
-`).join('')}
-</div>
-`;
-form.appendChild(qDiv);
-});
+  // 2. Limpiar y preparar formulario
+  const form = document.getElementById('exam-form');
+  form.innerHTML = ''; 
+  
+  selectedQuestions.forEach((q, index) => {
+    const qDiv = document.createElement('div');
+    qDiv.className = 'question-card';
+    
+    // Enunciado
+    const questionContent = document.createElement('div');
+    questionContent.className = 'question-text';
+    questionContent.innerHTML = `<strong>${index + 1}.</strong> ${q.q}`;
+    qDiv.appendChild(questionContent);
 
-// UI Changes
-document.getElementById('sim-start-screen').style.display = 'none';
-document.getElementById('exam-interface').style.display = 'block';
-document.getElementById('timer-bar-fill').style.width = '100%';
+    // Contenedor de opciones
+    const optionsContainer = document.createElement('div');
+    optionsContainer.className = 'question-options';
+    
+    q.options.forEach((opt, optIndex) => {
+      const label = document.createElement('label');
+      label.className = 'option-radio';
+      
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = `q${q.id}`; 
+      input.value = optIndex;
+      
+      // Lógica de selección
+      input.addEventListener('change', () => {
+        optionsContainer.querySelectorAll('.option-radio').forEach(el => el.classList.remove('selected'));
+        label.classList.add('selected');
+        userAnswers[q.id] = optIndex;
+      });
 
-// Start Timer
-examTimer = setInterval(updateTimer, 1000);
+      // Forzar clic en toda la caja
+      label.onclick = () => {
+        input.checked = true;
+        input.dispatchEvent(new Event('change'));
+      };
+
+      const spanText = document.createElement('span');
+      spanText.innerHTML = opt;
+
+      label.appendChild(input);
+      label.appendChild(spanText);
+      optionsContainer.appendChild(label);
+    });
+
+    qDiv.appendChild(optionsContainer);
+    form.appendChild(qDiv);
+  });
+
+  // 3. Cambios de Interfaz
+  document.getElementById('sim-start-screen').style.display = 'none';
+  document.getElementById('exam-interface').style.display = 'block';
+  
+  // Barra de tiempo
+  const bar = document.getElementById('timer-bar-fill');
+  if(bar) {
+      bar.style.width = '100%';
+      bar.style.transition = 'none';
+      setTimeout(() => { bar.style.transition = 'width 1s linear'; }, 50);
+  }
+
+  // Iniciar Cronómetro
+  if(examTimer) clearInterval(examTimer);
+  examTimer = setInterval(updateTimer, 1000);
 }
 
+// Función auxiliar separada
 window.selectOption = (qId, optIndex, element) => {
-if(timeLeft <= 0) return;
-// Visual selection
-const container = element.closest('.question-options');
-container.querySelectorAll('.option-radio').forEach(el => el.classList.remove('selected'));
-element.classList.add('selected');
-// Store answer
-userAnswers[qId] = optIndex;
+  if(timeLeft <= 0) return;
+  const container = element.closest('.question-options');
+  container.querySelectorAll('.option-radio').forEach(el => el.classList.remove('selected'));
+  element.parentElement.classList.add('selected');
+  userAnswers[qId] = optIndex;
 };
 
 function updateTimer() {
-const minutes = Math.floor(timeLeft / 60);
-const seconds = timeLeft % 60;
-document.getElementById('timer-display').textContent = 
-`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    
-// Update bar
-const percentage = (timeLeft / (30 * 60)) * 100;
-document.getElementById('timer-bar-fill').style.width = `${percentage}%`;
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
+  document.getElementById('timer-display').textContent = 
+    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  
+  // Update bar
+  const percentage = (timeLeft / (30 * 60)) * 100;
+  const bar = document.getElementById('timer-bar-fill');
+  if(bar) bar.style.width = `${percentage}%`;
 
-if (timeLeft <= 0) {
-finishExam(true);
-}
-timeLeft--;
+  if (timeLeft <= 0) {
+    finishExam(true);
+  }
+  timeLeft--;
 }
 
 function finishExam(timeOut = false) {
-clearInterval(examTimer);
-if(timeOut) showToast("¡Tiempo agotado! Entregando examen...");
-    
-// Calculate Score
-let correctCount = 0;
-let reviewHTML = '';
+  clearInterval(examTimer);
+  if(timeOut && typeof showToast === "function") showToast("¡Tiempo agotado! Entregando examen...");
+  
+  // Calculate Score
+  let correctCount = 0;
+  let reviewHTML = '';
 
-selectedQuestions.forEach((q) => {
-const userAns = userAnswers[q.id];
-const isCorrect = userAns === q.correct;
-if (isCorrect) correctCount++;
+  selectedQuestions.forEach((q) => {
+    const userAns = userAnswers[q.id];
+    const isCorrect = userAns === q.correct;
+    if (isCorrect) correctCount++;
 
-// Build Review HTML
-const userText = userAns !== undefined ? q.options[userAns] : 'Sin responder';
-const correctText = q.options[q.correct];
-const statusClass = isCorrect ? 'correct' : 'wrong';
+    // Build Review HTML - Usamos DIV para que la revisión también muestre las gráficas/tablas
+    const userText = userAns !== undefined ? q.options[userAns] : 'Sin responder';
+    const correctText = q.options[q.correct];
+    const statusClass = isCorrect ? 'correct' : 'wrong';
 
-reviewHTML += `
-<div class="review-item ${statusClass}">
-<div class="review-q">${q.q}</div>
-<div class="review-ans ${isCorrect ? '' : 'user-ans-wrong'}">
-Tu respuesta: <strong>${userText}</strong>
-</div>
- ${!isCorrect ? `<div class="review-ans correct-ans-highlight">Respuesta correcta: ${correctText}</div>` : ''}
-<div class="feedback-explanation">
-<strong>Explicación:</strong> ${q.feedback}
-</div>
-</div>
-`;
-});
+    reviewHTML += `
+      <div class="review-item ${statusClass}">
+        <div class="review-q">${q.q}</div>
+        <div class="review-ans ${isCorrect ? '' : 'user-ans-wrong'}">
+          Tu respuesta: <strong>${userText}</strong>
+        </div>
+        ${!isCorrect ? `<div class="review-ans correct-ans-highlight">Respuesta correcta: ${correctText}</div>` : ''}
+        <div class="feedback-explanation">
+          <strong>Explicación:</strong> ${q.feedback}
+        </div>
+      </div>
+    `;
+  });
 
-// ICFES Score Calculation (Simple Linear for this demo: 0 to 300)
-// Usually ICFES uses a complex formula based on population performance, here we map directly: 15 qs * 20 pts = 300
-const finalScore = Math.round((correctCount / 15) * 300);
+  const finalScore = Math.round((correctCount / 15) * 300);
 
-// Show Results
-document.getElementById('exam-interface').style.display = 'none';
-document.getElementById('results-review').style.display = 'block';
-document.getElementById('final-score').textContent = finalScore;
+  // Show Results
+  document.getElementById('exam-interface').style.display = 'none';
+  document.getElementById('results-review').style.display = 'block';
+  document.getElementById('final-score').textContent = finalScore;
 
-let message = "";
-if(finalScore >= 250) message = "¡Excelente! Dominas la lógica cuantitativa.";
-else if(finalScore >= 180) message = "Buen trabajo, pero revisa las trampas de promedio.";
-else message = "Necesitas practicar más la auditoría de datos.";
-document.getElementById('score-message').textContent = message;
+  let message = "";
+  if(finalScore >= 250) message = "¡Excelente! Dominas la lógica cuantitativa.";
+  else if(finalScore >= 180) message = "Buen trabajo, pero revisa las trampas de promedio.";
+  else message = "Necesitas practicar más la auditoría de datos.";
+  document.getElementById('score-message').textContent = message;
 
-document.getElementById('review-list').innerHTML = reviewHTML;
-window.scrollTo(0, 0);
+  document.getElementById('review-list').innerHTML = reviewHTML;
+  window.scrollTo(0, 0);
 }
 
 document.getElementById('btn-start-sim').addEventListener('click', () => {
-// Confirm start (simple check)
-if(confirm("¿Estás listo para iniciar? Tendrás 30 minutos.")) {
-startExam();
-}
+  if(confirm("¿Estás listo para iniciar? Tendrás 30 minutos.")) {
+    startExam();
+  }
 });
 
 document.getElementById('btn-finish-exam').addEventListener('click', () => {
-const answered = Object.keys(userAnswers).length;
-if(answered < 15 && !confirm(`Has respondido ${answered} de 15 preguntas. ¿Seguro que quieres entregar?`)) {
-return;
-}
-finishExam();
-});
-
+  const answered = Object.keys(userAnswers).length;
+  if(answered < 15 && !confirm(`Has respondido ${answered} de 15 preguntas. ¿Seguro que quieres entregar?`)) {
+    return;
+  }
+  finishExam();
 });
 </script>
 </body>
-</html>
