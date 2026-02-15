@@ -3196,30 +3196,71 @@ function startExam() {
 
   // Renderizar preguntas
   const form = document.getElementById('exam-form');
-  form.innerHTML = '';
+  form.innerHTML = ''; // Limpiar formulario previo
+  
   selectedQuestions.forEach((q, index) => {
     const qDiv = document.createElement('div');
     qDiv.className = 'question-card';
     
-    // AJUSTE: Se cambia <p> por <div> para que el sistema "lea" tablas, gráficas e infografías sin romperse
-    qDiv.innerHTML = `
-      <div class="question-text"><strong>${index + 1}.</strong> ${q.q}</div>
-      <div class="question-options">
-        ${q.options.map((opt, optIndex) => `
-          <label class="option-radio">
-            <input type="radio" name="q${q.id}" value="${optIndex}" onchange="selectOption(${q.id}, ${optIndex}, this)">
-            <span>${opt}</span>
-          </label>
-        `).join('')}
-      </div>
-    `;
+    // --- CORRECCIÓN 1: Usamos un DIV contenedor para la pregunta ---
+    // Esto permite que dentro de q.q (que tiene tablas HTML) no se rompa el layout
+    const questionContent = document.createElement('div');
+    questionContent.className = 'question-text';
+    // Inyectamos el HTML con seguridad
+    questionContent.innerHTML = `<strong>${index + 1}.</strong> ${q.q}`;
+    
+    qDiv.appendChild(questionContent);
+
+    // --- CORRECCIÓN 2: Contenedor de opciones ---
+    const optionsContainer = document.createElement('div');
+    optionsContainer.className = 'question-options';
+    
+    q.options.forEach((opt, optIndex) => {
+      // --- CORRECCIÓN 3: Lógica de etiquetas ---
+      // Envolvemos el input en el label para hacer clic en todo el botón
+      const label = document.createElement('label');
+      label.className = 'option-radio';
+      
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = `q${q.id}`; // Agrupa por ID de pregunta
+      input.value = optIndex;
+      
+      // Evento de cambio
+      input.addEventListener('change', () => {
+        // Remover clase 'selected' de TODOS los botones de ESTA pregunta
+        optionsContainer.querySelectorAll('.option-radio').forEach(el => el.classList.remove('selected'));
+        // Añadir clase a este
+        label.classList.add('selected');
+        // Guardar respuesta
+        userAnswers[q.id] = optIndex;
+      });
+
+      const spanText = document.createElement('span');
+      spanText.innerHTML = opt; // Usamos innerHTML por si el texto tiene negritas o formatos
+
+      label.appendChild(input);
+      label.appendChild(spanText);
+      optionsContainer.appendChild(label);
+    });
+
+    qDiv.appendChild(optionsContainer);
     form.appendChild(qDiv);
   });
 
   // UI Changes
   document.getElementById('sim-start-screen').style.display = 'none';
   document.getElementById('exam-interface').style.display = 'block';
-  document.getElementById('timer-bar-fill').style.width = '100%';
+  
+  // Resetear y animar barra de tiempo
+  const bar = document.getElementById('timer-bar-fill');
+  if(bar) {
+      bar.style.width = '100%';
+      bar.style.transition = 'none'; // Quitar transición para el reset
+      setTimeout(() => {
+          bar.style.transition = 'width 1s linear'; // Ponerla de nuevo
+      }, 50);
+  }
 
   // Start Timer
   examTimer = setInterval(updateTimer, 1000);
