@@ -3190,52 +3190,61 @@ function shuffleArray(array) {
 }
 
 function startExam() {
-  // Seleccionar 15 preguntas aleatorias
   const shuffled = shuffleArray([...questionBank]);
   selectedQuestions = shuffled.slice(0, 15);
-
-  // Renderizar preguntas
   const form = document.getElementById('exam-form');
-  form.innerHTML = ''; // Limpiar formulario previo
+  form.innerHTML = ''; 
   
   selectedQuestions.forEach((q, index) => {
     const qDiv = document.createElement('div');
     qDiv.className = 'question-card';
     
-    // --- CORRECCIÓN 1: Usamos un DIV contenedor para la pregunta ---
-    // Esto permite que dentro de q.q (que tiene tablas HTML) no se rompa el layout
     const questionContent = document.createElement('div');
     questionContent.className = 'question-text';
-    // Inyectamos el HTML con seguridad
     questionContent.innerHTML = `<strong>${index + 1}.</strong> ${q.q}`;
-    
     qDiv.appendChild(questionContent);
 
-    // --- CORRECCIÓN 2: Contenedor de opciones ---
     const optionsContainer = document.createElement('div');
     optionsContainer.className = 'question-options';
     
     q.options.forEach((opt, optIndex) => {
-      // --- CORRECCIÓN 3: Lógica de etiquetas ---
-      // Envolvemos el input en el label para hacer clic en todo el botón
       const label = document.createElement('label');
       label.className = 'option-radio';
       
       const input = document.createElement('input');
       input.type = 'radio';
-      input.name = `q${q.id}`; // Agrupa por ID de pregunta
+      input.name = `q${q.id}`; 
       input.value = optIndex;
       
-      // Evento de cambio
+      // Escuchamos el cambio para pintar el botón
       input.addEventListener('change', () => {
-        // Remover clase 'selected' de TODOS los botones de ESTA pregunta
         optionsContainer.querySelectorAll('.option-radio').forEach(el => el.classList.remove('selected'));
-        // Añadir clase a este
         label.classList.add('selected');
-        // Guardar respuesta
         userAnswers[q.id] = optIndex;
       });
 
+      // FORZAMOS EL CLIC EN TODA LA CAJA
+      label.onclick = () => {
+        input.checked = true;
+        input.dispatchEvent(new Event('change'));
+      };
+
+      const spanText = document.createElement('span');
+      spanText.innerHTML = opt;
+
+      label.appendChild(input);
+      label.appendChild(spanText);
+      optionsContainer.appendChild(label);
+    });
+
+    qDiv.appendChild(optionsContainer);
+    form.appendChild(qDiv);
+  });
+
+  document.getElementById('sim-start-screen').style.display = 'none';
+  document.getElementById('exam-interface').style.display = 'block';
+  examTimer = setInterval(updateTimer, 1000);
+}
       const spanText = document.createElement('span');
       spanText.innerHTML = opt; // Usamos innerHTML por si el texto tiene negritas o formatos
 
