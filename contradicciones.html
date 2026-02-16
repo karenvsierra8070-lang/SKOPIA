@@ -2204,7 +2204,6 @@ feedback: "El promedio (media) es sensible a valores extremos (el jefe que ganó
         feedback: "<strong>Lógica de la Correcta:</strong> Se aplica el <strong>Zoom Selectivo en el Rango</strong>. Al estrechar el eje a solo 2 puntos de diferencia, la longitud de la barra pierde su relación de proporcionalidad con el dato real, creando una contradicción narrativa. <br><strong>Anatomía del Distractor:</strong> La opción 0 es una sospecha de sesgo de selección. La opción 2 confunde volumen con tasa. La opción 3 es una opinión sobre la industria."
     }
 ];
-/* --- LÓGICA DEL SIMULADOR (Post-Preguntas) --- */
 let selectedQuestions = [];
 let examTimer = null;
 let timeLeft = 30 * 60; // 30 minutos
@@ -2224,7 +2223,7 @@ function startExam() {
     const shuffled = shuffleArray([...questionBank]);
     selectedQuestions = shuffled.slice(0, 15);
 
-    // 2. Limpiar y preparar formulario
+    // 2. Renderizar preguntas
     const form = document.getElementById('exam-form');
     form.innerHTML = ''; 
     
@@ -2232,7 +2231,8 @@ function startExam() {
         const qDiv = document.createElement('div');
         qDiv.className = 'question-card';
         
-        // CORRECCIÓN: Usamos DIV en lugar de P para que soporte infografías/tablas internas
+        // CAMBIO CLAVE: Usamos div class="question-text" en lugar de p
+        // Esto permite que las gráficas e infografías se dibujen correctamente
         qDiv.innerHTML = `
             <div class="question-text"><strong>${index + 1}.</strong> ${q.q}</div>
             <div class="question-options">
@@ -2247,29 +2247,20 @@ function startExam() {
         form.appendChild(qDiv);
     });
 
-    // 3. Cambios de Interfaz
+    // 3. UI Changes
     document.getElementById('sim-start-screen').style.display = 'none';
     document.getElementById('exam-interface').style.display = 'block';
-    
-    // Reset de barra de tiempo
-    const bar = document.getElementById('timer-bar-fill');
-    if(bar) {
-        bar.style.width = '100%';
-        bar.style.transition = 'none';
-        setTimeout(() => { bar.style.transition = 'width 1s linear'; }, 50);
-    }
+    document.getElementById('timer-bar-fill').style.width = '100%';
 
-    // 4. Iniciar Cronómetro
+    // 4. Start Timer
     if(examTimer) clearInterval(examTimer);
     examTimer = setInterval(updateTimer, 1000);
 }
 
-// Función de selección global
 window.selectOption = (qId, optIndex, element) => {
     if(timeLeft <= 0) return;
     const container = element.closest('.question-options');
     container.querySelectorAll('.option-radio').forEach(el => el.classList.remove('selected'));
-    // El element es el input, el parent es el label
     element.parentElement.classList.add('selected');
     userAnswers[qId] = optIndex;
 };
@@ -2277,13 +2268,11 @@ window.selectOption = (qId, optIndex, element) => {
 function updateTimer() {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
-    const display = document.getElementById('timer-display');
-    if(display) display.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    document.getElementById('timer-display').textContent = 
+        `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     
-    // Actualizar barra
     const percentage = (timeLeft / (30 * 60)) * 100;
-    const bar = document.getElementById('timer-bar-fill');
-    if(bar) bar.style.width = `${percentage}%`;
+    document.getElementById('timer-bar-fill').style.width = `${percentage}%`;
 
     if (timeLeft <= 0) finishExam(true);
     timeLeft--;
@@ -2320,7 +2309,6 @@ function finishExam(timeOut = false) {
     });
 
     const finalScore = Math.round((correctCount / 15) * 300);
-
     document.getElementById('exam-interface').style.display = 'none';
     document.getElementById('results-review').style.display = 'block';
     document.getElementById('final-score').textContent = finalScore;
@@ -2333,24 +2321,20 @@ function finishExam(timeOut = false) {
     window.scrollTo(0, 0);
 }
 
-// Inicialización de eventos
-document.addEventListener('DOMContentLoaded', () => {
-    const startBtn = document.getElementById('btn-start-sim');
-    if(startBtn) {
-        startBtn.addEventListener('click', () => {
-            if(confirm("¿Estás listo para iniciar? Tendrás 30 minutos.")) startExam();
-        });
+// BOTONES DIRECTOS (Como los tenías antes)
+document.getElementById('btn-start-sim').onclick = function() {
+    if(confirm("¿Estás listo para iniciar? Tendrás 30 minutos.")) {
+        startExam();
     }
+};
 
-    const finishBtn = document.getElementById('btn-finish-exam');
-    if(finishBtn) {
-        finishBtn.addEventListener('click', () => {
-            const answered = Object.keys(userAnswers).length;
-            if(answered < 15 && !confirm(`Has respondido ${answered} de 15 preguntas. ¿Seguro que quieres entregar?`)) return;
-            finishExam();
-        });
+document.getElementById('btn-finish-exam').onclick = function() {
+    const answered = Object.keys(userAnswers).length;
+    if(answered < 15 && !confirm(`Has respondido ${answered} de 15 preguntas. ¿Seguro que quieres entregar?`)) {
+        return;
     }
-});
+    finishExam();
+};
 </script>
 </body>
 </html>
