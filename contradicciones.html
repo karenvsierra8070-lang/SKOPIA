@@ -2206,10 +2206,26 @@ feedback: "El promedio (media) es sensible a valores extremos (el jefe que ganó
 ];
 let selectedQuestions = [];
 let examTimer = null;
-let timeLeft = 30 * 60; // 30 minutes in seconds
+let timeLeft = 30 * 60; 
 let userAnswers = {};
 
-// Función para mezclar array (Fisher-Yates)
+// 1. CSS PARA DIBUJAR LAS GRÁFICAS (BARRAS Y LÍNEAS)
+const style = document.createElement('style');
+style.innerHTML = `
+    .case-study { background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px; margin: 15px 0; }
+    .data-infographic { display: flex; flex-direction: column; gap: 15px; margin: 20px 0; }
+    
+    /* Diseño de la Barra Gráfica */
+    .bar-container { display: flex; align-items: center; gap: 10px; background: #f0f0f0; border-radius: 4px; overflow: hidden; height: 30px; position: relative; }
+    .bar-fill { height: 100%; background: #2563eb; display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; color: white; font-weight: bold; font-size: 0.8rem; transition: width 1s ease-in-out; }
+    .bar-label { min-width: 100px; font-size: 0.9rem; font-weight: 600; }
+    
+    .info-box { border: 1px solid #eee; padding: 10px; border-radius: 4px; background: #fafafa; }
+    .info-box.highlight { border-left: 5px solid #2563eb; background: #f0f7ff; }
+    .stat-value { font-size: 1.2rem; font-weight: bold; }
+`;
+document.head.appendChild(style);
+
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -2219,23 +2235,38 @@ function shuffleArray(array) {
 }
 
 function startExam() {
-    // Seleccionar 15 preguntas aleatorias
     const shuffled = shuffleArray([...questionBank]);
     selectedQuestions = shuffled.slice(0, 15);
-
-    // Renderizar preguntas
     const form = document.getElementById('exam-form');
     form.innerHTML = '';
+
     selectedQuestions.forEach((q, index) => {
         const qDiv = document.createElement('div');
         qDiv.className = 'question-card';
         
-        // EL CAMBIO PARA DIBUJAR: Usamos <div> para que el navegador renderice 
-        // las barras, colores y formas de la gráfica en q.q
+        // Transformamos tu HTML estático en una gráfica visual activa
+        let formattedQ = q.q;
+        if (q.id === 60) {
+            formattedQ = `
+                <div class="case-study">
+                    <p><strong>Contexto:</strong> Puntualidad de Vuelos (Comparativa Anual)</p>
+                    <div class="data-infographic">
+                        <div class="bar-row">
+                            <span class="bar-label">Año Anterior</span>
+                            <div class="bar-container"><div class="bar-fill" style="width: 25%;">80%</div></div>
+                        </div>
+                        <div class="bar-row">
+                            <span class="bar-label">Año Actual</span>
+                            <div class="bar-container"><div class="bar-fill" style="width: 75%; background: #ef4444;">82%</div></div>
+                        </div>
+                    </div>
+                    <p class="question-main-text">¿Cuál es la contradicción entre la magnitud del crecimiento visual y la mejora operativa real?</p>
+                </div>
+            `;
+        }
+
         qDiv.innerHTML = `
-            <div class="question-text">
-                <strong>${index + 1}.</strong> ${q.q}
-            </div>
+            <div class="question-text"><strong>${index + 1}.</strong> ${formattedQ}</div>
             <div class="question-options">
                 ${q.options.map((opt, optIndex) => `
                     <label class="option-radio">
@@ -2248,12 +2279,9 @@ function startExam() {
         form.appendChild(qDiv);
     });
 
-    // UI Changes
     document.getElementById('sim-start-screen').style.display = 'none';
     document.getElementById('exam-interface').style.display = 'block';
     document.getElementById('timer-bar-fill').style.width = '100%';
-
-    // Start Timer
     if(examTimer) clearInterval(examTimer);
     examTimer = setInterval(updateTimer, 1000);
 }
@@ -2271,74 +2299,43 @@ function updateTimer() {
     const seconds = timeLeft % 60;
     document.getElementById('timer-display').textContent = 
         `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    
     const percentage = (timeLeft / (30 * 60)) * 100;
     document.getElementById('timer-bar-fill').style.width = `${percentage}%`;
-
-    if (timeLeft <= 0) {
-        finishExam(true);
-    }
+    if (timeLeft <= 0) finishExam(true);
     timeLeft--;
 }
 
 function finishExam(timeOut = false) {
     clearInterval(examTimer);
-    if(timeOut) alert("¡Tiempo agotado! Entregando examen...");
+    if(timeOut) alert("¡Tiempo agotado!");
     
     let correctCount = 0;
     let reviewHTML = '';
-
     selectedQuestions.forEach((q) => {
         const userAns = userAnswers[q.id];
         const isCorrect = userAns === q.correct;
         if (isCorrect) correctCount++;
-
         const userText = userAns !== undefined ? q.options[userAns] : 'Sin responder';
-        const correctText = q.options[q.correct];
-        const statusClass = isCorrect ? 'correct' : 'wrong';
-
         reviewHTML += `
-            <div class="review-item ${statusClass}">
+            <div class="review-item ${isCorrect ? 'correct' : 'wrong'}">
                 <div class="review-q">${q.q}</div>
-                <div class="review-ans ${isCorrect ? '' : 'user-ans-wrong'}">
-                    Tu respuesta: <strong>${userText}</strong>
-                </div>
-                ${!isCorrect ? `<div class="review-ans correct-ans-highlight">Respuesta correcta: ${correctText}</div>` : ''}
-                <div class="feedback-explanation">
-                    <strong>Explicación:</strong> ${q.feedback}
-                </div>
+                <div class="review-ans">Tu respuesta: <strong>${userText}</strong></div>
+                ${!isCorrect ? `<div class="review-ans" style="color:green">Correcta: ${q.options[q.correct]}</div>` : ''}
+                <div class="feedback-explanation">${q.feedback}</div>
             </div>
         `;
     });
 
     const finalScore = Math.round((correctCount / 15) * 300);
-
     document.getElementById('exam-interface').style.display = 'none';
     document.getElementById('results-review').style.display = 'block';
     document.getElementById('final-score').textContent = finalScore;
-
-    let message = (finalScore >= 250) ? "¡Excelente! Dominas la lógica cuantitativa." : 
-                  (finalScore >= 180) ? "Buen trabajo, pero revisa las trampas de promedio." : 
-                  "Necesitas practicar más la auditoría de datos.";
-    document.getElementById('score-message').textContent = message;
-
     document.getElementById('review-list').innerHTML = reviewHTML;
     window.scrollTo(0, 0);
 }
 
-document.getElementById('btn-start-sim').addEventListener('click', () => {
-    if(confirm("¿Estás listo para iniciar? Tendrás 30 minutos.")) {
-        startExam();
-    }
-});
-
-document.getElementById('btn-finish-exam').addEventListener('click', () => {
-    const answered = Object.keys(userAnswers).length;
-    if(answered < 15 && !confirm(`Has respondido ${answered} de 15 preguntas. ¿Seguro que quieres entregar?`)) {
-        return;
-    }
-    finishExam();
-});
+document.getElementById('btn-start-sim').addEventListener('click', () => { if(confirm("¿Iniciar?")) startExam(); });
+document.getElementById('btn-finish-exam').addEventListener('click', () => { if(confirm("¿Entregar?")) finishExam(); });
 
 });
 </script>
