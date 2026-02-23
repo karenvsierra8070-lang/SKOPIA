@@ -438,7 +438,36 @@
             display: flex;
             gap: 10px;
         }
+/* Estilos específicos para el descanso */
+.modal-descanso {
+    display: none !important; /* Oculto totalmente por defecto */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 10000; /* Por encima de todo */
+    justify-content: center;
+    align-items: center;
+}
 
+/* Solo se muestra cuando tiene la clase active */
+.modal-descanso.active {
+    display: flex !important;
+}
+
+/* Para asegurar que el contenido se vea bien */
+.modal-descanso .modal-content {
+    background: white;
+    border-radius: 25px;
+    padding: 40px;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+    position: relative;
+}
         .action-btn {
             background: rgba(255, 255, 255, 0.2);
             border: none;
@@ -1759,30 +1788,30 @@
     </div>
     
     <!-- Modal de descanso -->
-    <div class="modal" id="break-modal">
-        <div class="modal-content">
-            <div class="modal-icon">☕</div>
-            <h2 class="modal-title">¡Momento de Descansar!</h2>
-            <p class="modal-text">
-                Has llegado a la mitad del cuestionario. Tómate un minuto para descansar la vista y estirarte.
-            </p>
-            <div class="break-timer" id="break-timer">1:00</div>
-            <div class="break-exercises">
-                <div class="exercise-item">
-                    <div class="exercise-icon">👀</div>
-                    <div class="exercise-text">Mira a lo lejos</div>
-                </div>
-                <div class="exercise-item">
-                    <div class="exercise-icon">🤸</div>
-                    <div class="exercise-text">Estira los brazos</div>
-                </div>
-                <div class="exercise-item">
-                    <div class="exercise-icon">🧘</div>
-                    <div class="exercise-text">Respira profundamente</div>
-                </div>
+  <div class="modal-descanso" id="break-modal">
+    <div class="modal-content">
+        <div class="modal-icon">☕</div>
+        <h2 class="modal-title">¡Momento de Descansar!</h2>
+        <p class="modal-text">
+            Has llegado a la mitad del cuestionario. Tómate un minuto para descansar la vista y estirarte.
+        </p>
+        <div class="break-timer" id="break-timer">1:00</div>
+        <div class="break-exercises">
+            <div class="exercise-item">
+                <div class="exercise-icon">👀</div>
+                <div class="exercise-text">Mira a lo lejos</div>
+            </div>
+            <div class="exercise-item">
+                <div class="exercise-icon">🤸</div>
+                <div class="exercise-text">Estira los brazos</div>
+            </div>
+            <div class="exercise-item">
+                <div class="exercise-icon">🧘</div>
+                <div class="exercise-text">Respira profundamente</div>
             </div>
         </div>
     </div>
+</div>
     
     <!-- Modal de preguntas diferidas -->
     <div class="modal" id="deferred-modal">
@@ -3146,48 +3175,57 @@
                 }
             }
             
-            // Mostrar modal de descanso
-            function showBreakModal() {
-                breakModal.classList.add('active');
-                
-                // Iniciar temporizador de descanso
-                let breakTimeRemaining = 60; // 1 minuto
-                
-                const breakTimerInterval = setInterval(() => {
-                    breakTimeRemaining--;
-                    const minutes = Math.floor(breakTimeRemaining / 60);
-                    const seconds = breakTimeRemaining % 60;
-                    breakTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                    
-                    if (breakTimeRemaining <= 0) {
-                        clearInterval(breakTimerInterval);
-                        closeBreakModal();
-                    }
-                }, 1000);
-                
-                // Guardar referencia al temporizador para poder limpiarlo
-                breakModal.dataset.timerId = breakTimerInterval;
-            }
-            
-            // Cerrar modal de descanso
-            function closeBreakModal() {
-                // Limpiar temporizador
-                const timerId = breakModal.dataset.timerId;
-                if (timerId) {
-                    clearInterval(timerId);
-                    delete breakModal.dataset.timerId;
-                }
-                
-                // Marcar descanso como tomado
-                breakTaken = true;
-                saveProgress();
-                
-                // Cerrar modal
-                breakModal.classList.remove('active');
-                
-                // Continuar con el cuestionario
-                loadQuestion();
-            }
+           // Mostrar modal de descanso
+function showBreakModal() {
+    // Usamos el ID para asegurar que seleccionamos el correcto
+    const modal = document.getElementById('break-modal');
+    modal.classList.add('active'); // Activa la visualización en el CSS
+    
+    // Iniciar temporizador de descanso
+    let breakTimeRemaining = 60; // 1 minuto
+    
+    const breakTimerInterval = setInterval(() => {
+        breakTimeRemaining--;
+        const minutes = Math.floor(breakTimeRemaining / 60);
+        const seconds = breakTimeRemaining % 60;
+        
+        // Actualizar el texto del contador
+        const breakTimerElement = document.getElementById('break-timer');
+        if (breakTimerElement) {
+            breakTimerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        if (breakTimeRemaining <= 0) {
+            clearInterval(breakTimerInterval);
+            closeBreakModal(); // Llamamos al cierre automático
+        }
+    }, 1000);
+    
+    // Guardamos el ID en el dataset por si acaso
+    modal.dataset.timerId = breakTimerInterval;
+}
+
+// Cerrar modal de descanso
+function closeBreakModal() {
+    const modal = document.getElementById('break-modal');
+    
+    // 1. Limpiar temporizador inmediatamente
+    const timerId = modal.dataset.timerId;
+    if (timerId) {
+        clearInterval(parseInt(timerId));
+        delete modal.dataset.timerId;
+    }
+    
+    // 2. Marcar descanso como tomado
+    breakTaken = true;
+    if (typeof saveProgress === 'function') saveProgress();
+    
+    // 3. Cerrar modal quitando la clase active
+    modal.classList.remove('active');
+    
+    // 4. Continuar con el cuestionario cargando la siguiente pregunta
+    loadQuestion();
+}
             
             // Siguiente pregunta
             function nextQuestion() {
