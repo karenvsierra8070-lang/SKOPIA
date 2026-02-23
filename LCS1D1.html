@@ -67,7 +67,13 @@
             overflow-x: hidden;
             position: relative;
         }
+#break-modal {
+    display: none !important; /* Por defecto siempre oculto */
+}
 
+#break-modal.active {
+    display: flex !important; /* Solo se muestra si tiene .active */
+}
         /* Fondo animado con formas */
         .bg-shapes {
             position: fixed;
@@ -3177,55 +3183,67 @@
             }
             
            // Mostrar modal de descanso
+// Mostrar modal de descanso
 function showBreakModal() {
-    // Usamos el ID para asegurar que seleccionamos el correcto
     const modal = document.getElementById('break-modal');
-    modal.classList.add('active'); // Activa la visualización en el CSS
+    const timerDisplay = document.getElementById('break-timer');
     
-    // Iniciar temporizador de descanso
-    let breakTimeRemaining = 60; // 1 minuto
+    if (!modal) return; // Si no encuentra el modal, no hace nada
     
+    modal.classList.add('active');
+    let breakTimeRemaining = 60; 
+
+    // Limpiar cualquier intervalo previo por seguridad
+    if (modal.dataset.timerId) {
+        clearInterval(parseInt(modal.dataset.timerId));
+    }
+
     const breakTimerInterval = setInterval(() => {
         breakTimeRemaining--;
-        const minutes = Math.floor(breakTimeRemaining / 60);
-        const seconds = breakTimeRemaining % 60;
         
-        // Actualizar el texto del contador
-        const breakTimerElement = document.getElementById('break-timer');
-        if (breakTimerElement) {
-            breakTimerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        if (timerDisplay) {
+            const minutes = Math.floor(breakTimeRemaining / 60);
+            const seconds = breakTimeRemaining % 60;
+            timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
         
         if (breakTimeRemaining <= 0) {
             clearInterval(breakTimerInterval);
-            closeBreakModal(); // Llamamos al cierre automático
+            closeBreakModal();
         }
     }, 1000);
     
-    // Guardamos el ID en el dataset por si acaso
     modal.dataset.timerId = breakTimerInterval;
 }
 
 // Cerrar modal de descanso
 function closeBreakModal() {
-    const modal = document.getElementById('break-modal');
+    console.log("Intentando cerrar el descanso..."); // Ver en consola (F12)
     
-    // 1. Limpiar temporizador inmediatamente
+    const modal = document.getElementById('break-modal');
+    if (!modal) return;
+
+    // 1. Detener el reloj inmediatamente
     const timerId = modal.dataset.timerId;
     if (timerId) {
         clearInterval(parseInt(timerId));
         delete modal.dataset.timerId;
     }
     
-    // 2. Marcar descanso como tomado
-    breakTaken = true;
-    if (typeof saveProgress === 'function') saveProgress();
-    
-    // 3. Cerrar modal quitando la clase active
+    // 2. ACTUALIZACIÓN CRÍTICA: Forzar el cierre visual primero
     modal.classList.remove('active');
+    modal.style.display = 'none'; // Refuerzo por código directo
     
-    // 4. Continuar con el cuestionario cargando la siguiente pregunta
-    loadQuestion();
+    // 3. Variables de progreso
+    breakTaken = true; 
+    
+    // 4. Continuar (usando try/catch para que si esto falla, el modal ya se haya cerrado)
+    try {
+        if (typeof saveProgress === 'function') saveProgress();
+        loadQuestion(); 
+    } catch (error) {
+        console.error("Error al cargar siguiente pregunta:", error);
+    }
 }
             
             // Siguiente pregunta
