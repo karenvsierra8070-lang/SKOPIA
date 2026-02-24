@@ -157,17 +157,19 @@
             color: var(--color-amarillo);
             padding: 15px 25px;
             font-family: 'Orbitron', sans-serif;
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 900;
             letter-spacing: 2px;
             border: 4px solid var(--color-amarillo);
             display: none;
             text-align: center;
+            min-width: 200px;
         }
         .challenge-status-wrapper.active { display: block; animation: flash 1s infinite; }
         .challenge-status-wrapper.challenge-2 { 
             border-color: var(--color-incorrecto); 
             color: var(--color-incorrecto);
+            font-size: 2rem;
         }
         @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
@@ -181,6 +183,16 @@
             font-size: 1.3rem; line-height: 1.8; 
             border-left: 8px solid var(--color-azul); 
             color: #222; font-weight: 500;
+            transition: all 0.5s ease; /* Para efecto de desvanecimiento */
+        }
+        /* Clase para ocultar texto */
+        .text-passage.vanished, .question-text.vanished {
+            opacity: 0;
+            height: 0;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+            border: none;
         }
         
         .options-container { display: grid; gap: 20px; margin-bottom: 30px; }
@@ -466,21 +478,21 @@
         <div id="analisis-content"></div>
     </div>
 
-    <!-- MODAL DESAFÍO 1 -->
+    <!-- MODAL DESAFÍO 1 (VANISH) -->
     <div class="modal-overlay" id="modal-challenge1">
         <div class="modal-box">
-            <h2>DESAFÍO 1</h2>
-            <p style="font-size: 1.5rem; margin: 30px 0;">Has respondido 2 correctamente seguidas.</p>
-            <p style="font-size: 1.2rem;">MODO RIESGO ACTIVO:<br><strong style="color:var(--color-correcto)">+60 Puntos</strong> | <strong style="color:var(--color-incorrecto)">-30 Puntos</strong></p>
+            <h2>¡DESAFÍO FANTASMA!</h2>
+            <p style="font-size: 1.5rem; margin: 30px 0;">Has respondido 2 correctas seguidas.</p>
+            <p style="font-size: 1.2rem;">Cada pregunta tendrá un temporizador de <strong>30 segundos</strong>.<br>Al terminar, el texto y la pregunta <strong>desaparecerán</strong>.</p>
             <button class="modal-btn" id="btn-accept-challenge1">¡ACEPTAR!</button>
         </div>
     </div>
 
-    <!-- MODAL DESAFÍO 2 -->
+    <!-- MODAL DESAFÍO 2 (AMBICIOSO) -->
     <div class="modal-overlay" id="modal-challenge2">
         <div class="modal-box challenge-2">
-            <h2 style="color: var(--color-incorrecto);">DESAFÍO 2</h2>
-            <p style="font-size: 1.5rem; margin: 30px 0;">¡Increíble! 4 correctas seguidas.</p>
+            <h2 style="color: var(--color-incorrecto);">¡DESAFÍO 2!</h2>
+            <p style="font-size: 1.5rem; margin: 30px 0;">¡Increíble! Has acertado 4 veces en el Desafío Fantasma.</p>
             <p style="font-size: 1.2rem;">MODO AMBICIOSO ACTIVO:<br><strong style="color:var(--color-correcto)">+50 Puntos</strong> | <strong style="color:var(--color-incorrecto)">-50 Puntos</strong></p>
             <button class="modal-btn ch2" id="btn-accept-challenge2">¡ACEPTAR!</button>
         </div>
@@ -493,9 +505,11 @@
             let score = 0;
             let selectedOption = null;
             let questions = [];
-            let consecutiveCorrect = 0; 
-            let consecutiveFailures = 0; // CONTADOR DE PREGUNTAS FALLADAS SEGUIDAS
-            let activeChallenge = null;
+            let consecutiveCorrect = 0; // Racha global
+            let consecutiveFailures = 0; // Fallos consecutivos para intersticiales
+            let activeChallenge = null; // 'vanish', 'risk', null
+            let challengeStreak = 0; // Contador interno para Desafio 1 (hasta llegar a 4)
+            let timerInterval = null;
             
             // Elementos DOM
             const containers = {
@@ -585,7 +599,7 @@
                 if(containers[name]) containers[name].classList.add('active');
             }
 
-            // --- LÓGICA DEL QUIZ (1 SOLO INTENTO) ---
+            // --- LÓGICA DEL QUIZ ---
             function loadQuestion() {
                 if (currentQuestionIndex >= questions.length) {
                     showResults();
@@ -593,6 +607,10 @@
                 }
                 
                 switchContainer('quiz');
+                
+                // Resetear visuales de texto
+                ui.passage.classList.remove('vanished');
+                ui.qText.classList.remove('vanished');
                 
                 const q = questions[currentQuestionIndex];
                 ui.qNumber.textContent = currentQuestionIndex + 1;
@@ -620,6 +638,14 @@
                 btns.check.disabled = true;
                 
                 updateChallengeVisuals();
+
+                // Lógica del temporizador para Desafío 1 (Vanish)
+                if (activeChallenge === 'vanish') {
+                    startVanishTimer();
+                } else {
+                    stopVanishTimer();
+                }
+                
                 updateProgress();
             }
 
@@ -627,7 +653,7 @@
                 selectedOption = index;
                 document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
                 btn.classList.add('selected');
-                btns.check.disabled = false; // HABILITAR BOTÓN
+                btns.check.disabled = false;
             }
 
             function checkAnswer() {
@@ -642,7 +668,9 @@
                 feedbackBox.style.display = 'block';
                 document.getElementById('trick-text').textContent = q.truco || "";
                 
-                // BLOQUEAR OPCIONES
+                // DETENER TEMPORIZADOR SI HAY
+                stopVanishTimer();
+
                 options.forEach(b => b.disabled = true);
 
                 if (isCorrect) {
@@ -652,12 +680,20 @@
                     let points = 30;
                     let title = '<i class="fas fa-check-circle"></i> CORRECTO';
                     
-                    if (activeChallenge === 'challenge2') {
+                    if (activeChallenge === 'risk') {
+                        // DESAFÍO 2
                         points = 50;
                         title = '<i class="fas fa-trophy"></i> DESAFÍO 2 (+50)';
-                    } else if (activeChallenge === 'challenge1') {
-                        points = 60;
-                        title = '<i class="fas fa-trophy"></i> DESAFÍO 1 (+60)';
+                    } else if (activeChallenge === 'vanish') {
+                        // DESAFÍO 1: Puntos normales (30)
+                        points = 30;
+                        title = '<i class="fas fa-check-circle"></i> CORRECTO (FANTASMA)';
+                        
+                        // Aumentar contador interno del desafío
+                        challengeStreak++;
+                        if (challengeStreak === 4) {
+                            setTimeout(() => { modals.ch2.style.display = 'flex'; }, 1000);
+                        }
                     }
 
                     score += points;
@@ -670,10 +706,9 @@
                     
                     options[selectedOption].classList.add('correct');
                     
+                    // Disparador inicial de Desafío 1 (Si no está activo y llevas 2 globales)
                     if (!activeChallenge && consecutiveCorrect === 2) {
                         setTimeout(() => { modals.ch1.style.display = 'flex'; }, 1000);
-                    } else if (activeChallenge === 'challenge1' && consecutiveCorrect === 4) {
-                        setTimeout(() => { modals.ch2.style.display = 'flex'; }, 1000);
                     }
                     
                     btns.next.style.display = 'inline-flex';
@@ -685,17 +720,26 @@
                     let penalty = 0;
                     let title = '<i class="fas fa-times-circle"></i> INCORRECTO';
 
-                    if (activeChallenge === 'challenge2') {
+                    if (activeChallenge === 'risk') {
                         penalty = 50;
                         title = '<i class="fas fa-bomb"></i> DESAFÍO 2 FALLADO (-50)';
-                    } else if (activeChallenge === 'challenge1') {
-                        penalty = 30;
-                        title = '<i class="fas fa-bomb"></i> DESAFÍO 1 FALLADO (-30)';
+                    } else if (activeChallenge === 'vanish') {
+                        // Desafío 1 fallado: Se pierde el desafío pero no se penaliza extra (puntos base 0 o normal)
+                        // Si el usuario quiere penalización en Desafío 1 se puede agregar aquí, pero dijo "solo suma los mismos 30"
+                        // Así que asumimos que fallar en Desafío 1 es como fallar normalmente.
+                        penalty = 0; 
+                        title = '<i class="fas fa-times-circle"></i> INCORRECTO (FIN DEL FANTASMA)';
+                        
+                        // Reiniciar contador interno
+                        challengeStreak = 0;
                     }
 
                     score -= penalty;
                     if (score < 0) score = 0;
+                    
+                    // Si fallas, sales de cualquier desafío
                     activeChallenge = null;
+                    challengeStreak = 0;
                     updateChallengeVisuals();
 
                     feedbackBox.className = 'feedback-container incorrect';
@@ -712,8 +756,43 @@
                 ui.score.textContent = score;
             }
             
-            // --- EVENTOS (AQUÍ ESTÁ LA CORRECCIÓN) ---
-            btns.check.addEventListener('click', checkAnswer); // <--- ESTA LÍNEA FALTABA
+            // --- LÓGICA TEMPORIZADOR FANTASMA ---
+            function startVanishTimer() {
+                let timeLeft = 30;
+                ui.challengeBox.style.display = 'block';
+                ui.challengeBox.className = 'challenge-status-wrapper active';
+                ui.challengeText.textContent = timeLeft;
+
+                stopVanishTimer(); // Limpiar anterior si existe
+                
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    ui.challengeText.textContent = timeLeft < 10 ? `0${timeLeft}` : timeLeft;
+                    
+                    if (timeLeft <= 0) {
+                        stopVanishTimer();
+                        ui.challengeText.textContent = "VANISH";
+                        // OCULTAR TEXTO Y PREGUNTA
+                        ui.passage.classList.add('vanished');
+                        ui.qText.classList.add('vanished');
+                    }
+                }, 1000);
+            }
+
+            function stopVanishTimer() {
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                }
+                if (activeChallenge !== 'vanish') {
+                    ui.challengeBox.style.display = 'none';
+                    ui.passage.classList.remove('vanished');
+                    ui.qText.classList.remove('vanished');
+                }
+            }
+            
+            // --- EVENTOS ---
+            btns.check.addEventListener('click', checkAnswer);
             
             btns.next.addEventListener('click', () => {
                 if (currentQuestionIndex === 4) {
@@ -759,26 +838,30 @@
             // --- GESTIÓN DE DESAFÍOS ---
             modals.btnCh1.onclick = () => {
                 modals.ch1.style.display = 'none';
-                activeChallenge = 'challenge1';
+                activeChallenge = 'vanish';
+                challengeStreak = 0; // Iniciar contador para llegar a 4
                 updateChallengeVisuals();
             };
             modals.btnCh2.onclick = () => {
                 modals.ch2.style.display = 'none';
-                activeChallenge = 'challenge2';
+                activeChallenge = 'risk';
                 updateChallengeVisuals();
             };
 
             function updateChallengeVisuals() {
                 if (!activeChallenge) {
                     ui.challengeBox.style.display = 'none';
+                    ui.passage.classList.remove('vanished');
+                    ui.qText.classList.remove('vanished');
+                    stopVanishTimer();
                 } else {
                     ui.challengeBox.style.display = 'block';
-                    ui.challengeBox.className = 'challenge-status-wrapper active';
-                    if (activeChallenge === 'challenge2') {
-                        ui.challengeBox.classList.add('challenge-2');
+                    if (activeChallenge === 'vanish') {
+                        ui.challengeBox.className = 'challenge-status-wrapper active';
+                        // El texto del timer se maneja en startVanishTimer
+                    } else if (activeChallenge === 'risk') {
+                        ui.challengeBox.className = 'challenge-status-wrapper active challenge-2';
                         ui.challengeText.textContent = "+50 / -50";
-                    } else {
-                        ui.challengeText.textContent = "+60 / -30";
                     }
                 }
             }
@@ -788,9 +871,10 @@
                 loadQuestion();
             };
             
+            // CORRECCIÓN BOTÓN VOLVER
             btns.back.addEventListener('click', () => {
                 if(confirm('¿Seguro que quieres salir? Perderás tu progreso.')) {
-                    window.location.href = 'index.html';
+                    window.location.href = 'LCS1D.html'; // <--- CAMBIO AQUÍ
                 }
             });
 
@@ -806,7 +890,7 @@
                 document.getElementById('correct-answers').textContent = Math.round(score / 30);
             }
 
-            btns.finish.onclick = () => { window.location.href = 'index.html'; };
+            btns.finish.onclick = () => { window.location.href = 'LCS1D.html'; };
 
             // UI Menús
             const hamburger = document.getElementById('hamburger-menu');
