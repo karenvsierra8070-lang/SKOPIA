@@ -433,7 +433,10 @@
                         <div style="text-transform: uppercase;">Correctas</div>
                     </div>
                 </div>
-                <div class="action-buttons" style="justify-content: center;">
+                <div class="action-buttons" style="justify-content: center; flex-direction: column; gap: 20px;">
+                    <button class="btn btn-primary" id="replay-btn">
+                        VOLVER A JUGAR <i class="fas fa-redo"></i>
+                    </button>
                     <button class="btn" id="finish-btn">FINALIZAR</button>
                 </div>
             </div>
@@ -505,13 +508,85 @@
             let score = 0;
             let selectedOption = null;
             let questions = [];
-            let consecutiveCorrect = 0; // Racha global
-            let consecutiveFailures = 0; // Fallos consecutivos para intersticiales
-            let activeChallenge = null; // 'vanish', 'risk', null
-            let challengeStreak = 0; // Contador interno para Desafio 1 (hasta llegar a 4)
+            let consecutiveCorrect = 0;
+            let consecutiveFailures = 0;
+            let activeChallenge = null;
+            let challengeStreak = 0;
             let timerInterval = null;
+            let isReplay = false; // Flag para saber si es replay (saltar video)
+
+            // --- SISTEMA DE AUDIO (Web Audio API & SpeechSynthesis) ---
+            let audioCtx;
             
-            // Elementos DOM
+            function initAudio() {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            // SFX: Beep agudo (para cuenta regresiva)
+            function playBeep() {
+                if (!audioCtx) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime); // La5
+                osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.1);
+                
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            }
+
+            // SFX: Sonido de éxito/inicio (Acorde simple)
+            function playStartSound() {
+                if (!audioCtx) return;
+                const now = audioCtx.currentTime;
+                [440, 554, 659].forEach((freq, i) => { // A Mayor
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    
+                    osc.frequency.value = freq;
+                    osc.type = 'triangle';
+                    
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(0.05, now + 0.1 + (i*0.05));
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+                    
+                    osc.start(now);
+                    osc.stop(now + 0.6);
+                });
+            }
+
+            // TTS: Voz alegre femenina
+            function speak(text) {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel(); // Detener anterior
+                    const msg = new SpeechSynthesisUtterance(text);
+                    msg.lang = 'es-ES'; 
+                    msg.rate = 1.1;
+                    msg.pitch = 1.2; // Tono más alto = más alegre
+
+                    // Intentar buscar voz femenina
+                    const voices = window.speechSynthesis.getVoices();
+                    // Prioridad: Google Español (suele ser femenina), luego cualquiera que sea es-MX o es-ES
+                    const femaleVoice = voices.find(v => v.lang.includes('es') && (v.name.includes('Google') || v.name.includes('Female'))) 
+                                      || voices.find(v => v.lang.includes('es'));
+                    
+                    if (femaleVoice) msg.voice = femaleVoice;
+
+                    window.speechSynthesis.speak(msg);
+                }
+            }
+
+            // --- Elementos DOM ---
             const containers = {
                 video: document.getElementById('video-container'),
                 quiz: document.getElementById('quiz-container'),
@@ -541,7 +616,8 @@
                 continueQuiz: document.getElementById('continue-quiz-btn'),
                 continueGame: document.getElementById('continue-after-game-btn'),
                 finish: document.getElementById('finish-btn'),
-                back: document.getElementById('back-btn')
+                back: document.getElementById('back-btn'),
+                replay: document.getElementById('replay-btn')
             };
 
             const modals = {
@@ -551,46 +627,119 @@
                 btnCh2: document.getElementById('btn-accept-challenge2')
             };
 
-            // Datos Tips/Teoría
-            const tips = [
-                { content: "Analiza la estructura del texto.", example: "Introducción, Desarrollo y Conclusión." },
-                { content: "Busca los conectores lógicos.", example: "Por lo tanto, sin embargo, en conclusión." },
-                { content: "Identifica la tesis principal.", example: "¿Qué está defendiendo el autor?" }
-            ];
-            const theories = [
-                { 
-                    content: "El texto argumentativo.", 
-                    points: ["Tesis", "Cuerpo argumentativo", "Conclusión"],
-                    visual: "Estructura base de la comunicación académica."
+            // --- DATOS MOCK (Con texto y Tags correctos) ---
+            const mockQuestions = [
+                {
+                    pregunta: "El fenómeno de la desertificación avanza imparablemente en varias regiones del mundo debido al cambio climático y las prácticas agrícolas insostenibles. La tierra pierde su fertilidad, la vegetación muere y los ecosistemas colapsan, provocando migraciones masivas y hambruna. Aunque existen proyectos de reforestación, estos son insuficientes si no se atacan las causas raíz del problema. Por lo tanto, expertos internacionales advierten que se requiere una acción global coordinada que combine la restauración ecológica con cambios drásticos en el modelo de producción de alimentos.\n\n¿Cuál es la idea principal del texto sobre la solución a la desertificación?",
+                    opciones: ["La reforestación es la única solución viable para detener la desertificación en el mundo.", "Se necesita una acción global coordinada que combine restauración ecológica con cambios en la producción de alimentos.", "La desertificación es un proceso natural que no se puede detener con intervenciones humanas.", "Las prácticas agrícolas actuales son perfectas y no contribuyen al problema de la tierra."],
+                    respuestaCorrecta: 1,
+                    explicacion: "El texto propone una solución integral ('acción global coordinada') que aborda tanto la restauración como el modelo de producción.",
+                    truco: "Busca conectores finales como 'por lo tanto'.",
+                    tags: ["diagnostico","basico medio","LC","comprensión literal","ideas principales"]
+                },
+                {
+                    pregunta: "La inteligencia artificial generativa ha revolucionado la forma en que interactuamos con la información, permitiendo crear texto, imágenes y código a partir de simples descripciones. Sin embargo, esta tecnología también plantea serios desafíos éticos y legales, como la generación de contenido falso (deepfakes) y la violación de derechos de autor. A pesar de estos riesgos, su potencial para acelerar la investigación científica y la creatividad es innegable. En conclusión, la sociedad debe establecer marcos regulatorios claros que fomenten la innovación mientras protegen a los ciudadanos de los posibles abusos.\n\n¿Cuál es la posición principal del autor respecto a la Inteligencia Artificial?",
+                    opciones: ["La IA generativa debe ser prohibida completamente debido a sus riesgos.", "La sociedad debe ignorar los riesgos para centrarse solo en la innovación tecnológica.", "Es necesario crear regulaciones que equilibren la promoción de la innovación con la protección ciudadana.", "La IA generativa no tiene impacto real en la investigación científica."],
+                    respuestaCorrecta: 2,
+                    explicacion: "El autor reconoce riesgos y beneficios, pero concluye abogando por una 'solución intermedia': regulación clara.",
+                    truco: "Identifica la postura final ('En conclusión').",
+                    tags: ["basico medio","ideas principales","tecnologia"]
+                },
+                {
+                    pregunta: "El consumo excesivo de azúcares refinados está directamente relacionado con el aumento alarmante de enfermedades metabólicas como la diabetes tipo 2 y la obesidad infantil. Estudios recientes demuestran que el azúcar activa los mismos centros de recompensa en el cerebro que las drogas adictivas, creando un ciclo de dependencia difícil de romper. Además, el azúcar oculto en alimentos procesados hace que el control del consumo sea casi imposible para el promedio de las personas. Por consiguiente, los nutricionistas recomiendan volver a una dieta basada en alimentos integrales y cocinar en casa para recuperar el control sobre lo que ingerimos.\n\n¿Cuál es la recomendación principal derivada del texto?",
+                    opciones: ["Eliminar completamente todos los carbohidratos de la dieta diaria.", "Consumir suplementos vitamínicos para compensar el azúcar.", "Adoptar una dieta de alimentos integrales y cocina casera para controlar el consumo.", "Aumentar el ejercicio físico sin modificar la alimentación."],
+                    respuestaCorrecta: 2,
+                    explicacion: "La recomendación explícita ('Por consiguiente...') es volver a alimentos integrales y cocinar en casa.",
+                    truco: "Busca palabras imperativas o acciones sugeridas al final del texto.",
+                    tags: ["basico medio","LC","ideas principales","salud"]
+                },
+                {
+                    pregunta: "La economía circular se presenta como una alternativa al modelo lineal de 'producir, usar y tirar'. En este nuevo paradigma, los materiales se mantienen en uso el mayor tiempo posible, mediante procesos como reparación, reutilización y reciclaje. Esto no solo reduce la presión sobre los recursos naturales, sino que también estimula la innovación y crea nuevos empleos en sectores verdes. Por lo tanto, transitar hacia una economía circular no es solo una necesidad ambiental, sino una oportunidad económica estratégica para las naciones que deseen liderar el desarrollo sostenible.\n\n¿Cuál es la idea principal sobre la economía circular?",
+                    opciones: ["La economía circular es difícil de implementar y costosa para los países en desarrollo.", "Mantener los materiales en uso el mayor tiempo posible reduce la presión sobre recursos y crea oportunidades económicas.", "El modelo lineal es superior porque es más rápido y barato para los consumidores.", "La innovación tecnológica es el único componente necesario para la sostenibilidad."],
+                    respuestaCorrecta: 1,
+                    explicacion: "El texto argumenta que es una 'necesidad ambiental' y una 'oportunidad económica', basada en mantener materiales en uso.",
+                    truco: "El título o el primer párrafo suelen definir el concepto principal.",
+                    tags: ["basico medio","ideas principales","medio ambiente"]
+                },
+                {
+                    pregunta: "El aprendizaje basado en proyectos (ABP) ha demostrado ser más efectivo que la enseñanza tradicional memorística para el desarrollo de habilidades blandas como el trabajo en equipo y la resolución de problemas. Al enfrentar un desafío real, los estudiantes deben investigar, colaborar y crear soluciones tangibles, lo que profundiza su comprensión y retención del conocimiento. Sin embargo, requiere una planificación cuidadosa por parte de los docentes y una disponibilidad de recursos que no todas las instituciones tienen. A pesar de estos obstáculos, los beneficios pedagógicos sugieren que debería adoptarse como metodología principal en la educación moderna.\n\n¿Cuál es la postura del autor sobre el ABP?",
+                    opciones: ["El ABP es ineficaz y debe ser abandonado en favor de la memorización.", "Aunque requiere recursos, el ABP debe ser la metodología principal por sus beneficios pedagógicos.", "El ABP solo funciona en instituciones con presupuestos ilimitados.", "El aprendizaje tradicional es superior para el desarrollo de habilidades blandas."],
+                    respuestaCorrecta: 1,
+                    explicacion: "El autor reconoce los obstáculos, pero concluye firmemente a favor del ABP ('debería adoptarse como metodología principal').",
+                    truco: "Busca la estructura 'Aunque X... sin embargo Y... por lo tanto Z'.",
+                    tags: ["basico medio","ideas principales","educacion"]
                 }
+                // (Se generan más en el código si no hay suficientes)
             ];
 
             // --- CARGAR PREGUNTAS ---
             async function loadQuestions() {
+                // Si es replay, no necesitamos recargar el JSON, solo reordenar las que ya teníamos o recargar si se prefiere frescura total.
+                // Para simplicidad, recargaremos siempre para asegurar frescura en replay.
+                
                 try {
                     const response = await fetch('preguntas.json');
                     if (!response.ok) throw new Error('Error JSON');
                     const data = await response.json();
                     
+                    // Filtrado estricto: Debe tener AMBOS tags
                     const filteredQuestions = data.filter(q => 
                         q.tags && q.tags.includes("basico medio") && q.tags.includes("ideas principales")
                     );
 
                     if (filteredQuestions.length === 0) {
-                        questions = Array.from({length:10}, (_,i)=>({
-                            pregunta: `Pregunta ${i+1}. ¿Cuál es la idea principal?`,
-                            opciones: ["La opción correcta", "Distractor A", "Distractor B", "Distractor C"],
-                            respuestaCorrecta: 0,
-                            explicacion: "Explicación.",
-                            truco: "Truco."
-                        }));
+                        console.warn("No se encontraron preguntas con ambos tags. Usando Mock Data mejorado.");
+                        questions = generateMockQuestions();
                     } else {
+                        // Tomar 10 aleatorias
                         questions = filteredQuestions.sort(() => 0.5 - Math.random()).slice(0, 10);
                     }
+                    
+                    // Rellenar con mocks si faltan para llegar a 10
+                    if (questions.length < 10) {
+                        const needed = 10 - questions.length;
+                        const mocks = generateMockQuestions();
+                        // Asegurar que los mocks también tengan tags si se quiere consistencia, pero ya lo tienen en la función
+                        questions = questions.concat(mocks.slice(0, needed));
+                    }
+
                     ui.qTotal.textContent = questions.length;
+                    
+                    // Ocultar video si es replay, mostrar si no
+                    if(isReplay) {
+                        switchContainer('quiz');
+                        loadQuestion();
+                    } else {
+                        // Si es la primera vez, esperamos al botón de comenzar
+                    }
+
                 } catch (error) {
                     console.error('Error:', error);
+                    questions = generateMockQuestions();
+                    ui.qTotal.textContent = questions.length;
+                    if(!isReplay) {
+                        // Esperar botón comenzar
+                    } else {
+                        switchContainer('quiz');
+                        loadQuestion();
+                    }
                 }
+            }
+
+            // Generador de Mocks Robustos
+            function generateMockQuestions() {
+                // Duplicar el array base para tener suficientes
+                const base = mockQuestions; 
+                // Si necesitamos más, generamos genéricos con el formato correcto
+                const extra = Array.from({length: 10}, (_, i) => ({
+                    pregunta: `Texto de relleno largo para simular una lectura académica compleja sobre el tema ${i+1}. Este texto contiene información relevante y distractores para probar la comprensión lectora del estudiante. \n\n¿Cuál es la idea principal del texto sobre el tema ${i+1}?`,
+                    opciones: ["Opción distractora A", "Opción distractora B", "La idea principal correcta es esta", "Opción distractora C"],
+                    respuestaCorrecta: 2,
+                    explicacion: "Esta es la explicación generada automáticamente para la pregunta de prueba.",
+                    truco: "Lee la primera y última oración.",
+                    tags: ["basico medio", "ideas principales", "mock"]
+                }));
+                return [...base, ...extra].slice(0, 10);
             }
 
             // --- CONTROL DE VISTAS ---
@@ -639,7 +788,6 @@
                 
                 updateChallengeVisuals();
 
-                // Lógica del temporizador para Desafío 1 (Vanish)
                 if (activeChallenge === 'vanish') {
                     startVanishTimer();
                 } else {
@@ -668,7 +816,6 @@
                 feedbackBox.style.display = 'block';
                 document.getElementById('trick-text').textContent = q.truco || "";
                 
-                // DETENER TEMPORIZADOR SI HAY
                 stopVanishTimer();
 
                 options.forEach(b => b.disabled = true);
@@ -681,18 +828,18 @@
                     let title = '<i class="fas fa-check-circle"></i> CORRECTO';
                     
                     if (activeChallenge === 'risk') {
-                        // DESAFÍO 2
                         points = 50;
                         title = '<i class="fas fa-trophy"></i> DESAFÍO 2 (+50)';
                     } else if (activeChallenge === 'vanish') {
-                        // DESAFÍO 1: Puntos normales (30)
                         points = 30;
                         title = '<i class="fas fa-check-circle"></i> CORRECTO (FANTASMA)';
                         
-                        // Aumentar contador interno del desafío
                         challengeStreak++;
                         if (challengeStreak === 4) {
-                            setTimeout(() => { modals.ch2.style.display = 'flex'; }, 1000);
+                            setTimeout(() => { 
+                                modals.ch2.style.display = 'flex'; 
+                                playStartSound(); // Sonido inicio desafío
+                            }, 1000);
                         }
                     }
 
@@ -706,9 +853,11 @@
                     
                     options[selectedOption].classList.add('correct');
                     
-                    // Disparador inicial de Desafío 1 (Si no está activo y llevas 2 globales)
                     if (!activeChallenge && consecutiveCorrect === 2) {
-                        setTimeout(() => { modals.ch1.style.display = 'flex'; }, 1000);
+                        setTimeout(() => { 
+                            modals.ch1.style.display = 'flex'; 
+                            playStartSound(); // Sonido inicio desafío
+                        }, 1000);
                     }
                     
                     btns.next.style.display = 'inline-flex';
@@ -724,20 +873,14 @@
                         penalty = 50;
                         title = '<i class="fas fa-bomb"></i> DESAFÍO 2 FALLADO (-50)';
                     } else if (activeChallenge === 'vanish') {
-                        // Desafío 1 fallado: Se pierde el desafío pero no se penaliza extra (puntos base 0 o normal)
-                        // Si el usuario quiere penalización en Desafío 1 se puede agregar aquí, pero dijo "solo suma los mismos 30"
-                        // Así que asumimos que fallar en Desafío 1 es como fallar normalmente.
                         penalty = 0; 
                         title = '<i class="fas fa-times-circle"></i> INCORRECTO (FIN DEL FANTASMA)';
-                        
-                        // Reiniciar contador interno
                         challengeStreak = 0;
                     }
 
                     score -= penalty;
                     if (score < 0) score = 0;
                     
-                    // Si fallas, sales de cualquier desafío
                     activeChallenge = null;
                     challengeStreak = 0;
                     updateChallengeVisuals();
@@ -763,16 +906,20 @@
                 ui.challengeBox.className = 'challenge-status-wrapper active';
                 ui.challengeText.textContent = timeLeft;
 
-                stopVanishTimer(); // Limpiar anterior si existe
+                stopVanishTimer();
                 
                 timerInterval = setInterval(() => {
                     timeLeft--;
                     ui.challengeText.textContent = timeLeft < 10 ? `0${timeLeft}` : timeLeft;
                     
+                    // EFECTO DE SONIDO A LOS 5 SEGUNDOS
+                    if (timeLeft === 5) {
+                        playBeep();
+                    }
+                    
                     if (timeLeft <= 0) {
                         stopVanishTimer();
                         ui.challengeText.textContent = "VANISH";
-                        // OCULTAR TEXTO Y PREGUNTA
                         ui.passage.classList.add('vanished');
                         ui.qText.classList.add('vanished');
                     }
@@ -839,13 +986,17 @@
             modals.btnCh1.onclick = () => {
                 modals.ch1.style.display = 'none';
                 activeChallenge = 'vanish';
-                challengeStreak = 0; // Iniciar contador para llegar a 4
+                challengeStreak = 0;
                 updateChallengeVisuals();
+                // VOZ: Descripción Desafío 1
+                speak("¡Desafío Fantasma iniciado! Tienes 30 segundos. Prepárate.");
             };
             modals.btnCh2.onclick = () => {
                 modals.ch2.style.display = 'none';
                 activeChallenge = 'risk';
                 updateChallengeVisuals();
+                // VOZ: Descripción Desafío 2
+                speak("¡Desafío 2 activado! Modo ambicioso. Suma cincuenta, resta cincuenta. ¡Mucho cuidado!");
             };
 
             function updateChallengeVisuals() {
@@ -858,7 +1009,6 @@
                     ui.challengeBox.style.display = 'block';
                     if (activeChallenge === 'vanish') {
                         ui.challengeBox.className = 'challenge-status-wrapper active';
-                        // El texto del timer se maneja en startVanishTimer
                     } else if (activeChallenge === 'risk') {
                         ui.challengeBox.className = 'challenge-status-wrapper active challenge-2';
                         ui.challengeText.textContent = "+50 / -50";
@@ -866,15 +1016,32 @@
                 }
             }
 
+            // --- REPLAY ---
+            btns.replay.addEventListener('click', () => {
+                // Reiniciar variables
+                currentQuestionIndex = 0;
+                score = 0;
+                consecutiveCorrect = 0;
+                consecutiveFailures = 0;
+                activeChallenge = null;
+                challengeStreak = 0;
+                isReplay = true; // Importante para saltar video
+                ui.score.textContent = "0";
+                ui.progress.style.width = "0%";
+                
+                // Cargar nuevas preguntas (la función loadQuestions maneja el isReplay)
+                loadQuestions();
+            });
+
             // --- OTROS EVENTOS ---
             btns.skip.onclick = () => {
-                loadQuestion();
+                initAudio(); // Iniciar audio en primer click de usuario
+                loadQuestions();
             };
             
-            // CORRECCIÓN BOTÓN VOLVER
             btns.back.addEventListener('click', () => {
                 if(confirm('¿Seguro que quieres salir? Perderás tu progreso.')) {
-                    window.location.href = 'LCS1D.html'; // <--- CAMBIO AQUÍ
+                    window.location.href = 'LCS1D.html';
                 }
             });
 
@@ -888,6 +1055,10 @@
                 ui.progress.style.width = '100%';
                 document.getElementById('results-score').textContent = score + "/300";
                 document.getElementById('correct-answers').textContent = Math.round(score / 30);
+                
+                // Mensaje de voz final
+                const message = `¡COMPLETADO! Haz completado el cuestionario con ${score} puntos. Siempre puedes volver a intentarlo las veces que quieras, o si gustas, puedes darle finalizar para ir a otro banco de preguntas!`;
+                speak(message);
             }
 
             btns.finish.onclick = () => { window.location.href = 'LCS1D.html'; };
@@ -930,8 +1101,23 @@
                 };
             });
 
-            // Iniciar
-            loadQuestions();
+            // Datos Tips/Teoría (Mismos que antes)
+            const tips = [
+                { content: "Analiza la estructura del texto.", example: "Introducción, Desarrollo y Conclusión." },
+                { content: "Busca los conectores lógicos.", example: "Por lo tanto, sin embargo, en conclusión." },
+                { content: "Identifica la tesis principal.", example: "¿Qué está defendiendo el autor?" }
+            ];
+            const theories = [
+                { 
+                    content: "El texto argumentativo.", 
+                    points: ["Tesis", "Cuerpo argumentativo", "Conclusión"],
+                    visual: "Estructura base de la comunicación académica."
+                }
+            ];
+
+            // Inicializar carga (El video está visible por defecto)
+            // Si el usuario refresca la página y estaba en medio, se podría guardar estado, pero por ahora iniciamos fresh.
+            loadQuestions(); 
         });
     </script>
 </body>
