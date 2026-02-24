@@ -45,7 +45,7 @@
     </script>
 
     <style>
-        /* --- DISEÑO BRUTALISTA / SWISS (CENTRADO Y BONITO) --- */
+        /* --- DISEÑO BRUTALISTA / SWISS (CENTRADO) --- */
         :root {
             --color-crema: #fdfbf5;
             --color-oliva-claro: #bec092;
@@ -131,7 +131,7 @@
             width: 100%; 
         }
         
-        /* TARJETAS (ESTILO ORIGINAL BRUTALISTA) */
+        /* TARJETAS (ESTILO BRUTALISTA) */
         .video-container, .quiz-container, .tip-container, .theory-container, .game-container, .results-container { 
             width: 100%; max-width: 1000px; 
             background: white; 
@@ -141,7 +141,7 @@
             position: relative;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
-        /* Solo mostramos activo */
+        /* Clase active para mostrar */
         .video-container.active, .quiz-container.active, .tip-container.active, .theory-container.active, .game-container.active, .results-container.active { display: block; }
         
         /* QUIZ HEADER */
@@ -151,30 +151,28 @@
             border-bottom: 4px solid var(--color-oliva-medio);
         }
 
-        /* CHALLENGE STATUS (ORIGINAL) */
+        /* CHALLENGE STATUS */
         .challenge-status-wrapper {
             background: black; 
             color: var(--color-amarillo);
             padding: 15px 25px;
             font-family: 'Orbitron', sans-serif;
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 900;
-            letter-spacing: 4px;
+            letter-spacing: 2px;
             border: 4px solid var(--color-amarillo);
             display: none;
             text-align: center;
-            min-width: 200px;
         }
         .challenge-status-wrapper.active { display: block; animation: flash 1s infinite; }
         .challenge-status-wrapper.challenge-2 { 
             border-color: var(--color-incorrecto); 
             color: var(--color-incorrecto);
-            font-size: 1.8rem;
         }
         @keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
         .question-number { font-size: 1.2rem; font-weight: 700; margin-bottom: 10px; opacity: 0.7; letter-spacing: 2px; text-transform: uppercase; }
-        .question-text { font-family: 'Patrick Hand', cursive; font-size: 2.8rem; line-height: 1.2; font-weight: 400; max-width: 80%; }
+        .question-text { font-family: 'Patrick Hand', cursive; font-size: 2.5rem; line-height: 1.2; font-weight: 400; max-width: 80%; }
         
         .quiz-body { padding: 50px; }
         
@@ -310,7 +308,7 @@
     </div>
 
     <main class="main-content">
-        <!-- Video -->
+        <!-- Video (ACTIVO POR DEFECTO) -->
         <div class="video-container active" id="video-container">
             <div style="margin-bottom: 30px; text-align: center;">
                 <h2 style="font-family: 'Patrick Hand'; font-size: 3rem; color: var(--color-oliva-oscuro);">VIDEO INTRODUCTORIO</h2>
@@ -343,9 +341,6 @@
                 
                 <div class="options-container" id="options-container"></div>
                 
-                <!-- NO HAY BOTÓN DE PISTAS SEGÚN PETICIÓN ANTERIOR, PERO EL USUARIO PIDIÓ INTERSTICIALES POR FALLO -->
-                <!-- El feedback actúa como guía -->
-                
                 <div class="feedback-container" id="feedback-container">
                     <div class="feedback-title" id="feedback-title"></div>
                     <div class="feedback-text" id="feedback-text"></div>
@@ -366,7 +361,7 @@
             </div>
         </div>
         
-        <!-- Tip (Consejo) - Aparece al fallar 2 veces seguidas -->
+        <!-- Tip (Consejo) -->
         <div class="tip-container" id="tip-container">
             <div class="tip-header">
                 <div style="font-size: 2.5rem;">💡</div>
@@ -381,7 +376,7 @@
             </div>
         </div>
         
-        <!-- Theory (Teoría) - Aparece después del Tip -->
+        <!-- Theory (Teoría) -->
         <div class="theory-container" id="theory-container">
             <div class="theory-header">
                 <div style="font-size: 2.5rem;">📚</div>
@@ -397,7 +392,7 @@
             </div>
         </div>
         
-        <!-- Game (Educaplay) - Aparece después de la pregunta 5 -->
+        <!-- Game (Educaplay) -->
         <div class="game-container" id="game-container">
             <div class="game-header">
                 <div style="font-size: 2.5rem;">🎮</div>
@@ -413,7 +408,7 @@
             </div>
         </div>
 
-        <!-- Results (Solo al final) -->
+        <!-- Results -->
         <div class="results-container" id="results-container">
             <h2 style="font-family: 'Patrick Hand'; font-size: 4rem; color: black; margin: 0 0 20px; text-align: center;">¡COMPLETADO!</h2>
             <div style="font-size: 1.5rem; color: #666; margin-bottom: 30px; text-align: center;">BANCO 2: TEXTOS ACADÉMICOS</div>
@@ -498,9 +493,9 @@
             let score = 0;
             let selectedOption = null;
             let questions = [];
-            let consecutiveCorrect = 0; // Para desafíos
-            let consecutiveFailures = 0; // Para intersticiales (Tip/Teoria)
-            let activeChallenge = null; // 'challenge1', 'challenge2' o null
+            let consecutiveCorrect = 0; 
+            let consecutiveFailures = 0; // CONTADOR DE PREGUNTAS FALLADAS SEGUIDAS
+            let activeChallenge = null;
             
             // Elementos DOM
             const containers = {
@@ -531,7 +526,8 @@
                 continueTheory: document.getElementById('continue-to-theory-btn'),
                 continueQuiz: document.getElementById('continue-quiz-btn'),
                 continueGame: document.getElementById('continue-after-game-btn'),
-                finish: document.getElementById('finish-btn')
+                finish: document.getElementById('finish-btn'),
+                back: document.getElementById('back-btn')
             };
 
             const modals = {
@@ -541,17 +537,17 @@
                 btnCh2: document.getElementById('btn-accept-challenge2')
             };
 
-            // Datos de Tips y Teorías (Simplificados para el ejemplo)
+            // Datos Tips/Teoría
             const tips = [
-                { content: "Lee atentamente la primera y última oración.", example: "Ahí suele estar la idea principal." },
-                { content: "Identifica el problema y la solución.", example: "El texto académico suele resolver una interrogante." },
-                { content: "Busca conectores lógicos.", example: "Por lo tanto, en conclusión, como resultado." }
+                { content: "Analiza la estructura del texto.", example: "Introducción, Desarrollo y Conclusión." },
+                { content: "Busca los conectores lógicos.", example: "Por lo tanto, sin embargo, en conclusión." },
+                { content: "Identifica la tesis principal.", example: "¿Qué está defendiendo el autor?" }
             ];
             const theories = [
                 { 
-                    content: "La estructura argumentativa.", 
-                    points: ["Tesis", "Argumentos", "Conclusión"],
-                    visual: "Estructura clásica de texto académico."
+                    content: "El texto argumentativo.", 
+                    points: ["Tesis", "Cuerpo argumentativo", "Conclusión"],
+                    visual: "Estructura base de la comunicación académica."
                 }
             ];
 
@@ -571,33 +567,25 @@
                             pregunta: `Pregunta ${i+1}. ¿Cuál es la idea principal?`,
                             opciones: ["La opción correcta", "Distractor A", "Distractor B", "Distractor C"],
                             respuestaCorrecta: 0,
-                            explicacion: "Explicación de prueba.",
-                            truco: "Truco de prueba."
+                            explicacion: "Explicación.",
+                            truco: "Truco."
                         }));
                     } else {
                         questions = filteredQuestions.sort(() => 0.5 - Math.random()).slice(0, 10);
                     }
                     ui.qTotal.textContent = questions.length;
-                    loadQuestion();
                 } catch (error) {
-                    console.error('Error al cargar las preguntas:', error);
-                    questions = Array.from({length:10}, (_,i)=>({
-                        pregunta: `Demo ${i+1}`,
-                        opciones: ["A","B","C","D"],
-                        respuestaCorrecta: 0,
-                        explicacion: "...", truco: "..."
-                    }));
-                    ui.qTotal.textContent = questions.length;
-                    loadQuestion();
+                    console.error('Error:', error);
                 }
             }
 
-            // --- LÓGICA DEL QUIZ ---
+            // --- CONTROL DE VISTAS ---
             function switchContainer(name) {
                 Object.values(containers).forEach(el => el.classList.remove('active'));
-                containers[name].classList.add('active');
+                if(containers[name]) containers[name].classList.add('active');
             }
 
+            // --- LÓGICA DEL QUIZ (1 SOLO INTENTO) ---
             function loadQuestion() {
                 if (currentQuestionIndex >= questions.length) {
                     showResults();
@@ -624,6 +612,7 @@
                 });
                 
                 selectedOption = null;
+                
                 document.getElementById('feedback-container').style.display = 'none';
                 document.getElementById('trick-box').style.display = 'none';
                 btns.next.style.display = 'none';
@@ -650,14 +639,16 @@
                 const feedbackBox = document.getElementById('feedback-container');
 
                 btns.check.style.display = 'none';
-                options.forEach(b => b.disabled = true);
-
                 feedbackBox.style.display = 'block';
                 document.getElementById('trick-text').textContent = q.truco || "";
                 
+                // BLOQUEAR TODAS LAS OPCIONES INMEDIATAMENTE
+                options.forEach(b => b.disabled = true);
+
                 if (isCorrect) {
+                    // CORRECTO
                     consecutiveCorrect++;
-                    consecutiveFailures = 0; // Resetear fallos al acertar
+                    consecutiveFailures = 0; // Resetear fallos
                     
                     let points = 30;
                     let title = '<i class="fas fa-check-circle"></i> CORRECTO';
@@ -680,16 +671,19 @@
                     
                     options[selectedOption].classList.add('correct');
                     
-                    // Chequear desafíos
+                    // Desafíos
                     if (!activeChallenge && consecutiveCorrect === 2) {
                         setTimeout(() => { modals.ch1.style.display = 'flex'; }, 1000);
                     } else if (activeChallenge === 'challenge1' && consecutiveCorrect === 4) {
                         setTimeout(() => { modals.ch2.style.display = 'flex'; }, 1000);
                     }
+                    
+                    btns.next.style.display = 'inline-flex';
 
                 } else {
+                    // INCORRECTO (FIN DE LA PREGUNTA - SIN REINTENTOS)
+                    consecutiveFailures++; // SUMAR FALLO DE PREGUNTA
                     consecutiveCorrect = 0;
-                    consecutiveFailures++; // Aumentar contador de fallos consecutivos
                     
                     let penalty = 0;
                     let title = '<i class="fas fa-times-circle"></i> INCORRECTO';
@@ -704,7 +698,7 @@
 
                     score -= penalty;
                     if (score < 0) score = 0;
-                    activeChallenge = null; // Perder desafío al fallar
+                    activeChallenge = null; // PERDER DESAFÍO
                     updateChallengeVisuals();
 
                     feedbackBox.className = 'feedback-container incorrect';
@@ -714,54 +708,52 @@
                     
                     options[selectedOption].classList.add('incorrect');
                     options[q.respuestaCorrecta].classList.add('correct');
+                    
+                    btns.next.style.display = 'inline-flex';
                 }
                 
                 ui.score.textContent = score;
-                btns.next.style.display = 'inline-flex';
             }
             
             // --- LÓGICA DEL BOTÓN SIGUIENTE ---
             btns.next.addEventListener('click', () => {
-                // 1. Chequear si es después de la pregunta 5 -> Juego
-                if (currentQuestionIndex === 4) { // Index 4 es la 5ta pregunta (0,1,2,3,4)
+                // 1. JUEGO DESPUÉS DE PREGUNTA 5
+                if (currentQuestionIndex === 4) {
                     switchContainer('game');
                     return;
                 }
 
-                // 2. Chequear si hay 2 fallos consecutivos -> Intersticial (Tip)
+                // 2. INTERSTICIAL SI FALLÓ 2 PREGUNTAS SEGUIDAS
                 if (consecutiveFailures >= 2) {
                     showIntervention();
                     return;
                 }
 
-                // 3. Flujo normal
+                // 3. FLUJO NORMAL
                 currentQuestionIndex++;
                 loadQuestion();
             });
 
             function showIntervention() {
-                // Cargar datos del Tip
+                // Cargar Tip
                 const tip = tips[currentQuestionIndex % tips.length];
                 document.getElementById('tip-content').textContent = tip.content;
                 document.getElementById('tip-example').textContent = tip.example;
-                
                 switchContainer('tip');
-                // No reseteamos consecutiveFailures aquí, lo haremos después de la teoría
             }
 
             btns.continueTheory.addEventListener('click', () => {
-                // Cargar datos de la Teoría
+                // Cargar Teoría
                 const t = theories[currentQuestionIndex % theories.length];
                 document.getElementById('theory-content').textContent = t.content;
                 const list = document.getElementById('theory-points');
                 list.innerHTML = t.points.map(p => `<li style="margin-bottom:10px; font-size:1.1rem;">• ${p}</li>`).join('');
-                
                 switchContainer('theory');
             });
 
             btns.continueQuiz.addEventListener('click', () => {
                 // Terminó la intervención, resetear fallos y continuar
-                consecutiveFailures = 0;
+                consecutiveFailures = 0; 
                 currentQuestionIndex++;
                 loadQuestion();
             });
@@ -798,11 +790,17 @@
                 }
             }
 
-            // --- OTROS ---
+            // --- EVENTOS GENERALES ---
             btns.skip.onclick = () => {
-                containers.video.classList.remove('active');
-                loadQuestion();
+                loadQuestion(); // Carga la primera pregunta
             };
+            
+            // BOTÓN VOLVER
+            btns.back.addEventListener('click', () => {
+                if(confirm('¿Seguro que quieres salir? Perderás tu progreso.')) {
+                    window.location.href = 'index.html';
+                }
+            });
 
             function updateProgress() {
                 const progress = ((currentQuestionIndex) / questions.length) * 100;
@@ -850,14 +848,13 @@
                 document.getElementById('btn-'+id).onclick = () => { 
                     closeAllPanels(); 
                     document.getElementById('panel-'+id).classList.add('active'); 
-                    // Rellenado básico
                     if(id==='misiones') document.getElementById('misiones-content').innerHTML='<div class="mission-row"><span>Completa el cuestionario</span><span>50 pts</span></div>';
                     if(id==='nivel') document.getElementById('nivel-content').innerHTML='<p>NIVEL 5: EXPLORADOR</p>';
                     if(id==='progreso') document.getElementById('progreso-content').innerHTML='<p>Progreso Global</p>';
                 };
             });
 
-            // Iniciar
+            // Iniciar Carga de Datos (El video ya está visible por HTML)
             loadQuestions();
         });
     </script>
