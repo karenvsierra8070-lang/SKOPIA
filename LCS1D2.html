@@ -1908,6 +1908,7 @@
             let isMemoryEffectActive = false; // Controla si el texto debe ocultarse (Desafío 1)
             let isSuddenDeathActive = false;  // Controla si un error termina la racha (Desafío 2)
             let challengeStartTime = 0;       // Para medir exactamente cuándo empezó el reto
+            let challenge1Completed = false; // Nueva: rastrea si el nivel 1 ya se ganó
             let hasTextBeenHidden = false;    // Estado para saber si el texto ya se borró en el Desafío 1
             // Descanso programado
             let breakTaken = false; // Si ya se tomó el descanso programado
@@ -3075,130 +3076,125 @@ function startChallengeTimer() {
                 checkBtn.disabled = false;
             }
             
-            // Verificar respuesta
-            function checkAnswer() {
-                if (selectedOption === null) return;
-                
-                attempts++;
-                let question;
-                
-                // Determinar si estamos en una pregunta normal o diferida
-                if (showingDeferredQuestions) {
-                    question = deferredQuestions[currentDeferredQuestionIndex].question;
-                } else {
-                    question = questions[currentQuestionIndex];
-                }
-                
-                const isCorrect = selectedOption === question.respuestaCorrecta;
-                const options = document.querySelectorAll('.option-card');
-                
-              // Detener temporizador si está activo
-                if (challengeTimer) {
-                    clearInterval(challengeTimer);
-                }
-                if (deferredTimer) {
-                    clearInterval(deferredTimer);
-                }
-                
-                // Resetear efectos visuales de los desafíos (Memoria y Muerte Súbita)
-                if (passageContainer) {
-                    passageContainer.style.opacity = '1';
-                    passageContainer.style.display = 'block';
-                }
-                if (mainGameContainer) {
-                    mainGameContainer.style.borderColor = '';
-                }
-                
-                // Actualizar indicador de intentos
-                attempt1.classList.add('used');
-                
-                if (isCorrect) {
-                    // Respuesta correcta
-                    score += 30; // 30 puntos por respuesta correcta
-                    currentScore.textContent = score;
-                    currentStreak++; // Incrementar racha
-                    
-                    // Actualizar mejor racha si es necesario
-                    if (currentStreak > maxStreak) {
-                        maxStreak = currentStreak;
-                    }
-                    
-                    // Actualizar bloque actual
-                    if (!showingDeferredQuestions) {
-                        updateBlockQuestion(currentQuestionIndex, true, false);
-                    }
-                    
-                    feedbackSection.className = 'feedback-section correct';
-                    feedbackIcon.className = 'feedback-icon fas fa-check-circle';
-                    feedbackTitle.textContent = '¡Correcto!';
-                    feedbackText.textContent = question.explicacion;
-                    trickBox.style.display = 'none';
-                    
-                    // Mostrar todas las opciones con sus estados
-                    options.forEach((opt, i) => {
-                        if (i === question.respuestaCorrecta) {
-                            opt.classList.add('correct');
-                            opt.innerHTML += '<div class="option-icon correct">✓</div>';
-                        }
-                        opt.onclick = null; // Deshabilitar clics
-                    });
-                    
-                    // Deshabilitar botón de pista
-                    hintBtn.disabled = true;
-                    
-                    // Mostrar botón de siguiente
-                    nextBtn.style.display = 'block';
-                    checkBtn.style.display = 'none';
-                    
-                    // Actualizar progreso
-                    updateProgress();
-                    saveProgress();
-                } else {
-                    // Respuesta incorrecta - solo un intento, así que mostramos la solución directamente
-                    feedbackSection.className = 'feedback-section incorrect';
-                    feedbackIcon.className = 'feedback-icon fas fa-times-circle';
-                    feedbackTitle.textContent = 'Incorrecto';
-                    feedbackText.textContent = question.explicacion;
-                    trickBox.style.display = 'block';
-                    trickText.textContent = question.truco;
-                    
-                    // Reiniciar racha actual
-                    currentStreak = 0;
-                    
-                    // Actualizar bloque actual
-                    if (!showingDeferredQuestions) {
-                        updateBlockQuestion(currentQuestionIndex, false, true);
-                    }
-                    
-                    // Guardar pregunta incorrecta
-                    saveIncorrectQuestion(question);
-                    
-                    // Mostrar todas las opciones con sus estados
-                    options.forEach((opt, i) => {
-                        if (i === question.respuestaCorrecta) {
-                            opt.classList.add('correct');
-                            opt.innerHTML += '<div class="option-icon correct">✓</div>';
-                        } else if (i === selectedOption && !opt.classList.contains('correct')) {
-                            opt.classList.add('incorrect');
-                            if (!opt.querySelector('.option-icon')) {
-                                opt.innerHTML += '<div class="option-icon incorrect">✗</div>';
-                            }
-                        }
-                        opt.onclick = null; // Deshabilitar clics
-                    });
-                    
-                    // Deshabilitar botón de pista
-                    hintBtn.disabled = true;
-                    
-                    // Mostrar botón de siguiente
-                    nextBtn.style.display = 'block';
-                    checkBtn.style.display = 'none';
-                }
-                
-                feedbackSection.style.display = 'block';
-                saveProgress();
+          function checkAnswer() {
+    if (selectedOption === null) return;
+    
+    attempts++;
+    let question;
+    
+    if (showingDeferredQuestions) {
+        question = deferredQuestions[currentDeferredQuestionIndex].question;
+    } else {
+        question = questions[currentQuestionIndex];
+    }
+    
+    const isCorrect = selectedOption === question.respuestaCorrecta;
+    const options = document.querySelectorAll('.option-card');
+    
+    // Detener temporizadores
+    if (challengeTimer) clearInterval(challengeTimer);
+    if (deferredTimer) clearInterval(deferredTimer);
+    
+    // Resetear efectos visuales (Limpieza de Reto de Memoria)
+    if (typeof showPassageText === 'function') {
+        showPassageText(); 
+    } else if (textPassage) {
+        textPassage.style.opacity = '1';
+        textPassage.style.filter = 'none';
+    }
+    
+    attempt1.classList.add('used');
+    
+    if (isCorrect) {
+        // --- LÓGICA DE RESPUESTA CORRECTA ---
+        score += 30;
+        currentScore.textContent = score;
+        currentStreak++; 
+        
+        // GESTIÓN DE DESAFÍOS AL ACERTAR
+        if (challengeMode) {
+            if (challengeLevel === 1) {
+                challenge1Completed = true; // Guardamos que pasó el nivel 1
+                showNotification("¡Reto de Memoria superado! Próximo objetivo: Muerte Súbita.");
+            } else if (challengeLevel === 2) {
+                showNotification("¡Increíble! Has superado el reto de Muerte Súbita.");
             }
             
+            // IMPORTANTE: Resetear racha y modo para que el Desafío 2 pueda empezar a contar desde 0
+            challengeMode = false;
+            currentStreak = 0; 
+        }
+        
+        if (currentStreak > maxStreak) {
+            maxStreak = currentStreak;
+        }
+        
+        if (!showingDeferredQuestions) {
+            updateBlockQuestion(currentQuestionIndex, true, false);
+        }
+        
+        feedbackSection.className = 'feedback-section correct';
+        feedbackIcon.className = 'feedback-icon fas fa-check-circle';
+        feedbackTitle.textContent = '¡Correcto!';
+        feedbackText.textContent = question.explicacion;
+        trickBox.style.display = 'none';
+        
+        options.forEach((opt, i) => {
+            if (i === question.respuestaCorrecta) {
+                opt.classList.add('correct');
+                opt.innerHTML += '<div class="option-icon correct">✓</div>';
+            }
+            opt.onclick = null;
+        });
+        
+    } else {
+        // --- LÓGICA DE RESPUESTA INCORRECTA ---
+        feedbackSection.className = 'feedback-section incorrect';
+        feedbackIcon.className = 'feedback-icon fas fa-times-circle';
+        feedbackTitle.textContent = 'Incorrecto';
+        feedbackText.textContent = question.explicacion;
+        trickBox.style.display = 'block';
+        trickText.textContent = question.truco;
+        
+        // Si falla en modo desafío, el castigo es perder la racha
+        currentStreak = 0;
+        if (challengeMode) {
+            challengeMode = false;
+            showNotification("Reto fallido. ¡Sigue practicando!");
+        }
+        
+        if (!showingDeferredQuestions) {
+            updateBlockQuestion(currentQuestionIndex, false, true);
+        }
+        
+        saveIncorrectQuestion(question);
+        
+        options.forEach((opt, i) => {
+            if (i === question.respuestaCorrecta) {
+                opt.classList.add('correct');
+                opt.innerHTML += '<div class="option-icon correct">✓</div>';
+            } else if (i === selectedOption) {
+                opt.classList.add('incorrect');
+                opt.innerHTML += '<div class="option-icon incorrect">✗</div>';
+            }
+            opt.onclick = null;
+        });
+    }
+    
+    // Comunes
+    hintBtn.disabled = true;
+    nextBtn.style.display = 'block';
+    checkBtn.style.display = 'none';
+    feedbackSection.style.display = 'block';
+    
+    updateProgress();
+    saveProgress();
+
+    // LLAMADA CLAVE: Verificar si la nueva racha activa el siguiente desafío
+    if (typeof checkChallengeStatus === 'function') {
+        checkChallengeStatus();
+    }
+}
             // Actualizar pregunta del bloque actual
             function updateBlockQuestion(questionIndex, isCorrect, isIncorrect) {
                 const blockQuestion = blockQuestions.find(q => q.index === questionIndex);
@@ -3447,54 +3443,63 @@ function startChallengeTimer() {
 
                 loadQuestion();
             }
-         // Verificar si debemos activar el modo desafío
-            function checkChallengeStatus() {
-                // Si todas las preguntas del bloque son correctas y no estamos en modo desafío
-                if (blockCorrectAnswers === questionsPerChallenge && !challengeMode) {
-                    // Activar modo desafío (Nivel 1: Memoria)
-                    activateChallenge(1);
-                }
-                // Si estamos en modo desafío
-                else if (challengeMode) {
-                    // Si respondimos correctamente todo en el nivel 1, subimos al 2
-                    if (blockCorrectAnswers === questionsPerChallenge && challengeLevel === 1) {
-                        activateChallenge(2); // Activar Nivel 2: Muerte Súbita
-                    }
-                    // Si fallamos en el nivel de muerte súbita o no llegamos al mínimo en el 1
-                    else if (blockIncorrectQuestions.length > 0 && challengeLevel === 2 || blockCorrectAnswers < 2) {
-                        deactivateChallenge();
-                        showNotification('Has regresado al modo normal. Sigue practicando.');
-                    }
-                }
-                
-                initializeBlock();
+       function checkChallengeStatus() {
+    // Solo actuamos si el bloque de 3 preguntas ha terminado
+    if (blockCorrectAnswers + blockIncorrectQuestions.length === questionsPerChallenge) {
+        
+        // CASO A: No estamos en desafío y sacó 3/3 -> Toca activar el 1
+        if (!challengeMode && blockCorrectAnswers === questionsPerChallenge) {
+            if (!challenge1Completed) {
+                activateChallenge(1);
+            } else {
+                // Si por alguna razón ya completó el 1, saltamos al 2
+                activateChallenge(2);
             }
-            
-            // Activar modo desafío
-            function activateChallenge(level) {
-                challengeMode = true;
-                challengeLevel = level;
-                questionsPerChallenge = 3;
+        } 
+        // CASO B: Estamos en Desafío Nivel 1 y sacó 3/3 -> Toca activar el 2
+        else if (challengeMode && challengeLevel === 1 && blockCorrectAnswers === questionsPerChallenge) {
+            challenge1Completed = true; // Marcamos el éxito del nivel 1
+            activateChallenge(2); 
+        }
+        // CASO C: Falló en cualquier nivel de desafío
+        else if (challengeMode && (blockIncorrectQuestions.length > 0 || blockCorrectAnswers < questionsPerChallenge)) {
+            deactivateChallenge();
+            showNotification('Has regresado al modo normal. ¡Sigue practicando!');
+        }
 
-                // Configurar tiempos y textos según el nivel
-                if (level === 1) {
-                    challengeTimeLimit = 70; // 1:10 para Memoria
-                    modalChallengeTitle.textContent = '¡RETO DE MEMORIA!';
-                    challengeDescription.textContent = '¡Felicidades! Has respondido correctamente las 3 preguntas anteriores. Ahora enfrentarás un desafío: el texto desaparecerá tras 1 minuto y 10 segundos. ¡Lee rápido!';
-                    modalChallengeTime.textContent = '1:10';
-                } else if (level === 2) {
-                    challengeTimeLimit = 60; // 1:00 para Muerte Súbita
-                    modalChallengeTitle.textContent = '¡MUERTE SÚBITA!';
-                    challengeDescription.textContent = '¡Increíble! Superaste la memoria. Ahora el reto final: responde 3 preguntas en 1 minuto. Si fallas una sola, pierdes la racha.';
-                    modalChallengeTime.textContent = '1:00';
-                }
-                
-                // Mostrar modal de desafío
-                challengeModal.classList.add('active');
-                
-                // Crear efecto de confeti
-                createConfetti();
-            }
+        // Siempre reiniciamos el bloque para las siguientes 3 preguntas
+        initializeBlock();
+    }
+}
+     function activateChallenge(level) {
+    challengeMode = true;
+    challengeLevel = level;
+    questionsPerChallenge = 3; 
+
+    // Reiniciamos los contadores del bloque para que el desafío cuente sus propias 3 preguntas
+    blockCorrectAnswers = 0;
+    blockIncorrectQuestions = [];
+
+    // Configurar tiempos y textos según el nivel
+    if (level === 1) {
+        challengeTimeLimit = 70; // 1:10 para Memoria
+        modalChallengeTitle.textContent = '¡RETO DE MEMORIA!';
+        challengeDescription.textContent = '¡Excelente racha! Ahora enfrentarás el Nivel 1: El texto desaparecerá tras 1 minuto y 10 segundos en cada una de las próximas 3 preguntas. ¡Lee rápido!';
+        modalChallengeTime.textContent = '1:10';
+    } else if (level === 2) {
+        challengeTimeLimit = 60; // 1:00 para Muerte Súbita
+        modalChallengeTitle.textContent = '¡MUERTE SÚBITA!';
+        challengeDescription.textContent = '¡Superaste la memoria! Ahora el Nivel 2: Tienes 1 minuto por pregunta. Si fallas una sola de estas 3, el reto termina.';
+        modalChallengeTime.textContent = '1:00';
+    }
+    
+    // Mostrar modal
+    if (challengeModal) {
+        challengeModal.classList.add('active');
+    }
+    
+    createConfetti();
+}
             
             // Desactivar modo desafío
             function deactivateChallenge() {
