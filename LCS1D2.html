@@ -1878,6 +1878,7 @@
             let totalTimeSpent = 0; // Tiempo total empleado
             // Añade esto donde están tus otros "let" al principio
             let answerProcessed = false;
+            let answerProcessed = false; // Añade esta línea con las demás variables globales
             // Sistema de desafíos
             let challengeMode = false; // false: normal, true: desafío
             let challengeLevel = 0; // 0: sin desafío, 1: primer nivel, 2: segundo nivel
@@ -2685,23 +2686,24 @@ function initializeBlock() {
         }
     }
 }
-// Cargar pregunta actual corregida
+// --- PASO POR PASO: FUNCIÓN LOADQUESTION CORREGIDA ---
 function loadQuestion() {
-    answerProcessed = false;
-    // 1. DETENER TEMPORIZADORES PREVIOS (Evita que el reto anterior afecte a la nueva pregunta)
-    if (typeof challengeTimer !== 'undefined') {
+    // A. RESET DE SEGURIDAD (Para que el botón Verificar funcione y los puntos no se dupliquen)
+    answerProcessed = false; 
+
+    // 1. DETENER TEMPORIZADORES PREVIOS
+    if (typeof challengeTimer !== 'undefined' && challengeTimer !== null) {
         clearInterval(challengeTimer);
     }
 
-    // 2. RESETEAR VISIBILIDAD Y ESTILOS (Limpia el rastro de hidePassageText)
+    // 2. RESETEAR VISIBILIDAD Y ESTILOS
     if (textPassage) {
-        textPassage.style.transition = 'none'; // Cambio instantáneo
+        textPassage.style.transition = 'none'; 
         textPassage.style.opacity = '1';
         textPassage.style.filter = 'none'; 
         textPassage.style.pointerEvents = 'auto';
         textPassage.style.userSelect = 'auto';
 
-        // Quitar el borde naranja de alerta del contenedor
         const container = textPassage.parentElement;
         if (container) {
             container.style.borderLeft = 'none';
@@ -2719,15 +2721,16 @@ function loadQuestion() {
         return;
     }
     
-    // 4. VERIFICAR FIN DEL CUESTIONARIO
+    // 4. VERIFICAR FIN DEL CUESTIONARIO (BLINDAJE PREGUNTA 10)
+    // Si el índice llega al límite, saltamos a diferidas o resultados ANTES de buscar en el JSON
     if (currentQuestionIndex >= questions.length) {
-        if (deferredQuestions.length > 0) {
+        if (deferredQuestions && deferredQuestions.length > 0) {
             showingDeferredQuestions = true;
             currentDeferredQuestionIndex = 0;
             loadDeferredQuestion();
-            return;
+        } else {
+            showResults();
         }
-        showResults();
         return;
     }
     
@@ -2737,16 +2740,23 @@ function loadQuestion() {
         return;
     }
     
-    // 6. CARGAR DATOS DEL JSON
+    // 6. CARGAR DATOS DEL JSON (Seguro)
     const question = questions[currentQuestionIndex];
+    
+    // Si por algún motivo la pregunta es undefined, detenemos el error aquí
+    if (!question) {
+        showResults();
+        return;
+    }
+
     questionNumber.textContent = currentQuestionIndex + 1;
     
-    // Separar el texto largo de la instrucción (basado en tus capturas)
+    // Separar el texto largo de la instrucción
     const parts = question.pregunta.split('\n\n');
-    const textContent = parts[0]; // El párrafo que se oculta
-    const actualQuestion = parts[1] || question.pregunta; // La pregunta del header
+    const textContent = parts[0]; 
+    const actualQuestion = parts[1] || question.pregunta; 
     
-    // Inyectar contenido en el HTML
+    // Inyectar contenido
     textPassage.textContent = textContent; 
     questionText.textContent = actualQuestion; 
     
@@ -2776,13 +2786,13 @@ function loadQuestion() {
     checkBtn.disabled = true;
     hintBtn.disabled = false;
     
-    // 9. ACTUALIZAR BOTONES DE ESTADO (Difícil / Diferida)
+    // 9. ACTUALIZAR BOTONES DE ESTADO
     const isDifficult = difficultQuestions.some(q => q.index === currentQuestionIndex);
     difficultBtn.classList.toggle('active', isDifficult);
     const isDeferred = deferredQuestions.some(q => q.index === currentQuestionIndex);
     deferBtn.classList.toggle('active', isDeferred);
     
-    // 10. LÓGICA DE DESAFÍO (Badges y Timer)
+    // 10. LÓGICA DE DESAFÍO
     if (challengeMode) {
         challengeBadge.style.display = 'flex';
         timerBadge.style.display = 'flex';
@@ -2792,14 +2802,15 @@ function loadQuestion() {
         } else if (challengeLevel === 2) {
             challengeLabel.textContent = '2: TODO O NADA';
         }
-        // Iniciar el cronómetro de la pregunta actual
-        startChallengeTimer();
+        if (typeof startChallengeTimer === 'function') {
+            startChallengeTimer();
+        }
     } else {
         challengeBadge.style.display = 'none';
         timerBadge.style.display = 'none';
     }
     
-    // 11. GUARDAR PROGRESO
+    // 11. ACTUALIZAR PROGRESO Y GUARDAR
     updateProgress();
     saveProgress();
 }
@@ -3104,19 +3115,27 @@ function startChallengeTimer() {
                 checkBtn.disabled = false;
             }
             
-    function checkAnswer() {
+  function checkAnswer() {
     // SEGURO: Evita que se procese la misma pregunta varias veces
     if (selectedOption === null || answerProcessed) return; 
     
-    answerProcessed = true; 
-    attempts++;
     let question;
     
+    // 1. Identificar la pregunta actual de forma segura
     if (showingDeferredQuestions) {
         question = deferredQuestions[currentDeferredQuestionIndex].question;
     } else {
         question = questions[currentQuestionIndex];
     }
+
+    // BLINDAJE EXTRA: Si por error de índice la pregunta no existe, saltar a resultados
+    if (!question) {
+        showResults();
+        return;
+    }
+
+    answerProcessed = true; 
+    attempts++;
     
     const isCorrect = selectedOption === question.respuestaCorrecta;
     const options = document.querySelectorAll('.option-card');
@@ -3157,7 +3176,10 @@ function startChallengeTimer() {
         }
         
         if (!showingDeferredQuestions) {
-            updateBlockQuestion(currentQuestionIndex, true, false);
+            // Protección por si la función no existe
+            if (typeof updateBlockQuestion === 'function') {
+                updateBlockQuestion(currentQuestionIndex, true, false);
+            }
         }
         
         feedbackSection.className = 'feedback-section correct';
@@ -3190,10 +3212,14 @@ function startChallengeTimer() {
         }
         
         if (!showingDeferredQuestions) {
-            updateBlockQuestion(currentQuestionIndex, false, true);
+            if (typeof updateBlockQuestion === 'function') {
+                updateBlockQuestion(currentQuestionIndex, false, true);
+            }
         }
         
-        saveIncorrectQuestion(question);
+        if (typeof saveIncorrectQuestion === 'function') {
+            saveIncorrectQuestion(question);
+        }
         
         options.forEach((opt, i) => {
             if (i === question.respuestaCorrecta) {
@@ -3207,10 +3233,10 @@ function startChallengeTimer() {
         });
     }
     
-    // --- PASO 1: DESBLOQUEO DEL BOTÓN SIGUIENTE ---
+    // --- DESBLOQUEO DE NAVEGACIÓN ---
     hintBtn.disabled = true;
     
-    // Forzamos que el botón aparezca y sea clicable ANTES de los desafíos
+    // Aseguramos visibilidad del botón siguiente
     nextBtn.style.display = 'block';
     nextBtn.style.pointerEvents = 'auto'; 
     nextBtn.style.opacity = '1';
@@ -3218,15 +3244,16 @@ function startChallengeTimer() {
     checkBtn.style.display = 'none';
     feedbackSection.style.display = 'block';
     
-    updateProgress();
+    // Actualizar y Guardar (British English: checking for function existence)
+    if (typeof updateProgress === 'function') updateProgress();
     saveProgress();
 
-    // LLAMADA AL ESTADO DEL DESAFÍO (con protección de errores)
+    // LLAMADA AL ESTADO DEL DESAFÍO
     if (typeof checkChallengeStatus === 'function') {
         try {
             checkChallengeStatus();
         } catch (e) {
-            console.error("Error en checkChallengeStatus, pero el flujo continúa:", e);
+            console.error("Error en checkChallengeStatus:", e);
         }
     }
 }
