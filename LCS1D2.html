@@ -2643,112 +2643,109 @@ const modalChallengeIcon = document.getElementById('modal-challenge-icon');
             }
             
             // Cargar pregunta actual
-            function loadQuestion() {
-                // Verificar si estamos mostrando preguntas diferidas
-                if (showingDeferredQuestions) {
-                    if (currentDeferredQuestionIndex >= deferredQuestions.length) {
-                        // Si hemos terminado las preguntas diferidas, mostrar resultados
-                        showingDeferredQuestions = false;
-                        showResults();
-                        return;
-                    }
-                    
-                    // Cargar la pregunta diferida actual
-                    loadDeferredQuestion();
-                    return;
-                }
-                
-                // Si hemos terminado todas las preguntas principales
-                if (currentQuestionIndex >= questions.length) {
-                    // Si hay preguntas diferidas, mostrarlas
-                    if (deferredQuestions.length > 0) {
-                        showingDeferredQuestions = true;
-                        currentDeferredQuestionIndex = 0;
-                        loadDeferredQuestion();
-                        return;
-                    }
-                    // Si no, mostrar resultados
-                    showResults();
-                    return;
-                }
-                
-                // Verificar si es momento de tomar un descanso (pregunta 5)
-                if (currentQuestionIndex === 5 && !breakTaken) {
-                    showBreakModal();
-                    return;
-                }
-                
-                const question = questions[currentQuestionIndex];
-                questionNumber.textContent = currentQuestionIndex + 1;
-                
-                // Separar correctamente el texto de la pregunta
-                const parts = question.pregunta.split('\n\n');
-                const textContent = parts[0]; // El texto principal
-                const actualQuestion = parts[1] || question.pregunta; // La pregunta real
-                
-                // Mostrar el texto en el contenedor beige
-                textPassage.textContent = textContent;
-                
-                // Mostrar solo la pregunta en el header
-                questionText.textContent = actualQuestion;
-                
-                // Cargar opciones
-                optionsContainer.innerHTML = '';
-                question.opciones.forEach((option, index) => {
-                    const optionCard = document.createElement('div');
-                    optionCard.className = 'option-card';
-                    optionCard.innerHTML = `
-                        <div class="option-content">
-                            <div class="option-letter">${String.fromCharCode(65 + index)}</div>
-                            <div class="option-text">${option}</div>
-                        </div>
-                    `;
-                    optionCard.onclick = () => selectOption(index);
-                    optionsContainer.appendChild(optionCard);
-                });
-                
-                // Resetear estado
-                selectedOption = null;
-                attempts = 0;
-                attempt1.classList.remove('used');
-                hintBox.style.display = 'none';
-                feedbackSection.style.display = 'none';
-                nextBtn.style.display = 'none';
-                checkBtn.style.display = 'block';
-                checkBtn.disabled = true;
-                hintBtn.disabled = false;
-                
-                // Verificar si la pregunta está marcada como difícil
-                const isDifficult = difficultQuestions.some(q => q.index === currentQuestionIndex);
-                difficultBtn.classList.toggle('active', isDifficult);
-                
-                // Verificar si la pregunta está diferida
-                const isDeferred = deferredQuestions.some(q => q.index === currentQuestionIndex);
-                deferBtn.classList.toggle('active', isDeferred);
-                
-              // Actualizar indicadores de desafío
-                if (challengeMode) {
-                    challengeBadge.style.display = 'flex';
-                    timerBadge.style.display = 'flex';
-                    
-                    // Actualizar el texto del badge según el nivel (1: MEMORIA o 2: MUERTE SÚBITA)
-                    if (challengeLevel === 1) {
-                        challengeLabel.textContent = '1: MEMORIA';
-                    } else if (challengeLevel === 2) {
-                        challengeLabel.textContent = '2: TODO O NADA';
-                    }
+function loadQuestion() {
+    // 1. Resetear visibilidad (Por si venimos de un reto donde se ocultó el texto)
+    if (textPassage) {
+        textPassage.style.opacity = '1';
+        textPassage.style.pointerEvents = 'auto';
+    }
 
-                    startChallengeTimer();
-                } else {
-                    challengeBadge.style.display = 'none';
-                    timerBadge.style.display = 'none';
-                }
-                
-                // Actualizar progreso
-                updateProgress();
-                saveProgress();
-            }
-            
+    // Verificar si estamos mostrando preguntas diferidas
+    if (showingDeferredQuestions) {
+        if (currentDeferredQuestionIndex >= deferredQuestions.length) {
+            showingDeferredQuestions = false;
+            showResults();
+            return;
+        }
+        loadDeferredQuestion();
+        return;
+    }
+    
+    // Si hemos terminado todas las preguntas principales
+    if (currentQuestionIndex >= questions.length) {
+        if (deferredQuestions.length > 0) {
+            showingDeferredQuestions = true;
+            currentDeferredQuestionIndex = 0;
+            loadDeferredQuestion();
+            return;
+        }
+        showResults();
+        return;
+    }
+    
+    // Verificar si es momento de tomar un descanso (pregunta 5)
+    if (currentQuestionIndex === 5 && !breakTaken) {
+        showBreakModal();
+        return;
+    }
+    
+    const question = questions[currentQuestionIndex];
+    questionNumber.textContent = currentQuestionIndex + 1;
+    
+    // --- LÓGICA DE TEXTO SEGÚN TU JSON ---
+    // Separar correctamente el texto de la pregunta
+    const parts = question.pregunta.split('\n\n');
+    const textContent = parts[0]; // El párrafo de lectura (EL QUE SE OCULTARÁ)
+    const actualQuestion = parts[1] || question.pregunta; // La instrucción/pregunta
+    
+    // Inyectar en el HTML
+    textPassage.textContent = textContent; // Cuadro beige
+    questionText.textContent = actualQuestion; // Header verde oscuro
+    
+    // Cargar opciones
+    optionsContainer.innerHTML = '';
+    question.opciones.forEach((option, index) => {
+        const optionCard = document.createElement('div');
+        optionCard.className = 'option-card';
+        optionCard.innerHTML = `
+            <div class="option-content">
+                <div class="option-letter">${String.fromCharCode(65 + index)}</div>
+                <div class="option-text">${option}</div>
+            </div>
+        `;
+        optionCard.onclick = () => selectOption(index);
+        optionsContainer.appendChild(optionCard);
+    });
+    
+    // Resetear estado de la interfaz
+    selectedOption = null;
+    attempts = 0;
+    attempt1.classList.remove('used');
+    hintBox.style.display = 'none';
+    feedbackSection.style.display = 'none';
+    nextBtn.style.display = 'none';
+    checkBtn.style.display = 'block';
+    checkBtn.disabled = true;
+    hintBtn.disabled = false;
+    
+    // Marcas de usuario (Difícil / Diferida)
+    const isDifficult = difficultQuestions.some(q => q.index === currentQuestionIndex);
+    difficultBtn.classList.toggle('active', isDifficult);
+    const isDeferred = deferredQuestions.some(q => q.index === currentQuestionIndex);
+    deferBtn.classList.toggle('active', isDeferred);
+    
+    // --- LÓGICA DE DESAFÍO ---
+    if (challengeMode) {
+        challengeBadge.style.display = 'flex';
+        timerBadge.style.display = 'flex';
+        
+        if (challengeLevel === 1) {
+            challengeLabel.textContent = '1: MEMORIA';
+        } else if (challengeLevel === 2) {
+            challengeLabel.textContent = '2: TODO O NADA';
+        }
+        // Iniciar cronómetro
+        startChallengeTimer();
+    } else {
+        challengeBadge.style.display = 'none';
+        timerBadge.style.display = 'none';
+        // Si no hay reto, nos aseguramos de que no haya un timer corriendo
+        if (typeof challengeTimer !== 'undefined') clearInterval(challengeTimer);
+    }
+    
+    updateProgress();
+    saveProgress();
+}
             // Cargar pregunta diferida
             function loadDeferredQuestion() {
                 const deferredQuestion = deferredQuestions[currentDeferredQuestionIndex];
@@ -3545,17 +3542,35 @@ function closeBreakModal() {
         console.error("Error al cargar siguiente pregunta:", error);
     }
 }
+/**
+ * Oculta el texto largo (párrafo) del cuestionario
+ * Se activa específicamente en el Reto de Memoria (Nivel 1)
+ * cuando el temporizador llega a 00:00.
+ */
 function hidePassageText() {
-    // Buscamos el contenedor donde se inyectó pregunta.pregunta
-    // En la imagen se ve que es el cuadro blanco central
-    const container = document.getElementById('question-text') || document.querySelector('.question-content');
-    
-    if (container) {
-        container.style.opacity = '0';
-        container.style.transition = 'opacity 1.5s ease';
-        container.style.pointerEvents = 'none'; // Evita que marquen texto invisible
+    // Usamos la variable textPassage que ya tienes definida para el ID 'text-passage'
+    if (textPassage) {
+        // 1. Aplicamos el efecto visual de desvanecimiento
+        textPassage.style.transition = 'opacity 1.5s ease-in-out, filter 1.5s ease-in-out';
+        textPassage.style.opacity = '0';
+        textPassage.style.filter = 'blur(10px)'; // Efecto extra de desenfoque mientras desaparece
         
-        showNotification('¡Tiempo de lectura agotado! Responde de memoria.');
+        // 2. Bloqueamos la interacción para que no puedan seleccionar el texto invisible
+        textPassage.style.pointerEvents = 'none';
+        textPassage.style.userSelect = 'none';
+
+        // 3. Notificamos al usuario
+        showNotification('¡Tiempo de lectura agotado! El texto ha desaparecido. ¡Responde de memoria!');
+        
+        // 4. (Opcional) Podemos cambiar el color del contenedor para dar feedback visual
+        const container = textPassage.parentElement;
+        if (container && container.classList.contains('question-body')) {
+            container.style.borderLeft = '4px solid #FF9800'; 
+        }
+        
+        console.log("Evento: Texto ocultado por Reto de Memoria.");
+    } else {
+        console.error("Error: No se encontró el contenedor 'text-passage' para ocultar.");
     }
 }
             // Manejar qué pasa cuando el tiempo llega a cero
