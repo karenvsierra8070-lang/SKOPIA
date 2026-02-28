@@ -2641,16 +2641,45 @@ const modalChallengeIcon = document.getElementById('modal-challenge-icon');
                     }
                 }
             }
-            
-            // Cargar pregunta actual
-function loadQuestion() {
-    // 1. Resetear visibilidad (Por si venimos de un reto donde se ocultó el texto)
+            function showPassageText() {
     if (textPassage) {
+        // Quitamos la transición para que el cambio sea instantáneo al cargar
+        textPassage.style.transition = 'none'; 
         textPassage.style.opacity = '1';
+        textPassage.style.filter = 'none';
         textPassage.style.pointerEvents = 'auto';
+        textPassage.style.userSelect = 'auto';
+        
+        // Quitamos el borde naranja del contenedor
+        const container = textPassage.parentElement;
+        if (container) {
+            container.style.borderLeft = 'none';
+        }
+    }
+}
+// Cargar pregunta actual corregida
+function loadQuestion() {
+    // 1. DETENER TEMPORIZADORES PREVIOS (Evita que el reto anterior afecte a la nueva pregunta)
+    if (typeof challengeTimer !== 'undefined') {
+        clearInterval(challengeTimer);
     }
 
-    // Verificar si estamos mostrando preguntas diferidas
+    // 2. RESETEAR VISIBILIDAD Y ESTILOS (Limpia el rastro de hidePassageText)
+    if (textPassage) {
+        textPassage.style.transition = 'none'; // Cambio instantáneo
+        textPassage.style.opacity = '1';
+        textPassage.style.filter = 'none'; 
+        textPassage.style.pointerEvents = 'auto';
+        textPassage.style.userSelect = 'auto';
+
+        // Quitar el borde naranja de alerta del contenedor
+        const container = textPassage.parentElement;
+        if (container) {
+            container.style.borderLeft = 'none';
+        }
+    }
+
+    // 3. VERIFICAR PREGUNTAS DIFERIDAS
     if (showingDeferredQuestions) {
         if (currentDeferredQuestionIndex >= deferredQuestions.length) {
             showingDeferredQuestions = false;
@@ -2661,7 +2690,7 @@ function loadQuestion() {
         return;
     }
     
-    // Si hemos terminado todas las preguntas principales
+    // 4. VERIFICAR FIN DEL CUESTIONARIO
     if (currentQuestionIndex >= questions.length) {
         if (deferredQuestions.length > 0) {
             showingDeferredQuestions = true;
@@ -2673,26 +2702,26 @@ function loadQuestion() {
         return;
     }
     
-    // Verificar si es momento de tomar un descanso (pregunta 5)
+    // 5. VERIFICAR DESCANSO (Pregunta 5)
     if (currentQuestionIndex === 5 && !breakTaken) {
         showBreakModal();
         return;
     }
     
+    // 6. CARGAR DATOS DEL JSON
     const question = questions[currentQuestionIndex];
     questionNumber.textContent = currentQuestionIndex + 1;
     
-    // --- LÓGICA DE TEXTO SEGÚN TU JSON ---
-    // Separar correctamente el texto de la pregunta
+    // Separar el texto largo de la instrucción (basado en tus capturas)
     const parts = question.pregunta.split('\n\n');
-    const textContent = parts[0]; // El párrafo de lectura (EL QUE SE OCULTARÁ)
-    const actualQuestion = parts[1] || question.pregunta; // La instrucción/pregunta
+    const textContent = parts[0]; // El párrafo que se oculta
+    const actualQuestion = parts[1] || question.pregunta; // La pregunta del header
     
-    // Inyectar en el HTML
-    textPassage.textContent = textContent; // Cuadro beige
-    questionText.textContent = actualQuestion; // Header verde oscuro
+    // Inyectar contenido en el HTML
+    textPassage.textContent = textContent; 
+    questionText.textContent = actualQuestion; 
     
-    // Cargar opciones
+    // 7. RENDERIZAR OPCIONES
     optionsContainer.innerHTML = '';
     question.opciones.forEach((option, index) => {
         const optionCard = document.createElement('div');
@@ -2707,7 +2736,7 @@ function loadQuestion() {
         optionsContainer.appendChild(optionCard);
     });
     
-    // Resetear estado de la interfaz
+    // 8. RESETEAR ESTADO DE INTERFAZ
     selectedOption = null;
     attempts = 0;
     attempt1.classList.remove('used');
@@ -2718,13 +2747,13 @@ function loadQuestion() {
     checkBtn.disabled = true;
     hintBtn.disabled = false;
     
-    // Marcas de usuario (Difícil / Diferida)
+    // 9. ACTUALIZAR BOTONES DE ESTADO (Difícil / Diferida)
     const isDifficult = difficultQuestions.some(q => q.index === currentQuestionIndex);
     difficultBtn.classList.toggle('active', isDifficult);
     const isDeferred = deferredQuestions.some(q => q.index === currentQuestionIndex);
     deferBtn.classList.toggle('active', isDeferred);
     
-    // --- LÓGICA DE DESAFÍO ---
+    // 10. LÓGICA DE DESAFÍO (Badges y Timer)
     if (challengeMode) {
         challengeBadge.style.display = 'flex';
         timerBadge.style.display = 'flex';
@@ -2734,15 +2763,14 @@ function loadQuestion() {
         } else if (challengeLevel === 2) {
             challengeLabel.textContent = '2: TODO O NADA';
         }
-        // Iniciar cronómetro
+        // Iniciar el cronómetro de la pregunta actual
         startChallengeTimer();
     } else {
         challengeBadge.style.display = 'none';
         timerBadge.style.display = 'none';
-        // Si no hay reto, nos aseguramos de que no haya un timer corriendo
-        if (typeof challengeTimer !== 'undefined') clearInterval(challengeTimer);
     }
     
+    // 11. GUARDAR PROGRESO
     updateProgress();
     saveProgress();
 }
@@ -2802,45 +2830,64 @@ function loadQuestion() {
                 updateProgress();
                 saveProgress();
             }
-          // Iniciar temporizador de desafío
-            function startChallengeTimer() {
-                // Detener temporizador anterior si existe
-                if (challengeTimer) {
-                    clearInterval(challengeTimer);
-                }
-                
-                // Reiniciar variables del temporizador
-                challengeTimeRemaining = challengeTimeLimit;
-                challengeWarningShown = false;
-                
-                // Actualizar visualización
-                updateTimerDisplay();
-                
-                // Iniciar cuenta regresiva
-                challengeTimer = setInterval(() => {
-                    challengeTimeRemaining--;
-                    updateTimerDisplay();
-                    
-                    // Ajustar advertencia: para retos cortos (60-70s), avisar a los 15 segundos
-                    let warningThreshold = (challengeTimeLimit <= 70) ? 15 : 45;
-
-                    if (challengeTimeRemaining === warningThreshold && !challengeWarningShown) {
-                        showNotification(`⚠️ ¡Cuidado! Te quedan ${warningThreshold} segundos.`);
-                        challengeWarningShown = true;
-                    }
-                    
-                    // Dentro del setInterval de startChallengeTimer...
-                     if (challengeTimeRemaining <= 0) {
-                      clearInterval(challengeTimer);
+        // Iniciar temporizador de desafío
+function startChallengeTimer() {
+    // 1. Limpieza absoluta antes de empezar
+    if (typeof challengeTimer !== 'undefined') {
+        clearInterval(challengeTimer);
+    }
     
-                      if (challengeLevel === 1) {
-                          hidePassageText(); // <--- Aquí es donde se oculta
-                     } else {
-                      handleTimeUp();
-                       }
-                     }
-                }, 1000);
+    // Resetear colores del badge (por si venían de una pregunta fallida)
+    if (timerBadge) {
+        timerBadge.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+        timerBadge.style.color = 'white';
+    }
+    
+    // 2. Reiniciar variables de estado
+    challengeTimeRemaining = challengeTimeLimit;
+    challengeWarningShown = false;
+    
+    // Actualizar visualización inicial (01:10, etc.)
+    updateTimerDisplay();
+    
+    // 3. Iniciar cuenta regresiva
+    challengeTimer = setInterval(() => {
+        challengeTimeRemaining--;
+        updateTimerDisplay();
+        
+        // --- GESTIÓN DE ADVERTENCIA ---
+        // Para retos cortos (<=70s), avisar a los 15s. Para largos, a los 45s.
+        let warningThreshold = (challengeTimeLimit <= 70) ? 15 : 45;
+
+        if (challengeTimeRemaining <= warningThreshold && !challengeWarningShown) {
+            showNotification(`⚠️ ¡Cuidado! Te quedan ${challengeTimeRemaining} segundos.`);
+            challengeWarningShown = true;
+            
+            // Efecto visual: el badge se pone naranja/rojo al entrar en tiempo crítico
+            if (timerBadge) {
+                timerBadge.style.backgroundColor = '#e67e22';
             }
+        }
+        
+        // --- FINALIZACIÓN DEL TIEMPO ---
+        if (challengeTimeRemaining <= 0) {
+            clearInterval(challengeTimer);
+            
+            // Feedback visual final en el badge
+            if (timerBadge) {
+                timerBadge.style.backgroundColor = '#e74c3c';
+            }
+
+            if (challengeLevel === 1) {
+                // MODO MEMORIA: Solo ocultamos el texto
+                hidePassageText(); 
+            } else if (challengeLevel === 2) {
+                // MODO TODO O NADA: Ejecuta la lógica de tiempo agotado (fallo)
+                handleTimeUp();
+            }
+        }
+    }, 1000);
+}
             
             // Iniciar temporizador para pregunta diferida
             function startDeferredTimer() {
@@ -3547,32 +3594,41 @@ function closeBreakModal() {
  * Se activa específicamente en el Reto de Memoria (Nivel 1)
  * cuando el temporizador llega a 00:00.
  */
-function hidePassageText() {
-    // Usamos la variable textPassage que ya tienes definida para el ID 'text-passage'
+function hidePassageText(reset = false) {
     if (textPassage) {
-        // 1. Aplicamos el efecto visual de desvanecimiento
-        textPassage.style.transition = 'opacity 1.5s ease-in-out, filter 1.5s ease-in-out';
+        if (reset) {
+            // --- BLOQUE DE LIMPIEZA (Para que el texto vuelva a aparecer) ---
+            textPassage.style.transition = 'none'; 
+            textPassage.style.opacity = '1';
+            textPassage.style.filter = 'none';
+            textPassage.style.pointerEvents = 'auto';
+            textPassage.style.userSelect = 'auto';
+            
+            const container = textPassage.parentElement;
+            if (container) {
+                container.style.borderLeft = 'none';
+            }
+            return; // Salimos de la función aquí si solo estamos reseteando
+        }
+
+        // --- BLOQUE DE OCULTAR (Tu lógica original mejorada) ---
+        textPassage.style.transition = 'all 1.5s ease-in-out';
         textPassage.style.opacity = '0';
-        textPassage.style.filter = 'blur(10px)'; // Efecto extra de desenfoque mientras desaparece
+        textPassage.style.filter = 'blur(15px)';
         
-        // 2. Bloqueamos la interacción para que no puedan seleccionar el texto invisible
         textPassage.style.pointerEvents = 'none';
         textPassage.style.userSelect = 'none';
 
-        // 3. Notificamos al usuario
-        showNotification('¡Tiempo de lectura agotado! El texto ha desaparecido. ¡Responde de memoria!');
+        showNotification('¡Tiempo de lectura agotado! El texto ha desaparecido.');
         
-        // 4. (Opcional) Podemos cambiar el color del contenedor para dar feedback visual
         const container = textPassage.parentElement;
-        if (container && container.classList.contains('question-body')) {
-            container.style.borderLeft = '4px solid #FF9800'; 
+        if (container) {
+            container.style.transition = 'border-left 0.5s ease';
+            container.style.borderLeft = '6px solid #FF9800'; 
         }
-        
-        console.log("Evento: Texto ocultado por Reto de Memoria.");
-    } else {
-        console.error("Error: No se encontró el contenedor 'text-passage' para ocultar.");
     }
 }
+     
             // Manejar qué pasa cuando el tiempo llega a cero
 function handleTimeUp() {
     // Si estamos en Muerte Súbita (Nivel 2), cualquier fallo de tiempo desactiva el reto
