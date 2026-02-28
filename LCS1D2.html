@@ -2596,25 +2596,24 @@ const modalChallengeIcon = document.getElementById('modal-challenge-icon');
                 return newArray;
             }
             
-            // Inicializar bloque de preguntas
-            function initializeBlock() {
-                blockQuestions = [];
-                blockCorrectAnswers = 0;
-                blockIncorrectQuestions = [];
-                tipTheoryShown = false; // Resetear el control de consejos/teoría
-                
-              // Obtener las siguientes 3 preguntas (o las que queden)
-                for (let i = 0; i < questionsPerChallenge && currentQuestionIndex + i < questions.length; i++) {
-                    blockQuestions.push({
-                        ...questions[currentQuestionIndex + i],
-                        index: currentQuestionIndex + i,
-                        correct: false,
-                        incorrect: false,
-                        challengeLevel: challengeLevel // Añadido para diferenciar el reto
-                    });
-                }
-            }
-            
+          // Inicializar bloque de preguntas
+function initializeBlock() {
+    blockQuestions = [];
+    blockCorrectAnswers = 0;
+    blockIncorrectQuestions = [];
+    tipTheoryShown = false; // Resetear el control de consejos/teoría
+
+    // Obtener las siguientes 3 preguntas (o las que queden)
+    for (let i = 0; i < questionsPerChallenge && currentQuestionIndex + i < questions.length; i++) {
+        blockQuestions.push({
+            ...questions[currentQuestionIndex + i],
+            index: currentQuestionIndex + i,
+            correct: false,
+            incorrect: false,
+            challengeLevel: challengeLevel // Añadido para diferenciar el reto
+        });
+    }
+}
         // Cargar progreso guardado
             function loadSavedProgress() {
                 const savedProgress = localStorage.getItem('skopia_quiz_progress_LCS1D2');
@@ -3443,32 +3442,31 @@ function startChallengeTimer() {
 
                 loadQuestion();
             }
-       function checkChallengeStatus() {
-    // Solo actuamos si el bloque de 3 preguntas ha terminado
-    if (blockCorrectAnswers + blockIncorrectQuestions.length === questionsPerChallenge) {
-        
-        // CASO A: No estamos en desafío y sacó 3/3 -> Toca activar el 1
-        if (!challengeMode && blockCorrectAnswers === questionsPerChallenge) {
-            if (!challenge1Completed) {
-                activateChallenge(1);
-            } else {
-                // Si por alguna razón ya completó el 1, saltamos al 2
-                activateChallenge(2);
-            }
-        } 
-        // CASO B: Estamos en Desafío Nivel 1 y sacó 3/3 -> Toca activar el 2
-        else if (challengeMode && challengeLevel === 1 && blockCorrectAnswers === questionsPerChallenge) {
-            challenge1Completed = true; // Marcamos el éxito del nivel 1
-            activateChallenge(2); 
-        }
-        // CASO C: Falló en cualquier nivel de desafío
-        else if (challengeMode && (blockIncorrectQuestions.length > 0 || blockCorrectAnswers < questionsPerChallenge)) {
-            deactivateChallenge();
-            showNotification('Has regresado al modo normal. ¡Sigue practicando!');
-        }
+  function checkChallengeStatus() {
+    const totalProcessed = blockCorrectAnswers + blockIncorrectQuestions.length;
 
-        // Siempre reiniciamos el bloque para las siguientes 3 preguntas
-        initializeBlock();
+    if (totalProcessed === questionsPerChallenge) {
+        
+        // Guardamos el resultado del bloque antes de resetear nada
+        const isPerfectBlock = (blockCorrectAnswers === questionsPerChallenge);
+
+        if (!challengeMode && isPerfectBlock) {
+            initializeBlock(); // Limpiamos PRIMERO
+            activateChallenge(1); // Anunciamos DESPUÉS
+        } 
+        else if (challengeMode && challengeLevel === 1 && isPerfectBlock) {
+            challenge1Completed = true;
+            initializeBlock(); // Limpiamos PRIMERO
+            activateChallenge(2); // Anunciamos DESPUÉS (Aquí aparecerá el cartel)
+        }
+        else if (challengeMode && (!isPerfectBlock)) {
+            deactivateChallenge();
+            showNotification('Reto no superado. Volviendo al modo normal.');
+            initializeBlock();
+        } else {
+            // Si es un bloque normal sin racha perfecta o fin de nivel 2
+            initializeBlock();
+        }
     }
 }
      function activateChallenge(level) {
@@ -3501,15 +3499,24 @@ function startChallengeTimer() {
     createConfetti();
 }
             
-            // Desactivar modo desafío
-            function deactivateChallenge() {
-                challengeMode = false;
-                challengeLevel = 0;
-                questionsPerChallenge = 3;
-                // Resetear color de alerta por si acaso
-                if (mainGameContainer) mainGameContainer.style.borderColor = '';
-            }
-            
+      // Desactivar modo desafío
+function deactivateChallenge() {
+    challengeMode = false;
+    challengeLevel = 0;
+    questionsPerChallenge = 3;
+    
+    // IMPORTANTE: Resetear la racha del bloque para que 
+    // el usuario empiece de cero a contar sus 3 correctas.
+    blockCorrectAnswers = 0; 
+    blockIncorrectQuestions = [];
+
+    // Resetear color de alerta por si acaso
+    if (mainGameContainer) mainGameContainer.style.borderColor = '';
+    
+    // Ocultar los badges del timer si estaban visibles
+    if (challengeBadge) challengeBadge.style.display = 'none';
+    if (timerBadge) timerBadge.style.display = 'none';
+}
             // Crear efecto de confeti
             function createConfetti() {
                 const colors = ['#5a6133', '#bec092', '#272b00', '#2196f3', '#ffeb3b'];
