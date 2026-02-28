@@ -2550,6 +2550,31 @@ const challengeDescription = document.getElementById('challenge-description');
 const modalChallengeTime = document.getElementById('modal-challenge-time');
 const modalChallengeTitle = document.getElementById('modal-challenge-title');
 const modalChallengeIcon = document.getElementById('modal-challenge-icon');
+
+
+// --- PASO 2: LÓGICA DE NAVEGACIÓN SEGURA ---
+            nextBtn.onclick = (e) => {
+                if (e) e.preventDefault(); 
+
+                // 1. Limpieza visual inmediata
+                feedbackSection.style.display = 'none';
+                nextBtn.style.display = 'none';
+                
+                // 2. Avanzar el índice según el modo
+                if (showingDeferredQuestions) {
+                    currentDeferredQuestionIndex++;
+                } else {
+                    currentQuestionIndex++;
+                }
+
+                // 3. Guardar progreso inmediatamente
+                if (typeof saveProgress === 'function') {
+                    saveProgress();
+                }
+
+                // 4. Cargar la siguiente pregunta
+                loadQuestion();
+            };
             // Cargar preguntas desde JSON
             async function loadQuestions(isNewQuiz = false) {
                 try {
@@ -3452,28 +3477,32 @@ function startChallengeTimer() {
 function checkChallengeStatus() {
     const totalProcessed = blockCorrectAnswers + blockIncorrectQuestions.length;
 
-    // Solo verificamos cuando se completa el bloque de 3
+    // 1. DETECTAR FIN DEL CUESTIONARIO (Para evitar bloqueos en la pregunta 10)
+    if (currentQuestionIndex >= questions.length - 1) {
+        // Si es la última pregunta, no intentamos activar más retos
+        return; 
+    }
+
+    // 2. VERIFICACIÓN DE BLOQUE COMPLETO
     if (totalProcessed === questionsPerChallenge) {
         const isPerfectBlock = (blockCorrectAnswers === questionsPerChallenge);
 
-        // CASO A: Activar Nivel 1 (Si no estamos en modo desafío y hubo 3 aciertos)
-        if (!challengeMode && isPerfectBlock) {
-            // NO reseteamos aquí, dejamos que activateChallenge maneje el flujo
+        // CASO A: Activar Nivel 1
+        if (!challengeMode && isPerfectBlock && !challenge1Completed) {
             activateChallenge(1); 
         } 
-        // CASO B: Activar Nivel 2 (Si venimos del Nivel 1 y fue perfecto)
+        // CASO B: Activar Nivel 2
         else if (challengeMode && challengeLevel === 1 && isPerfectBlock) {
-            // IMPORTANTE: Marcamos completado el 1 antes de saltar al 2
             challenge1Completed = true;
             activateChallenge(2); 
         }
-        // CASO C: Fallo en cualquier reto
+        // CASO C: Fallo en reto
         else if (challengeMode && !isPerfectBlock) {
             deactivateChallenge();
             showNotification('Reto no superado. Volviendo al modo normal.');
             initializeBlock();
         } 
-        // CASO D: Bloque normal sin racha
+        // CASO D: Bloque normal o racha ya completada
         else {
             initializeBlock();
         }
@@ -3790,49 +3819,53 @@ function handleTimeUp() {
                 questionsAnswered.textContent = totalAnswered;
             }
             
-           // Guardar progreso
-            function saveProgress(completed = false) {
-                const progress = {
-                    quiz: 'LCS1D2',
-                    currentQuestionIndex: currentQuestionIndex,
-                    score: score,
-                    points: score, // Puntos totales (10 por respuesta correcta)
-                    percentage: Math.round((score / (questions.length * 30)) * 100),
-                    hintsUsed: hintsUsed,
-                    currentStreak: currentStreak,
-                    maxStreak: maxStreak,
-                    challengeMode: challengeMode,
-                    challengeLevel: challengeLevel,
-                    // Guardar el estado del bloque y el tiempo para que no se pierdan al refrescar
-                    blockQuestions: blockQuestions,
-                    challengeTimeRemaining: challengeTimeRemaining,
-                    deferredQuestions: deferredQuestions,
-                    difficultQuestions: difficultQuestions,
-                    breakTaken: breakTaken,
-                    totalTimeSpent: totalTimeSpent,
-                    completed: completed,
-                    timestamp: new Date().toISOString()
-                };
-                
-                // Guardar progreso individual del cuestionario
-                localStorage.setItem('skopia_quiz_progress_LCS1D2', JSON.stringify(progress));
-                
-                // Si está completado, guardar en historial
-                if (completed) {
-                    saveToHistory(progress);
-                }
-                
-                // Actualizar progreso global en la biblioteca
-                updateGlobalProgress(progress);
-                
-                // Completar misiones si corresponde
-                if (progress.percentage >= 60) {
-                    completeMission(1); // Misión de completar examen
-                    if (progress.percentage >= 80) {
-                        completeMission(2); // Misión de buen puntaje
-                    }
-                }
-            }
+         // --- PASO 3: FUNCIÓN DE GUARDADO CORREGIDA ---
+function saveProgress(completed = false) {
+    // Verificamos si realmente se ha completado el cuestionario
+    // (Llegó a la última pregunta y no hay diferidas pendientes)
+    const isActuallyCompleted = completed || (currentQuestionIndex >= questions.length && deferredQuestions.length === 0);
+
+    const progress = {
+        quiz: 'LCS1D2',
+        currentQuestionIndex: currentQuestionIndex,
+        score: score,
+        points: score, 
+        percentage: Math.round((score / (questions.length * 30)) * 100),
+        hintsUsed: hintsUsed,
+        currentStreak: currentStreak,
+        maxStreak: maxStreak,
+        challengeMode: challengeMode,
+        challengeLevel: challengeLevel,
+        challenge1Completed: challenge1Completed, // AÑADIDO: Evita conflictos en pregunta 7
+        blockQuestions: blockQuestions,
+        challengeTimeRemaining: challengeTimeRemaining,
+        deferredQuestions: deferredQuestions,
+        difficultQuestions: difficultQuestions,
+        breakTaken: breakTaken,
+        totalTimeSpent: totalTimeSpent,
+        completed: isActuallyCompleted,
+        timestamp: new Date().toISOString()
+    };
+    
+    // Guardar progreso individual
+    localStorage.setItem('skopia_quiz_progress_LCS1D2', JSON.stringify(progress));
+    
+    // Si está completado, guardar en historial
+    if (isActuallyCompleted) {
+        if (typeof saveToHistory === 'function') saveToHistory(progress);
+    }
+    
+    // Actualizar progreso global
+    if (typeof updateGlobalProgress === 'function') updateGlobalProgress(progress);
+    
+    // Completar misiones
+    if (progress.percentage >= 60 && typeof completeMission === 'function') {
+        completeMission(1);
+        if (progress.percentage >= 80) {
+            completeMission(2);
+        }
+    }
+}
             
          // Guardar en historial
             function saveToHistory(progress) {
