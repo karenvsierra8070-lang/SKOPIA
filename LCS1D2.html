@@ -3116,27 +3116,19 @@ function startChallengeTimer() {
                 checkBtn.disabled = false;
             }
             
-  function checkAnswer() {
+function checkAnswer() {
     // SEGURO: Evita que se procese la misma pregunta varias veces
-    if (selectedOption === null || answerProcessed) return; 
+    if (selectedOption === null || (typeof answerProcessed !== 'undefined' && answerProcessed)) return; 
     
+    if (typeof answerProcessed !== 'undefined') answerProcessed = true; 
+    attempts++;
     let question;
     
-    // 1. Identificar la pregunta actual de forma segura
     if (showingDeferredQuestions) {
         question = deferredQuestions[currentDeferredQuestionIndex].question;
     } else {
         question = questions[currentQuestionIndex];
     }
-
-    // BLINDAJE EXTRA: Si por error de índice la pregunta no existe, saltar a resultados
-    if (!question) {
-        showResults();
-        return;
-    }
-
-    answerProcessed = true; 
-    attempts++;
     
     const isCorrect = selectedOption === question.respuestaCorrecta;
     const options = document.querySelectorAll('.option-card');
@@ -3177,10 +3169,7 @@ function startChallengeTimer() {
         }
         
         if (!showingDeferredQuestions) {
-            // Protección por si la función no existe
-            if (typeof updateBlockQuestion === 'function') {
-                updateBlockQuestion(currentQuestionIndex, true, false);
-            }
+            updateBlockQuestion(currentQuestionIndex, true, false);
         }
         
         feedbackSection.className = 'feedback-section correct';
@@ -3213,14 +3202,10 @@ function startChallengeTimer() {
         }
         
         if (!showingDeferredQuestions) {
-            if (typeof updateBlockQuestion === 'function') {
-                updateBlockQuestion(currentQuestionIndex, false, true);
-            }
+            updateBlockQuestion(currentQuestionIndex, false, true);
         }
         
-        if (typeof saveIncorrectQuestion === 'function') {
-            saveIncorrectQuestion(question);
-        }
+        saveIncorrectQuestion(question);
         
         options.forEach((opt, i) => {
             if (i === question.respuestaCorrecta) {
@@ -3234,28 +3219,18 @@ function startChallengeTimer() {
         });
     }
     
-    // --- DESBLOQUEO DE NAVEGACIÓN ---
+    // --- NAVEGACIÓN ---
     hintBtn.disabled = true;
-    
-    // Aseguramos visibilidad del botón siguiente
     nextBtn.style.display = 'block';
-    nextBtn.style.pointerEvents = 'auto'; 
-    nextBtn.style.opacity = '1';
-    
     checkBtn.style.display = 'none';
     feedbackSection.style.display = 'block';
     
-    // Actualizar y Guardar (British English: checking for function existence)
-    if (typeof updateProgress === 'function') updateProgress();
+    updateProgress();
     saveProgress();
 
     // LLAMADA AL ESTADO DEL DESAFÍO
     if (typeof checkChallengeStatus === 'function') {
-        try {
-            checkChallengeStatus();
-        } catch (e) {
-            console.error("Error en checkChallengeStatus:", e);
-        }
+        checkChallengeStatus();
     }
 }
             // Actualizar pregunta del bloque actual
