@@ -3075,9 +3075,11 @@ function startChallengeTimer() {
                 checkBtn.disabled = false;
             }
             
-          function checkAnswer() {
-    if (selectedOption === null) return;
+    function checkAnswer() {
+    // SEGURO: Evita que se procese la misma pregunta varias veces
+    if (selectedOption === null || answerProcessed) return; 
     
+    answerProcessed = true; 
     attempts++;
     let question;
     
@@ -3094,7 +3096,7 @@ function startChallengeTimer() {
     if (challengeTimer) clearInterval(challengeTimer);
     if (deferredTimer) clearInterval(deferredTimer);
     
-    // Resetear efectos visuales (Limpieza de Reto de Memoria)
+    // Resetear efectos visuales
     if (typeof showPassageText === 'function') {
         showPassageText(); 
     } else if (textPassage) {
@@ -3105,38 +3107,29 @@ function startChallengeTimer() {
     attempt1.classList.add('used');
     
     if (isCorrect) {
-        // --- LÓGICA DE RESPUESTA CORRECTA ---
-        score += 30;
+        // --- LÓGICA CORRECTA ---
+        score += 30; 
         currentScore.textContent = score;
         currentStreak++; 
         
-    // --- BLOQUE CORREGIDO: GESTIÓN DE DESAFÍOS AL ACERTAR ---
         if (challengeMode) {
             if (challengeLevel === 1) {
-                // Solo marcamos que completó el 1, NO apagamos el modo desafío aún
                 challenge1Completed = true; 
                 showNotification("¡Reto de Memoria superado! Próximo objetivo: Muerte Súbita.");
             } else if (challengeLevel === 2) {
-                // El modo desafío solo se apaga cuando termina el nivel 2 (Muerte Súbita)
                 challengeMode = false;
                 showNotification("¡Increíble! Has superado el reto de Muerte Súbita.");
-                currentStreak = 0; // Opcional: reiniciar racha tras la gloria máxima
+                currentStreak = 0;
             }
-            
-            // ELIMINADO: Ya no reseteamos challengeMode = false aquí de forma general
-            // porque si lo haces, la función checkChallengeStatus() nunca verá que venías del Nivel 1.
         }
         
-        // Actualizar récords personales
         if (currentStreak > maxStreak) {
             maxStreak = currentStreak;
         }
         
-        // Registrar el progreso del bloque actual
         if (!showingDeferredQuestions) {
             updateBlockQuestion(currentQuestionIndex, true, false);
         }
-        // --- FIN DEL BLOQUE CORREGIDO ---
         
         feedbackSection.className = 'feedback-section correct';
         feedbackIcon.className = 'feedback-icon fas fa-check-circle';
@@ -3153,7 +3146,7 @@ function startChallengeTimer() {
         });
         
     } else {
-        // --- LÓGICA DE RESPUESTA INCORRECTA ---
+        // --- LÓGICA INCORRECTA ---
         feedbackSection.className = 'feedback-section incorrect';
         feedbackIcon.className = 'feedback-icon fas fa-times-circle';
         feedbackTitle.textContent = 'Incorrecto';
@@ -3161,7 +3154,6 @@ function startChallengeTimer() {
         trickBox.style.display = 'block';
         trickText.textContent = question.truco;
         
-        // Si falla en modo desafío, el castigo es perder la racha
         currentStreak = 0;
         if (challengeMode) {
             challengeMode = false;
@@ -3186,18 +3178,27 @@ function startChallengeTimer() {
         });
     }
     
-    // Comunes
+    // --- PASO 1: DESBLOQUEO DEL BOTÓN SIGUIENTE ---
     hintBtn.disabled = true;
+    
+    // Forzamos que el botón aparezca y sea clicable ANTES de los desafíos
     nextBtn.style.display = 'block';
+    nextBtn.style.pointerEvents = 'auto'; 
+    nextBtn.style.opacity = '1';
+    
     checkBtn.style.display = 'none';
     feedbackSection.style.display = 'block';
     
     updateProgress();
     saveProgress();
 
-    // LLAMADA CLAVE: Verificar si la nueva racha activa el siguiente desafío
+    // LLAMADA AL ESTADO DEL DESAFÍO (con protección de errores)
     if (typeof checkChallengeStatus === 'function') {
-        checkChallengeStatus();
+        try {
+            checkChallengeStatus();
+        } catch (e) {
+            console.error("Error en checkChallengeStatus, pero el flujo continúa:", e);
+        }
     }
 }
             // Actualizar pregunta del bloque actual
