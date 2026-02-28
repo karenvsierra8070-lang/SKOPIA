@@ -3382,61 +3382,70 @@ const modalChallengeIcon = document.getElementById('modal-challenge-icon');
 
                 loadQuestion();
             }
-            
-            // Omitir teoría y continuar
+        // Omitir teoría y continuar
             function skipTheoryAndContinue() {
                 currentView = 'quiz';
                 tipContainer.style.display = 'none';
                 questionCard.style.display = 'block';
                 
-                // Verificar si hemos completado el bloque actual
-                if (currentQuestionIndex >= blockQuestions[blockQuestions.length - 1].index) {
-                    // Verificar si debemos activar el modo desafío
+                // Incrementar el índice antes de verificar el estado del bloque
+                currentQuestionIndex++;
+
+                // Verificar si hemos completado el bloque actual de 3 preguntas
+                if (blockQuestions.length > 0 && currentQuestionIndex > blockQuestions[blockQuestions.length - 1].index) {
+                    // Verificar si la racha activa el Desafío 1 o el Desafío 2
                     checkChallengeStatus();
                 }
                 
-                currentQuestionIndex++;
+                // Resetear visibilidad del texto por si venimos de un reto de memoria
+                if (passageContainer) {
+                    passageContainer.style.opacity = '1';
+                    passageContainer.style.display = 'block';
+                }
+
                 loadQuestion();
             }
-            
-            // Verificar si debemos activar el modo desafío
+         // Verificar si debemos activar el modo desafío
             function checkChallengeStatus() {
                 // Si todas las preguntas del bloque son correctas y no estamos en modo desafío
                 if (blockCorrectAnswers === questionsPerChallenge && !challengeMode) {
-                    // Activar modo desafío
-                    activateChallenge();
+                    // Activar modo desafío (Nivel 1: Memoria)
+                    activateChallenge(1);
                 }
                 // Si estamos en modo desafío
                 else if (challengeMode) {
-                    // Si respondimos correctamente 2 o más preguntas
-                    if (blockCorrectAnswers >= 2) {
-                        // Continuar en modo desafío
-                        if (blockCorrectAnswers === questionsPerChallenge && challengeLevel === 1) {
-                            // Si respondimos todas correctamente en el primer nivel, subir al segundo nivel
-                            challengeLevel = 2;
-                            questionsPerChallenge = 3;
-                            challengeTimeLimit = 90; // 1:30 por pregunta
-                            showNotification('¡Excelente! Has pasado al siguiente nivel de desafío: 3 preguntas con 1:30 minutos cada una.');
-                        }
+                    // Si respondimos correctamente todo en el nivel 1, subimos al 2
+                    if (blockCorrectAnswers === questionsPerChallenge && challengeLevel === 1) {
+                        activateChallenge(2); // Activar Nivel 2: Muerte Súbita
                     }
-                    // Si respondimos incorrectamente 2 o más preguntas
-                    else if (blockIncorrectQuestions.length >= 2) {
-                        // Volver al modo normal
+                    // Si fallamos en el nivel de muerte súbita o no llegamos al mínimo en el 1
+                    else if (blockIncorrectQuestions.length > 0 && challengeLevel === 2 || blockCorrectAnswers < 2) {
                         deactivateChallenge();
-                        showNotification('Has regresado al modo normal. Sigue practicando para volver al desafío.');
+                        showNotification('Has regresado al modo normal. Sigue practicando.');
                     }
                 }
                 
-                // Inicializar el siguiente bloque
                 initializeBlock();
             }
             
             // Activar modo desafío
-            function activateChallenge() {
+            function activateChallenge(level) {
                 challengeMode = true;
-                challengeLevel = 1;
+                challengeLevel = level;
                 questionsPerChallenge = 3;
-                challengeTimeLimit = 252; // 4:12 para 3 preguntas
+
+                // Configurar tiempos y textos según el nivel
+                if (level === 1) {
+                    challengeTimeLimit = 70; // 1:10 para Memoria
+                    modalChallengeTitle.textContent = '¡RETO DE MEMORIA!';
+                    challengeDescription.textContent = '¡Felicidades! Has respondido correctamente las 3 preguntas anteriores. Ahora enfrentarás un desafío: el texto desaparecerá tras 1 minuto y 10 segundos. ¡Lee rápido!';
+                    modalChallengeTime.textContent = '1:10';
+                } else if (level === 2) {
+                    challengeTimeLimit = 60; // 1:00 para Muerte Súbita
+                    modalChallengeTitle.textContent = '¡MUERTE SÚBITA!';
+                    challengeDescription.textContent = '¡Increíble! Superaste la memoria. Ahora el reto final: responde 3 preguntas en 1 minuto. Si fallas una sola, pierdes la racha.';
+                    modalChallengeTime.textContent = '1:00';
+                }
                 
                 // Mostrar modal de desafío
                 challengeModal.classList.add('active');
@@ -3450,6 +3459,8 @@ const modalChallengeIcon = document.getElementById('modal-challenge-icon');
                 challengeMode = false;
                 challengeLevel = 0;
                 questionsPerChallenge = 3;
+                // Resetear color de alerta por si acaso
+                if (mainGameContainer) mainGameContainer.style.borderColor = '';
             }
             
             // Crear efecto de confeti
