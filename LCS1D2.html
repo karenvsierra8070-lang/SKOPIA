@@ -3557,23 +3557,31 @@ function closeBreakModal() {
                     return;
                 }
                 
+             // Incrementar índice antes de cualquier verificación
+                currentQuestionIndex++;
+
                 // Verificar si hemos completado el bloque actual
-                if (currentQuestionIndex >= blockQuestions[blockQuestions.length - 1].index) {
-                    // Verificar si debemos mostrar consejos y teoría (solo si hay preguntas incorrectas y no se han mostrado antes)
+                if (blockQuestions.length > 0 && currentQuestionIndex > blockQuestions[blockQuestions.length - 1].index) {
+                    
+                    // Prioridad 1: Mostrar teoría si hubo fallos (y no se ha mostrado)
                     if (blockIncorrectQuestions.length > 0 && !tipTheoryShown) {
-                        tipTheoryShown = true; // Marcar que ya se mostraron
+                        tipTheoryShown = true;
                         showTip();
-                        return;
-                    } else {
-                        // Verificar si debemos activar el modo desafío
-                        checkChallengeStatus();
-                    }
+                        return; // Detenemos aquí para que el usuario lea la teoría
+                    } 
+                    
+                    // Prioridad 2: Si no hay teoría, verificar si entra en modo desafío
+                    checkChallengeStatus();
                 }
                 
-                currentQuestionIndex++;
+                // Resetear visibilidad del texto por si venimos de un reto de memoria
+                if (passageContainer) {
+                    passageContainer.style.opacity = '1';
+                    passageContainer.style.display = 'block';
+                }
+
                 loadQuestion();
             }
-            
             // Mostrar resultados
             function showResults() {
                 currentView = 'results';
@@ -3634,7 +3642,7 @@ function closeBreakModal() {
                 questionsAnswered.textContent = totalAnswered;
             }
             
-            // Guardar progreso
+           // Guardar progreso
             function saveProgress(completed = false) {
                 const progress = {
                     quiz: 'LCS1D2',
@@ -3647,6 +3655,9 @@ function closeBreakModal() {
                     maxStreak: maxStreak,
                     challengeMode: challengeMode,
                     challengeLevel: challengeLevel,
+                    // Guardar el estado del bloque y el tiempo para que no se pierdan al refrescar
+                    blockQuestions: blockQuestions,
+                    challengeTimeRemaining: challengeTimeRemaining,
                     deferredQuestions: deferredQuestions,
                     difficultQuestions: difficultQuestions,
                     breakTaken: breakTaken,
@@ -3796,7 +3807,7 @@ function closeBreakModal() {
                 showNotification('Generando nuevo cuestionario con preguntas aleatorias...');
             }
             
-            // Event listeners
+        // Event listeners
             hintBtn.addEventListener('click', showHint);
             checkBtn.addEventListener('click', checkAnswer);
             nextBtn.addEventListener('click', nextQuestion);
@@ -3807,6 +3818,8 @@ function closeBreakModal() {
             deferBtn.addEventListener('click', toggleDeferred);
             startChallengeBtn.addEventListener('click', () => {
                 challengeModal.classList.remove('active');
+                // Arrancar el cronómetro inmediatamente al cerrar el modal
+                startChallengeTimer();
                 loadQuestion();
             });
             submitDeferredBtn.addEventListener('click', () => {
