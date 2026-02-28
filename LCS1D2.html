@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -2686,22 +2687,24 @@ function initializeBlock() {
         }
     }
 }
+// --- PASO POR PASO: FUNCIÓN LOADQUESTION CORREGIDA ---
 function loadQuestion() {
-    answerProcessed = false;
-    // 1. DETENER TEMPORIZADORES PREVIOS (Evita que el reto anterior afecte a la nueva pregunta)
-    if (typeof challengeTimer !== 'undefined') {
+    // A. RESET DE SEGURIDAD (Para que el botón Verificar funcione y los puntos no se dupliquen)
+    answerProcessed = false; 
+
+    // 1. DETENER TEMPORIZADORES PREVIOS
+    if (typeof challengeTimer !== 'undefined' && challengeTimer !== null) {
         clearInterval(challengeTimer);
     }
 
-    // 2. RESETEAR VISIBILIDAD Y ESTILOS (Limpia el rastro de hidePassageText)
+    // 2. RESETEAR VISIBILIDAD Y ESTILOS
     if (textPassage) {
-        textPassage.style.transition = 'none'; // Cambio instantáneo
+        textPassage.style.transition = 'none'; 
         textPassage.style.opacity = '1';
         textPassage.style.filter = 'none'; 
         textPassage.style.pointerEvents = 'auto';
         textPassage.style.userSelect = 'auto';
 
-        // Quitar el borde naranja de alerta del contenedor
         const container = textPassage.parentElement;
         if (container) {
             container.style.borderLeft = 'none';
@@ -2719,15 +2722,16 @@ function loadQuestion() {
         return;
     }
     
-    // 4. VERIFICAR FIN DEL CUESTIONARIO
+    // 4. VERIFICAR FIN DEL CUESTIONARIO (BLINDAJE PREGUNTA 10)
+    // Si el índice llega al límite, saltamos a diferidas o resultados ANTES de buscar en el JSON
     if (currentQuestionIndex >= questions.length) {
-        if (deferredQuestions.length > 0) {
+        if (deferredQuestions && deferredQuestions.length > 0) {
             showingDeferredQuestions = true;
             currentDeferredQuestionIndex = 0;
             loadDeferredQuestion();
-            return;
+        } else {
+            showResults();
         }
-        showResults();
         return;
     }
     
@@ -2737,16 +2741,23 @@ function loadQuestion() {
         return;
     }
     
-    // 6. CARGAR DATOS DEL JSON
+    // 6. CARGAR DATOS DEL JSON (Seguro)
     const question = questions[currentQuestionIndex];
+    
+    // Si por algún motivo la pregunta es undefined, detenemos el error aquí
+    if (!question) {
+        showResults();
+        return;
+    }
+
     questionNumber.textContent = currentQuestionIndex + 1;
     
-    // Separar el texto largo de la instrucción (basado en tus capturas)
+    // Separar el texto largo de la instrucción
     const parts = question.pregunta.split('\n\n');
-    const textContent = parts[0]; // El párrafo que se oculta
-    const actualQuestion = parts[1] || question.pregunta; // La pregunta del header
+    const textContent = parts[0]; 
+    const actualQuestion = parts[1] || question.pregunta; 
     
-    // Inyectar contenido en el HTML
+    // Inyectar contenido
     textPassage.textContent = textContent; 
     questionText.textContent = actualQuestion; 
     
@@ -2776,13 +2787,13 @@ function loadQuestion() {
     checkBtn.disabled = true;
     hintBtn.disabled = false;
     
-    // 9. ACTUALIZAR BOTONES DE ESTADO (Difícil / Diferida)
+    // 9. ACTUALIZAR BOTONES DE ESTADO
     const isDifficult = difficultQuestions.some(q => q.index === currentQuestionIndex);
     difficultBtn.classList.toggle('active', isDifficult);
     const isDeferred = deferredQuestions.some(q => q.index === currentQuestionIndex);
     deferBtn.classList.toggle('active', isDeferred);
     
-    // 10. LÓGICA DE DESAFÍO (Badges y Timer)
+    // 10. LÓGICA DE DESAFÍO
     if (challengeMode) {
         challengeBadge.style.display = 'flex';
         timerBadge.style.display = 'flex';
@@ -2792,17 +2803,74 @@ function loadQuestion() {
         } else if (challengeLevel === 2) {
             challengeLabel.textContent = '2: TODO O NADA';
         }
-        // Iniciar el cronómetro de la pregunta actual
-        startChallengeTimer();
+        if (typeof startChallengeTimer === 'function') {
+            startChallengeTimer();
+        }
     } else {
         challengeBadge.style.display = 'none';
         timerBadge.style.display = 'none';
     }
     
-    // 11. GUARDAR PROGRESO
+    // 11. ACTUALIZAR PROGRESO Y GUARDAR
     updateProgress();
     saveProgress();
 }
+            // Cargar pregunta diferida
+            function loadDeferredQuestion() {
+                const deferredQuestion = deferredQuestions[currentDeferredQuestionIndex];
+                const question = deferredQuestion.question;
+                
+                // Actualizar número de pregunta
+                questionNumber.textContent = `Diferida ${currentDeferredQuestionIndex + 1}`;
+                
+                // Separar correctamente el texto de la pregunta
+                const parts = question.pregunta.split('\n\n');
+                const textContent = parts[0]; // El texto principal
+                const actualQuestion = parts[1] || question.pregunta; // La pregunta real
+                
+                // Mostrar el texto en el contenedor beige
+                textPassage.textContent = textContent;
+                
+                // Mostrar solo la pregunta en el header
+                questionText.textContent = actualQuestion;
+                
+                // Cargar opciones
+                optionsContainer.innerHTML = '';
+                question.opciones.forEach((option, index) => {
+                    const optionCard = document.createElement('div');
+                    optionCard.className = 'option-card';
+                    optionCard.innerHTML = `
+                        <div class="option-content">
+                            <div class="option-letter">${String.fromCharCode(65 + index)}</div>
+                            <div class="option-text">${option}</div>
+                        </div>
+                    `;
+                    optionCard.onclick = () => selectOption(index);
+                    optionsContainer.appendChild(optionCard);
+                });
+                
+                // Resetear estado
+                selectedOption = null;
+                attempts = 0;
+                attempt1.classList.remove('used');
+                hintBox.style.display = 'none';
+                feedbackSection.style.display = 'none';
+                nextBtn.style.display = 'none';
+                checkBtn.style.display = 'block';
+                checkBtn.disabled = true;
+                hintBtn.disabled = false;
+                
+                // Desactivar botón de diferir (ya está diferida)
+                deferBtn.classList.add('active');
+                deferBtn.disabled = true;
+                
+                // Iniciar temporizador para pregunta diferida
+                startDeferredTimer();
+                
+                // Actualizar progreso
+                updateProgress();
+                saveProgress();
+            }
         // Iniciar temporizador de desafío
 function startChallengeTimer() {
     // 1. Limpieza absoluta antes de empezar
@@ -3050,9 +3118,9 @@ function startChallengeTimer() {
             
 function checkAnswer() {
     // SEGURO: Evita que se procese la misma pregunta varias veces
-    if (selectedOption === null || answerProcessed) return; 
+    if (selectedOption === null || (typeof answerProcessed !== 'undefined' && answerProcessed)) return; 
     
-    answerProcessed = true; 
+    if (typeof answerProcessed !== 'undefined') answerProcessed = true; 
     attempts++;
     let question;
     
@@ -3151,27 +3219,18 @@ function checkAnswer() {
         });
     }
     
-    // --- PASO 1: DESBLOQUEO DEL BOTÓN SIGUIENTE ---
+    // --- NAVEGACIÓN ---
     hintBtn.disabled = true;
-    
-    // Forzamos que el botón aparezca y sea clicable ANTES de los desafíos
     nextBtn.style.display = 'block';
-    nextBtn.style.pointerEvents = 'auto'; 
-    nextBtn.style.opacity = '1';
-    
     checkBtn.style.display = 'none';
     feedbackSection.style.display = 'block';
     
     updateProgress();
     saveProgress();
 
-    // LLAMADA AL ESTADO DEL DESAFÍO (con protección de errores)
+    // LLAMADA AL ESTADO DEL DESAFÍO
     if (typeof checkChallengeStatus === 'function') {
-        try {
-            checkChallengeStatus();
-        } catch (e) {
-            console.error("Error en checkChallengeStatus, pero el flujo continúa:", e);
-        }
+        checkChallengeStatus();
     }
 }
             // Actualizar pregunta del bloque actual
