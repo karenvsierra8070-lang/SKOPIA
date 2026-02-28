@@ -1877,8 +1877,7 @@
             let maxStreak = 0; // Mejor racha en este cuestionario
             let totalTimeSpent = 0; // Tiempo total empleado
             // Añade esto donde están tus otros "let" al principio
-            let answerProcessed = false;
-            let answerProcessed = false;
+            let answerProcessed = false;;
             // Sistema de desafíos
             let challengeMode = false; // false: normal, true: desafío
             let challengeLevel = 0; // 0: sin desafío, 1: primer nivel, 2: segundo nivel
@@ -2686,23 +2685,23 @@ function initializeBlock() {
         }
     }
 }
-// Cargar pregunta actual corregida
+// --- FUNCIÓN LOADQUESTION CORREGIDA ---
 function loadQuestion() {
-    answerProcessed = false;
-    // 1. DETENER TEMPORIZADORES PREVIOS (Evita que el reto anterior afecte a la nueva pregunta)
+    answerProcessed = false; // Paso 1: Resetear el seguro de puntos
+
+    // 1. DETENER TEMPORIZADORES PREVIOS
     if (typeof challengeTimer !== 'undefined') {
         clearInterval(challengeTimer);
     }
 
-    // 2. RESETEAR VISIBILIDAD Y ESTILOS (Limpia el rastro de hidePassageText)
+    // 2. RESETEAR VISIBILIDAD Y ESTILOS
     if (textPassage) {
-        textPassage.style.transition = 'none'; // Cambio instantáneo
+        textPassage.style.transition = 'none'; 
         textPassage.style.opacity = '1';
         textPassage.style.filter = 'none'; 
         textPassage.style.pointerEvents = 'auto';
         textPassage.style.userSelect = 'auto';
 
-        // Quitar el borde naranja de alerta del contenedor
         const container = textPassage.parentElement;
         if (container) {
             container.style.borderLeft = 'none';
@@ -2720,15 +2719,15 @@ function loadQuestion() {
         return;
     }
     
-    // 4. VERIFICAR FIN DEL CUESTIONARIO
+    // 4. VERIFICAR FIN DEL CUESTIONARIO (Corregido para evitar el error de 'undefined')
     if (currentQuestionIndex >= questions.length) {
-        if (deferredQuestions.length > 0) {
+        if (deferredQuestions && deferredQuestions.length > 0) {
             showingDeferredQuestions = true;
             currentDeferredQuestionIndex = 0;
             loadDeferredQuestion();
-            return;
+        } else {
+            showResults(); // Lanza resultados si no hay más preguntas ni diferidas
         }
-        showResults();
         return;
     }
     
@@ -2738,14 +2737,21 @@ function loadQuestion() {
         return;
     }
     
-    // 6. CARGAR DATOS DEL JSON
+    // 6. CARGAR DATOS DEL JSON (Blindado)
     const question = questions[currentQuestionIndex];
+    
+    // Si por algún error de índice la pregunta no existe, salimos a resultados
+    if (!question) {
+        showResults();
+        return;
+    }
+
     questionNumber.textContent = currentQuestionIndex + 1;
     
-    // Separar el texto largo de la instrucción (basado en tus capturas)
+    // Separar el texto largo de la instrucción
     const parts = question.pregunta.split('\n\n');
-    const textContent = parts[0]; // El párrafo que se oculta
-    const actualQuestion = parts[1] || question.pregunta; // La pregunta del header
+    const textContent = parts[0]; 
+    const actualQuestion = parts[1] || question.pregunta; 
     
     // Inyectar contenido en el HTML
     textPassage.textContent = textContent; 
@@ -2777,13 +2783,13 @@ function loadQuestion() {
     checkBtn.disabled = true;
     hintBtn.disabled = false;
     
-    // 9. ACTUALIZAR BOTONES DE ESTADO (Difícil / Diferida)
+    // 9. ACTUALIZAR BOTONES DE ESTADO
     const isDifficult = difficultQuestions.some(q => q.index === currentQuestionIndex);
     difficultBtn.classList.toggle('active', isDifficult);
     const isDeferred = deferredQuestions.some(q => q.index === currentQuestionIndex);
     deferBtn.classList.toggle('active', isDeferred);
     
-    // 10. LÓGICA DE DESAFÍO (Badges y Timer)
+    // 10. LÓGICA DE DESAFÍO
     if (challengeMode) {
         challengeBadge.style.display = 'flex';
         timerBadge.style.display = 'flex';
@@ -2793,7 +2799,6 @@ function loadQuestion() {
         } else if (challengeLevel === 2) {
             challengeLabel.textContent = '2: TODO O NADA';
         }
-        // Iniciar el cronómetro de la pregunta actual
         startChallengeTimer();
     } else {
         challengeBadge.style.display = 'none';
