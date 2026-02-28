@@ -3110,27 +3110,33 @@ function startChallengeTimer() {
         currentScore.textContent = score;
         currentStreak++; 
         
-        // GESTIÓN DE DESAFÍOS AL ACERTAR
+    // --- BLOQUE CORREGIDO: GESTIÓN DE DESAFÍOS AL ACERTAR ---
         if (challengeMode) {
             if (challengeLevel === 1) {
-                challenge1Completed = true; // Guardamos que pasó el nivel 1
+                // Solo marcamos que completó el 1, NO apagamos el modo desafío aún
+                challenge1Completed = true; 
                 showNotification("¡Reto de Memoria superado! Próximo objetivo: Muerte Súbita.");
             } else if (challengeLevel === 2) {
+                // El modo desafío solo se apaga cuando termina el nivel 2 (Muerte Súbita)
+                challengeMode = false;
                 showNotification("¡Increíble! Has superado el reto de Muerte Súbita.");
+                currentStreak = 0; // Opcional: reiniciar racha tras la gloria máxima
             }
             
-            // IMPORTANTE: Resetear racha y modo para que el Desafío 2 pueda empezar a contar desde 0
-            challengeMode = false;
-            currentStreak = 0; 
+            // ELIMINADO: Ya no reseteamos challengeMode = false aquí de forma general
+            // porque si lo haces, la función checkChallengeStatus() nunca verá que venías del Nivel 1.
         }
         
+        // Actualizar récords personales
         if (currentStreak > maxStreak) {
             maxStreak = currentStreak;
         }
         
+        // Registrar el progreso del bloque actual
         if (!showingDeferredQuestions) {
             updateBlockQuestion(currentQuestionIndex, true, false);
         }
+        // --- FIN DEL BLOQUE CORREGIDO ---
         
         feedbackSection.className = 'feedback-section correct';
         feedbackIcon.className = 'feedback-icon fas fa-check-circle';
@@ -3442,56 +3448,62 @@ function startChallengeTimer() {
 
                 loadQuestion();
             }
-  function checkChallengeStatus() {
+function checkChallengeStatus() {
     const totalProcessed = blockCorrectAnswers + blockIncorrectQuestions.length;
 
+    // Solo verificamos cuando se completa el bloque de 3
     if (totalProcessed === questionsPerChallenge) {
-        
-        // Guardamos el resultado del bloque antes de resetear nada
         const isPerfectBlock = (blockCorrectAnswers === questionsPerChallenge);
 
+        // CASO A: Activar Nivel 1 (Si no estamos en modo desafío y hubo 3 aciertos)
         if (!challengeMode && isPerfectBlock) {
-            initializeBlock(); // Limpiamos PRIMERO
-            activateChallenge(1); // Anunciamos DESPUÉS
+            // NO reseteamos aquí, dejamos que activateChallenge maneje el flujo
+            activateChallenge(1); 
         } 
+        // CASO B: Activar Nivel 2 (Si venimos del Nivel 1 y fue perfecto)
         else if (challengeMode && challengeLevel === 1 && isPerfectBlock) {
+            // IMPORTANTE: Marcamos completado el 1 antes de saltar al 2
             challenge1Completed = true;
-            initializeBlock(); // Limpiamos PRIMERO
-            activateChallenge(2); // Anunciamos DESPUÉS (Aquí aparecerá el cartel)
+            activateChallenge(2); 
         }
-        else if (challengeMode && (!isPerfectBlock)) {
+        // CASO C: Fallo en cualquier reto
+        else if (challengeMode && !isPerfectBlock) {
             deactivateChallenge();
             showNotification('Reto no superado. Volviendo al modo normal.');
             initializeBlock();
-        } else {
-            // Si es un bloque normal sin racha perfecta o fin de nivel 2
+        } 
+        // CASO D: Bloque normal sin racha
+        else {
             initializeBlock();
         }
     }
 }
-     function activateChallenge(level) {
+
+function activateChallenge(level) {
+    // 1. Primero reseteamos el bloque para que el desafío empiece limpio
+    blockCorrectAnswers = 0;
+    blockIncorrectQuestions = [];
+    blockQuestions = []; // Limpiamos la lista de índices del bloque anterior
+    
+    // 2. Seteamos el modo
     challengeMode = true;
     challengeLevel = level;
     questionsPerChallenge = 3; 
 
-    // Reiniciamos los contadores del bloque para que el desafío cuente sus propias 3 preguntas
-    blockCorrectAnswers = 0;
-    blockIncorrectQuestions = [];
-
-    // Configurar tiempos y textos según el nivel
+    // 3. Configurar textos del modal
     if (level === 1) {
-        challengeTimeLimit = 70; // 1:10 para Memoria
+        challengeTimeLimit = 70;
         modalChallengeTitle.textContent = '¡RETO DE MEMORIA!';
-        challengeDescription.textContent = '¡Excelente racha! Ahora enfrentarás el Nivel 1: El texto desaparecerá tras 1 minuto y 10 segundos en cada una de las próximas 3 preguntas. ¡Lee rápido!';
+        challengeDescription.textContent = '¡Excelente racha! El texto desaparecerá tras 1 minuto y 10 segundos. ¡Lee rápido!';
         modalChallengeTime.textContent = '1:10';
     } else if (level === 2) {
-        challengeTimeLimit = 60; // 1:00 para Muerte Súbita
+        challengeTimeLimit = 60;
         modalChallengeTitle.textContent = '¡MUERTE SÚBITA!';
-        challengeDescription.textContent = '¡Superaste la memoria! Ahora el Nivel 2: Tienes 1 minuto por pregunta. Si fallas una sola de estas 3, el reto termina.';
+        challengeDescription.textContent = '¡Nivel 2! Tienes 1 minuto por pregunta. Si fallas una sola de estas 3, el reto termina.';
         modalChallengeTime.textContent = '1:00';
     }
     
-    // Mostrar modal
+    // 4. Mostrar modal (Asegúrate de que este ID existe en tu HTML)
     if (challengeModal) {
         challengeModal.classList.add('active');
     }
@@ -3537,7 +3549,30 @@ function deactivateChallenge() {
                     }, i * 30);
                 }
             }
+           // --- LÓGICA PARA QUE EL BOTÓN DEL CARTEL FUNCIONE ---
+    if (startChallengeBtn) {
+        startChallengeBtn.onclick = () => {
+            // 1. Cerramos el cartel
+            if (challengeModal) {
+                challengeModal.classList.remove('active');
+                challengeModal.style.display = 'none';
+            }
             
+            // 2. IMPORTANTE: Limpiamos los puntos del bloque para el nuevo reto
+            blockCorrectAnswers = 0;
+            blockIncorrectQuestions = [];
+            
+            // 3. Mostramos las etiquetas arriba
+            if (timerBadge) timerBadge.style.display = 'flex';
+            if (challengeBadge) {
+                challengeBadge.style.display = 'flex';
+                challengeBadge.textContent = challengeLevel === 1 ? 'Reto: Memoria' : 'Reto: Muerte Súbita';
+            }
+
+            // 4. Arrancamos la pregunta
+            loadQuestion();
+        };
+    } 
            // Mostrar modal de descanso
 // Mostrar modal de descanso
 function showBreakModal() {
@@ -3655,7 +3690,7 @@ function handleTimeUp() {
         checkAnswer(); // Forzamos la comprobación de la respuesta actual
     }
 }
-            // Siguiente pregunta
+      // Siguiente pregunta
             function nextQuestion() {
                 // Si estamos mostrando preguntas diferidas
                 if (showingDeferredQuestions) {
@@ -3664,24 +3699,25 @@ function handleTimeUp() {
                     return;
                 }
                 
-             // Incrementar índice antes de cualquier verificación
+                // Incrementar índice antes de cualquier verificación
                 currentQuestionIndex++;
 
                 // Verificar si hemos completado el bloque actual
                 if (blockQuestions.length > 0 && currentQuestionIndex > blockQuestions[blockQuestions.length - 1].index) {
                     
-                    // Prioridad 1: Mostrar teoría si hubo fallos (y no se ha mostrado)
+                    // Prioridad 1: Mostrar teoría si hubo fallos
                     if (blockIncorrectQuestions.length > 0 && !tipTheoryShown) {
                         tipTheoryShown = true;
                         showTip();
-                        return; // Detenemos aquí para que el usuario lea la teoría
+                        return; // Correcto: Detiene para leer teoría
                     } 
                     
                     // Prioridad 2: Si no hay teoría, verificar si entra en modo desafío
                     checkChallengeStatus();
+                    return; // <--- CORRECCIÓN: Añade este return para que NO ejecute loadQuestion() abajo
                 }
                 
-                // Resetear visibilidad del texto por si venimos de un reto de memoria
+                // Resetear visibilidad del texto
                 if (passageContainer) {
                     passageContainer.style.opacity = '1';
                     passageContainer.style.display = 'block';
@@ -3793,21 +3829,27 @@ function handleTimeUp() {
                 }
             }
             
-            // Guardar en historial
+         // Guardar en historial
             function saveToHistory(progress) {
-                let history = JSON.parse(localStorage.getItem('skopia_quiz_history') || '[]');
+                // Asegurar que existe un historial o crear uno nuevo
+                let history;
+                try {
+                    history = JSON.parse(localStorage.getItem('skopia_quiz_history') || '[]');
+                } catch (e) {
+                    history = [];
+                }
                 
-                // Agregar entrada al historial
+                // Agregar entrada al historial con valores de respaldo (fallback)
                 history.push({
-                    quizId: 'LCS1D2',
+                    quizId: progress.quiz || 'LCS1D2',
                     quizName: 'Ideas Principales - Básico',
-                    score: progress.score,
-                    points: progress.points,
-                    percentage: progress.percentage,
-                    timeSpent: progress.totalTimeSpent,
-                    completedAt: progress.timestamp,
-                    hintsUsed: progress.hintsUsed,
-                    maxStreak: progress.maxStreak
+                    score: progress.score || 0,
+                    points: progress.points || 0,
+                    percentage: progress.percentage || 0,
+                    timeSpent: progress.totalTimeSpent || 0, // Seguridad contra undefined
+                    completedAt: progress.timestamp || new Date().toISOString(),
+                    hintsUsed: progress.hintsUsed || 0,
+                    maxStreak: progress.maxStreak || 0
                 });
                 
                 // Mantener solo las últimas 50 entradas
@@ -3821,7 +3863,7 @@ function handleTimeUp() {
             
             // Actualizar progreso global en la biblioteca
             function updateGlobalProgress(quizProgress) {
-                // Obtener progreso global actual
+                // 1. Obtener progreso global o crear uno base si no existe
                 let globalStats = JSON.parse(localStorage.getItem('skopia_global_stats')) || {
                     totalCompleted: 0,
                     averageScore: 0,
@@ -3830,19 +3872,25 @@ function handleTimeUp() {
                     quizProgress: {}
                 };
                 
-                // Actualizar progreso del cuestionario actual
+                // 2. SEGURIDAD: Asegurar que el objeto quizProgress existe dentro de globalStats
+                if (!globalStats.quizProgress) {
+                    globalStats.quizProgress = {};
+                }
+                
+                // 3. Actualizar progreso del cuestionario actual (LCS1D2.html)
                 globalStats.quizProgress['LCS1D2.html'] = {
-                    completed: quizProgress.completed,
-                    score: quizProgress.score,
-                    points: quizProgress.points,
-                    maxStreak: quizProgress.maxStreak
+                    completed: quizProgress.completed || false,
+                    score: quizProgress.score || 0,
+                    points: quizProgress.points || 0,
+                    maxStreak: quizProgress.maxStreak || 0
                 };
                 
-                // Recalcular estadísticas globales
-                const completedQuizzes = Object.values(globalStats.quizProgress).filter(q => q.completed).length;
+                // 4. Recalcular estadísticas globales con seguridad
+                const allQuizzes = Object.values(globalStats.quizProgress);
+                const completedQuizzes = allQuizzes.filter(q => q.completed).length;
                 globalStats.totalCompleted = completedQuizzes;
                 
-                const scores = Object.values(globalStats.quizProgress)
+                const scores = allQuizzes
                     .filter(q => q.completed)
                     .map(q => q.points);
                 
@@ -3852,14 +3900,13 @@ function handleTimeUp() {
                     globalStats.averageScore = 0;
                 }
                 
-                globalStats.totalPoints = Object.values(globalStats.quizProgress)
-                    .reduce((sum, q) => sum + q.points, 0);
+                globalStats.totalPoints = allQuizzes.reduce((sum, q) => sum + (q.points || 0), 0);
                 
-                // Calcular mejor racha global
-                const streaks = Object.values(globalStats.quizProgress).map(q => q.maxStreak || 0);
+                // 5. Calcular mejor racha global
+                const streaks = allQuizzes.map(q => q.maxStreak || 0);
                 globalStats.bestStreak = Math.max(...streaks, 0);
                 
-                // Guardar estadísticas globales actualizadas
+                // 6. Guardar estadísticas globales actualizadas
                 localStorage.setItem('skopia_global_stats', JSON.stringify(globalStats));
             }
             
