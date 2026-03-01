@@ -3765,45 +3765,61 @@ function handleTimeUp() {
     }
 }
 function nextQuestion() {
-    // 1. ELIMINAR SUMA DOBLE: No sumamos aquí, dejamos que loadQuestion maneje el estado
+    // 1. BLOQUEO DE SEGURIDAD: Si el botón ya se pulsó, no hacer nada hasta que cargue
+    if (nextBtn.disabled) return;
+    nextBtn.disabled = true;
+
+    console.log("--- Intento de avance ---");
+    console.log("Índice antes de incrementar:", currentQuestionIndex);
+
+    // 2. VERIFICAR FIN DEL CUESTIONARIO
     if (!showingDeferredQuestions && currentQuestionIndex >= questions.length - 1) {
         showResults();
         return;
     }
 
-    // 2. Limpiar interfaz
-    answerProcessed = false; 
-    feedbackSection.style.display = 'none';
-    nextBtn.style.display = 'none';
-
-    // 3. Avance de 1 en 1 (Solo si no estamos al final)
+    // 3. AVANCE DE ÍNDICE (Solo ocurre aquí)
     if (showingDeferredQuestions) {
         currentDeferredQuestionIndex++;
+        if (currentDeferredQuestionIndex >= deferredQuestions.length) {
+            showResults();
+            return;
+        }
     } else {
-        // Solo incrementamos si estamos seguros de que hay una siguiente
-        currentQuestionIndex++; 
+        currentQuestionIndex++;
     }
 
-    // 4. Console log para rastrear el índice REAL tras el incremento
-    console.log("Índice actual después de incrementar:", currentQuestionIndex);
+    console.log("Índice después de incrementar:", currentQuestionIndex);
 
-    // 5. Verificación de bloques (Teoría/Desafíos)
+    // 4. LÓGICA DE BLOQUES Y TEORÍA
     if (!showingDeferredQuestions && blockQuestions.length > 0) {
-        const currentBlock = blockQuestions[blockQuestions.length - 1];
-        if (currentQuestionIndex > currentBlock.index) {
+        const ultimoIndiceBloque = blockQuestions[blockQuestions.length - 1].index;
+        if (currentQuestionIndex > ultimoIndiceBloque) {
             if (blockIncorrectQuestions.length > 0 && !tipTheoryShown) {
                 tipTheoryShown = true;
                 showTip();
-                return; 
+                nextBtn.disabled = false; // Liberamos el botón si mostramos teoría
+                return;
             }
-            checkChallengeStatus();
-            return; 
+            if (typeof checkChallengeStatus === 'function') {
+                checkChallengeStatus();
+                nextBtn.disabled = false;
+                return;
+            }
         }
     }
 
-    // 6. Cargar la pregunta
+    // 5. LIMPIAR INTERFAZ Y CARGAR
+    feedbackSection.style.display = 'none';
+    nextBtn.style.display = 'none';
+    
     saveProgress();
     loadQuestion();
+
+    // 6. LIBERAR BOTÓN: Solo después de un pequeño retraso para evitar dobles clics
+    setTimeout(() => {
+        nextBtn.disabled = false;
+    }, 500);
 }
           // Mostrar resultados
             function showResults() {
