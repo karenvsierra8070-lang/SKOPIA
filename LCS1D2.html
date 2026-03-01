@@ -3277,37 +3277,38 @@ function checkAnswer() {
                 saveProgress();
             }
             
-            // Diferir pregunta
-            function toggleDeferred() {
-                // No permitir diferir si ya estamos mostrando preguntas diferidas
-                if (showingDeferredQuestions) {
-                    return;
-                }
-                
-                const isDeferred = deferBtn.classList.toggle('active');
-                
-                if (isDeferred) {
-                    // Agregar a la lista de preguntas diferidas
-                    if (!deferredQuestions.some(q => q.index === currentQuestionIndex)) {
-                        deferredQuestions.push({
-                            index: currentQuestionIndex,
-                            question: questions[currentQuestionIndex],
-                            selectedOption: selectedOption
-                        });
-                        showNotification('Pregunta guardada para responder más tarde');
-                        
-                        // Pasar a la siguiente pregunta
-                        nextQuestion();
-                    }
-                } else {
-                    // Eliminar de la lista de preguntas diferidas
-                    deferredQuestions = deferredQuestions.filter(q => q.index !== currentQuestionIndex);
-                    showNotification('Pregunta eliminada de la lista de diferidas');
-                }
-                
-                saveProgress();
-            }
+            // Diferir pregunta (CORREGIDA)
+function toggleDeferred() {
+    // No permitir diferir si ya estamos mostrando preguntas diferidas
+    if (showingDeferredQuestions) {
+        return;
+    }
+    
+    const isDeferred = deferBtn.classList.toggle('active');
+    
+    if (isDeferred) {
+        // Agregar a la lista de preguntas diferidas
+        if (!deferredQuestions.some(q => q.index === currentQuestionIndex)) {
+            deferredQuestions.push({
+                index: currentQuestionIndex,
+                question: questions[currentQuestionIndex],
+                selectedOption: selectedOption
+            });
+            showNotification('Pregunta guardada para responder más tarde');
             
+            // PASO FINAL: Llamamos con "true" para que el avance sea FORZADO
+            // Esto permite saltar aunque no se haya marcado ninguna opción.
+            nextQuestion(true); 
+        }
+    } else {
+        // Eliminar de la lista de preguntas diferidas
+        deferredQuestions = deferredQuestions.filter(q => q.index !== currentQuestionIndex);
+        showNotification('Pregunta eliminada de la lista de diferidas');
+    }
+    
+    saveProgress();
+}
+
             // Mostrar consejo
             function showTip() {
                 currentView = 'tip';
@@ -3697,13 +3698,14 @@ function handleTimeUp() {
         checkAnswer(); // Forzamos la comprobación de la respuesta actual
     }
 }
-function nextQuestion() {
+            function nextQuestion(forzado = false) {
     // 1. ESCUDO ANTIDUPICADOS
     if (isTransitioning) return;
     
-    // 2. VERIFICACIÓN DE SEGURIDAD
-    // Solo permitimos avanzar si se ha procesado una respuesta (answerProcessed === true)
-    if (!answerProcessed) {
+    // 2. VERIFICACIÓN DE SEGURIDAD MODIFICADA
+    // Si NO es forzado Y NO se ha respondido, bloqueamos.
+    // Si es forzado (huellita), este IF se ignora y deja pasar.
+    if (!forzado && !answerProcessed) {
         console.log("Intento de avance bloqueado: Debes marcar una opción primero.");
         return; 
     }
@@ -3712,8 +3714,8 @@ function nextQuestion() {
     nextBtn.disabled = true;
 
     // 3. LÓGICA DE BLOQUES DE 3 (TEORÍA)
-    // Comprobamos antes de sumar para que el consejo salga en la pregunta correcta (3, 6, 9...)
-    if (!showingDeferredQuestions && currentQuestionIndex > 0 && (currentQuestionIndex + 1) % 3 === 0) {
+    // Solo evaluamos errores si NO es un salto forzado (huellita)
+    if (!forzado && !showingDeferredQuestions && currentQuestionIndex > 0 && (currentQuestionIndex + 1) % 3 === 0) {
         if (blockIncorrectQuestions && blockIncorrectQuestions.length > 0 && !tipTheoryShown) {
             tipTheoryShown = true;
             showTip(); 
@@ -3745,7 +3747,7 @@ function nextQuestion() {
     }
 
     // 7. LIMPIEZA PARA LA NUEVA PREGUNTA
-    answerProcessed = false; // Se bloquea el siguiente avance hasta que se responda la nueva
+    answerProcessed = false; 
     selectedOption = null;
     feedbackSection.style.display = 'none';
     nextBtn.style.display = 'none';
@@ -3756,6 +3758,7 @@ function nextQuestion() {
     // 8. LIBERACIÓN CONTROLADA
     setTimeout(resetTransition, 600);
 }
+
 
 // Función auxiliar indispensable para que el botón no se quede trabado
 function resetTransition() {
