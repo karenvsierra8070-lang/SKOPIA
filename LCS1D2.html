@@ -2552,47 +2552,43 @@ const modalChallengeTime = document.getElementById('modal-challenge-time');
 const modalChallengeTitle = document.getElementById('modal-challenge-title');
 const modalChallengeIcon = document.getElementById('modal-challenge-icon');
 
-// --- PASO 2: LÓGICA DE NAVEGACIÓN SEGURA ---
 nextBtn.onclick = (e) => {
     if (e) e.preventDefault();
     
-    // Seguridad extra: Reiniciamos el estado de procesamiento para la nueva pregunta
-    answerProcessed = false; 
+    // 1. EL SEGURO: Si ya estamos en la última pregunta, forzamos resultados y salimos
+    if (!showingDeferredQuestions && currentQuestionIndex >= questions.length - 1) {
+        showResults();
+        return;
+    }
 
-    // 1. Limpieza visual inmediata
+    // 2. ACTUAR NORMAL: Resetear el seguro de puntos y limpiar pantalla
+    answerProcessed = false; 
     feedbackSection.style.display = 'none';
     nextBtn.style.display = 'none';
     
-    // 2. Avanzar el índice según el modo
+    // 3. AVANCE DE 1 EN 1 (Sin duplicados)
     if (showingDeferredQuestions) {
         currentDeferredQuestionIndex++;
     } else {
         currentQuestionIndex++;
     }
 
-    // 3. Guardar progreso inmediatamente
-    if (typeof saveProgress === 'function') {
-        saveProgress();
-    }
-
-    // 4. Cargar la siguiente pregunta (o finalizar si no hay más)
-    // Verificamos si el índice superó el total de preguntas
-    if (!showingDeferredQuestions && currentQuestionIndex >= questions.length) {
-        if (deferredQuestions && deferredQuestions.length > 0) {
-            showingDeferredQuestions = true;
-            currentDeferredQuestionIndex = 0;
-            loadQuestion();
-        } else {
-            showResults(); // Obliga a pasar a resultados si no hay más
-        }
-    } else {
-        loadQuestion(); // Carga la siguiente normalmente
-    }
+    // 4. GUARDAR Y CARGAR
+    saveProgress();
+    loadQuestion(); 
 };
-
-// Cargar preguntas desde JSON
+// Cargar preguntas desde JSON corregido
 async function loadQuestions(isNewQuiz = false) {
     try {
+        // --- NUEVO: SI ES UN QUIZ NUEVO, RESETEAMOS TODO AL PRINCIPIO ---
+        if (isNewQuiz) {
+            currentQuestionIndex = 0;
+            score = 0;
+            currentStreak = 0;
+            if (currentScore) currentScore.textContent = '0';
+            localStorage.removeItem('quizProgress'); // Borra el progreso guardado
+        }
+
         showNotification('Cargando preguntas...');
         const response = await fetch('preguntas.json');
         const data = await response.json();
@@ -2610,9 +2606,12 @@ async function loadQuestions(isNewQuiz = false) {
         totalQuestions.textContent = questions.length;
         totalQuestionsHeader.textContent = questions.length;
         
-        // Si no es un cuestionario nuevo, cargar progreso guardado
+        // --- CAMBIO: SOLO CARGAR SI NO ES NUEVO ---
         if (!isNewQuiz) {
             loadSavedProgress();
+        } else {
+            // Si es nuevo, forzamos que la interfaz se vea fresca
+            updateProgress(); 
         }
         
         // Inicializar el primer bloque de preguntas
