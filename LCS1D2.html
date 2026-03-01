@@ -2707,23 +2707,13 @@ function initializeBlock() {
 function loadQuestion() {
     answerProcessed = false; 
 
-    // 1. DETENER TEMPORIZADORES PREVIOS
+    // 1. REINICIAR VISIBILIDAD DEL TEXTO (Usa la función que me pasaste)
+    // Esto asegura que si el texto se ocultó por un reto, vuelva a ser visible ahora.
+    hidePassageText(true);
+
+    // 2. DETENER TEMPORIZADORES PREVIOS
     if (typeof challengeTimer !== 'undefined') {
         clearInterval(challengeTimer);
-    }
-
-    // 2. RESETEAR VISIBILIDAD Y ESTILOS
-    if (textPassage) {
-        textPassage.style.transition = 'none'; 
-        textPassage.style.opacity = '1';
-        textPassage.style.filter = 'none'; 
-        textPassage.style.pointerEvents = 'auto';
-        textPassage.style.userSelect = 'auto';
-
-        const container = textPassage.parentElement;
-        if (container) {
-            container.style.borderLeft = 'none';
-        }
     }
 
     // 3. VERIFICAR PREGUNTAS DIFERIDAS
@@ -2749,13 +2739,7 @@ function loadQuestion() {
         return;
     }
     
-    // 5. VERIFICAR DESCANSO (En la pregunta 6 real, índice 5)
-    if (currentQuestionIndex === 5 && !breakTaken) {
-        showBreakModal();
-        return;
-    }
-    
-    // 6. CARGAR DATOS DEL JSON
+    // 5. CARGAR DATOS DEL JSON
     const question = questions[currentQuestionIndex];
     
     if (!question) {
@@ -2763,19 +2747,21 @@ function loadQuestion() {
         return;
     }
 
-    // --- PUNTO CLAVE: Sincronización del número superior ---
-    // Usamos el índice + 1 de forma estricta para que si el índice es 2, diga "Pregunta 3"
-    questionNumber.textContent = currentQuestionIndex + 1;
+    // 6. ACTUALIZAR NÚMERO VISUAL (Sincronizado: Índice 0 -> Pregunta 1)
+    // Esto corrige el error de ver "Pregunta 3" cuando el código va por la 2.
+    if (questionNumber) {
+        questionNumber.textContent = currentQuestionIndex + 1;
+    }
     
-    // Separar texto e instrucción
+    // 7. SEPARAR TEXTO E INSTRUCCIÓN
     const parts = question.pregunta.split('\n\n');
     const textContent = parts[0]; 
     const actualQuestion = parts[1] || question.pregunta; 
     
-    textPassage.textContent = textContent; 
-    questionText.textContent = actualQuestion; 
+    if (textPassage) textPassage.textContent = textContent; 
+    if (questionText) questionText.textContent = actualQuestion; 
     
-    // 7. RENDERIZAR OPCIONES
+    // 8. RENDERIZAR OPCIONES
     optionsContainer.innerHTML = '';
     question.opciones.forEach((option, index) => {
         const optionCard = document.createElement('div');
@@ -2790,25 +2776,28 @@ function loadQuestion() {
         optionsContainer.appendChild(optionCard);
     });
     
-    // 8. RESETEAR ESTADO DE INTERFAZ
+    // 9. RESETEAR ESTADO DE INTERFAZ
     selectedOption = null;
     attempts = 0;
-    if (typeof attempt1 !== 'undefined' && attempt1) attempt1.classList.remove('used');
+    if (typeof attempt1 !== 'undefined' && attempt1) {
+        attempt1.classList.remove('used');
+    }
     
     hintBox.style.display = 'none';
     feedbackSection.style.display = 'none';
     nextBtn.style.display = 'none';
     checkBtn.style.display = 'block';
     checkBtn.disabled = true;
-    hintBtn.disabled = false;
+    if (hintBtn) hintBtn.disabled = false;
     
-    // 9. ACTUALIZAR BOTONES DE ESTADO
+    // 10. ACTUALIZAR BOTONES DE ESTADO (Difíciles/Diferidas)
     const isDifficult = difficultQuestions.some(q => q.index === currentQuestionIndex);
-    difficultBtn.classList.toggle('active', isDifficult);
-    const isDeferred = deferredQuestions.some(q => q.index === currentQuestionIndex);
-    deferBtn.classList.toggle('active', isDeferred);
+    if (difficultBtn) difficultBtn.classList.toggle('active', isDifficult);
     
-    // 10. LÓGICA DE DESAFÍO
+    const isDeferred = deferredQuestions.some(q => q.index === currentQuestionIndex);
+    if (deferBtn) deferBtn.classList.toggle('active', isDeferred);
+    
+    // 11. LÓGICA DE DESAFÍO
     if (challengeMode) {
         if (challengeBadge) challengeBadge.style.display = 'flex';
         if (timerBadge) timerBadge.style.display = 'flex';
@@ -2818,16 +2807,18 @@ function loadQuestion() {
         } else if (challengeLevel === 2) {
             if (challengeLabel) challengeLabel.textContent = '2: TODO O NADA';
         }
-        startChallengeTimer();
+        if (typeof startChallengeTimer === 'function') startChallengeTimer();
     } else {
         if (challengeBadge) challengeBadge.style.display = 'none';
         if (timerBadge) timerBadge.style.display = 'none';
     }
     
-    // 11. ACTUALIZAR PROGRESO (Llamamos a la nueva función que arreglamos)
+    // 12. ACTUALIZAR PROGRESO Y GUARDAR
+    // Llamamos a la función que sincroniza el marcador de arriba.
     updateProgress();
-    saveProgress();
+    if (typeof saveProgress === 'function') saveProgress();
 }
+            
             // Cargar pregunta diferida
             function loadDeferredQuestion() {
                 const deferredQuestion = deferredQuestions[currentDeferredQuestionIndex];
@@ -3119,32 +3110,45 @@ function startChallengeTimer() {
                 saveProgress();
             }
             
-            // Seleccionar opción
-            function selectOption(index) {
-                selectedOption = index;
-                const options = document.querySelectorAll('.option-card');
-                options.forEach((opt, i) => {
-                    opt.classList.toggle('selected', i === index);
-                });
-                checkBtn.disabled = false;
-            }
+         function selectOption(index) {
+    // 1. SEGURO: Si la respuesta ya fue procesada, no permitir cambiar la selección
+    if (answerProcessed) return;
+
+    // 2. ACTUALIZAR VARIABLE GLOBAL
+    selectedOption = index;
+
+    // 3. ACTUALIZAR INTERFAZ VISUAL
+    const options = document.querySelectorAll('.option-card');
+    options.forEach((opt, i) => {
+        // Añade la clase 'selected' solo a la opción clicada
+        opt.classList.toggle('selected', i === index);
+    });
+
+    // 4. HABILITAR EL BOTÓN DE VERIFICAR
+    if (checkBtn) {
+        checkBtn.disabled = false;
+    }
+
+    // 5. SONIDO O FEEDBACK (Opcional, si tienes alguna función de feedback leve)
+    console.log("Opción seleccionada:", String.fromCharCode(65 + index));
+}
             
 function checkAnswer() {
-    // SEGURO: Evita que se procese la misma pregunta varias veces y previene puntos extra
+    // 1. SEGURO: Evita procesar si no hay selección o si ya se respondió
     if (selectedOption === null || answerProcessed) return; 
     
     answerProcessed = true; 
     attempts++;
     let question;
     
-    // Identificar si estamos en preguntas normales o diferidas
+    // 2. IDENTIFICAR CONTEXTO: Normales o Diferidas
     if (showingDeferredQuestions) {
         question = deferredQuestions[currentDeferredQuestionIndex].question;
     } else {
         question = questions[currentQuestionIndex];
     }
 
-    // --- ESCUDO DE SEGURIDAD: Obliga a mostrar resultados si no hay más preguntas ---
+    // 3. ESCUDO DE SEGURIDAD
     if (!question) {
         showResults();
         return;
@@ -3153,30 +3157,33 @@ function checkAnswer() {
     const isCorrect = selectedOption === question.respuestaCorrecta;
     const options = document.querySelectorAll('.option-card');
     
-    // Detener temporizadores activos
-    if (challengeTimer) clearInterval(challengeTimer);
-    if (deferredTimer) clearInterval(deferredTimer);
+    // 4. DETENER TEMPORIZADORES
+    if (typeof challengeTimer !== 'undefined') clearInterval(challengeTimer);
+    if (typeof deferredTimer !== 'undefined') clearInterval(deferredTimer);
     
-    // Resetear efectos visuales del texto
-    if (typeof showPassageText === 'function') {
-        showPassageText(); 
-    } else if (typeof textPassage !== 'undefined' && textPassage) {
+    // 5. RESTAURAR VISIBILIDAD DEL TEXTO
+    // Llamamos a la función de limpieza que me pasaste antes para que el texto sea legible al corregir
+    if (typeof hidePassageText === 'function') {
+        hidePassageText(true); 
+    } else if (textPassage) {
         textPassage.style.opacity = '1';
         textPassage.style.filter = 'none';
     }
     
-    // Marcar intento usado (si tienes el elemento attempt1 en el HTML)
+    // Marcar intento visual si existe el elemento
     if (typeof attempt1 !== 'undefined' && attempt1) {
         attempt1.classList.add('used');
     }
     
+    // 6. LÓGICA DE ACIERTO
     if (isCorrect) {
-        // --- LÓGICA SI ES CORRECTA ---
         score += 30; 
-        if (currentScore) currentScore.textContent = score;
+        if (typeof currentScore !== 'undefined' && currentScore) {
+            currentScore.textContent = score;
+        }
         currentStreak++; 
         
-        // Manejo de niveles de desafío
+        // Manejo de Desafíos
         if (challengeMode) {
             if (challengeLevel === 1) {
                 challenge1Completed = true; 
@@ -3193,31 +3200,37 @@ function checkAnswer() {
         }
         
         if (!showingDeferredQuestions) {
-            updateBlockQuestion(currentQuestionIndex, true, false);
+            if (typeof updateBlockQuestion === 'function') {
+                updateBlockQuestion(currentQuestionIndex, true, false);
+            }
         }
         
+        // Interfaz Correcta
         feedbackSection.className = 'feedback-section correct';
         feedbackIcon.className = 'feedback-icon fas fa-check-circle';
         feedbackTitle.textContent = '¡Correcto!';
         feedbackText.textContent = question.explicacion;
-        trickBox.style.display = 'none';
+        if (typeof trickBox !== 'undefined' && trickBox) trickBox.style.display = 'none';
         
         options.forEach((opt, i) => {
             if (i === question.respuestaCorrecta) {
                 opt.classList.add('correct');
                 opt.innerHTML += '<div class="option-icon correct">✓</div>';
             }
-            opt.onclick = null;
+            opt.onclick = null; // Bloqueamos clics adicionales
         });
         
     } else {
-        // --- LÓGICA SI ES INCORRECTA ---
+        // 7. LÓGICA DE ERROR
         feedbackSection.className = 'feedback-section incorrect';
         feedbackIcon.className = 'feedback-icon fas fa-times-circle';
         feedbackTitle.textContent = 'Incorrecto';
         feedbackText.textContent = question.explicacion;
-        trickBox.style.display = 'block';
-        trickText.textContent = question.truco;
+        
+        if (typeof trickBox !== 'undefined' && trickBox) {
+            trickBox.style.display = 'block';
+            if (trickText) trickText.textContent = question.truco;
+        }
         
         currentStreak = 0;
         if (challengeMode) {
@@ -3226,10 +3239,14 @@ function checkAnswer() {
         }
         
         if (!showingDeferredQuestions) {
-            updateBlockQuestion(currentQuestionIndex, false, true);
+            if (typeof updateBlockQuestion === 'function') {
+                updateBlockQuestion(currentQuestionIndex, false, true);
+            }
         }
         
-        saveIncorrectQuestion(question);
+        if (typeof saveIncorrectQuestion === 'function') {
+            saveIncorrectQuestion(question);
+        }
         
         options.forEach((opt, i) => {
             if (i === question.respuestaCorrecta) {
@@ -3243,32 +3260,23 @@ function checkAnswer() {
         });
     }
     
-    // --- GESTIÓN DE INTERFAZ POST-RESPUESTA ---
-    hintBtn.disabled = true;
+    // 8. GESTIÓN DE INTERFAZ POST-RESPUESTA
+    if (typeof hintBtn !== 'undefined' && hintBtn) hintBtn.disabled = true;
     
-    // Habilitar botón "Siguiente" y ocultar "Verificar"
+    // IMPORTANTE: Mostramos el botón Siguiente y ocultamos Verificar
     nextBtn.style.display = 'block';
-    nextBtn.style.pointerEvents = 'auto'; 
+    nextBtn.disabled = false; // Nos aseguramos de que el escudo de nextQuestion esté listo
     nextBtn.style.opacity = '1';
     
     checkBtn.style.display = 'none';
     feedbackSection.style.display = 'block';
     
-    // Actualizar progreso y almacenamiento local
+    // 9. ACTUALIZAR PROGRESO Y GUARDAR
+    // Al llamar a updateProgress aquí, el círculo se llena justo al responder
     updateProgress();
-    saveProgress();
-
-    // --- COMENTADO: Evitamos que checkChallengeStatus dispare el siguiente automático ---
-    /*
-    if (typeof checkChallengeStatus === 'function') {
-        try {
-            checkChallengeStatus();
-        } catch (e) {
-            console.error("Error en checkChallengeStatus:", e);
-        }
-    }
-    */
+    if (typeof saveProgress === 'function') saveProgress();
 }
+            
             // Actualizar pregunta del bloque actual
             function updateBlockQuestion(questionIndex, isCorrect, isIncorrect) {
                 const blockQuestion = blockQuestions.find(q => q.index === questionIndex);
@@ -3681,40 +3689,35 @@ function showBreakModal() {
     modal.dataset.timerId = breakTimerInterval;
 }
 
-// Cerrar modal de descanso
 function closeBreakModal() {
-    console.log("Intentando cerrar el descanso..."); // Ver en consola (F12)
+    console.log("Intentando cerrar el descanso..."); 
     
     const modal = document.getElementById('break-modal');
     if (!modal) return;
 
-    // 1. Detener el reloj inmediatamente
+    // 1. Detener el temporizador del descanso
     const timerId = modal.dataset.timerId;
     if (timerId) {
         clearInterval(parseInt(timerId));
         delete modal.dataset.timerId;
     }
     
-    // 2. ACTUALIZACIÓN CRÍTICA: Forzar el cierre visual primero
+    // 2. Cierre visual del modal
     modal.classList.remove('active');
-    modal.style.display = 'none'; // Refuerzo por código directo
+    modal.style.display = 'none'; 
     
-    // 3. Variables de progreso
+    // 3. Registrar que el descanso ya se hizo
     breakTaken = true; 
     
-    // 4. Continuar (usando try/catch para que si esto falla, el modal ya se haya cerrado)
     try {
-        if (typeof saveProgress === 'function') saveProgress();
+        // 4. IMPORTANTE: loadQuestion() carga la pregunta actual (índice 5)
+        // No llamamos a nextQuestion() para evitar saltar a la pregunta 8
         loadQuestion(); 
+        if (typeof saveProgress === 'function') saveProgress();
     } catch (error) {
-        console.error("Error al cargar siguiente pregunta:", error);
+        console.error("Error al retomar el cuestionario tras el descanso:", error);
     }
 }
-/**
- * Oculta el texto largo (párrafo) del cuestionario
- * Se activa específicamente en el Reto de Memoria (Nivel 1)
- * cuando el temporizador llega a 00:00.
- */
 function hidePassageText(reset = false) {
     if (textPassage) {
         if (reset) {
@@ -3765,20 +3768,20 @@ function handleTimeUp() {
     }
 }
 function nextQuestion() {
-    // 1. BLOQUEO DE SEGURIDAD: Si el botón ya se pulsó, no hacer nada hasta que cargue
+    // 1. BLOQUEO DE SEGURIDAD: Evita que el botón responda a más clics mientras procesa
     if (nextBtn.disabled) return;
     nextBtn.disabled = true;
 
     console.log("--- Intento de avance ---");
     console.log("Índice antes de incrementar:", currentQuestionIndex);
 
-    // 2. VERIFICAR FIN DEL CUESTIONARIO
+    // 2. VERIFICAR SI ES EL FINAL DEL CUESTIONARIO
     if (!showingDeferredQuestions && currentQuestionIndex >= questions.length - 1) {
         showResults();
         return;
     }
 
-    // 3. AVANCE DE ÍNDICE (Solo ocurre aquí)
+    // 3. INCREMENTO DEL ÍNDICE (Solo ocurre aquí)
     if (showingDeferredQuestions) {
         currentDeferredQuestionIndex++;
         if (currentDeferredQuestionIndex >= deferredQuestions.length) {
@@ -3791,14 +3794,22 @@ function nextQuestion() {
 
     console.log("Índice después de incrementar:", currentQuestionIndex);
 
-    // 4. LÓGICA DE BLOQUES Y TEORÍA
+    // 4. LÓGICA DE BLOQUES: DESCANSO Y TEORÍA
+    // Si llegamos al índice 5 (que es la Pregunta 6 real)
+    if (currentQuestionIndex === 5 && !breakTaken) {
+        showBreakModal();
+        nextBtn.disabled = false; // Liberamos para que sea usable después del modal
+        return;
+    }
+
+    // Si hay teoría pendiente por fallos en el bloque
     if (!showingDeferredQuestions && blockQuestions.length > 0) {
         const ultimoIndiceBloque = blockQuestions[blockQuestions.length - 1].index;
         if (currentQuestionIndex > ultimoIndiceBloque) {
             if (blockIncorrectQuestions.length > 0 && !tipTheoryShown) {
                 tipTheoryShown = true;
                 showTip();
-                nextBtn.disabled = false; // Liberamos el botón si mostramos teoría
+                nextBtn.disabled = false;
                 return;
             }
             if (typeof checkChallengeStatus === 'function') {
@@ -3809,14 +3820,14 @@ function nextQuestion() {
         }
     }
 
-    // 5. LIMPIAR INTERFAZ Y CARGAR
+    // 5. LIMPIEZA DE INTERFAZ Y CARGA
     feedbackSection.style.display = 'none';
     nextBtn.style.display = 'none';
     
     saveProgress();
     loadQuestion();
 
-    // 6. LIBERAR BOTÓN: Solo después de un pequeño retraso para evitar dobles clics
+    // 6. REHABILITAR BOTÓN TRAS CARGA
     setTimeout(() => {
         nextBtn.disabled = false;
     }, 500);
@@ -3863,28 +3874,31 @@ function nextQuestion() {
             }
             
 function updateProgress() {
-    // Usamos el índice actual directamente para el progreso
+    // El progreso se basa estrictamente en el índice de la pregunta actual
     let totalAnswered = currentQuestionIndex;
     
     if (showingDeferredQuestions) {
         totalAnswered = questions.length + currentDeferredQuestionIndex;
     } 
     
-    // Cálculo básico sin caracteres especiales extraños
+    // Cálculo de porcentaje basado en el total real de preguntas
     const totalPossible = questions.length + (deferredQuestions ? deferredQuestions.length : 0);
-    const progress = (totalAnswered / totalPossible) * 100;
+    const progressValue = (totalPossible > 0) ? (totalAnswered / totalPossible) * 100 : 0;
     
-    const circumference = 2 * Math.PI * 54;
-    const offset = circumference - (progress / 100) * circumference;
+    // Animación del círculo SVG
+    const radio = 54;
+    const circunferencia = 2 * Math.PI * radio;
+    const offset = circunferencia - (progressValue / 100) * circunferencia;
     
-    // Aplicar a la interfaz con seguridad
-    if (progressCircle) {
-        progressCircle.style.strokeDashoffset = offset;
+    // Actualización de elementos en el HTML
+    if (document.getElementById('progressCircle')) {
+        document.getElementById('progressCircle').style.strokeDashoffset = offset;
     }
     if (progressPercentage) {
-        progressPercentage.textContent = Math.round(progress) + '%';
+        progressPercentage.textContent = Math.round(progressValue) + '%';
     }
     if (questionsAnswered) {
+        // Este es el número que ves arriba junto al total
         questionsAnswered.textContent = totalAnswered;
     }
 }
