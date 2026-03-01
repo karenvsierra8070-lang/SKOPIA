@@ -2651,34 +2651,43 @@ function initializeBlock() {
             challengeLevel: challengeLevel // Añadido para diferenciar el reto
         });
     }
-}
-        // Cargar progreso guardado
-            function loadSavedProgress() {
-                const savedProgress = localStorage.getItem('skopia_quiz_progress_LCS1D2');
-                if (savedProgress) {
-                    const progress = JSON.parse(savedProgress);
-                    currentQuestionIndex = progress.currentQuestionIndex || 0;
-                    score = progress.score || 0;
-                    hintsUsed = progress.hintsUsed || 0;
-                    currentStreak = progress.currentStreak || 0;
-                    maxStreak = progress.maxStreak || 0;
-                    challengeMode = progress.challengeMode || false;
-                    challengeLevel = progress.challengeLevel || 0;
-                    deferredQuestions = progress.deferredQuestions || [];
-                    difficultQuestions = progress.difficultQuestions || [];
-                    breakTaken = progress.breakTaken || false;
-                    totalTimeSpent = progress.totalTimeSpent || 0;
-                    // Guardar el estado interno del desafío para que no se reinicie el bloque
-                    blockQuestions = progress.blockQuestions || [];
-                    challengeTimeRemaining = progress.challengeTimeRemaining || 0;
-                    
-                    // Si el cuestionario ya fue completado, ir directamente a resultados
-                    if (progress.completed) {
-                        showResults();
-                        return;
-                    }
-                }
+}function loadSavedProgress() {
+    // 1. Verificamos si hay algo guardado
+    const savedProgress = localStorage.getItem('skopia_quiz_progress_LCS1D2');
+    
+    if (savedProgress) {
+        const progress = JSON.parse(savedProgress);
+
+        // 2. EL SEGURO DE REINICIO: Si el cuestionario ya se completó, 
+        // no dejamos que los datos viejos interfieran con uno nuevo.
+        if (progress.completed) {
+            // Si no estamos en un proceso de carga de nuevo quiz, mostramos resultados
+            if (typeof isNewQuiz !== 'undefined' && !isNewQuiz) {
+                showResults();
             }
+            return;
+        }
+
+        // 3. Cargamos los datos solo si son válidos
+        currentQuestionIndex = progress.currentQuestionIndex || 0;
+        score = progress.score || 0;
+        hintsUsed = progress.hintsUsed || 0;
+        currentStreak = progress.currentStreak || 0;
+        maxStreak = progress.maxStreak || 0;
+        challengeMode = progress.challengeMode || false;
+        challengeLevel = progress.challengeLevel || 0;
+        deferredQuestions = progress.deferredQuestions || [];
+        difficultQuestions = progress.difficultQuestions || [];
+        breakTaken = progress.breakTaken || false;
+        totalTimeSpent = progress.totalTimeSpent || 0;
+        blockQuestions = progress.blockQuestions || [];
+        challengeTimeRemaining = progress.challengeTimeRemaining || 0;
+
+        // 4. Sincronizamos la interfaz visual de inmediato
+        if (currentScore) currentScore.textContent = score;
+        updateProgress();
+    }
+}
             function showPassageText() {
     if (textPassage) {
         // Quitamos la transición para que el cambio sea instantáneo al cargar
@@ -3750,41 +3759,54 @@ function handleTimeUp() {
         checkAnswer(); // Forzamos la comprobación de la respuesta actual
     }
 }
-      // Siguiente pregunta
-            function nextQuestion() {
-                // Si estamos mostrando preguntas diferidas
-                if (showingDeferredQuestions) {
-                    currentDeferredQuestionIndex++;
-                    loadQuestion();
-                    return;
-                }
-                
-                // Incrementar índice antes de cualquier verificación
-                currentQuestionIndex++;
+      // Siguiente pregunta (Versión Unificada y Sin Saltos)
+function nextQuestion() {
+    // 1. EL SEGURO FINAL: Si ya no hay más preguntas, vamos a resultados
+    if (!showingDeferredQuestions && currentQuestionIndex >= questions.length - 1) {
+        showResults();
+        return;
+    }
 
-                // Verificar si hemos completado el bloque actual
-                if (blockQuestions.length > 0 && currentQuestionIndex > blockQuestions[blockQuestions.length - 1].index) {
-                    
-                    // Prioridad 1: Mostrar teoría si hubo fallos
-                    if (blockIncorrectQuestions.length > 0 && !tipTheoryShown) {
-                        tipTheoryShown = true;
-                        showTip();
-                        return; // Correcto: Detiene para leer teoría
-                    } 
-                    
-                    // Prioridad 2: Si no hay teoría, verificar si entra en modo desafío
-                    checkChallengeStatus();
-                    return; // <--- CORRECCIÓN: Añade este return para que NO ejecute loadQuestion() abajo
-                }
-                
-                // Resetear visibilidad del texto
-                if (passageContainer) {
-                    passageContainer.style.opacity = '1';
-                    passageContainer.style.display = 'block';
-                }
+    // 2. Limpieza para la nueva pregunta
+    answerProcessed = false; 
+    feedbackSection.style.display = 'none';
+    nextBtn.style.display = 'none';
 
-                loadQuestion();
-            }
+    // 3. Avance de 1 en 1 según el modo
+    if (showingDeferredQuestions) {
+        currentDeferredQuestionIndex++;
+        // Si terminamos las diferidas, vamos a resultados
+        if (currentDeferredQuestionIndex >= deferredQuestions.length) {
+            showResults();
+            return;
+        }
+    } else {
+        currentQuestionIndex++;
+    }
+
+    // 4. Verificación de bloques (Teoría y Desafíos)
+    if (!showingDeferredQuestions && blockQuestions.length > 0 && currentQuestionIndex > blockQuestions[blockQuestions.length - 1].index) {
+        // Prioridad: Mostrar teoría si hubo fallos
+        if (blockIncorrectQuestions.length > 0 && !tipTheoryShown) {
+            tipTheoryShown = true;
+            showTip();
+            return; 
+        } 
+        
+        // Verificar si entra en modo desafío
+        checkChallengeStatus();
+        return; 
+    }
+    
+    // 5. Cargar la pregunta físicamente
+    if (passageContainer) {
+        passageContainer.style.opacity = '1';
+        passageContainer.style.display = 'block';
+    }
+
+    saveProgress();
+    loadQuestion();
+}
           // Mostrar resultados
             function showResults() {
                 currentView = 'results';
