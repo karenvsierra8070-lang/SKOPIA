@@ -1878,6 +1878,8 @@
             let totalTimeSpent = 0; // Tiempo total empleado
             // Añade esto donde están tus otros "let" al principio
             let answerProcessed = false;;
+            // 1. Declarar esta variable FUERA de la función (al inicio de tu script)
+let isTransitioning = false; 
             // Sistema de desafíos
             let challengeMode = false; // false: normal, true: desafío
             let challengeLevel = 0; // 0: sin desafío, 1: primer nivel, 2: segundo nivel
@@ -2577,98 +2579,96 @@ nextBtn.onclick = (e) => {
     saveProgress();
     loadQuestion(); 
 };
-// Cargar preguntas desde JSON corregido
+// ==========================================
+// SISTEMA DE CARGA Y GESTIÓN DEL CUESTIONARIO
+// ==========================================
+
+// 1. Cargar preguntas desde JSON y Mezclar
 async function loadQuestions(isNewQuiz = false) {
     try {
-        // --- NUEVO: SI ES UN QUIZ NUEVO, RESETEAMOS TODO AL PRINCIPIO ---
         if (isNewQuiz) {
             currentQuestionIndex = 0;
             score = 0;
             currentStreak = 0;
+            breakTaken = false; 
             if (currentScore) currentScore.textContent = '0';
-            localStorage.removeItem('quizProgress'); // Borra el progreso guardado
+            localStorage.removeItem('skopia_quiz_progress_LCS1D2'); 
         }
 
         showNotification('Cargando preguntas...');
         const response = await fetch('preguntas.json');
         const data = await response.json();
         
-        // Filtrar preguntas por tags "ideas principales" y "basico medio"
+        // Filtrado por etiquetas
         questions = data.filter(question => 
             question.tags && 
             question.tags.includes("ideas principales") && 
             question.tags.includes("basico medio")
         );
         
-        // Mezclar preguntas aleatoriamente y tomar las primeras 10
+        // Mezcla y selección de 10
         questions = shuffleArray(questions).slice(0, 10);
         
-        totalQuestions.textContent = questions.length;
-        totalQuestionsHeader.textContent = questions.length;
+        if (totalQuestions) totalQuestions.textContent = questions.length;
+        if (totalQuestionsHeader) totalQuestionsHeader.textContent = questions.length;
         
-        // --- CAMBIO: SOLO CARGAR SI NO ES NUEVO ---
         if (!isNewQuiz) {
             loadSavedProgress();
         } else {
-            // Si es nuevo, forzamos que la interfaz se vea fresca
             updateProgress(); 
         }
         
-        // Inicializar el primer bloque de preguntas
         initializeBlock();
-        
         loadQuestion();
         showNotification('¡Cuestionario cargado correctamente!');
     } catch (error) {
         console.error('Error al cargar las preguntas:', error);
-        showNotification('Error al cargar las preguntas. Por favor, recarga la página.');
+        showNotification('Error al cargar las preguntas. Por favor, recarga.');
     }
 }
-            // Función para mezclar array
-            function shuffleArray(array) {
-                const newArray = [...array];
-                for (let i = newArray.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-                }
-                return newArray;
-            }
-            
-          // Inicializar bloque de preguntas
+
+// 2. Utilidad para mezclar array
+function shuffleArray(array) {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+}
+
+// 3. Inicializar bloques de 3 preguntas
 function initializeBlock() {
     blockQuestions = [];
     blockCorrectAnswers = 0;
     blockIncorrectQuestions = [];
-    tipTheoryShown = false; // Resetear el control de consejos/teoría
+    tipTheoryShown = false; 
 
-    // Obtener las siguientes 3 preguntas (o las que queden)
-    for (let i = 0; i < questionsPerChallenge && currentQuestionIndex + i < questions.length; i++) {
+    for (let i = 0; i < (typeof questionsPerChallenge !== 'undefined' ? questionsPerChallenge : 3) && currentQuestionIndex + i < questions.length; i++) {
         blockQuestions.push({
             ...questions[currentQuestionIndex + i],
             index: currentQuestionIndex + i,
             correct: false,
             incorrect: false,
-            challengeLevel: challengeLevel // Añadido para diferenciar el reto
+            challengeLevel: typeof challengeLevel !== 'undefined' ? challengeLevel : 0
         });
     }
-}function loadSavedProgress() {
-    // 1. Verificamos si hay algo guardado
+}
+
+// 4. Cargar Progreso Guardado
+function loadSavedProgress() {
     const savedProgress = localStorage.getItem('skopia_quiz_progress_LCS1D2');
     
     if (savedProgress) {
         const progress = JSON.parse(savedProgress);
 
-        // 2. EL SEGURO DE REINICIO: Si el cuestionario ya se completó, 
-        // no dejamos que los datos viejos interfieran con uno nuevo.
         if (progress.completed) {
-            // Si no estamos en un proceso de carga de nuevo quiz, mostramos resultados
             if (typeof isNewQuiz !== 'undefined' && !isNewQuiz) {
                 showResults();
             }
             return;
         }
 
-        // 3. Cargamos los datos solo si son válidos
         currentQuestionIndex = progress.currentQuestionIndex || 0;
         score = progress.score || 0;
         hintsUsed = progress.hintsUsed || 0;
@@ -2683,85 +2683,101 @@ function initializeBlock() {
         blockQuestions = progress.blockQuestions || [];
         challengeTimeRemaining = progress.challengeTimeRemaining || 0;
 
-        // 4. Sincronizamos la interfaz visual de inmediato
         if (currentScore) currentScore.textContent = score;
         updateProgress();
     }
 }
-            function showPassageText() {
+
+// 5. Mostrar/Resetear texto (Memory Challenge)
+function showPassageText() {
     if (textPassage) {
-        // Quitamos la transición para que el cambio sea instantáneo al cargar
         textPassage.style.transition = 'none'; 
         textPassage.style.opacity = '1';
         textPassage.style.filter = 'none';
         textPassage.style.pointerEvents = 'auto';
         textPassage.style.userSelect = 'auto';
         
-        // Quitamos el borde naranja del contenedor
         const container = textPassage.parentElement;
         if (container) {
             container.style.borderLeft = 'none';
         }
     }
 }
+
+function hidePassageText(reset = false) {
+    if (textPassage) {
+        if (reset) {
+            textPassage.style.transition = 'none'; 
+            textPassage.style.opacity = '1';
+            textPassage.style.filter = 'none';
+            textPassage.style.pointerEvents = 'auto';
+            textPassage.style.userSelect = 'auto';
+            const container = textPassage.parentElement;
+            if (container) container.style.borderLeft = 'none';
+            return;
+        }
+
+        textPassage.style.transition = 'all 1.5s ease-in-out';
+        textPassage.style.opacity = '0';
+        textPassage.style.filter = 'blur(15px)';
+        textPassage.style.pointerEvents = 'none';
+        textPassage.style.userSelect = 'none';
+
+        showNotification('¡Tiempo agotado! El texto se ha ocultado.');
+        
+        const container = textPassage.parentElement;
+        if (container) {
+            container.style.transition = 'border-left 0.5s ease';
+            container.style.borderLeft = '6px solid #FF9800'; 
+        }
+    }
+}
+
+// 6. Cargar Pregunta Actual
 function loadQuestion() {
     answerProcessed = false; 
+    hidePassageText(true); // Reset visual en cada carga
 
-    // 1. REINICIAR VISIBILIDAD DEL TEXTO (Usa la función que me pasaste)
-    // Esto asegura que si el texto se ocultó por un reto, vuelva a ser visible ahora.
-    hidePassageText(true);
+    if (typeof challengeTimer !== 'undefined') clearInterval(challengeTimer);
 
-    // 2. DETENER TEMPORIZADORES PREVIOS
-    if (typeof challengeTimer !== 'undefined') {
-        clearInterval(challengeTimer);
-    }
-
-    // 3. VERIFICAR PREGUNTAS DIFERIDAS
+    // Lógica de Diferidas
     if (showingDeferredQuestions) {
         if (currentDeferredQuestionIndex >= deferredQuestions.length) {
             showingDeferredQuestions = false;
             showResults();
             return;
         }
-        loadDeferredQuestion();
+        if (typeof loadDeferredQuestion === 'function') loadDeferredQuestion();
         return;
     }
     
-    // 4. VERIFICAR LÍMITES
+    // Verificación de límites
     if (currentQuestionIndex >= questions.length) {
         if (deferredQuestions && deferredQuestions.length > 0) {
             showingDeferredQuestions = true;
             currentDeferredQuestionIndex = 0;
-            loadDeferredQuestion();
+            loadQuestion();
         } else {
             showResults(); 
         }
         return;
     }
     
-    // 5. CARGAR DATOS DEL JSON
     const question = questions[currentQuestionIndex];
-    
     if (!question) {
         showResults();
         return;
     }
 
-    // 6. ACTUALIZAR NÚMERO VISUAL (Sincronizado: Índice 0 -> Pregunta 1)
-    // Esto corrige el error de ver "Pregunta 3" cuando el código va por la 2.
+    // Sincronización de interfaz
     if (questionNumber) {
         questionNumber.textContent = currentQuestionIndex + 1;
     }
     
-    // 7. SEPARAR TEXTO E INSTRUCCIÓN
     const parts = question.pregunta.split('\n\n');
-    const textContent = parts[0]; 
-    const actualQuestion = parts[1] || question.pregunta; 
+    if (textPassage) textPassage.textContent = parts[0]; 
+    if (questionText) questionText.textContent = parts[1] || question.pregunta; 
     
-    if (textPassage) textPassage.textContent = textContent; 
-    if (questionText) questionText.textContent = actualQuestion; 
-    
-    // 8. RENDERIZAR OPCIONES
     optionsContainer.innerHTML = '';
     question.opciones.forEach((option, index) => {
         const optionCard = document.createElement('div');
@@ -2776,12 +2792,10 @@ function loadQuestion() {
         optionsContainer.appendChild(optionCard);
     });
     
-    // 9. RESETEAR ESTADO DE INTERFAZ
+    // Estados iniciales
     selectedOption = null;
     attempts = 0;
-    if (typeof attempt1 !== 'undefined' && attempt1) {
-        attempt1.classList.remove('used');
-    }
+    if (typeof attempt1 !== 'undefined' && attempt1) attempt1.classList.remove('used');
     
     hintBox.style.display = 'none';
     feedbackSection.style.display = 'none';
@@ -2790,347 +2804,289 @@ function loadQuestion() {
     checkBtn.disabled = true;
     if (hintBtn) hintBtn.disabled = false;
     
-    // 10. ACTUALIZAR BOTONES DE ESTADO (Difíciles/Diferidas)
-    const isDifficult = difficultQuestions.some(q => q.index === currentQuestionIndex);
-    if (difficultBtn) difficultBtn.classList.toggle('active', isDifficult);
-    
-    const isDeferred = deferredQuestions.some(q => q.index === currentQuestionIndex);
-    if (deferBtn) deferBtn.classList.toggle('active', isDeferred);
-    
-    // 11. LÓGICA DE DESAFÍO
+    // Badges de reto
     if (challengeMode) {
         if (challengeBadge) challengeBadge.style.display = 'flex';
         if (timerBadge) timerBadge.style.display = 'flex';
-        
-        if (challengeLevel === 1) {
-            if (challengeLabel) challengeLabel.textContent = '1: MEMORIA';
-        } else if (challengeLevel === 2) {
-            if (challengeLabel) challengeLabel.textContent = '2: TODO O NADA';
-        }
+        if (challengeLabel) challengeLabel.textContent = challengeLevel === 1 ? '1: MEMORIA' : '2: TODO O NADA';
         if (typeof startChallengeTimer === 'function') startChallengeTimer();
     } else {
         if (challengeBadge) challengeBadge.style.display = 'none';
         if (timerBadge) timerBadge.style.display = 'none';
     }
     
-    // 12. ACTUALIZAR PROGRESO Y GUARDAR
-    // Llamamos a la función que sincroniza el marcador de arriba.
     updateProgress();
     if (typeof saveProgress === 'function') saveProgress();
 }
-            
-            // Cargar pregunta diferida
-            function loadDeferredQuestion() {
-                const deferredQuestion = deferredQuestions[currentDeferredQuestionIndex];
-                const question = deferredQuestion.question;
-                
-                // Actualizar número de pregunta
-                questionNumber.textContent = `Diferida ${currentDeferredQuestionIndex + 1}`;
-                
-                // Separar correctamente el texto de la pregunta
-                const parts = question.pregunta.split('\n\n');
-                const textContent = parts[0]; // El texto principal
-                const actualQuestion = parts[1] || question.pregunta; // La pregunta real
-                
-                // Mostrar el texto en el contenedor beige
-                textPassage.textContent = textContent;
-                
-                // Mostrar solo la pregunta en el header
-                questionText.textContent = actualQuestion;
-                
-                // Cargar opciones
-                optionsContainer.innerHTML = '';
-                question.opciones.forEach((option, index) => {
-                    const optionCard = document.createElement('div');
-                    optionCard.className = 'option-card';
-                    optionCard.innerHTML = `
-                        <div class="option-content">
-                            <div class="option-letter">${String.fromCharCode(65 + index)}</div>
-                            <div class="option-text">${option}</div>
-                        </div>
-                    `;
-                    optionCard.onclick = () => selectOption(index);
-                    optionsContainer.appendChild(optionCard);
-                });
-                
-                // Resetear estado
-                selectedOption = null;
-                attempts = 0;
-                attempt1.classList.remove('used');
-                hintBox.style.display = 'none';
-                feedbackSection.style.display = 'none';
-                nextBtn.style.display = 'none';
-                checkBtn.style.display = 'block';
-                checkBtn.disabled = true;
-                hintBtn.disabled = false;
-                
-                // Desactivar botón de diferir (ya está diferida)
-                deferBtn.classList.add('active');
-                deferBtn.disabled = true;
-                
-                // Iniciar temporizador para pregunta diferida
-                startDeferredTimer();
-                
-                // Actualizar progreso
-                updateProgress();
-                saveProgress();
-            }
-        // Iniciar temporizador de desafío
+
+// 7. Seleccionar Opción
+function selectOption(index) {
+    if (answerProcessed) return;
+    selectedOption = index;
+    const options = document.querySelectorAll('.option-card');
+    options.forEach((opt, i) => {
+        opt.classList.toggle('selected', i === index);
+    });
+    checkBtn.disabled = false;
+}
+        // ==========================================
+// SISTEMA DE TEMPORIZADORES Y PREGUNTAS DIFERIDAS
+// ==========================================
+
+// 1. Cargar Pregunta Diferida
+function loadDeferredQuestion() {
+    const deferredQuestion = deferredQuestions[currentDeferredQuestionIndex];
+    const question = deferredQuestion.question;
+    
+    // Resetear visibilidad del texto por si venía de un reto
+    if (typeof hidePassageText === 'function') hidePassageText(true);
+
+    // Actualizar número de pregunta
+    if (questionNumber) {
+        questionNumber.textContent = `Diferida ${currentDeferredQuestionIndex + 1}`;
+    }
+    
+    // Separar correctamente el texto de la pregunta
+    const parts = question.pregunta.split('\n\n');
+    const textContent = parts[0]; 
+    const actualQuestion = parts[1] || question.pregunta; 
+    
+    if (textPassage) textPassage.textContent = textContent;
+    if (questionText) questionText.textContent = actualQuestion;
+    
+    // Cargar opciones
+    optionsContainer.innerHTML = '';
+    question.opciones.forEach((option, index) => {
+        const optionCard = document.createElement('div');
+        optionCard.className = 'option-card';
+        optionCard.innerHTML = `
+            <div class="option-content">
+                <div class="option-letter">${String.fromCharCode(65 + index)}</div>
+                <div class="option-text">${option}</div>
+            </div>
+        `;
+        optionCard.onclick = () => selectOption(index);
+        optionsContainer.appendChild(optionCard);
+    });
+    
+    // Resetear estado de interfaz
+    selectedOption = null;
+    answerProcessed = false;
+    attempts = 0;
+    if (typeof attempt1 !== 'undefined') attempt1.classList.remove('used');
+    
+    if (hintBox) hintBox.style.display = 'none';
+    if (feedbackSection) feedbackSection.style.display = 'none';
+    if (nextBtn) nextBtn.style.display = 'none';
+    if (checkBtn) {
+        checkBtn.style.display = 'block';
+        checkBtn.disabled = true;
+    }
+    if (hintBtn) hintBtn.disabled = false;
+    
+    // Desactivar botón de diferir (ya estamos en una diferida)
+    if (deferBtn) {
+        deferBtn.classList.add('active');
+        deferBtn.disabled = true;
+    }
+    
+    // Iniciar temporizador específico
+    startDeferredTimer();
+    
+    updateProgress();
+    if (typeof saveProgress === 'function') saveProgress();
+}
+
+// 2. Temporizador de Desafío (Memoria y Todo o Nada)
 function startChallengeTimer() {
-    // 1. Limpieza absoluta antes de empezar
     if (typeof challengeTimer !== 'undefined') {
         clearInterval(challengeTimer);
     }
     
-    // Resetear colores del badge (por si venían de una pregunta fallida)
     if (timerBadge) {
         timerBadge.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
         timerBadge.style.color = 'white';
     }
     
-    // 2. Reiniciar variables de estado
-    challengeTimeRemaining = challengeTimeLimit;
+    challengeTimeRemaining = typeof challengeTimeLimit !== 'undefined' ? challengeTimeLimit : 70;
     challengeWarningShown = false;
     
-    // Actualizar visualización inicial (01:10, etc.)
     updateTimerDisplay();
     
-    // 3. Iniciar cuenta regresiva
     challengeTimer = setInterval(() => {
         challengeTimeRemaining--;
         updateTimerDisplay();
         
-        // --- GESTIÓN DE ADVERTENCIA ---
-        // Para retos cortos (<=70s), avisar a los 15s. Para largos, a los 45s.
-        let warningThreshold = (challengeTimeLimit <= 70) ? 15 : 45;
+        // Advertencia visual
+        let warningThreshold = (challengeTimeRemaining <= 15) || (challengeTimeRemaining <= 45 && challengeTimeLimit > 70);
 
-        if (challengeTimeRemaining <= warningThreshold && !challengeWarningShown) {
+        if (warningThreshold && !challengeWarningShown) {
             showNotification(`⚠️ ¡Cuidado! Te quedan ${challengeTimeRemaining} segundos.`);
             challengeWarningShown = true;
-            
-            // Efecto visual: el badge se pone naranja/rojo al entrar en tiempo crítico
-            if (timerBadge) {
-                timerBadge.style.backgroundColor = '#e67e22';
-            }
+            if (timerBadge) timerBadge.style.backgroundColor = '#e67e22';
         }
         
-        // --- FINALIZACIÓN DEL TIEMPO ---
         if (challengeTimeRemaining <= 0) {
             clearInterval(challengeTimer);
-            
-            // Feedback visual final en el badge
-            if (timerBadge) {
-                timerBadge.style.backgroundColor = '#e74c3c';
-            }
+            if (timerBadge) timerBadge.style.backgroundColor = '#e74c3c';
 
             if (challengeLevel === 1) {
-                // MODO MEMORIA: Solo ocultamos el texto
-                hidePassageText(); 
+                hidePassageText(); // Modo Memoria: Oculta el texto
             } else if (challengeLevel === 2) {
-                // MODO TODO O NADA: Ejecuta la lógica de tiempo agotado (fallo)
-                handleTimeUp();
+                handleTimeUp(); // Modo Todo o Nada: Fallo automático
             }
         }
     }, 1000);
 }
-            
-            // Iniciar temporizador para pregunta diferida
-            function startDeferredTimer() {
-                // Detener temporizador anterior si existe
-                if (deferredTimer) {
-                    clearInterval(deferredTimer);
-                }
-                
-                // Reiniciar variables del temporizador
-                deferredTimeRemaining = deferredTimeLimit;
-                
-                // Actualizar visualización
-                updateDeferredTimerDisplay();
-                
-                // Iniciar cuenta regresiva
-                deferredTimer = setInterval(() => {
-                    deferredTimeRemaining--;
-                    updateDeferredTimerDisplay();
-                    
-                    // Si el tiempo se acaba
-                    if (deferredTimeRemaining <= 0) {
-                        clearInterval(deferredTimer);
-                        handleDeferredTimeUp();
-                    }
-                }, 1000);
-            }
-            
-        // Actualizar visualización del temporizador
-            function updateTimerDisplay() {
-                const minutes = Math.floor(challengeTimeRemaining / 60);
-                const seconds = challengeTimeRemaining % 60;
-                timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                
-                // Ajustar el umbral de advertencia visual según el tiempo total
-                let dangerThreshold = (challengeTimeLimit <= 70) ? 15 : 30;
 
-                // Añadir clase de advertencia si el tiempo es bajo
-                if (challengeTimeRemaining <= dangerThreshold) {
-                    timerBadge.style.background = '#f44336';
-                    timerBadge.style.color = 'white';
-                    
-                    // Efecto extra para Muerte Súbita (Nivel 2): El fondo del juego también cambia
-                    if (challengeLevel === 2) {
-                        mainGameContainer.style.borderColor = '#f44336';
-                    }
-                } else {
-                    timerBadge.style.background = '';
-                    timerBadge.style.color = '';
-                    if (challengeLevel === 2) {
-                        mainGameContainer.style.borderColor = '';
-                    }
-                }
-            }
-            
-            // Actualizar visualización del temporizador diferido
-            function updateDeferredTimerDisplay() {
-                // Mostrar tiempo en el badge de temporizador
-                const minutes = Math.floor(deferredTimeRemaining / 60);
-                const seconds = deferredTimeRemaining % 60;
-                
-                // Crear o actualizar badge de temporizador diferido
-                let deferredTimerBadge = document.getElementById('deferred-timer-badge');
-                if (!deferredTimerBadge) {
-                    deferredTimerBadge = document.createElement('div');
-                    deferredTimerBadge.id = 'deferred-timer-badge';
-                    deferredTimerBadge.className = 'badge timer';
-                    deferredTimerBadge.innerHTML = `<i class="fas fa-clock"></i><span id="deferred-timer-display">1:30</span>`;
-                    document.querySelector('.question-badges').appendChild(deferredTimerBadge);
-                }
-                
-                const deferredTimerDisplay = document.getElementById('deferred-timer-display');
-                deferredTimerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-                
-                // Añadir clase de advertencia si quedan menos de 10 segundos
-                if (deferredTimeRemaining <= 10) {
-                    deferredTimerBadge.style.background = '#f44336';
-                    deferredTimerBadge.style.color = 'white';
-                } else {
-                    deferredTimerBadge.style.background = '';
-                    deferredTimerBadge.style.color = '';
-                }
-            }
-            
-            // Manejar tiempo agotado
-            function handleTimeUp() {
-                // Marcar pregunta como incorrecta
-                const question = questions[currentQuestionIndex];
-                const options = document.querySelectorAll('.option-card');
-                
-                // Mostrar respuesta correcta
-                options.forEach((opt, i) => {
-                    if (i === question.respuestaCorrecta) {
-                        opt.classList.add('correct');
-                        opt.innerHTML += '<div class="option-icon correct">✓</div>';
-                    }
-                    opt.onclick = null; // Deshabilitar clics
-                });
-                
-                // Actualizar estadísticas
-                attempts = 1; // Solo hay un intento ahora
-                attempt1.classList.add('used');
-                
-                // Reiniciar racha
-                currentStreak = 0;
-                
-                // Mostrar retroalimentación
-                feedbackSection.className = 'feedback-section incorrect';
-                feedbackIcon.className = 'feedback-icon fas fa-times-circle';
-                feedbackTitle.textContent = 'Tiempo agotado';
-                feedbackText.textContent = 'Se acabó el tiempo. La respuesta correcta ha sido resaltada.';
-                trickBox.style.display = 'none';
-                feedbackSection.style.display = 'block';
-                
-                // Actualizar bloque actual
-                updateBlockQuestion(currentQuestionIndex, false, true);
-                
-                // Deshabilitar botón de pista
-                hintBtn.disabled = true;
-                
-                // Mostrar botón de siguiente
-                nextBtn.style.display = 'block';
-                checkBtn.style.display = 'none';
-                
-                // Guardar pregunta incorrecta
-                saveIncorrectQuestion(question);
-                
-                // Actualizar progreso
-                updateProgress();
-                saveProgress();
-            }
-            
-            // Manejar tiempo agotado en pregunta diferida
-            function handleDeferredTimeUp() {
-                // Marcar pregunta como incorrecta
-                const deferredQuestion = deferredQuestions[currentDeferredQuestionIndex];
-                const question = deferredQuestion.question;
-                const options = document.querySelectorAll('.option-card');
-                
-                // Mostrar respuesta correcta
-                options.forEach((opt, i) => {
-                    if (i === question.respuestaCorrecta) {
-                        opt.classList.add('correct');
-                        opt.innerHTML += '<div class="option-icon correct">✓</div>';
-                    }
-                    opt.onclick = null; // Deshabilitar clics
-                });
-                
-                // Actualizar estadísticas
-                attempts = 1; // Solo hay un intento ahora
-                attempt1.classList.add('used');
-                
-                // Reiniciar racha
-                currentStreak = 0;
-                
-                // Mostrar retroalimentación
-                feedbackSection.className = 'feedback-section incorrect';
-                feedbackIcon.className = 'feedback-icon fas fa-times-circle';
-                feedbackTitle.textContent = 'Tiempo agotado';
-                feedbackText.textContent = 'Se acabó el tiempo. La respuesta correcta ha sido resaltada.';
-                trickBox.style.display = 'none';
-                feedbackSection.style.display = 'block';
-                
-                // Deshabilitar botón de pista
-                hintBtn.disabled = true;
-                
-                // Mostrar botón de siguiente
-                nextBtn.style.display = 'block';
-                checkBtn.style.display = 'none';
-                
-                // Guardar pregunta incorrecta
-                saveIncorrectQuestion(question);
-                
-                // Actualizar progreso
-                updateProgress();
-                saveProgress();
-            }
-            
-         function selectOption(index) {
-    // 1. SEGURO: Si la respuesta ya fue procesada, no permitir cambiar la selección
+// 3. Temporizador de Pregunta Diferida
+function startDeferredTimer() {
+    if (typeof deferredTimer !== 'undefined') {
+        clearInterval(deferredTimer);
+    }
+    
+    deferredTimeRemaining = typeof deferredTimeLimit !== 'undefined' ? deferredTimeLimit : 90;
+    updateDeferredTimerDisplay();
+    
+    deferredTimer = setInterval(() => {
+        deferredTimeRemaining--;
+        updateDeferredTimerDisplay();
+        
+        if (deferredTimeRemaining <= 0) {
+            clearInterval(deferredTimer);
+            handleDeferredTimeUp();
+        }
+    }, 1000);
+}
+
+// 4. Actualización Visual de Tiempos
+function updateTimerDisplay() {
+    if (!timerDisplay) return;
+    const minutes = Math.floor(challengeTimeRemaining / 60);
+    const seconds = challengeTimeRemaining % 60;
+    timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    let dangerThreshold = (challengeTimeLimit <= 70) ? 15 : 30;
+
+    if (challengeTimeRemaining <= dangerThreshold) {
+        if (timerBadge) {
+            timerBadge.style.background = '#f44336';
+            timerBadge.style.color = 'white';
+        }
+        if (challengeLevel === 2 && typeof mainGameContainer !== 'undefined') {
+            mainGameContainer.style.borderColor = '#f44336';
+        }
+    } else if (timerBadge) {
+        timerBadge.style.background = '';
+        timerBadge.style.color = '';
+    }
+}
+
+function updateDeferredTimerDisplay() {
+    const minutes = Math.floor(deferredTimeRemaining / 60);
+    const seconds = deferredTimeRemaining % 60;
+    
+    let deferredTimerBadge = document.getElementById('deferred-timer-badge');
+    if (!deferredTimerBadge) {
+        deferredTimerBadge = document.createElement('div');
+        deferredTimerBadge.id = 'deferred-timer-badge';
+        deferredTimerBadge.className = 'badge timer';
+        deferredTimerBadge.innerHTML = `<i class="fas fa-clock"></i><span id="deferred-timer-display"></span>`;
+        const container = document.querySelector('.question-badges');
+        if (container) container.appendChild(deferredTimerBadge);
+    }
+    
+    const display = document.getElementById('deferred-timer-display');
+    if (display) display.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    if (deferredTimeRemaining <= 10) {
+        deferredTimerBadge.style.background = '#f44336';
+        deferredTimerBadge.style.color = 'white';
+    }
+}
+
+// 5. Manejo de Tiempo Agotado (Normal y Diferida)
+function handleTimeUp() {
     if (answerProcessed) return;
+    answerProcessed = true;
 
-    // 2. ACTUALIZAR VARIABLE GLOBAL
+    const question = questions[currentQuestionIndex];
+    const options = document.querySelectorAll('.option-card');
+    
+    options.forEach((opt, i) => {
+        if (i === question.respuestaCorrecta) {
+            opt.classList.add('correct');
+            opt.innerHTML += '<div class="option-icon correct">✓</div>';
+        }
+        opt.onclick = null;
+    });
+    
+    attempts = 1;
+    if (typeof attempt1 !== 'undefined') attempt1.classList.add('used');
+    currentStreak = 0;
+    
+    feedbackSection.className = 'feedback-section incorrect';
+    feedbackIcon.className = 'feedback-icon fas fa-times-circle';
+    feedbackTitle.textContent = 'Tiempo agotado';
+    feedbackText.textContent = 'Se acabó el tiempo del reto. La respuesta correcta era la marcada.';
+    
+    if (trickBox) trickBox.style.display = 'none';
+    feedbackSection.style.display = 'block';
+    
+    if (typeof updateBlockQuestion === 'function') updateBlockQuestion(currentQuestionIndex, false, true);
+    if (hintBtn) hintBtn.disabled = true;
+    
+    nextBtn.style.display = 'block';
+    checkBtn.style.display = 'none';
+    
+    if (typeof saveIncorrectQuestion === 'function') saveIncorrectQuestion(question);
+    updateProgress();
+    if (typeof saveProgress === 'function') saveProgress();
+}
+
+function handleDeferredTimeUp() {
+    if (answerProcessed) return;
+    answerProcessed = true;
+
+    const deferredQuestion = deferredQuestions[currentDeferredQuestionIndex];
+    const question = deferredQuestion.question;
+    const options = document.querySelectorAll('.option-card');
+    
+    options.forEach((opt, i) => {
+        if (i === question.respuestaCorrecta) {
+            opt.classList.add('correct');
+            opt.innerHTML += '<div class="option-icon correct">✓</div>';
+        }
+        opt.onclick = null;
+    });
+    
+    attempts = 1;
+    if (typeof attempt1 !== 'undefined') attempt1.classList.add('used');
+    currentStreak = 0;
+    
+    feedbackSection.className = 'feedback-section incorrect';
+    feedbackTitle.textContent = 'Tiempo agotado';
+    feedbackText.textContent = 'El tiempo para esta pregunta diferida ha finalizado.';
+    feedbackSection.style.display = 'block';
+    
+    if (hintBtn) hintBtn.disabled = true;
+    nextBtn.style.display = 'block';
+    checkBtn.style.display = 'none';
+    
+    if (typeof saveIncorrectQuestion === 'function') saveIncorrectQuestion(question);
+    updateProgress();
+    if (typeof saveProgress === 'function') saveProgress();
+}
+
+// 6. Selección de Opción (Blindada)
+function selectOption(index) {
+    if (answerProcessed) return;
     selectedOption = index;
-
-    // 3. ACTUALIZAR INTERFAZ VISUAL
     const options = document.querySelectorAll('.option-card');
     options.forEach((opt, i) => {
-        // Añade la clase 'selected' solo a la opción clicada
         opt.classList.toggle('selected', i === index);
     });
-
-    // 4. HABILITAR EL BOTÓN DE VERIFICAR
-    if (checkBtn) {
-        checkBtn.disabled = false;
-    }
-
-    // 5. SONIDO O FEEDBACK (Opcional, si tienes alguna función de feedback leve)
-    console.log("Opción seleccionada:", String.fromCharCode(65 + index));
+    if (checkBtn) checkBtn.disabled = false;
 }
             
 function checkAnswer() {
@@ -3767,70 +3723,73 @@ function handleTimeUp() {
         checkAnswer(); // Forzamos la comprobación de la respuesta actual
     }
 }
+
 function nextQuestion() {
-    // 1. BLOQUEO DE SEGURIDAD: Evita que el botón responda a más clics mientras procesa
-    if (nextBtn.disabled) return;
+    // 2. ESCUDO REAL: Si ya estamos cambiando, ignoramos cualquier clic
+    if (isTransitioning) return;
+    
+    // Bloqueamos el botón y el estado
+    isTransitioning = true;
     nextBtn.disabled = true;
 
     console.log("--- Intento de avance ---");
-    console.log("Índice antes de incrementar:", currentQuestionIndex);
+    // Si aquí sale 1 después de la pregunta 1, es que checkAnswer está sumando.
+    console.log("Índice ANTES de incrementar:", currentQuestionIndex);
 
-    // 2. VERIFICAR SI ES EL FINAL DEL CUESTIONARIO
+    // 3. VERIFICAR FINAL
     if (!showingDeferredQuestions && currentQuestionIndex >= questions.length - 1) {
         showResults();
+        isTransitioning = false; // Liberamos para que showResults pueda operar
         return;
     }
 
-    // 3. INCREMENTO DEL ÍNDICE (Solo ocurre aquí)
+    // 4. INCREMENTO (ÚNICO SITIO)
     if (showingDeferredQuestions) {
         currentDeferredQuestionIndex++;
         if (currentDeferredQuestionIndex >= deferredQuestions.length) {
             showResults();
+            isTransitioning = false;
             return;
         }
     } else {
         currentQuestionIndex++;
     }
 
-    console.log("Índice después de incrementar:", currentQuestionIndex);
+    console.log("Índice DESPUÉS de incrementar:", currentQuestionIndex);
 
-    // 4. LÓGICA DE BLOQUES: DESCANSO Y TEORÍA
-    // Si llegamos al índice 5 (que es la Pregunta 6 real)
+    // 5. LÓGICA DE BLOQUES (Descanso/Teoría)
     if (currentQuestionIndex === 5 && !breakTaken) {
         showBreakModal();
-        nextBtn.disabled = false; // Liberamos para que sea usable después del modal
+        // IMPORTANTE: Aquí NO liberamos isTransitioning hasta que se cierre el modal
         return;
     }
 
-    // Si hay teoría pendiente por fallos en el bloque
     if (!showingDeferredQuestions && blockQuestions.length > 0) {
         const ultimoIndiceBloque = blockQuestions[blockQuestions.length - 1].index;
         if (currentQuestionIndex > ultimoIndiceBloque) {
             if (blockIncorrectQuestions.length > 0 && !tipTheoryShown) {
                 tipTheoryShown = true;
                 showTip();
-                nextBtn.disabled = false;
+                // No liberamos aquí para obligar a ver la teoría
                 return;
             }
-            if (typeof checkChallengeStatus === 'function') {
-                checkChallengeStatus();
-                nextBtn.disabled = false;
-                return;
-            }
+            // ... resto de lógica de retos ...
         }
     }
 
-    // 5. LIMPIEZA DE INTERFAZ Y CARGA
+    // 6. LIMPIEZA Y CARGA
     feedbackSection.style.display = 'none';
     nextBtn.style.display = 'none';
     
     saveProgress();
     loadQuestion();
 
-    // 6. REHABILITAR BOTÓN TRAS CARGA
+    // 7. REHABILITAR CON SEGURIDAD
+    // Solo permitimos un nuevo avance después de un tiempo prudente
     setTimeout(() => {
+        isTransitioning = false;
         nextBtn.disabled = false;
-    }, 500);
+    }, 800); 
 }
           // Mostrar resultados
             function showResults() {
