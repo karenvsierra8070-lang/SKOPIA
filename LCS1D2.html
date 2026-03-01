@@ -2707,43 +2707,44 @@ function hidePassageText(reset = false) {
     }
 }
 
-// 6. Cargar Pregunta Actual
 function loadQuestion() {
     answerProcessed = false; 
-    hidePassageText(true); // Reset visual en cada carga
+    if (typeof hidePassageText === 'function') hidePassageText(true);
 
     if (typeof challengeTimer !== 'undefined') clearInterval(challengeTimer);
 
-    // Lógica de Diferidas
+    // A. ¿ESTAMOS YA EN MODO DIFERIDAS?
     if (showingDeferredQuestions) {
         if (currentDeferredQuestionIndex >= deferredQuestions.length) {
-            showingDeferredQuestions = false;
-            showResults();
+            showResults(); // Se acabaron las de la huellita
             return;
         }
         if (typeof loadDeferredQuestion === 'function') loadDeferredQuestion();
         return;
     }
     
-    // Verificación de límites
+    // B. ¿TERMINAMOS LAS NORMALES? (Salto a Diferidas)
     if (currentQuestionIndex >= questions.length) {
         if (deferredQuestions && deferredQuestions.length > 0) {
             showingDeferredQuestions = true;
             currentDeferredQuestionIndex = 0;
-            loadQuestion();
+            if (typeof loadDeferredQuestion === 'function') {
+                loadDeferredQuestion(); // Carga la primera de la huella con su 1:30
+            }
         } else {
             showResults(); 
         }
         return;
     }
     
+    // C. CARGA NORMAL
     const question = questions[currentQuestionIndex];
     if (!question) {
         showResults();
         return;
     }
 
-    // Sincronización de interfaz
+    // Actualización de interfaz
     if (questionNumber) {
         questionNumber.textContent = currentQuestionIndex + 1;
     }
@@ -2766,30 +2767,29 @@ function loadQuestion() {
         optionsContainer.appendChild(optionCard);
     });
     
-    // Estados iniciales
     selectedOption = null;
     attempts = 0;
     if (typeof attempt1 !== 'undefined' && attempt1) attempt1.classList.remove('used');
     
-    hintBox.style.display = 'none';
-    feedbackSection.style.display = 'none';
-    nextBtn.style.display = 'none';
-    checkBtn.style.display = 'block';
-    checkBtn.disabled = true;
-    if (hintBtn) hintBtn.disabled = false;
+    if (hintBox) hintBox.style.display = 'none';
+    if (feedbackSection) feedbackSection.style.display = 'none';
+    if (nextBtn) nextBtn.style.display = 'none';
+    if (checkBtn) {
+        checkBtn.style.display = 'block';
+        checkBtn.disabled = true;
+    }
     
-    // Badges de reto
-    if (challengeMode) {
+    // Retos y Badges
+    if (typeof challengeMode !== 'undefined' && challengeMode) {
         if (challengeBadge) challengeBadge.style.display = 'flex';
         if (timerBadge) timerBadge.style.display = 'flex';
-        if (challengeLabel) challengeLabel.textContent = challengeLevel === 1 ? '1: MEMORIA' : '2: TODO O NADA';
         if (typeof startChallengeTimer === 'function') startChallengeTimer();
     } else {
         if (challengeBadge) challengeBadge.style.display = 'none';
         if (timerBadge) timerBadge.style.display = 'none';
     }
     
-    updateProgress();
+    if (typeof updateProgress === 'function') updateProgress();
     if (typeof saveProgress === 'function') saveProgress();
 }
 
@@ -3698,23 +3698,18 @@ function handleTimeUp() {
         checkAnswer(); // Forzamos la comprobación de la respuesta actual
     }
 }
-            function nextQuestion(forzado = false) {
-    // 1. ESCUDO ANTIDUPICADOS
+           function nextQuestion(forzado = false) {
     if (isTransitioning) return;
     
-    // 2. VERIFICACIÓN DE SEGURIDAD MODIFICADA
-    // Si NO es forzado Y NO se ha respondido, bloqueamos.
-    // Si es forzado (huellita), este IF se ignora y deja pasar.
+    // Filtro: Siguiente pide respuesta, Huellita (forzado) pasa libre
     if (!forzado && !answerProcessed) {
-        console.log("Intento de avance bloqueado: Debes marcar una opción primero.");
         return; 
     }
 
     isTransitioning = true;
     nextBtn.disabled = true;
 
-    // 3. LÓGICA DE BLOQUES DE 3 (TEORÍA)
-    // Solo evaluamos errores si NO es un salto forzado (huellita)
+    // Lógica de bloques de 3 (Teoría)
     if (!forzado && !showingDeferredQuestions && currentQuestionIndex > 0 && (currentQuestionIndex + 1) % 3 === 0) {
         if (blockIncorrectQuestions && blockIncorrectQuestions.length > 0 && !tipTheoryShown) {
             tipTheoryShown = true;
@@ -3724,38 +3719,25 @@ function handleTimeUp() {
         }
     }
 
-    // 4. REINICIO DE ESTADO DE TEORÍA
     if (tipTheoryShown) tipTheoryShown = false;
 
-    // 5. INCREMENTO ÚNICO
+    // Incremento
     if (showingDeferredQuestions) {
         currentDeferredQuestionIndex++;
-        if (currentDeferredQuestionIndex >= deferredQuestions.length) {
-            showResults();
-            resetTransition();
-            return;
-        }
     } else {
         currentQuestionIndex++;
     }
 
-    // 6. VERIFICAR FINAL
-    if (!showingDeferredQuestions && currentQuestionIndex >= questions.length) {
-        showResults();
-        resetTransition();
-        return;
-    }
-
-    // 7. LIMPIEZA PARA LA NUEVA PREGUNTA
+    // LIMPIEZA Y CARGA: Aquí está el truco
+    // Simplemente llamamos a loadQuestion y ella sabrá si toca normal, diferida o final
     answerProcessed = false; 
     selectedOption = null;
     feedbackSection.style.display = 'none';
     nextBtn.style.display = 'none';
     
     saveProgress();
-    loadQuestion();
+    loadQuestion(); // <--- Ella toma el control ahora
 
-    // 8. LIBERACIÓN CONTROLADA
     setTimeout(resetTransition, 600);
 }
 
