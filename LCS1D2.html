@@ -3987,8 +3987,8 @@ function saveProgress(completed = false) {
                 }, duration);
             }
             
-            function retryQuiz() {
-    // 1. Resetear estado lógico
+           function retryQuiz() {
+    // Resetear estado
     currentQuestionIndex = 0;
     score = 0;
     attempts = 0;
@@ -4007,28 +4007,12 @@ function saveProgress(completed = false) {
     showingDeferredQuestions = false;
     currentDeferredQuestionIndex = 0;
     tipTheoryShown = false;
-
-    // --- CORRECCIÓN: LIMPIEZA DE INTERFAZ Y TEMPORIZADORES ---
     
-    // Detener cualquier cronómetro activo (Normal, Diferido o Reto)
-    if (typeof timerInterval !== 'undefined') clearInterval(timerInterval);
-    if (typeof challengeTimer !== 'undefined') clearInterval(challengeTimer);
-    if (typeof deferredTimerInterval !== 'undefined') clearInterval(deferredTimerInterval);
-
-    // Ocultar etiquetas de tiempo y retos que quedaron de la sesión anterior
-    if (timerBadge) timerBadge.style.display = 'none';
-    if (challengeBadge) challengeBadge.style.display = 'none';
-    
-    // Resetear el botón de la huellita (quitar color activo y habilitar)
-    if (deferBtn) {
-        deferBtn.classList.remove('active');
-        deferBtn.disabled = false;
-    }
-    
-    // Resetear el texto del cronómetro si existe
-    const timerDisplay = document.getElementById('timer-display');
-    if (timerDisplay) timerDisplay.textContent = '00:00';
-    // -------------------------------------------------------
+    // --- LIMPIEZA VISUAL DEL TIEMPO ---
+    if (typeof timerBadge !== 'undefined' && timerBadge) timerBadge.style.display = 'none';
+    if (typeof challengeBadge !== 'undefined' && challengeBadge) challengeBadge.style.display = 'none';
+    if (typeof isTransitioning !== 'undefined') isTransitioning = false; // Desbloqueo de seguridad
+    // ----------------------------------
 
     // Limpiar progreso guardado
     localStorage.removeItem('skopia_quiz_progress_LCS1D2');
@@ -4042,6 +4026,57 @@ function saveProgress(completed = false) {
     
     showNotification('Generando nuevo cuestionario con preguntas aleatorias...');
 }
+
+// Event listeners
+hintBtn.addEventListener('click', showHint);
+checkBtn.addEventListener('click', checkAnswer);
+nextBtn.addEventListener('click', nextQuestion);
+continueToTheoryBtn.addEventListener('click', showTheory);
+skipTheoryBtn.addEventListener('click', skipTheoryAndContinue);
+continueQuizBtn.addEventListener('click', continueQuiz);
+difficultBtn.addEventListener('click', toggleDifficult);
+deferBtn.addEventListener('click', toggleDeferred);
+startChallengeBtn.addEventListener('click', () => {
+    challengeModal.classList.remove('active');
+    // Arrancar el cronómetro inmediatamente al cerrar el modal
+    startChallengeTimer();
+    loadQuestion();
+});
+submitDeferredBtn.addEventListener('click', () => {
+    // Este botón ya no se usa, pero lo dejamos por si se necesita en el futuro
+});
+retryBtn.addEventListener('click', retryQuiz);
+
+backBtn.addEventListener('click', () => {
+    if (currentView === 'quiz') {
+        if (confirm('¿Estás seguro de que quieres salir? Perderás tu progreso actual.')) {
+            window.location.href = 'LCS1D.html';
+        }
+    } else if (currentView === 'tip') {
+        currentView = 'quiz';
+        tipContainer.style.display = 'none';
+        questionCard.style.display = 'block';
+    } else if (currentView === 'theory') {
+        currentView = 'tip';
+        theoryContainer.style.display = 'none';
+        tipContainer.style.display = 'block';
+    } else if (currentView === 'deferred') {
+        if (confirm('¿Estás seguro de que quieres salir? Las preguntas diferidas se contarán como incorrectas.')) {
+            // Marcar todas las preguntas diferidas como incorrectas
+            deferredQuestions.forEach(deferredQuestion => {
+                saveIncorrectQuestion(deferredQuestion.question);
+            });
+            
+            // Limpiar preguntas diferidas
+            deferredQuestions = [];
+            showingDeferredQuestions = false;
+            saveProgress();
+            
+            // Mostrar resultados
+            showResults();
+        }
+    }
+});
 
             finishBtn.addEventListener('click', () => {
                 window.location.href = 'LCS1D.html';
