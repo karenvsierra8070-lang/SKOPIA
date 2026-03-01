@@ -3699,73 +3699,73 @@ function handleTimeUp() {
 }
 
 function nextQuestion() {
-    // 2. ESCUDO REAL: Si ya estamos cambiando, ignoramos cualquier clic
+    // 1. BLOQUEO INMEDIATO: Impedimos cualquier otra ejecución
     if (isTransitioning) return;
-    
-    // Bloqueamos el botón y el estado
     isTransitioning = true;
+    
+    // Deshabilitamos el botón físicamente para que no reciba más clics
     nextBtn.disabled = true;
+    nextBtn.style.pointerEvents = 'none'; 
+    nextBtn.style.opacity = '0.5';
 
-    console.log("--- Intento de avance ---");
-    // Si aquí sale 1 después de la pregunta 1, es que checkAnswer está sumando.
-    console.log("Índice ANTES de incrementar:", currentQuestionIndex);
-
-    // 3. VERIFICAR FINAL
-    if (!showingDeferredQuestions && currentQuestionIndex >= questions.length - 1) {
-        showResults();
-        isTransitioning = false; // Liberamos para que showResults pueda operar
-        return;
+    // 2. RESET DE ESTADOS: Obligamos a la aplicación a olvidar la pregunta anterior
+    answerProcessed = false;
+    selectedOption = null;
+    if (typeof checkBtn !== 'undefined') {
+        checkBtn.disabled = true;
+        checkBtn.style.display = 'block';
     }
 
-    // 4. INCREMENTO (ÚNICO SITIO)
+    // 3. LÓGICA DE AVANCE (Suma +1 una sola vez)
     if (showingDeferredQuestions) {
         currentDeferredQuestionIndex++;
         if (currentDeferredQuestionIndex >= deferredQuestions.length) {
             showResults();
-            isTransitioning = false;
+            resetTransition();
             return;
         }
     } else {
         currentQuestionIndex++;
     }
 
-    console.log("Índice DESPUÉS de incrementar:", currentQuestionIndex);
-
-    // 5. LÓGICA DE BLOQUES (Descanso/Teoría)
-    if (currentQuestionIndex === 5 && !breakTaken) {
-        showBreakModal();
-        // IMPORTANTE: Aquí NO liberamos isTransitioning hasta que se cierre el modal
+    // 4. VERIFICAR FINAL
+    if (!showingDeferredQuestions && currentQuestionIndex >= questions.length) {
+        showResults();
+        resetTransition();
         return;
     }
 
-    if (!showingDeferredQuestions && blockQuestions.length > 0) {
-        const ultimoIndiceBloque = blockQuestions[blockQuestions.length - 1].index;
-        if (currentQuestionIndex > ultimoIndiceBloque) {
-            if (blockIncorrectQuestions.length > 0 && !tipTheoryShown) {
-                tipTheoryShown = true;
-                showTip();
-                // No liberamos aquí para obligar a ver la teoría
-                return;
-            }
-            // ... resto de lógica de retos ...
-        }
+    // 5. SALTOS ESPECIALES (Teoría/Descanso)
+    // Aquí obligamos a mostrar el modal y "limpiamos" para que no se trabe
+    if (currentQuestionIndex === 5 && !breakTaken) {
+        showBreakModal();
+        resetTransition();
+        return;
     }
 
-    // 6. LIMPIEZA Y CARGA
+    // 6. EJECUCIÓN DEL CAMBIO
     feedbackSection.style.display = 'none';
     nextBtn.style.display = 'none';
     
     saveProgress();
     loadQuestion();
 
-    // 7. REHABILITAR CON SEGURIDAD
-    // Solo permitimos un nuevo avance después de un tiempo prudente
-    setTimeout(() => {
-        isTransitioning = false;
-        nextBtn.disabled = false;
-    }, 800); 
+    // 7. LIBERACIÓN CONTROLADA
+    // Usamos una función auxiliar para asegurar que el botón vuelva a la vida
+    setTimeout(resetTransition, 600);
 }
-          // Mostrar resultados
+
+// Función auxiliar para "desbloquear" el sistema de forma segura
+function resetTransition() {
+    isTransitioning = false;
+    if (nextBtn) {
+        nextBtn.disabled = false;
+        nextBtn.style.pointerEvents = 'auto';
+        nextBtn.style.opacity = '1';
+    }
+}
+
+            // Mostrar resultados
             function showResults() {
                 currentView = 'results';
                 questionCard.style.display = 'none';
