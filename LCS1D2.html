@@ -2704,8 +2704,7 @@ function initializeBlock() {
         }
     }
 }
-// --- FUNCIÓN LOADQUESTION ESTABILIZADA ---
-function loadQuestion() {
+/function loadQuestion() {
     answerProcessed = false; 
 
     // 1. DETENER TEMPORIZADORES PREVIOS
@@ -2738,7 +2737,7 @@ function loadQuestion() {
         return;
     }
     
-    // 4. VERIFICAR LÍMITES (Ajustado para evitar saltos)
+    // 4. VERIFICAR LÍMITES
     if (currentQuestionIndex >= questions.length) {
         if (deferredQuestions && deferredQuestions.length > 0) {
             showingDeferredQuestions = true;
@@ -2750,8 +2749,8 @@ function loadQuestion() {
         return;
     }
     
-    // 5. VERIFICAR DESCANSO (Pregunta 6 real)
-    if (currentQuestionIndex === 5 && !breakTaken) { // Cambiado a 5 para que salte tras la 5ta pregunta
+    // 5. VERIFICAR DESCANSO (En la pregunta 6 real, índice 5)
+    if (currentQuestionIndex === 5 && !breakTaken) {
         showBreakModal();
         return;
     }
@@ -2764,7 +2763,8 @@ function loadQuestion() {
         return;
     }
 
-    // Sincronizar número visual
+    // --- PUNTO CLAVE: Sincronización del número superior ---
+    // Usamos el índice + 1 de forma estricta para que si el índice es 2, diga "Pregunta 3"
     questionNumber.textContent = currentQuestionIndex + 1;
     
     // Separar texto e instrucción
@@ -2775,7 +2775,7 @@ function loadQuestion() {
     textPassage.textContent = textContent; 
     questionText.textContent = actualQuestion; 
     
-    // 7. RENDERIZAR OPCIONES (Limpiando eventos previos)
+    // 7. RENDERIZAR OPCIONES
     optionsContainer.innerHTML = '';
     question.opciones.forEach((option, index) => {
         const optionCard = document.createElement('div');
@@ -2786,7 +2786,6 @@ function loadQuestion() {
                 <div class="option-text">${option}</div>
             </div>
         `;
-        // Usamos onclick para asegurar que no se acumulen clics
         optionCard.onclick = () => selectOption(index);
         optionsContainer.appendChild(optionCard);
     });
@@ -2825,7 +2824,7 @@ function loadQuestion() {
         if (timerBadge) timerBadge.style.display = 'none';
     }
     
-    // 11. GUARDAR Y ACTUALIZAR
+    // 11. ACTUALIZAR PROGRESO (Llamamos a la nueva función que arreglamos)
     updateProgress();
     saveProgress();
 }
@@ -3847,31 +3846,32 @@ function nextQuestion() {
                 saveProgress(true);
             }
             
-       function updateProgress() {
+  function updateProgress() {
+    // El total de respondidas es EXACTAMENTE el índice actual
     let totalAnswered = currentQuestionIndex;
     
-    // 1. Si estamos en diferidas, el total es todas las normales + la posición actual en diferidas
     if (showingDeferredQuestions) {
         totalAnswered = questions.length + currentDeferredQuestionIndex;
     } 
-    // 2. Quitamos el "+1" automático de attempts para que el número solo cambie 
-    // cuando realmente cargamos la siguiente pregunta.
-    else {
-        totalAnswered = currentQuestionIndex;
-    }
     
-    // 3. Cálculo de porcentaje y visualización
+    // Sincronizar el círculo y el porcentaje
     const totalPossible = questions.length + (deferredQuestions ? deferredQuestions.length : 0);
     const progress = (totalAnswered / totalPossible) * 100;
     
     const circumference = 2 * Math.PI * 54;
     const offset = circumference - (progress / 100) * circumference;
     
-    if (progressCircle) progressCircle.style.strokeDashoffset = offset;
-    if (progressPercentage) progressPercentage.textContent = Math.round(progress) + '%';
+    if (typeof progressCircle !== 'undefined' && progressCircle) {
+        progressCircle.style.strokeDashoffset = offset;
+    }
+    if (typeof progressPercentage !== 'undefined' && progressPercentage) {
+        progressPercentage.textContent = Math.round(progress) + '%';
+    }
     
-    // El número que ves en "Respondidas"
-    if (questionsAnswered) questionsAnswered.textContent = totalAnswered;
+    // El número de "Respondidas" en la barra superior
+    if (typeof questionsAnswered !== 'undefined' && questionsAnswered) {
+        questionsAnswered.textContent = totalAnswered;
+    }
 }
          // --- PASO 3: FUNCIÓN DE GUARDADO CORREGIDA ---
 function saveProgress(completed = false) {
