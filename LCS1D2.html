@@ -3697,38 +3697,35 @@ function handleTimeUp() {
         checkAnswer(); // Forzamos la comprobación de la respuesta actual
     }
 }
-
 function nextQuestion() {
+    // 1. ESCUDO ANTIDUPICADOS
     if (isTransitioning) return;
     
-    // VERIFICACIÓN DE SEGURIDAD (Tu sugerencia)
-    // Solo permitimos avanzar si se ha procesado una respuesta O si se ha pospuesto
-    const haRespondido = answerProcessed; 
-    const haPospuesto = false; // Aquí podrías añadir una variable si fuera necesario
-
-    if (!haRespondido) {
-        console.log("Intento de avance bloqueado: No se ha marcado ninguna opción.");
+    // 2. VERIFICACIÓN DE SEGURIDAD
+    // Solo permitimos avanzar si se ha procesado una respuesta (answerProcessed === true)
+    if (!answerProcessed) {
+        console.log("Intento de avance bloqueado: Debes marcar una opción primero.");
         return; 
     }
 
     isTransitioning = true;
     nextBtn.disabled = true;
 
-    // 1. LÓGICA DE BLOQUES DE 3 (TEORÍA)
-    // Comprobamos ANTES de sumar para que el índice sea exacto
+    // 3. LÓGICA DE BLOQUES DE 3 (TEORÍA)
+    // Comprobamos antes de sumar para que el consejo salga en la pregunta correcta (3, 6, 9...)
     if (!showingDeferredQuestions && currentQuestionIndex > 0 && (currentQuestionIndex + 1) % 3 === 0) {
         if (blockIncorrectQuestions && blockIncorrectQuestions.length > 0 && !tipTheoryShown) {
             tipTheoryShown = true;
             showTip(); 
             resetTransition();
-            return; // Se detiene en la 3, 6, 9... para mostrar la teoría
+            return; 
         }
     }
 
-    // 2. REINICIO PARA EL SIGUIENTE BLOQUE
+    // 4. REINICIO DE ESTADO DE TEORÍA
     if (tipTheoryShown) tipTheoryShown = false;
 
-    // 3. INCREMENTO ÚNICO Y SEGURO
+    // 5. INCREMENTO ÚNICO
     if (showingDeferredQuestions) {
         currentDeferredQuestionIndex++;
         if (currentDeferredQuestionIndex >= deferredQuestions.length) {
@@ -3740,15 +3737,15 @@ function nextQuestion() {
         currentQuestionIndex++;
     }
 
-    // 4. VERIFICAR FINAL
+    // 6. VERIFICAR FINAL
     if (!showingDeferredQuestions && currentQuestionIndex >= questions.length) {
         showResults();
         resetTransition();
         return;
     }
 
-    // 5. LIMPIEZA TOTAL PARA LA NUEVA PREGUNTA
-    answerProcessed = false; // IMPORTANTE: Bloqueamos el próximo "Siguiente" hasta que responda la nueva
+    // 7. LIMPIEZA PARA LA NUEVA PREGUNTA
+    answerProcessed = false; // Se bloquea el siguiente avance hasta que se responda la nueva
     selectedOption = null;
     feedbackSection.style.display = 'none';
     nextBtn.style.display = 'none';
@@ -3756,8 +3753,20 @@ function nextQuestion() {
     saveProgress();
     loadQuestion();
 
+    // 8. LIBERACIÓN CONTROLADA
     setTimeout(resetTransition, 600);
 }
+
+// Función auxiliar indispensable para que el botón no se quede trabado
+function resetTransition() {
+    isTransitioning = false;
+    if (nextBtn) {
+        nextBtn.disabled = false;
+        nextBtn.style.pointerEvents = 'auto';
+        nextBtn.style.opacity = '1';
+    }
+}
+
             
 function resetTransition() {
     isTransitioning = false;
