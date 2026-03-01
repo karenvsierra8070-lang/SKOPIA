@@ -2552,68 +2552,79 @@ const modalChallengeTime = document.getElementById('modal-challenge-time');
 const modalChallengeTitle = document.getElementById('modal-challenge-title');
 const modalChallengeIcon = document.getElementById('modal-challenge-icon');
 
-
 // --- PASO 2: LÓGICA DE NAVEGACIÓN SEGURA ---
-            nextBtn.onclick = (e) => {
+nextBtn.onclick = (e) => {
     if (e) e.preventDefault();
-    answerProcessed = false; // Seguridad extra al cambiar de pregunta
-    // ... el resto de la lógica que ya tienes
-                
-                // 1. Limpieza visual inmediata
-                feedbackSection.style.display = 'none';
-                nextBtn.style.display = 'none';
-                
-                // 2. Avanzar el índice según el modo
-                if (showingDeferredQuestions) {
-                    currentDeferredQuestionIndex++;
-                } else {
-                    currentQuestionIndex++;
-                }
+    
+    // Seguridad extra: Reiniciamos el estado de procesamiento para la nueva pregunta
+    answerProcessed = false; 
 
-                // 3. Guardar progreso inmediatamente
-                if (typeof saveProgress === 'function') {
-                    saveProgress();
-                }
+    // 1. Limpieza visual inmediata
+    feedbackSection.style.display = 'none';
+    nextBtn.style.display = 'none';
+    
+    // 2. Avanzar el índice según el modo
+    if (showingDeferredQuestions) {
+        currentDeferredQuestionIndex++;
+    } else {
+        currentQuestionIndex++;
+    }
 
-                // 4. Cargar la siguiente pregunta
-                loadQuestion();
-            };
-            // Cargar preguntas desde JSON
-            async function loadQuestions(isNewQuiz = false) {
-                try {
-                    showNotification('Cargando preguntas...');
-                    const response = await fetch('preguntas.json');
-                    const data = await response.json();
-                    
-                    // Filtrar preguntas por tags "ideas principales" y "basico"
-                    questions = data.filter(question => 
-                        question.tags && 
-                        question.tags.includes("ideas principales") && 
-                        question.tags.includes("basico medio")
-                    );
-                    
-                    // Mezclar preguntas aleatoriamente
-                    questions = shuffleArray(questions).slice(0, 10);
-                    
-                    totalQuestions.textContent = questions.length;
-                    totalQuestionsHeader.textContent = questions.length;
-                    
-                    // Si no es un cuestionario nuevo, cargar progreso guardado
-                    if (!isNewQuiz) {
-                        loadSavedProgress();
-                    }
-                    
-                    // Inicializar el primer bloque de preguntas
-                    initializeBlock();
-                    
-                    loadQuestion();
-                    showNotification('¡Cuestionario cargado correctamente!');
-                } catch (error) {
-                    console.error('Error al cargar las preguntas:', error);
-                    showNotification('Error al cargar las preguntas. Por favor, recarga la página.');
-                }
-            }
-            
+    // 3. Guardar progreso inmediatamente
+    if (typeof saveProgress === 'function') {
+        saveProgress();
+    }
+
+    // 4. Cargar la siguiente pregunta (o finalizar si no hay más)
+    // Verificamos si el índice superó el total de preguntas
+    if (!showingDeferredQuestions && currentQuestionIndex >= questions.length) {
+        if (deferredQuestions && deferredQuestions.length > 0) {
+            showingDeferredQuestions = true;
+            currentDeferredQuestionIndex = 0;
+            loadQuestion();
+        } else {
+            showResults(); // Obliga a pasar a resultados si no hay más
+        }
+    } else {
+        loadQuestion(); // Carga la siguiente normalmente
+    }
+};
+
+// Cargar preguntas desde JSON
+async function loadQuestions(isNewQuiz = false) {
+    try {
+        showNotification('Cargando preguntas...');
+        const response = await fetch('preguntas.json');
+        const data = await response.json();
+        
+        // Filtrar preguntas por tags "ideas principales" y "basico medio"
+        questions = data.filter(question => 
+            question.tags && 
+            question.tags.includes("ideas principales") && 
+            question.tags.includes("basico medio")
+        );
+        
+        // Mezclar preguntas aleatoriamente y tomar las primeras 10
+        questions = shuffleArray(questions).slice(0, 10);
+        
+        totalQuestions.textContent = questions.length;
+        totalQuestionsHeader.textContent = questions.length;
+        
+        // Si no es un cuestionario nuevo, cargar progreso guardado
+        if (!isNewQuiz) {
+            loadSavedProgress();
+        }
+        
+        // Inicializar el primer bloque de preguntas
+        initializeBlock();
+        
+        loadQuestion();
+        showNotification('¡Cuestionario cargado correctamente!');
+    } catch (error) {
+        console.error('Error al cargar las preguntas:', error);
+        showNotification('Error al cargar las preguntas. Por favor, recarga la página.');
+    }
+}
             // Función para mezclar array
             function shuffleArray(array) {
                 const newArray = [...array];
@@ -3110,28 +3121,35 @@ function startChallengeTimer() {
                 checkBtn.disabled = false;
             }
             
-    function checkAnswer() {
-    // SEGURO: Evita que se procese la misma pregunta varias veces
+ function checkAnswer() {
+    // SEGURO: Evita que se procese la misma pregunta varias veces y previene puntos extra
     if (selectedOption === null || answerProcessed) return; 
     
     answerProcessed = true; 
     attempts++;
     let question;
     
+    // Identificar si estamos en preguntas normales o diferidas
     if (showingDeferredQuestions) {
         question = deferredQuestions[currentDeferredQuestionIndex].question;
     } else {
         question = questions[currentQuestionIndex];
     }
+
+    // --- ESCUDO DE SEGURIDAD: Obliga a mostrar resultados si no hay más preguntas ---
+    if (!question) {
+        showResults();
+        return;
+    }
     
     const isCorrect = selectedOption === question.respuestaCorrecta;
     const options = document.querySelectorAll('.option-card');
     
-    // Detener temporizadores
+    // Detener temporizadores activos
     if (challengeTimer) clearInterval(challengeTimer);
     if (deferredTimer) clearInterval(deferredTimer);
     
-    // Resetear efectos visuales
+    // Resetear efectos visuales del texto
     if (typeof showPassageText === 'function') {
         showPassageText(); 
     } else if (textPassage) {
@@ -3142,11 +3160,12 @@ function startChallengeTimer() {
     attempt1.classList.add('used');
     
     if (isCorrect) {
-        // --- LÓGICA CORRECTA ---
+        // --- LÓGICA SI ES CORRECTA ---
         score += 30; 
         currentScore.textContent = score;
         currentStreak++; 
         
+        // Manejo de niveles de desafío
         if (challengeMode) {
             if (challengeLevel === 1) {
                 challenge1Completed = true; 
@@ -3181,7 +3200,7 @@ function startChallengeTimer() {
         });
         
     } else {
-        // --- LÓGICA INCORRECTA ---
+        // --- LÓGICA SI ES INCORRECTA ---
         feedbackSection.className = 'feedback-section incorrect';
         feedbackIcon.className = 'feedback-icon fas fa-times-circle';
         feedbackTitle.textContent = 'Incorrecto';
@@ -3213,10 +3232,10 @@ function startChallengeTimer() {
         });
     }
     
-    // --- PASO 1: DESBLOQUEO DEL BOTÓN SIGUIENTE ---
+    // --- GESTIÓN DE INTERFAZ POST-RESPUESTA ---
     hintBtn.disabled = true;
     
-    // Forzamos que el botón aparezca y sea clicable ANTES de los desafíos
+    // Habilitar botón "Siguiente" y ocultar "Verificar"
     nextBtn.style.display = 'block';
     nextBtn.style.pointerEvents = 'auto'; 
     nextBtn.style.opacity = '1';
@@ -3224,15 +3243,16 @@ function startChallengeTimer() {
     checkBtn.style.display = 'none';
     feedbackSection.style.display = 'block';
     
+    // Actualizar progreso y almacenamiento local
     updateProgress();
     saveProgress();
 
-    // LLAMADA AL ESTADO DEL DESAFÍO (con protección de errores)
+    // Verificación final del estado del desafío
     if (typeof checkChallengeStatus === 'function') {
         try {
             checkChallengeStatus();
         } catch (e) {
-            console.error("Error en checkChallengeStatus, pero el flujo continúa:", e);
+            console.error("Error en checkChallengeStatus:", e);
         }
     }
 }
