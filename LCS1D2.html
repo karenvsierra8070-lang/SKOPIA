@@ -3987,144 +3987,160 @@ function saveProgress(completed = false) {
                 }, duration);
             }
             
-            // Reiniciar cuestionario con preguntas aleatorias
-            function retryQuiz() {
-                // Resetear estado
-                currentQuestionIndex = 0;
-                score = 0;
-                attempts = 0;
-                selectedOption = null;
-                hintsUsed = 0;
-                currentStreak = 0;
-                maxStreak = 0;
-                totalTimeSpent = 0;
-                startTime = Date.now();
-                currentView = 'quiz';
-                challengeMode = false;
-                challengeLevel = 0;
-                deferredQuestions = [];
-                difficultQuestions = [];
-                breakTaken = false;
-                showingDeferredQuestions = false;
-                currentDeferredQuestionIndex = 0;
-                tipTheoryShown = false;
-                
-                // Limpiar progreso guardado
-                localStorage.removeItem('skopia_quiz_progress_LCS1D2');
-                
-                // Cargar nuevas preguntas aleatorias
-                loadQuestions(true); // true indica que es un nuevo cuestionario
-                
-                // Ocultar resultados y mostrar cuestionario
-                resultsContainer.style.display = 'none';
-                questionCard.style.display = 'block';
-                
-                showNotification('Generando nuevo cuestionario con preguntas aleatorias...');
-            }
-            
-        // Event listeners
-            hintBtn.addEventListener('click', showHint);
-            checkBtn.addEventListener('click', checkAnswer);
-            nextBtn.addEventListener('click', nextQuestion);
-            continueToTheoryBtn.addEventListener('click', showTheory);
-            skipTheoryBtn.addEventListener('click', skipTheoryAndContinue);
-            continueQuizBtn.addEventListener('click', continueQuiz);
-            difficultBtn.addEventListener('click', toggleDifficult);
-            deferBtn.addEventListener('click', toggleDeferred);
-            startChallengeBtn.addEventListener('click', () => {
-                challengeModal.classList.remove('active');
-                // Arrancar el cronómetro inmediatamente al cerrar el modal
-                startChallengeTimer();
-                loadQuestion();
-            });
-            submitDeferredBtn.addEventListener('click', () => {
-                // Este botón ya no se usa, pero lo dejamos por si se necesita en el futuro
-            });
-            retryBtn.addEventListener('click', retryQuiz);
-            
-            backBtn.addEventListener('click', () => {
-                if (currentView === 'quiz') {
-                    if (confirm('¿Estás seguro de que quieres salir? Perderás tu progreso actual.')) {
-                        window.location.href = 'LCS1D.html';
-                    }
-                } else if (currentView === 'tip') {
-                    currentView = 'quiz';
-                    tipContainer.style.display = 'none';
-                    questionCard.style.display = 'block';
-                } else if (currentView === 'theory') {
-                    currentView = 'tip';
-                    theoryContainer.style.display = 'none';
-                    tipContainer.style.display = 'block';
-                } else if (currentView === 'deferred') {
-                    if (confirm('¿Estás seguro de que quieres salir? Las preguntas diferidas se contarán como incorrectas.')) {
-                        // Marcar todas las preguntas diferidas como incorrectas
-                        deferredQuestions.forEach(deferredQuestion => {
-                            saveIncorrectQuestion(deferredQuestion.question);
-                        });
-                        
-                        // Limpiar preguntas diferidas
-                        deferredQuestions = [];
-                        showingDeferredQuestions = false;
-                        saveProgress();
-                        
-                        // Mostrar resultados
-                        showResults();
-                    }
-                }
-            });
-            
-            finishBtn.addEventListener('click', () => {
-                window.location.href = 'LCS1D.html';
-            });
-            
-            reviewIncorrectBtn.addEventListener('click', () => {
-                window.location.href = 'LCS1DD.html';
+          // Reiniciar cuestionario con preguntas aleatorias
+function retryQuiz() {
+    // Resetear estado
+    currentQuestionIndex = 0;
+    score = 0;
+    attempts = 0;
+    selectedOption = null;
+    hintsUsed = 0;
+    currentStreak = 0;
+    maxStreak = 0;
+    totalTimeSpent = 0;
+    startTime = Date.now();
+    currentView = 'quiz';
+    challengeMode = false;
+    challengeLevel = 0;
+    deferredQuestions = [];
+    difficultQuestions = [];
+    breakTaken = false;
+    showingDeferredQuestions = false;
+    currentDeferredQuestionIndex = 0;
+    tipTheoryShown = false;
+    
+    // --- LIMPIEZA DE TEMPORIZADORES Y BADGES ---
+    if (typeof challengeTimer !== 'undefined') clearInterval(challengeTimer);
+    if (typeof deferredTimer !== 'undefined') clearInterval(deferredTimer);
+    
+    if (typeof timerBadge !== 'undefined' && timerBadge) {
+        timerBadge.style.display = 'none';
+    }
+    
+    const dynamicBadge = document.getElementById('deferred-timer-badge');
+    if (dynamicBadge) {
+        dynamicBadge.remove();
+    }
+
+    if (typeof isTransitioning !== 'undefined') isTransitioning = false;
+    // -------------------------------------------
+    
+    // Limpiar progreso guardado
+    localStorage.removeItem('skopia_quiz_progress_LCS1D2');
+    
+    // Cargar nuevas preguntas aleatorias
+    loadQuestions(true); // true indica que es un nuevo cuestionario
+    
+    // Ocultar resultados y mostrar cuestionario
+    resultsContainer.style.display = 'none';
+    questionCard.style.display = 'block';
+    
+    showNotification('Generando nuevo cuestionario con preguntas aleatorias...');
+}
+
+// Event listeners
+hintBtn.addEventListener('click', showHint);
+checkBtn.addEventListener('click', checkAnswer);
+nextBtn.addEventListener('click', nextQuestion);
+continueToTheoryBtn.addEventListener('click', showTheory);
+skipTheoryBtn.addEventListener('click', skipTheoryAndContinue);
+continueQuizBtn.addEventListener('click', continueQuiz);
+difficultBtn.addEventListener('click', toggleDifficult);
+deferBtn.addEventListener('click', toggleDeferred);
+startChallengeBtn.addEventListener('click', () => {
+    challengeModal.classList.remove('active');
+    // Arrancar el cronómetro inmediatamente al cerrar el modal
+    startChallengeTimer();
+    loadQuestion();
+});
+submitDeferredBtn.addEventListener('click', () => {
+    // Este botón ya no se usa, pero lo dejamos por si se necesita en el futuro
+});
+retryBtn.addEventListener('click', retryQuiz);
+
+backBtn.addEventListener('click', () => {
+    if (currentView === 'quiz') {
+        if (confirm('¿Estás seguro de que quieres salir? Perderás tu progreso actual.')) {
+            window.location.href = 'LCS1D.html';
+        }
+    } else if (currentView === 'tip') {
+        currentView = 'quiz';
+        tipContainer.style.display = 'none';
+        questionCard.style.display = 'block';
+    } else if (currentView === 'theory') {
+        currentView = 'tip';
+        theoryContainer.style.display = 'none';
+        tipContainer.style.display = 'block';
+    } else if (currentView === 'deferred') {
+        if (confirm('¿Estás seguro de que quieres salir? Las preguntas diferidas se contarán como incorrectas.')) {
+            // Marcar todas las preguntas diferidas como incorrectas
+            deferredQuestions.forEach(deferredQuestion => {
+                saveIncorrectQuestion(deferredQuestion.question);
             });
             
-            // Event listeners para el menú de usuario
-            userAvatar.addEventListener('click', () => {
-                userDropdown.classList.toggle('active');
-            });
+            // Limpiar preguntas diferidas
+            deferredQuestions = [];
+            showingDeferredQuestions = false;
+            saveProgress();
             
-            document.getElementById('logout-btn').addEventListener('click', () => {
-                import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
-                    signOut(window.auth).then(() => window.location.href = 'index.html');
-                });
-            });
-            
-            window.addEventListener('click', (event) => {
-                if (!event.target.closest('.user-menu')) {
-                    userDropdown.classList.remove('active');
-                }
-            });
-            
-            // Floating buttons
-            document.getElementById('btn-misiones').addEventListener('click', () => {
-                showNotification('🎯 Misiones próximamente...');
-            });
-            
-            document.getElementById('btn-nivel').addEventListener('click', () => {
-                showNotification('⭐ Nivel actual: Aprendiz');
-            });
-            
-            document.getElementById('btn-progreso').addEventListener('click', () => {
-                showNotification('📊 Progreso general: 45%');
-            });
-            
-            // Actualizar información del usuario cuando esté disponible
-            window.addEventListener('userReady', (e) => {
-                const user = e.detail.user;
-                if (user.displayName) {
-                    userAvatar.textContent = user.displayName.charAt(0).toUpperCase();
-                } else if (user.email) {
-                    const emailName = user.email.split('@')[0];
-                    userAvatar.textContent = emailName.charAt(0).toUpperCase();
-                }
-            });
-            
-            // Inicializar
-            loadQuestions();
-        });
-    </script>
+            // Mostrar resultados
+            showResults();
+        }
+    }
+});
+
+finishBtn.addEventListener('click', () => {
+    window.location.href = 'LCS1D.html';
+});
+
+reviewIncorrectBtn.addEventListener('click', () => {
+    window.location.href = 'LCS1DD.html';
+});
+
+// Event listeners para el menú de usuario
+userAvatar.addEventListener('click', () => {
+    userDropdown.classList.toggle('active');
+});
+
+document.getElementById('logout-btn').addEventListener('click', () => {
+    import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
+        signOut(window.auth).then(() => window.location.href = 'index.html');
+    });
+});
+
+window.addEventListener('click', (event) => {
+    if (!event.target.closest('.user-menu')) {
+        userDropdown.classList.remove('active');
+    }
+});
+
+// Floating buttons
+document.getElementById('btn-misiones').addEventListener('click', () => {
+    showNotification('🎯 Misiones próximamente...');
+});
+
+document.getElementById('btn-nivel').addEventListener('click', () => {
+    showNotification('⭐ Nivel actual: Aprendiz');
+});
+
+document.getElementById('btn-progreso').addEventListener('click', () => {
+    showNotification('📊 Progreso general: 45%');
+});
+
+// Actualizar información del usuario cuando esté disponible
+window.addEventListener('userReady', (e) => {
+    const user = e.detail.user;
+    if (user.displayName) {
+        userAvatar.textContent = user.displayName.charAt(0).toUpperCase();
+    } else if (user.email) {
+        const emailName = user.email.split('@')[0];
+        userAvatar.textContent = emailName.charAt(0).toUpperCase();
+    }
+});
+
+// Inicializar
+loadQuestions();
+});
+</script>
 </body>
 </html>
