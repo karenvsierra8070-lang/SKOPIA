@@ -3765,53 +3765,71 @@ function handleTimeUp() {
         checkAnswer(); // Forzamos la comprobación de la respuesta actual
     }
 }
-      // Siguiente pregunta (Versión Unificada y Sin Saltos)
+   // Siguiente pregunta (Versión con Freno de Mano)
 function nextQuestion() {
-    // 1. EL SEGURO FINAL: Si ya no hay más preguntas, vamos a resultados
+    // DIAGNÓSTICO: Si ves esto dos veces en la consola con un solo clic, el error es el HTML
+    console.log("Intentando avanzar a la pregunta:", currentQuestionIndex + 1);
+
+    // 1. LIMPIEZA INMEDIATA: Evita que el botón responda a más clics mientras carga
+    nextBtn.style.pointerEvents = 'none'; 
+    answerProcessed = false; 
+
+    // 2. EL SEGURO FINAL
     if (!showingDeferredQuestions && currentQuestionIndex >= questions.length - 1) {
         showResults();
         return;
     }
 
-    // 2. Limpieza para la nueva pregunta
-    answerProcessed = false; 
-    feedbackSection.style.display = 'none';
-    nextBtn.style.display = 'none';
-
-    // 3. Avance de 1 en 1 según el modo
+    // 3. AVANCE CONTROLADO (Solo sumamos aquí, en ningún otro sitio)
     if (showingDeferredQuestions) {
         currentDeferredQuestionIndex++;
-        // Si terminamos las diferidas, vamos a resultados
         if (currentDeferredQuestionIndex >= deferredQuestions.length) {
             showResults();
             return;
         }
     } else {
-        currentQuestionIndex++;
+        // IMPORTANTE: Solo sumamos si no estamos al final
+        if (currentQuestionIndex < questions.length - 1) {
+            currentQuestionIndex++;
+        } else {
+            showResults();
+            return;
+        }
     }
 
-    // 4. Verificación de bloques (Teoría y Desafíos)
-    if (!showingDeferredQuestions && blockQuestions.length > 0 && currentQuestionIndex > blockQuestions[blockQuestions.length - 1].index) {
-        // Prioridad: Mostrar teoría si hubo fallos
-        if (blockIncorrectQuestions.length > 0 && !tipTheoryShown) {
-            tipTheoryShown = true;
-            showTip();
-            return; 
-        } 
-        
-        // Verificar si entra en modo desafío
-        checkChallengeStatus();
-        return; 
+    // 4. VERIFICACIÓN DE BLOQUES
+    if (!showingDeferredQuestions && blockQuestions && blockQuestions.length > 0) {
+        const lastBlockIndex = blockQuestions[blockQuestions.length - 1].index;
+        if (currentQuestionIndex > lastBlockIndex) {
+            if (typeof blockIncorrectQuestions !== 'undefined' && blockIncorrectQuestions.length > 0 && !tipTheoryShown) {
+                tipTheoryShown = true;
+                showTip();
+                return;
+            }
+            if (typeof checkChallengeStatus === 'function') {
+                checkChallengeStatus();
+                return;
+            }
+        }
     }
+
+    // 5. PREPARAR INTERFAZ
+    feedbackSection.style.display = 'none';
+    nextBtn.style.display = 'none';
     
-    // 5. Cargar la pregunta físicamente
     if (passageContainer) {
         passageContainer.style.opacity = '1';
         passageContainer.style.display = 'block';
     }
 
+    // 6. CARGA FINAL
     saveProgress();
     loadQuestion();
+    
+    // Reactivar el botón para la siguiente vez
+    setTimeout(() => {
+        nextBtn.style.pointerEvents = 'auto';
+    }, 500);
 }
           // Mostrar resultados
             function showResults() {
