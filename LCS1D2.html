@@ -3699,24 +3699,18 @@ function handleTimeUp() {
 }
 
 function nextQuestion() {
-    // 1. BLOQUEO INMEDIATO: Impedimos cualquier otra ejecución
     if (isTransitioning) return;
     isTransitioning = true;
-    
-    // Deshabilitamos el botón físicamente para que no reciba más clics
     nextBtn.disabled = true;
-    nextBtn.style.pointerEvents = 'none'; 
-    nextBtn.style.opacity = '0.5';
 
-    // 2. RESET DE ESTADOS: Obligamos a la aplicación a olvidar la pregunta anterior
-    answerProcessed = false;
-    selectedOption = null;
-    if (typeof checkBtn !== 'undefined') {
-        checkBtn.disabled = true;
-        checkBtn.style.display = 'block';
+    // 1. VERIFICAR SI LLEGAMOS AL FINAL
+    if (!showingDeferredQuestions && currentQuestionIndex >= questions.length - 1) {
+        showResults();
+        resetTransition();
+        return;
     }
 
-    // 3. LÓGICA DE AVANCE (Suma +1 una sola vez)
+    // 2. EL AVANCE (Sumamos 1)
     if (showingDeferredQuestions) {
         currentDeferredQuestionIndex++;
         if (currentDeferredQuestionIndex >= deferredQuestions.length) {
@@ -3728,31 +3722,53 @@ function nextQuestion() {
         currentQuestionIndex++;
     }
 
-    // 4. VERIFICAR FINAL
-    if (!showingDeferredQuestions && currentQuestionIndex >= questions.length) {
-        showResults();
-        resetTransition();
-        return;
+    // 3. IDENTIDAD DE LA PÁGINA: BLOQUES DE 3
+    // Evaluamos justo después de la pregunta 3, 6, 9, etc.
+    if (!showingDeferredQuestions) {
+        // ¿Acabamos de completar un múltiplo de 3? (3, 6, 9...)
+        // Usamos (currentQuestionIndex) porque ya sumamos el +1 arriba
+        if (currentQuestionIndex % 3 === 0) {
+            // REGLA: Si hubo al menos una falla en este bloque
+            if (blockIncorrectQuestions && blockIncorrectQuestions.length > 0) {
+                console.log("Fallas detectadas en el bloque. Mostrando teoría...");
+                tipTheoryShown = true;
+                showTip(); // Llamamos a tu función de consejos
+                
+                // IMPORTANTE: Reseteamos las fallas para el siguiente bloque
+                // blockIncorrectQuestions = []; 
+                
+                resetTransition();
+                return; // Nos detenemos aquí para que lea la teoría
+            }
+        }
     }
 
-    // 5. SALTOS ESPECIALES (Teoría/Descanso)
-    // Aquí obligamos a mostrar el modal y "limpiamos" para que no se trabe
+    // 4. EL DESCANSO (Sigue en la 5 o donde prefieras)
     if (currentQuestionIndex === 5 && !breakTaken) {
         showBreakModal();
         resetTransition();
         return;
     }
 
-    // 6. EJECUCIÓN DEL CAMBIO
+    // 5. CARGA NORMAL SI TODO VA BIEN
+    answerProcessed = false;
+    selectedOption = null;
     feedbackSection.style.display = 'none';
     nextBtn.style.display = 'none';
     
     saveProgress();
     loadQuestion();
 
-    // 7. LIBERACIÓN CONTROLADA
-    // Usamos una función auxiliar para asegurar que el botón vuelva a la vida
     setTimeout(resetTransition, 600);
+}
+
+function resetTransition() {
+    isTransitioning = false;
+    if (nextBtn) {
+        nextBtn.disabled = false;
+        nextBtn.style.pointerEvents = 'auto';
+        nextBtn.style.opacity = '1';
+    }
 }
 
 // Función auxiliar para "desbloquear" el sistema de forma segura
