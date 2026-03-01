@@ -2704,9 +2704,9 @@ function initializeBlock() {
         }
     }
 }
-// --- FUNCIÓN LOADQUESTION CORREGIDA ---
+// --- FUNCIÓN LOADQUESTION ESTABILIZADA ---
 function loadQuestion() {
-    answerProcessed = false; // Paso 1: Resetear el seguro de puntos
+    answerProcessed = false; 
 
     // 1. DETENER TEMPORIZADORES PREVIOS
     if (typeof challengeTimer !== 'undefined') {
@@ -2738,45 +2738,44 @@ function loadQuestion() {
         return;
     }
     
-    // 4. VERIFICAR FIN DEL CUESTIONARIO (Corregido para evitar el error de 'undefined')
+    // 4. VERIFICAR LÍMITES (Ajustado para evitar saltos)
     if (currentQuestionIndex >= questions.length) {
         if (deferredQuestions && deferredQuestions.length > 0) {
             showingDeferredQuestions = true;
             currentDeferredQuestionIndex = 0;
             loadDeferredQuestion();
         } else {
-            showResults(); // Lanza resultados si no hay más preguntas ni diferidas
+            showResults(); 
         }
         return;
     }
     
-    // 5. VERIFICAR DESCANSO (Pregunta 5)
-    if (currentQuestionIndex === 6 && !breakTaken) {
+    // 5. VERIFICAR DESCANSO (Pregunta 6 real)
+    if (currentQuestionIndex === 5 && !breakTaken) { // Cambiado a 5 para que salte tras la 5ta pregunta
         showBreakModal();
         return;
     }
     
-    // 6. CARGAR DATOS DEL JSON (Blindado)
+    // 6. CARGAR DATOS DEL JSON
     const question = questions[currentQuestionIndex];
     
-    // Si por algún error de índice la pregunta no existe, salimos a resultados
     if (!question) {
         showResults();
         return;
     }
 
+    // Sincronizar número visual
     questionNumber.textContent = currentQuestionIndex + 1;
     
-    // Separar el texto largo de la instrucción
+    // Separar texto e instrucción
     const parts = question.pregunta.split('\n\n');
     const textContent = parts[0]; 
     const actualQuestion = parts[1] || question.pregunta; 
     
-    // Inyectar contenido en el HTML
     textPassage.textContent = textContent; 
     questionText.textContent = actualQuestion; 
     
-    // 7. RENDERIZAR OPCIONES
+    // 7. RENDERIZAR OPCIONES (Limpiando eventos previos)
     optionsContainer.innerHTML = '';
     question.opciones.forEach((option, index) => {
         const optionCard = document.createElement('div');
@@ -2787,6 +2786,7 @@ function loadQuestion() {
                 <div class="option-text">${option}</div>
             </div>
         `;
+        // Usamos onclick para asegurar que no se acumulen clics
         optionCard.onclick = () => selectOption(index);
         optionsContainer.appendChild(optionCard);
     });
@@ -2794,7 +2794,8 @@ function loadQuestion() {
     // 8. RESETEAR ESTADO DE INTERFAZ
     selectedOption = null;
     attempts = 0;
-    attempt1.classList.remove('used');
+    if (typeof attempt1 !== 'undefined' && attempt1) attempt1.classList.remove('used');
+    
     hintBox.style.display = 'none';
     feedbackSection.style.display = 'none';
     nextBtn.style.display = 'none';
@@ -2810,21 +2811,21 @@ function loadQuestion() {
     
     // 10. LÓGICA DE DESAFÍO
     if (challengeMode) {
-        challengeBadge.style.display = 'flex';
-        timerBadge.style.display = 'flex';
+        if (challengeBadge) challengeBadge.style.display = 'flex';
+        if (timerBadge) timerBadge.style.display = 'flex';
         
         if (challengeLevel === 1) {
-            challengeLabel.textContent = '1: MEMORIA';
+            if (challengeLabel) challengeLabel.textContent = '1: MEMORIA';
         } else if (challengeLevel === 2) {
-            challengeLabel.textContent = '2: TODO O NADA';
+            if (challengeLabel) challengeLabel.textContent = '2: TODO O NADA';
         }
         startChallengeTimer();
     } else {
-        challengeBadge.style.display = 'none';
-        timerBadge.style.display = 'none';
+        if (challengeBadge) challengeBadge.style.display = 'none';
+        if (timerBadge) timerBadge.style.display = 'none';
     }
     
-    // 11. GUARDAR PROGRESO
+    // 11. GUARDAR Y ACTUALIZAR
     updateProgress();
     saveProgress();
 }
