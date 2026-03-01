@@ -3700,17 +3700,35 @@ function handleTimeUp() {
 
 function nextQuestion() {
     if (isTransitioning) return;
+    
+    // VERIFICACIÓN DE SEGURIDAD (Tu sugerencia)
+    // Solo permitimos avanzar si se ha procesado una respuesta O si se ha pospuesto
+    const haRespondido = answerProcessed; 
+    const haPospuesto = false; // Aquí podrías añadir una variable si fuera necesario
+
+    if (!haRespondido) {
+        console.log("Intento de avance bloqueado: No se ha marcado ninguna opción.");
+        return; 
+    }
+
     isTransitioning = true;
     nextBtn.disabled = true;
 
-    // 1. VERIFICAR SI LLEGAMOS AL FINAL
-    if (!showingDeferredQuestions && currentQuestionIndex >= questions.length - 1) {
-        showResults();
-        resetTransition();
-        return;
+    // 1. LÓGICA DE BLOQUES DE 3 (TEORÍA)
+    // Comprobamos ANTES de sumar para que el índice sea exacto
+    if (!showingDeferredQuestions && currentQuestionIndex > 0 && (currentQuestionIndex + 1) % 3 === 0) {
+        if (blockIncorrectQuestions && blockIncorrectQuestions.length > 0 && !tipTheoryShown) {
+            tipTheoryShown = true;
+            showTip(); 
+            resetTransition();
+            return; // Se detiene en la 3, 6, 9... para mostrar la teoría
+        }
     }
 
-    // 2. EL AVANCE (Sumamos 1)
+    // 2. REINICIO PARA EL SIGUIENTE BLOQUE
+    if (tipTheoryShown) tipTheoryShown = false;
+
+    // 3. INCREMENTO ÚNICO Y SEGURO
     if (showingDeferredQuestions) {
         currentDeferredQuestionIndex++;
         if (currentDeferredQuestionIndex >= deferredQuestions.length) {
@@ -3722,36 +3740,15 @@ function nextQuestion() {
         currentQuestionIndex++;
     }
 
-    // 3. IDENTIDAD DE LA PÁGINA: BLOQUES DE 3
-    // Evaluamos justo después de la pregunta 3, 6, 9, etc.
-    if (!showingDeferredQuestions) {
-        // ¿Acabamos de completar un múltiplo de 3? (3, 6, 9...)
-        // Usamos (currentQuestionIndex) porque ya sumamos el +1 arriba
-        if (currentQuestionIndex % 3 === 0) {
-            // REGLA: Si hubo al menos una falla en este bloque
-            if (blockIncorrectQuestions && blockIncorrectQuestions.length > 0) {
-                console.log("Fallas detectadas en el bloque. Mostrando teoría...");
-                tipTheoryShown = true;
-                showTip(); // Llamamos a tu función de consejos
-                
-                // IMPORTANTE: Reseteamos las fallas para el siguiente bloque
-                // blockIncorrectQuestions = []; 
-                
-                resetTransition();
-                return; // Nos detenemos aquí para que lea la teoría
-            }
-        }
-    }
-
-    // 4. EL DESCANSO (Sigue en la 5 o donde prefieras)
-    if (currentQuestionIndex === 5 && !breakTaken) {
-        showBreakModal();
+    // 4. VERIFICAR FINAL
+    if (!showingDeferredQuestions && currentQuestionIndex >= questions.length) {
+        showResults();
         resetTransition();
         return;
     }
 
-    // 5. CARGA NORMAL SI TODO VA BIEN
-    answerProcessed = false;
+    // 5. LIMPIEZA TOTAL PARA LA NUEVA PREGUNTA
+    answerProcessed = false; // IMPORTANTE: Bloqueamos el próximo "Siguiente" hasta que responda la nueva
     selectedOption = null;
     feedbackSection.style.display = 'none';
     nextBtn.style.display = 'none';
@@ -3761,7 +3758,7 @@ function nextQuestion() {
 
     setTimeout(resetTransition, 600);
 }
-
+            
 function resetTransition() {
     isTransitioning = false;
     if (nextBtn) {
