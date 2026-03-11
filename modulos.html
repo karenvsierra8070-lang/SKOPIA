@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -43,9 +43,11 @@
 
         function initializePage(user) {
             const logoutBtn = document.getElementById('logout-btn');
-            logoutBtn.addEventListener('click', () => {
-                signOut(auth).then(() => window.location.href = 'index.html');
-            });
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    signOut(auth).then(() => window.location.href = 'index.html');
+                });
+            }
         }
     </script>
 
@@ -75,6 +77,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow-x: hidden; /* Prevent horizontal scroll */
         }
 
         /* --- BARRA DE NAVEGACIÓN PRINCIPAL (REESTRUCTURADA POR MÓDULOS) --- */
@@ -317,6 +320,57 @@
             to { opacity: 1; }
         }
 
+        /* --- NUEVA SECCIÓN: INFO ICFES (AGREGADO) --- */
+        .info-icfes-container {
+            max-width: 1200px;
+            margin: 0 auto 40px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            animation: fadeIn 1s ease-in-out;
+        }
+        .info-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 25px var(--color-sombra);
+            border-top: 5px solid var(--color-oliva-medio);
+            transition: transform 0.3s;
+        }
+        .info-card:hover {
+            transform: translateY(-5px);
+        }
+        .info-card h3 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.8rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .info-card p {
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        .info-card ul {
+            list-style: none;
+        }
+        .info-card ul li {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 8px;
+            color: #444;
+        }
+        .info-card ul li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--color-oliva-medio);
+            font-weight: bold;
+        }
+
         /* --- MAIN CONTENT --- */
         .main-content {
             flex-grow: 1;
@@ -331,6 +385,8 @@
             grid-template-columns: repeat(2, 1fr);
             gap: 30px;
             flex-grow: 1;
+            max-width: 1000px; /* Added for better centering */
+            width: 100%;
         }
         .module-card {
             background: white;
@@ -476,6 +532,57 @@
 
         .info { font-family: 'Roboto', sans-serif; color:var(--color-oliva-oscuro); font-size:1.1rem; margin-bottom:12px; }
 
+        /* --- TOUR GUIDE STYLES (AGREGADO) --- */
+        .tour-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 9000;
+            display: none;
+        }
+        .tour-overlay.active { display: block; }
+        
+        .tour-highlight {
+            position: relative;
+            z-index: 9001;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.6);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .tour-tooltip {
+            position: fixed;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 300px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            z-index: 9002;
+            text-align: center;
+        }
+        .tour-tooltip h4 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: var(--color-oliva-oscuro);
+        }
+        .tour-tooltip p {
+            margin-bottom: 15px;
+            color: #555;
+        }
+        .tour-tooltip button {
+            background: var(--color-oliva-oscuro);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
         @media (max-width: 1024px) {
             .main-navigation > ul > li > .dropdown {
                 position: static;
@@ -501,19 +608,30 @@
             .main-navigation > ul > li > a, .main-navigation > ul > li > span {
                 padding: 15px;
             }
-            .main-content { flex-direction: column; }
+            .main-content { flex-direction: column; padding: 20px; }
             .modules-grid { grid-template-columns: 1fr; width: 100%; }
             .mascota-container { width: 100%; margin-top: 30px; flex-direction: column; }
             .panel-box { right: 10px; width: 92%; top: 55%; transform: translateY(-55%); }
             .floating-icons { right: 10px; }
+            
+            /* Adjust tour tooltip for mobile */
+            .tour-tooltip { width: 90%; left: 5% !important; top: auto !important; bottom: 20px !important; }
         }
     </style>
      <script type="module" src="./global-settings.js"></script>
 </head>
 
 <body>
+    <!-- TOUR OVERLAY (AGREGADO) -->
+    <div class="tour-overlay" id="tour-overlay"></div>
+    <div class="tour-tooltip" id="tour-tooltip" style="display: none;">
+        <h4 id="tour-title"></h4>
+        <p id="tour-text"></p>
+        <button id="tour-next-btn">Siguiente</button>
+    </div>
+
     <!-- BARRA DE NAVEGACIÓN PRINCIPAL (REESTRUCTURADA POR MÓDULOS) -->
-    <nav class="main-navigation">
+    <nav class="main-navigation" id="step-nav">
         <ul>
             <li>
                 <span><span class="emoji">🟦</span> MÓDULO 1 — Lectura Crítica</span>
@@ -725,7 +843,33 @@
         <h2 class="bienvenida">¡BIENVENIDO!</h2>
     </section>
 
-    <main class="main-content">
+    <!-- NUEVA SECCIÓN INFORMATIVA (AGREGADO) -->
+    <section class="info-icfes-container" id="step-info">
+        <div class="info-card">
+            <h3><i class="fas fa-question-circle"></i> ¿Qué es la prueba ICFES SABER PRO?</h3>
+            <p>Es un examen de estado en Colombia que evalúa las competencias genéricas de los estudiantes próximos a culminar sus programas de educación superior. Mide habilidades transversales y no tanto conocimiento teórico puro.</p>
+        </div>
+        <div class="info-card">
+            <h3><i class="fas fa-clipboard-check"></i> ¿Qué evalúa?</h3>
+            <ul>
+                <li><strong>Lectura Crítica:</strong> Comprensión de textos y argumentación.</li>
+                <li><strong>Razonamiento Cuantitativo:</strong> Resolución de problemas matemáticos.</li>
+                <li><strong>Competencias Ciudadanas:</strong> Convivencia y ética social.</li>
+                <li><strong>Inglés:</strong> Nivel de competencia comunicativa.</li>
+                <li><strong>Comunicación Escrita:</strong> Producción textual.</li>
+            </ul>
+        </div>
+        <div class="info-card">
+            <h3><i class="fas fa-lightbulb"></i> Consejos Clave</h3>
+            <ul>
+                <li>Lee cuidadosamente cada enunciado; las trampas están en los detalles.</li>
+                <li>Administra tu tiempo; no te estanques en una sola pregunta.</li>
+                <li>Practica con simulacros para familiarizarte con el formato digital.</li>
+            </ul>
+        </div>
+    </section>
+
+    <main class="main-content" id="step-modules">
         <section class="modules-grid">
             <div class="module-card module-lectura">
                 <h3>Lectura Crítica</h3>
@@ -754,7 +898,7 @@
     </main>
 
     <!-- ADDED: Floating vertical icons -->
-    <div class="floating-icons" aria-hidden="false">
+    <div class="floating-icons" id="step-floats" aria-hidden="false">
         <button id="btn-misiones" title="Misiones">🎯</button>
         <button id="btn-nivel" title="Nivel actual">⭐</button>
         <button id="btn-progreso" title="Progreso">📊</button>
@@ -813,9 +957,11 @@
         /*************************************************************************
          *  LOCAL DATA: 100 missions (fixed values taken from the updated list)
          *  Each mission: { id, title, points, completed }
+         *  RESTORED COMPLETELY AS REQUESTED
          *************************************************************************/
         const MISSIONS_KEY = 'skopia_missions_v1';
         const EXAMS_KEY = 'skopia_exam_scores_by_tag_v1';
+        const TOUR_KEY = 'skopia_tour_completed_v1'; // Added for tour logic
 
         const missionsTemplate = [
             { id: 1, title: "Completa tu primer examen", points: 50 },
@@ -1246,6 +1392,85 @@
                     if (targetPage) { window.location.href = targetPage; }
                 });
             });
+
+            /*************************************************************************
+             *  START TOUR GUIDE LOGIC (AGREGADO)
+             *************************************************************************/
+            const tourSteps = [
+                { id: 'step-nav', title: 'Navegación Principal', text: 'Aquí encuentras todos los módulos y ejercicios organizados por categoría.', position: 'bottom' },
+                { id: 'step-info', title: 'Información ICFES', text: 'Antes de empezar, conoce qué es la prueba Saber Pro y qué evalúa.', position: 'top' },
+                { id: 'step-modules', title: 'Rutas de Aprendizaje', text: 'Selecciona un módulo para iniciar tu práctica y ganar estrellas.', position: 'top' },
+                { id: 'step-floats', title: 'Tu Progreso', text: 'Aquí puedes ver tus misiones activas, tu nivel y tus estadísticas de estudio.', position: 'left' }
+            ];
+
+            let currentTourStep = 0;
+            const overlay = document.getElementById('tour-overlay');
+            const tooltip = document.getElementById('tour-tooltip');
+            const tooltipTitle = document.getElementById('tour-title');
+            const tooltipText = document.getElementById('tour-text');
+            const nextBtn = document.getElementById('tour-next-btn');
+
+            function showTourStep(index) {
+                if (index >= tourSteps.length) {
+                    endTour();
+                    return;
+                }
+
+                const step = tourSteps[index];
+                const targetElement = document.getElementById(step.id);
+
+                if (targetElement) {
+                    // Remove highlight from previous
+                    document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight'));
+                    
+                    // Add highlight
+                    targetElement.classList.add('tour-highlight');
+                    
+                    // Position tooltip
+                    const rect = targetElement.getBoundingClientRect();
+                    tooltip.style.display = 'block';
+                    tooltipTitle.textContent = step.title;
+                    tooltipText.textContent = step.text;
+                    
+                    // Simple central positioning logic
+                    let top = rect.bottom + 15;
+                    if(step.position === 'top') top = rect.top - tooltip.offsetHeight - 15;
+                    if(step.position === 'left') top = rect.top;
+                    
+                    let left = rect.left + (rect.width / 2) - 150;
+
+                    // Adjust if off screen
+                    if (top < 10) top = rect.bottom + 15;
+                    if (left < 10) left = 10;
+                    if (left + 300 > window.innerWidth) left = window.innerWidth - 310;
+
+                    tooltip.style.top = top + window.scrollY + 'px';
+                    tooltip.style.left = left + 'px';
+                    
+                    // Scroll into view if needed
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+
+            function endTour() {
+                overlay.classList.remove('active');
+                tooltip.style.display = 'none';
+                document.querySelectorAll('.tour-highlight').forEach(el => el.classList.remove('tour-highlight'));
+                localStorage.setItem(TOUR_KEY, 'true');
+            }
+
+            nextBtn.addEventListener('click', () => {
+                currentTourStep++;
+                showTourStep(currentTourStep);
+            });
+
+            // Check if first visit
+            if (!localStorage.getItem(TOUR_KEY)) {
+                overlay.classList.add('active');
+                setTimeout(() => {
+                    showTourStep(0);
+                }, 500); // Small delay for page load
+            }
         });
     </script>
 </body>
