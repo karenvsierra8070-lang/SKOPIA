@@ -562,6 +562,7 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.3);
             z-index: 9002;
             text-align: center;
+            display: none; /* Hidden by default */
         }
         .tour-tooltip h4 {
             font-family: 'Patrick Hand', cursive;
@@ -624,7 +625,7 @@
 <body>
     <!-- TOUR OVERLAY (AGREGADO) -->
     <div class="tour-overlay" id="tour-overlay"></div>
-    <div class="tour-tooltip" id="tour-tooltip" style="display: none;">
+    <div class="tour-tooltip" id="tour-tooltip">
         <h4 id="tour-title"></h4>
         <p id="tour-text"></p>
         <button id="tour-next-btn">Siguiente</button>
@@ -955,13 +956,11 @@
 
     <script>
         /*************************************************************************
-         *  LOCAL DATA: 100 missions (fixed values taken from the updated list)
-         *  Each mission: { id, title, points, completed }
-         *  RESTORED COMPLETELY AS REQUESTED
+         *  LOCAL DATA: 100 missions
          *************************************************************************/
         const MISSIONS_KEY = 'skopia_missions_v1';
         const EXAMS_KEY = 'skopia_exam_scores_by_tag_v1';
-        const TOUR_KEY = 'skopia_tour_completed_v1'; // Added for tour logic
+        const TOUR_KEY = 'skopia_tour_completed_v1'; 
 
         const missionsTemplate = [
             { id: 1, title: "Completa tu primer examen", points: 50 },
@@ -1394,7 +1393,7 @@
             });
 
             /*************************************************************************
-             *  START TOUR GUIDE LOGIC (AGREGADO)
+             *  START TOUR GUIDE LOGIC (CORREGIDO)
              *************************************************************************/
             const tourSteps = [
                 { id: 'step-nav', title: 'Navegación Principal', text: 'Aquí encuentras todos los módulos y ejercicios organizados por categoría.', position: 'bottom' },
@@ -1426,29 +1425,47 @@
                     // Add highlight
                     targetElement.classList.add('tour-highlight');
                     
-                    // Position tooltip
+                    // Scroll element into view INSTANTLY to calculate position correctly
+                    targetElement.scrollIntoView({ block: 'center' });
+                    
+                    // Get position
                     const rect = targetElement.getBoundingClientRect();
-                    tooltip.style.display = 'block';
+                    
+                    // Update content
                     tooltipTitle.textContent = step.title;
                     tooltipText.textContent = step.text;
-                    
-                    // Simple central positioning logic
-                    let top = rect.bottom + 15;
-                    if(step.position === 'top') top = rect.top - tooltip.offsetHeight - 15;
-                    if(step.position === 'left') top = rect.top;
-                    
-                    let left = rect.left + (rect.width / 2) - 150;
+                    tooltip.style.display = 'block';
 
-                    // Adjust if off screen
-                    if (top < 10) top = rect.bottom + 15;
+                    // Calculate position
+                    let top = 0;
+                    let left = 0;
+                    const tooltipWidth = 300;
+                    const tooltipHeight = tooltip.offsetHeight; // Get current height
+                    const gap = 15;
+
+                    if (step.position === 'bottom') {
+                        top = rect.bottom + gap;
+                        left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
+                    } else if (step.position === 'top') {
+                        top = rect.top - tooltipHeight - gap;
+                        left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
+                    } else if (step.position === 'left') {
+                        top = rect.top + (rect.height / 2) - (tooltipHeight / 2);
+                        left = rect.left - tooltipWidth - gap;
+                    } else { // default right or fallback
+                        top = rect.top + (rect.height / 2) - (tooltipHeight / 2);
+                        left = rect.right + gap;
+                    }
+
+                    // Screen boundary checks
+                    if (top < 10) top = 10;
+                    if (top + tooltipHeight > window.innerHeight - 10) top = window.innerHeight - tooltipHeight - 10;
                     if (left < 10) left = 10;
-                    if (left + 300 > window.innerWidth) left = window.innerWidth - 310;
+                    if (left + tooltipWidth > window.innerWidth - 10) left = window.innerWidth - tooltipWidth - 10;
 
-                    tooltip.style.top = top + window.scrollY + 'px';
+                    // Apply position (Fixed position is relative to viewport, NO scrollY needed)
+                    tooltip.style.top = top + 'px';
                     tooltip.style.left = left + 'px';
-                    
-                    // Scroll into view if needed
-                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             }
 
@@ -1467,9 +1484,10 @@
             // Check if first visit
             if (!localStorage.getItem(TOUR_KEY)) {
                 overlay.classList.add('active');
+                // Small delay to ensure layout is ready
                 setTimeout(() => {
                     showTourStep(0);
-                }, 500); // Small delay for page load
+                }, 500);
             }
         });
     </script>
