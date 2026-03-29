@@ -2739,37 +2739,32 @@
                 }
             }
             
-            // Cargar pregunta actual
+           // Cargar pregunta actual corregida para Skópia
             function loadQuestion() {
                 // Verificar si estamos mostrando preguntas diferidas
                 if (showingDeferredQuestions) {
                     if (currentDeferredQuestionIndex >= deferredQuestions.length) {
-                        // Si hemos terminado las preguntas diferidas, mostrar resultados
                         showingDeferredQuestions = false;
                         showResults();
                         return;
                     }
-                    
-                    // Cargar la pregunta diferida actual
                     loadDeferredQuestion();
                     return;
                 }
                 
                 // Si hemos terminado todas las preguntas principales
                 if (currentQuestionIndex >= questions.length) {
-                    // Si hay preguntas diferidas, mostrarlas
                     if (deferredQuestions.length > 0) {
                         showingDeferredQuestions = true;
                         currentDeferredQuestionIndex = 0;
                         loadDeferredQuestion();
                         return;
                     }
-                    // Si no, mostrar resultados
                     showResults();
                     return;
                 }
                 
-                // Verificar si es momento de tomar un descanso (pregunta 5)
+                // Verificar descanso
                 if (currentQuestionIndex === 5 && !breakTaken) {
                     showBreakModal();
                     return;
@@ -2778,15 +2773,11 @@
                 const question = questions[currentQuestionIndex];
                 questionNumber.textContent = currentQuestionIndex + 1;
                 
-                // Separar correctamente el texto de la pregunta
                 const parts = question.pregunta.split('\n\n');
-                const textContent = parts[0]; // El texto principal
-                const actualQuestion = parts[1] || question.pregunta; // La pregunta real
+                const textContent = parts[0]; 
+                const actualQuestion = parts[1] || question.pregunta; 
                 
-                // Mostrar el texto en el contenedor beige
                 textPassage.textContent = textContent;
-                
-                // Mostrar solo la pregunta en el header
                 questionText.textContent = actualQuestion;
                 
                 // Cargar opciones
@@ -2804,7 +2795,7 @@
                     optionsContainer.appendChild(optionCard);
                 });
                 
-                // Resetear estado
+                // Resetear estado básico
                 selectedOption = null;
                 attempts = 0;
                 attempt1.classList.remove('used');
@@ -2815,15 +2806,12 @@
                 checkBtn.disabled = true;
                 hintBtn.disabled = false;
                 
-                // Verificar si la pregunta está marcada como difícil
+                // Lógica de botones especiales
                 const isDifficult = difficultQuestions.some(q => q.index === currentQuestionIndex);
                 difficultBtn.classList.toggle('active', isDifficult);
-                
-                // Verificar si la pregunta está diferida
                 const isDeferred = deferredQuestions.some(q => q.index === currentQuestionIndex);
                 deferBtn.classList.toggle('active', isDeferred);
                 
-                // Actualizar indicadores de desafío
                 if (challengeMode) {
                     challengeBadge.style.display = 'flex';
                     timerBadge.style.display = 'flex';
@@ -2832,12 +2820,32 @@
                     challengeBadge.style.display = 'none';
                     timerBadge.style.display = 'none';
                 }
+
+                // --- INTEGRACIÓN MODO REFUERZO SKÓPIA ---
+                if (reinforcementMode) {
+                    if (reinforcementTimer) clearTimeout(reinforcementTimer);
+
+                    // Ocultar opciones al inicio
+                    optionsContainer.style.display = 'none';
+                    textPassage.style.display = 'block';
+
+                    showNotification('Modo Refuerzo: Tienes 2 minutos para memorizar.');
+
+                    reinforcementTimer = setTimeout(() => {
+                        if (reinforcementMode && currentView === 'quiz') {
+                            textPassage.style.display = 'none';      
+                            optionsContainer.style.display = 'grid'; 
+                            showNotification('¡Tiempo agotado! Responde ahora.');
+                        }
+                    }, 120000); 
+                } else {
+                    optionsContainer.style.display = 'grid';
+                    textPassage.style.display = 'block';
+                }
                 
-                // Actualizar progreso
                 updateProgress();
                 saveProgress();
             }
-            
             // Cargar pregunta diferida
             function loadDeferredQuestion() {
                 const deferredQuestion = deferredQuestions[currentDeferredQuestionIndex];
@@ -3103,7 +3111,7 @@
                 checkBtn.disabled = false;
             }
             
-          // Verificar respuesta
+         // Verificar respuesta corregida
             function checkAnswer() {
                 if (selectedOption === null) return;
                 
@@ -3119,13 +3127,15 @@
                 const isCorrect = selectedOption === question.respuestaCorrecta;
                 const options = document.querySelectorAll('.option-card');
                 
+                // Limpieza de temporizadores (AQUÍ AÑADIMOS EL DE REFUERZO)
                 if (challengeTimer) clearInterval(challengeTimer);
                 if (deferredTimer) clearInterval(deferredTimer);
+                if (reinforcementTimer) clearTimeout(reinforcementTimer); // Detiene el reloj de 2 min
                 
                 attempt1.classList.add('used');
                 
                 if (isCorrect) {
-                    // --- NUEVO: Si acierta en refuerzo, reseteamos sus fallos ---
+                    // Si acierta en refuerzo, reseteamos sus fallos
                     if (reinforcementMode) reinforcementFailCount = 0;
 
                     score += 30; 
@@ -3159,7 +3169,7 @@
                     updateProgress();
                     saveProgress();
                 } else {
-                    // --- NUEVO: LÓGICA DE FALLOS EN REFUERZO ---
+                    // LÓGICA DE FALLOS EN REFUERZO
                     if (reinforcementMode) {
                         reinforcementFailCount++;
                         if (reinforcementFailCount >= 3) {
@@ -3203,6 +3213,8 @@
                 }
                 
                 feedbackSection.style.display = 'block';
+                // Aseguramos que las opciones se vean después de responder si estaban ocultas
+                optionsContainer.style.display = 'grid'; 
                 saveProgress();
             }
             
@@ -3982,9 +3994,24 @@ function closeBreakModal() {
                 }
             });
             
-            // Inicializar
-            loadQuestions();
-        }); // Cierre de DOMContentLoaded
+          // --- INICIALIZACIÓN DE SKÓPIA ---
+            // Aquí decidimos si mostramos el entrenamiento o el quiz directo
+            if (inActiveRecallMode) {
+                // Ocultamos el quiz para que no se vea al cargar
+                const mainCard = document.querySelector('.question-card');
+                if (mainCard) mainCard.style.display = 'none';
+                
+                // Mostramos la pantalla de introducción al entrenamiento
+                const arIntro = document.getElementById('active-recall-intro');
+                if (arIntro) arIntro.style.display = 'block';
+                
+                // Cargamos las preguntas del quiz en memoria (pero no las mostramos aún)
+                loadQuestions(); 
+            } else {
+                // Si por alguna razón el modo entrenamiento está apagado, iniciamos normal
+                loadQuestions();
+            }
+            });
         
     </script>
 </body>
