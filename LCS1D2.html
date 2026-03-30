@@ -1,0 +1,1949 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQ3R - Método de Lectura | Skopia</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg: #faf8f3;
+            --bg-alt: #f0ede4;
+            --fg: #1a1a18;
+            --muted: #6b6b5e;
+            --accent: #4a3d6b;
+            --accent-light: #6b5d8b;
+            --card: #ffffff;
+            --border: #d4d0c3;
+            --success: #2d6a4f;
+            --error: #9d3c3c;
+            --highlight: #d4a227;
+            --step1: #6b4a3d;
+            --step2: #4a5d6b;
+            --step3: #4a6b5d;
+            --step4: #6b5d4a;
+            --step5: #5d4a6b;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .font-display { font-family: 'Fredoka', sans-serif; }
+        .font-serif { font-family: 'Source Serif 4', serif; }
+
+        .bg-pattern {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(74, 61, 107, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(212, 162, 39, 0.06) 0%, transparent 50%),
+                linear-gradient(180deg, var(--bg) 0%, var(--bg-alt) 100%);
+        }
+
+        .bg-pattern::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234a3d6b' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            outline: none;
+        }
+
+        .btn:focus-visible {
+            outline: 3px solid var(--highlight);
+            outline-offset: 2px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-light);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background: var(--border);
+            color: var(--muted);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: var(--bg-alt);
+            color: var(--fg);
+            border: 2px solid var(--border);
+        }
+
+        .btn-back {
+            background: white;
+            color: var(--accent);
+            border: 2px solid var(--accent);
+            padding: 10px 20px;
+        }
+
+        .btn-back:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-lg {
+            padding: 18px 40px;
+            font-size: 1.125rem;
+        }
+
+        /* Step indicators */
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .step-dot {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .step-dot.completed {
+            background: var(--success);
+            color: white;
+        }
+
+        .step-dot.active {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 0 0 4px rgba(74, 61, 107, 0.2);
+            animation: pulse 2s infinite;
+        }
+
+        .step-dot.pending {
+            background: var(--bg-alt);
+            color: var(--muted);
+            border: 2px solid var(--border);
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 4px rgba(74, 61, 107, 0.2); }
+            50% { box-shadow: 0 0 0 8px rgba(74, 61, 107, 0.1); }
+        }
+
+        .step-connector {
+            width: 20px;
+            height: 3px;
+            background: var(--border);
+            transition: background 0.3s ease;
+        }
+
+        .step-connector.completed {
+            background: var(--success);
+        }
+
+        /* Step card container */
+        .step-container {
+            position: relative;
+            min-height: 400px;
+        }
+
+        .step-card {
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid var(--border);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            position: absolute;
+            width: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            transform: translateX(100px);
+            pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .step-card.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: all;
+            position: relative;
+        }
+
+        .step-card.exit {
+            opacity: 0;
+            transform: translateX(-100px);
+            pointer-events: none;
+        }
+
+        .step-header {
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .step-header.step-1 { background: linear-gradient(135deg, #6b4a3d, #8b6a5d); }
+        .step-header.step-2 { background: linear-gradient(135deg, #4a5d6b, #6a7d8b); }
+        .step-header.step-3 { background: linear-gradient(135deg, #4a6b5d, #6a8b7d); }
+        .step-header.step-4 { background: linear-gradient(135deg, #6b5d4a, #8b7d6a); }
+        .step-header.step-5 { background: linear-gradient(135deg, #5d4a6b, #7d6a8b); }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .step-info {
+            flex: 1;
+        }
+
+        .step-title {
+            color: white;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .step-subtitle {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.875rem;
+            margin-top: 2px;
+        }
+
+        .step-body {
+            padding: 24px;
+        }
+
+        /* Options */
+        .option-item {
+            position: relative;
+            padding: 16px 20px;
+            padding-left: 52px;
+            border: 3px solid var(--border);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--card);
+            margin-bottom: 12px;
+        }
+
+        .option-item:hover:not(.disabled) {
+            border-color: var(--accent-light);
+            background: rgba(74, 61, 107, 0.03);
+            transform: translateX(4px);
+        }
+
+        .option-item.selected {
+            border-color: var(--accent);
+            background: rgba(74, 61, 107, 0.08);
+            box-shadow: 0 0 0 3px rgba(74, 61, 107, 0.15);
+        }
+
+        .option-item.correct {
+            border-color: var(--success);
+            background: rgba(45, 106, 79, 0.1);
+        }
+
+        .option-item.incorrect {
+            border-color: var(--error);
+            background: rgba(157, 60, 60, 0.08);
+        }
+
+        .option-item.disabled {
+            cursor: default;
+            opacity: 0.8;
+        }
+
+        .option-indicator {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--border);
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .option-item.selected .option-indicator {
+            border-color: var(--accent);
+            background: var(--accent);
+        }
+
+        .option-item.selected .option-indicator::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .option-item.correct .option-indicator {
+            border-color: var(--success);
+            background: var(--success);
+        }
+
+        .option-item.correct .option-indicator::after {
+            content: '✓';
+            color: white;
+            font-size: 12px;
+        }
+
+        .option-item.incorrect .option-indicator {
+            border-color: var(--error);
+            background: var(--error);
+        }
+
+        .option-item.incorrect .option-indicator::after {
+            content: '✗';
+            color: white;
+            font-size: 12px;
+        }
+
+        /* Checkbox items */
+        .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 16px 18px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--card);
+            margin-bottom: 10px;
+        }
+
+        .checkbox-item:hover:not(.disabled) {
+            border-color: var(--accent-light);
+        }
+
+        .checkbox-item.checked {
+            border-color: var(--accent);
+            background: rgba(74, 61, 107, 0.05);
+        }
+
+        .checkbox-item.correct {
+            border-color: var(--success);
+            background: rgba(45, 106, 79, 0.1);
+        }
+
+        .checkbox-item.incorrect {
+            border-color: var(--error);
+            background: rgba(157, 60, 60, 0.08);
+        }
+
+        .checkbox-box {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+            margin-top: 2px;
+        }
+
+        .checkbox-item.checked .checkbox-box {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .checkbox-item.checked .checkbox-box::after {
+            content: '✓';
+            font-size: 14px;
+        }
+
+        /* Timer */
+        .timer-display {
+            font-family: 'Fredoka', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .timer-display.warning {
+            color: var(--highlight);
+        }
+
+        .timer-display.danger {
+            color: var(--error);
+        }
+
+        /* Streak indicator */
+        .streak-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: var(--bg-alt);
+            border-radius: 30px;
+        }
+
+        .streak-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .streak-dot.filled {
+            background: var(--success);
+            box-shadow: 0 0 10px rgba(45, 106, 79, 0.5);
+            animation: streakPulse 1s ease;
+        }
+
+        @keyframes streakPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+
+        /* Title highlight */
+        .title-highlight {
+            display: inline-block;
+            padding: 12px 28px;
+            background: linear-gradient(135deg, rgba(74, 61, 107, 0.1), rgba(74, 61, 107, 0.05));
+            border-radius: 12px;
+            border-left: 5px solid var(--accent);
+            font-family: 'Source Serif 4', serif;
+            font-size: 1.75rem;
+            font-weight: 600;
+            font-style: italic;
+        }
+
+        /* Progress ring */
+        .progress-ring {
+            width: 100px;
+            height: 100px;
+            position: relative;
+        }
+
+        .progress-ring svg {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring circle {
+            fill: none;
+            stroke-width: 6;
+        }
+
+        .progress-ring .bg-circle {
+            stroke: var(--bg-alt);
+        }
+
+        .progress-ring .progress-circle {
+            stroke: var(--accent);
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s linear;
+        }
+
+        /* Feedback */
+        .feedback-box {
+            border-radius: 14px;
+            padding: 20px 24px;
+            margin-top: 20px;
+            border-left: 5px solid;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .feedback-box.success {
+            background: rgba(45, 106, 79, 0.08);
+            border-color: var(--success);
+        }
+
+        .feedback-box.error {
+            background: rgba(157, 60, 60, 0.08);
+            border-color: var(--error);
+        }
+
+        /* Text container */
+        .text-container {
+            background: linear-gradient(135deg, var(--bg-alt), #e8e5dc);
+            border-radius: 14px;
+            padding: 24px;
+            font-family: 'Source Serif 4', serif;
+            font-size: 1.15rem;
+            line-height: 1.9;
+            border-left: 5px solid var(--accent);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Hidden text placeholder */
+        .hidden-text-notice {
+            background: linear-gradient(135deg, rgba(107, 93, 74, 0.1), rgba(107, 93, 74, 0.05));
+            border-radius: 14px;
+            padding: 40px 24px;
+            text-align: center;
+            border: 2px dashed var(--border);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-15px); }
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(50px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .animate-fade-out {
+            animation: fadeOut 0.3s ease forwards;
+        }
+
+        /* Progress bar for exercise */
+        .exercise-progress {
+            height: 4px;
+            background: var(--bg-alt);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        .exercise-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light));
+            transition: width 0.5s ease;
+        }
+
+        @media (max-width: 768px) {
+            .step-dot {
+                width: 30px;
+                height: 30px;
+                font-size: 0.7rem;
+            }
+            
+            .step-connector {
+                width: 15px;
+            }
+            
+            .title-highlight {
+                font-size: 1.3rem;
+                padding: 10px 20px;
+            }
+
+            .timer-display {
+                font-size: 2.5rem;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="LCS1D.html" class="btn btn-back">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    Volver
+                </a>
+            </div>
+            
+            <h1 class="font-display text-xl font-bold" style="color: var(--accent);">Skopia</h1>
+            
+            <div class="flex items-center gap-3">
+                <div class="streak-container">
+                    <span class="text-sm font-medium">Racha:</span>
+                    <div class="streak-dot" id="streak-1"></div>
+                    <div class="streak-dot" id="streak-2"></div>
+                    <div class="streak-dot" id="streak-3"></div>
+                    <div class="streak-dot" id="streak-4"></div>
+                    <div class="streak-dot" id="streak-5"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 py-8">
+        
+        <!-- Intro Section -->
+        <section id="intro-section" class="animate-fade-in">
+            <div class="text-center mb-12">
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6" style="background: rgba(74, 61, 107, 0.1); color: var(--accent);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                    Método de Lectura Avanzada
+                </div>
+                <h2 class="font-display text-4xl sm:text-5xl font-bold mb-4" style="color: var(--accent);">
+                    Método SQ3R
+                </h2>
+                <p class="text-lg max-w-2xl mx-auto" style="color: var(--muted);">
+                    Survey, Question, Read, Recite, Review
+                </p>
+            </div>
+
+            <div class="card p-8 mb-8">
+                <h3 class="font-display text-2xl font-bold mb-6 flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-full flex items-center justify-center" style="background: rgba(74, 61, 107, 0.1);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent);">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 16v-4M12 8h.01"/>
+                        </svg>
+                    </span>
+                    ¿Qué es el SQ3R?
+                </h3>
+                <p class="font-serif text-lg leading-relaxed mb-6">
+                    El <strong>SQ3R</strong> es un método de lectura desarrollado para mejorar la comprensión de textos académicos. Cada letra representa un paso que te ayuda a procesar la información de manera sistemática y retenerla mejor.
+                </p>
+                <div class="grid sm:grid-cols-5 gap-4">
+                    <div class="text-center p-4 rounded-xl" style="background: rgba(107, 74, 61, 0.1);">
+                        <div class="font-display text-2xl font-bold mb-1" style="color: var(--step1);">S</div>
+                        <div class="font-bold text-sm">Survey</div>
+                        <div class="text-xs mt-1" style="color: var(--muted);">Explorar</div>
+                    </div>
+                    <div class="text-center p-4 rounded-xl" style="background: rgba(74, 93, 107, 0.1);">
+                        <div class="font-display text-2xl font-bold mb-1" style="color: var(--step2);">Q</div>
+                        <div class="font-bold text-sm">Question</div>
+                        <div class="text-xs mt-1" style="color: var(--muted);">Preguntar</div>
+                    </div>
+                    <div class="text-center p-4 rounded-xl" style="background: rgba(74, 107, 93, 0.1);">
+                        <div class="font-display text-2xl font-bold mb-1" style="color: var(--step3);">R</div>
+                        <div class="font-bold text-sm">Read</div>
+                        <div class="text-xs mt-1" style="color: var(--muted);">Leer</div>
+                    </div>
+                    <div class="text-center p-4 rounded-xl" style="background: rgba(107, 93, 74, 0.1);">
+                        <div class="font-display text-2xl font-bold mb-1" style="color: var(--step4);">R</div>
+                        <div class="font-bold text-sm">Recite</div>
+                        <div class="text-xs mt-1" style="color: var(--muted);">Repetir</div>
+                    </div>
+                    <div class="text-center p-4 rounded-xl" style="background: rgba(93, 74, 107, 0.1);">
+                        <div class="font-display text-2xl font-bold mb-1" style="color: var(--step5);">R</div>
+                        <div class="font-bold text-sm">Review</div>
+                        <div class="text-xs mt-1" style="color: var(--muted);">Revisar</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card p-8 mb-8">
+                <h3 class="font-display text-2xl font-bold mb-6 flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-full flex items-center justify-center" style="background: rgba(212, 162, 39, 0.2);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--highlight);">
+                            <path d="M9 12l2 2 4-4"/>
+                            <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
+                        </svg>
+                    </span>
+                    Cómo Funciona
+                </h3>
+                <ul class="space-y-4">
+                    <li class="flex gap-3 items-start">
+                        <span class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-sm" style="background: var(--accent);">1</span>
+                        <div>
+                            <strong>Completa los 5 pasos de cada ejercicio</strong>
+                            <p class="text-sm" style="color: var(--muted);">Cada paso desbloquea automáticamente el siguiente.</p>
+                        </div>
+                    </li>
+                    <li class="flex gap-3 items-start">
+                        <span class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-sm" style="background: var(--accent);">2</span>
+                        <div>
+                            <strong>Necesitas 5 ejercicios SEGUIDOS correctos</strong>
+                            <p class="text-sm" style="color: var(--muted);">Si fallas cualquier paso, la racha se reinicia.</p>
+                        </div>
+                    </li>
+                    <li class="flex gap-3 items-start">
+                        <span class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-sm" style="background: var(--accent);">3</span>
+                        <div>
+                            <strong>Desbloquea el cuestionario principal</strong>
+                            <p class="text-sm" style="color: var(--muted);">Demuestra que dominas el método y aplica tus conocimientos.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="text-center">
+                <button id="start-training" class="btn btn-primary btn-lg">
+                    Comenzar Entrenamiento SQ3R
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- Exercise Section -->
+        <section id="exercise-section" class="hidden">
+            <!-- Progress header -->
+            <div class="card p-5 mb-6">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                        <span class="text-sm font-medium" style="color: var(--muted);">Ejercicio</span>
+                        <span class="font-display text-2xl font-bold ml-2" id="exercise-number">1</span>
+                        <span class="text-sm" style="color: var(--muted);">de 15</span>
+                    </div>
+                    
+                    <div class="step-indicator">
+                        <div class="step-dot active" id="dot-1">S</div>
+                        <div class="step-connector" id="conn-1"></div>
+                        <div class="step-dot pending" id="dot-2">Q</div>
+                        <div class="step-connector" id="conn-2"></div>
+                        <div class="step-dot pending" id="dot-3">R</div>
+                        <div class="step-connector" id="conn-3"></div>
+                        <div class="step-dot pending" id="dot-4">R</div>
+                        <div class="step-connector" id="conn-4"></div>
+                        <div class="step-dot pending" id="dot-5">R</div>
+                    </div>
+                </div>
+                <div class="exercise-progress">
+                    <div class="exercise-progress-bar" id="progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Step container - cards appear one at a time -->
+            <div class="step-container" id="step-container">
+                <!-- Step 1: Survey -->
+                <div class="step-card" id="step-1-card">
+                    <div class="step-header step-1">
+                        <div class="step-number">1</div>
+                        <div class="step-info">
+                            <div class="step-title">Survey - Explorar el Texto</div>
+                            <div class="step-subtitle">Analiza el título y anticipa el contenido</div>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <p class="text-sm mb-5" style="color: var(--muted);">Observa el título y responde la pregunta:</p>
+                        
+                        <div class="text-center mb-6">
+                            <div class="title-highlight" id="text-title"></div>
+                        </div>
+                        
+                        <p class="font-bold mb-4 text-lg" id="survey-question"></p>
+                        
+                        <div id="survey-options"></div>
+                        
+                        <div class="text-center mt-6">
+                            <button id="survey-btn" class="btn btn-primary btn-lg" disabled>
+                                Confirmar y Continuar
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Question -->
+                <div class="step-card" id="step-2-card">
+                    <div class="step-header step-2">
+                        <div class="step-number">2</div>
+                        <div class="step-info">
+                            <div class="step-title">Question - Formular Preguntas</div>
+                            <div class="step-subtitle">Selecciona la pregunta guía correcta</div>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <p class="text-sm mb-5" style="color: var(--muted);">Lee el texto completo y selecciona la pregunta que mejor guiaría tu comprensión:</p>
+                        
+                        <div class="text-container mb-6" id="full-text"></div>
+                        
+                        <p class="font-bold mb-4 text-lg">¿Cuál pregunta guía mejor la comprensión del texto?</p>
+                        
+                        <div id="question-options"></div>
+                        
+                        <div class="text-center mt-6">
+                            <button id="question-btn" class="btn btn-primary btn-lg" disabled>
+                                Confirmar y Continuar
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Read -->
+                <div class="step-card" id="step-3-card">
+                    <div class="step-header step-3">
+                        <div class="step-number">3</div>
+                        <div class="step-info">
+                            <div class="step-title">Read - Leer el Texto</div>
+                            <div class="step-subtitle">Lee con atención durante el tiempo indicado</div>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <p class="text-sm mb-5" style="color: var(--muted);">Lee el texto con atención. El botón se habilitará cuando termine el tiempo:</p>
+                        
+                        <div class="text-container mb-6" id="read-text"></div>
+                        
+                        <div class="flex items-center justify-center gap-8 my-8">
+                            <div class="progress-ring">
+                                <svg width="100" height="100">
+                                    <circle class="bg-circle" cx="50" cy="50" r="44"/>
+                                    <circle class="progress-circle" cx="50" cy="50" r="44" 
+                                        stroke-dasharray="276.46" stroke-dashoffset="0" id="read-progress"/>
+                                </svg>
+                            </div>
+                            <div class="timer-display" id="read-timer">1:40</div>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button id="read-btn" class="btn btn-primary btn-lg" disabled>
+                                Continuar al Siguiente Paso
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Recite -->
+                <div class="step-card" id="step-4-card">
+                    <div class="step-header step-4">
+                        <div class="step-number">4</div>
+                        <div class="step-info">
+                            <div class="step-title">Recite - Repetir las Ideas</div>
+                            <div class="step-subtitle">Recuerda las ideas principales sin el texto</div>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <div class="hidden-text-notice mb-6">
+                            <div class="font-display text-xl mb-2" style="color: var(--step4);">Texto Ocultado</div>
+                            <p style="color: var(--muted);">Selecciona TODAS las ideas que aparecieron en el texto</p>
+                        </div>
+                        
+                        <p class="font-bold mb-4 text-lg">¿Cuáles ideas estaban presentes en el texto?</p>
+                        
+                        <div id="recite-options"></div>
+                        
+                        <div class="text-center mt-6">
+                            <button id="recite-btn" class="btn btn-primary btn-lg" disabled>
+                                Confirmar Selección
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 5: Review -->
+                <div class="step-card" id="step-5-card">
+                    <div class="step-header step-5">
+                        <div class="step-number">5</div>
+                        <div class="step-info">
+                            <div class="step-title">Review - Revisar la Comprensión</div>
+                            <div class="step-subtitle">Identifica la opción que NO corresponde</div>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <p class="text-sm mb-5" style="color: var(--muted);">El texto ha vuelto. Identifica cuál opción NO representa la idea principal:</p>
+                        
+                        <div class="text-container mb-6" id="review-text"></div>
+                        
+                        <p class="font-bold mb-4 text-lg">¿Cuál opción NO representa la idea principal?</p>
+                        
+                        <div id="review-options"></div>
+                        
+                        <div class="text-center mt-6">
+                            <button id="review-btn" class="btn btn-primary btn-lg" disabled>
+                                Finalizar Ejercicio
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feedback Section -->
+            <div id="feedback-section" class="hidden"></div>
+        </section>
+
+        <!-- Success Section -->
+        <section id="success-section" class="hidden">
+            <div class="card p-10 text-center animate-fade-in">
+                <div class="text-7xl mb-6">🏆</div>
+                <h3 class="font-display text-4xl font-bold mb-4" style="color: var(--success);">¡Entrenamiento Completado!</h3>
+                <p class="text-xl mb-8" style="color: var(--muted);">Has demostrado dominar el método SQ3R con 5 ejercicios correctos seguidos.</p>
+                
+                <div class="flex justify-center mb-8">
+                    <div class="streak-container" style="padding: 12px 24px;">
+                        <div class="streak-dot filled"></div>
+                        <div class="streak-dot filled"></div>
+                        <div class="streak-dot filled"></div>
+                        <div class="streak-dot filled"></div>
+                        <div class="streak-dot filled"></div>
+                    </div>
+                </div>
+                
+                <button id="continue-btn" class="btn btn-primary btn-lg">
+                    Ir al Cuestionario Principal
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // ============================================
+        // DATA: Text bank (same as before)
+        // ============================================
+        const textBank = [
+            {
+                id: 1,
+                title: "La Revolución del Trabajo Remoto",
+                text: "El trabajo remoto ha transformado radicalmente la dinámica laboral contemporánea. Antes de la pandemia, menos del 10% de los trabajadores realizaban sus labores desde casa. En 2023, esta cifra superó el 35% en muchos países desarrollados. Esta transformación ha traído beneficios significativos: mayor flexibilidad horaria, reducción de tiempos de desplazamiento y un mejor equilibrio entre vida laboral y personal. Sin embargo, también presenta desafíos como el aislamiento social, la dificultad para separar espacio de trabajo y descanso, y la necesidad de autodisciplina. Las empresas han tenido que adaptar sus modelos de gestión, pasando de supervisión presencial a sistemas basados en resultados y objetivos. El futuro laboral será indudablemente híbrido, combinando lo mejor de ambos mundos.",
+                mainIdeas: [
+                    "El trabajo remoto aumentó del 10% al 35% en países desarrollados",
+                    "Los beneficios incluyen flexibilidad y reducción de desplazamientos",
+                    "Los desafíos incluyen aislamiento y necesidad de autodisciplina",
+                    "Las empresas han adaptado su gestión hacia resultados",
+                    "El futuro será un modelo híbrido"
+                ],
+                distractorIdeas: [
+                    "Todos los trabajadores prefieren el modelo presencial",
+                    "La pandemia no afectó las dinámicas laborales",
+                    "Las empresas han mantenido la supervisión presencial",
+                    "El trabajo remoto no tiene ningún beneficio"
+                ],
+                surveyQuestions: [
+                    { 
+                        question: "¿Qué tema probablemente tratará el texto?", 
+                        options: [
+                            "Los cambios en las dinámicas laborales hacia el trabajo remoto",
+                            "La historia de las oficinas corporativas",
+                            "Técnicas de gestión de tiempo personal",
+                            "El desarrollo de nuevas tecnologías"
+                        ],
+                        correct: 0
+                    },
+                    { 
+                        question: "Según el título, ¿qué aspecto se analizará?", 
+                        options: [
+                            "Problemas económicos globales",
+                            "Transformaciones en el mundo laboral",
+                            "Avances en telecomunicaciones",
+                            "Crisis inmobiliarias urbanas"
+                        ],
+                        correct: 1
+                    },
+                    { 
+                        question: "¿Qué tipo de enfoque esperas del texto?", 
+                        options: [
+                            "Una narrativa histórica antigua",
+                            "Un análisis de cambios sociales contemporáneos",
+                            "Una guía de autoayuda personal",
+                            "Un informe técnico de ingeniería"
+                        ],
+                        correct: 1
+                    }
+                ],
+                guidingQuestions: [
+                    { text: "¿Cuáles son los beneficios y desafíos del trabajo remoto según el texto?", correct: true },
+                    { text: "¿Cuándo se inventó el teletrabajo?", correct: false },
+                    { text: "¿Cuántos edificios de oficinas existen en el mundo?", correct: false },
+                    { text: "¿Qué marca de computadoras es mejor para trabajar?", correct: false }
+                ],
+                wrongMainIdea: "El trabajo presencial es superior en todos los aspectos al trabajo remoto y debe ser la única opción.",
+                finalQuestion: {
+                    question: "¿Cuál es la idea principal del texto?",
+                    options: [
+                        "El trabajo remoto ha transformado el mercado laboral trayendo beneficios y desafíos que requieren adaptación",
+                        "Todas las empresas han eliminado completamente las oficinas físicas",
+                        "El trabajo remoto es perfecto y no tiene ningún inconveniente",
+                        "Los trabajadores prefieren unánimemente el trabajo presencial"
+                    ],
+                    correct: 0
+                }
+            },
+            {
+                id: 2,
+                title: "El Impacto de las Redes Sociales en la Adolescencia",
+                text: "Las redes sociales han redefinido la manera en que los adolescentes interactúan y construyen su identidad. Plataformas como Instagram, TikTok y Snapchat forman parte integral de la vida cotidiana de millones de jóvenes. Los estudios revelan efectos paradójicos: mientras facilitan conexiones y expresión creativa, también pueden intensificar problemas de autoestima, ansiedad y depresión. La comparación constante con vidas aparentemente perfectas genera presiones psicológicas significativas. El ciberacoso representa otra amenaza real, con el 37% de adolescentes reportando experiencias de acoso digital. Sin embargo, las redes también ofrecen espacios de apoyo para comunidades marginadas y facilitan la participación cívica juvenil. La clave está en la educación digital: enseñar a los jóvenes a usar estas herramientas de manera crítica y saludable, reconociendo tanto su potencial como sus riesgos.",
+                mainIdeas: [
+                    "Las redes sociales redefinen la interacción adolescente",
+                    "Existen efectos paradójicos: conexión vs problemas de autoestima",
+                    "La comparación constante genera presiones psicológicas",
+                    "El ciberacoso afecta al 37% de adolescentes",
+                    "La educación digital es clave para un uso saludable"
+                ],
+                distractorIdeas: [
+                    "Todas las redes sociales deberían ser prohibidas",
+                    "Los adolescentes no usan tecnología",
+                    "El ciberacoso no existe realmente",
+                    "Las redes no tienen ningún beneficio"
+                ],
+                surveyQuestions: [
+                    { 
+                        question: "¿Qué enfoque tendrá el texto según su título?", 
+                        options: [
+                            "Un análisis de efectos positivos y negativos en jóvenes",
+                            "Una guía para crear redes sociales",
+                            "La historia de Internet y sus creadores",
+                            "Estadísticas económicas de empresas tecnológicas"
+                        ],
+                        correct: 0
+                    },
+                    { 
+                        question: "¿Qué grupo poblacional será el centro del análisis?", 
+                        options: [
+                            "Adultos mayores",
+                            "Profesionales corporativos",
+                            "Población adolescente",
+                            "Niños de primaria"
+                        ],
+                        correct: 2
+                    },
+                    { 
+                        question: "¿Qué tipo de conclusiones esperas encontrar?", 
+                        options: [
+                            "Técnicas de programación informática",
+                            "Análisis de impacto psicológico y social",
+                            "Recetas de cocina saludable",
+                            "Consejos de inversión financiera"
+                        ],
+                        correct: 1
+                    }
+                ],
+                guidingQuestions: [
+                    { text: "¿Cuáles son los efectos positivos y negativos de las redes sociales en adolescentes?", correct: true },
+                    { text: "¿Cuál es la mejor red social para adolescentes?", correct: false },
+                    { text: "¿Cómo se programan las aplicaciones móviles?", correct: false },
+                    { text: "¿Cuántos seguidores necesita un adolescente para ser popular?", correct: false }
+                ],
+                wrongMainIdea: "Las redes sociales son enteramente perjudiciales y deberían ser eliminadas de la sociedad moderna.",
+                finalQuestion: {
+                    question: "¿Cuál es la idea principal del texto?",
+                    options: [
+                        "Las redes sociales tienen impactos mixtos en adolescentes y requieren educación digital para un uso saludable",
+                        "Todos los adolescentes sufren depresión por las redes sociales",
+                        "Las redes sociales son completamente beneficiosas sin excepciones",
+                        "Los padres deberían prohibir completamente el uso de tecnología"
+                    ],
+                    correct: 0
+                }
+            },
+            {
+                id: 3,
+                title: "La Economía Circular: Un Nuevo Paradigma",
+                text: "La economía circular propone una alternativa revolucionaria al modelo lineal tradicional de 'producir, usar y desechar'. Este sistema busca mantener los materiales en uso el mayor tiempo posible mediante la reparación, reutilización y reciclaje. A diferencia de la economía lineal, que agota recursos naturales y genera residuos masivos, la circular minimiza el desperdicio y regenera sistemas naturales. Empresas líderes ya implementan diseños de productos desmontables, materiales reciclables y sistemas de devolución. La Unión Europea ha establecido metas ambiciosas: para 2030, todos los envases plásticos deberán ser reciclables. Los beneficios económicos son sustanciales: se estima que la economía circular podría generar 700,000 nuevos empleos en Europa y ahorrar 600,000 millones de euros anuales. Sin embargo, la transición requiere cambios profundos en infraestructura, legislación y comportamiento del consumidor.",
+                mainIdeas: [
+                    "Propone alternativas al modelo lineal de producción",
+                    "Busca mantener materiales en uso mediante reparación y reciclaje",
+                    "Minimiza desperdicio y regenera sistemas naturales",
+                    "La UE establece metas para 2030 sobre envases reciclables",
+                    "Podría generar 700,000 empleos y ahorros significativos"
+                ],
+                distractorIdeas: [
+                    "El modelo lineal es superior y debe mantenerse",
+                    "El reciclaje no tiene ningún beneficio",
+                    "La economía circular solo funciona en Europa",
+                    "No es necesario cambiar el comportamiento del consumidor"
+                ],
+                surveyQuestions: [
+                    { 
+                        question: "¿Qué concepto central explorará el texto?", 
+                        options: [
+                            "Un modelo económico de sostenibilidad y reutilización",
+                            "Teorías de mercado financiero tradicional",
+                            "Historia del capitalismo moderno",
+                            "Técnicas de marketing digital"
+                        ],
+                        correct: 0
+                    },
+                    { 
+                        question: "¿Qué problema parece abordar el título?", 
+                        options: [
+                            "El desperdicio de recursos y contaminación",
+                            "La falta de inversión en bolsa",
+                            "El desempleo en empresas pequeñas",
+                            "La escasez de productos de lujo"
+                        ],
+                        correct: 0
+                    }
+                ],
+                guidingQuestions: [
+                    { text: "¿En qué consiste la economía circular y cuáles son sus beneficios?", correct: true },
+                    { text: "¿Cómo invertir en la bolsa de valores?", correct: false },
+                    { text: "¿Cuál es el mejor país para hacer negocios?", correct: false },
+                    { text: "¿Cómo crear una empresa exitosa?", correct: false }
+                ],
+                wrongMainIdea: "El modelo tradicional de producir y desechar es el único sistema económico viable.",
+                finalQuestion: {
+                    question: "¿Cuál es la idea principal del texto?",
+                    options: [
+                        "La economía circular ofrece una alternativa sostenible al modelo lineal con beneficios económicos y ambientales",
+                        "Debemos seguir usando el modelo lineal sin cambios",
+                        "El reciclaje es imposible de implementar",
+                        "Solo los países ricos pueden ser sostenibles"
+                    ],
+                    correct: 0
+                }
+            },
+            {
+                id: 4,
+                title: "El Futuro de la Inteligencia Artificial",
+                text: "La inteligencia artificial está redefiniendo los límites de lo posible en prácticamente todos los campos del conocimiento. Desde el diagnóstico médico hasta la conducción autónoma, los sistemas de IA demuestran capacidades que antes parecían exclusivamente humanas. El aprendizaje automático permite que estas tecnologías mejoren continuamente con nuevos datos. Sin embargo, este progreso plantea cuestiones éticas fundamentales: el sesgo algorítmico puede perpetuar discriminaciones, la automatización amenaza empleos tradicionales, y la opacidad de las decisiones algorítmicas desafía los principios de transparencia. Los expertos abogan por una IA explicable, cuyas decisiones puedan ser comprendidas y auditadas. La regulación se queda atrás del desarrollo tecnológico, creando vacíos legales preocupantes. El desafío no es detener el progreso, sino guiarlo hacia un desarrollo responsable que maximice beneficios mientras protege derechos fundamentales.",
+                mainIdeas: [
+                    "La IA redefine límites en múltiples campos",
+                    "Plantea cuestiones éticas como sesgo y pérdida de empleos",
+                    "La opacidad algorítmica desafía la transparencia",
+                    "Se necesita IA explicable y auditable",
+                    "El desarrollo responsable debe equilibrar beneficios y derechos"
+                ],
+                distractorIdeas: [
+                    "La IA no tiene ningún beneficio real",
+                    "Los robots controlarán completamente a la humanidad",
+                    "No existen riesgos en el desarrollo de IA",
+                    "La tecnología siempre es buena sin excepciones"
+                ],
+                surveyQuestions: [
+                    { 
+                        question: "¿Qué tema central se abordará?", 
+                        options: [
+                            "El desarrollo y las implicaciones de la inteligencia artificial",
+                            "La historia de las computadoras personales",
+                            "Técnicas de programación básica",
+                            "El mercado de videojuegos modernos"
+                        ],
+                        correct: 0
+                    },
+                    { 
+                        question: "¿Qué tipo de análisis esperas?", 
+                        options: [
+                            "Tecnológico con consideraciones éticas",
+                            "Pura ficción científica",
+                            "Manual técnico de programación",
+                            "Guía de compra de tecnología"
+                        ],
+                        correct: 0
+                    }
+                ],
+                guidingQuestions: [
+                    { text: "¿Cuáles son los beneficios y riesgos éticos de la inteligencia artificial?", correct: true },
+                    { text: "¿Cómo construir un robot en casa?", correct: false },
+                    { text: "¿Cuál es la mejor marca de computadoras?", correct: false },
+                    { text: "¿Cómo ganar dinero con criptomonedas?", correct: false }
+                ],
+                wrongMainIdea: "La inteligencia artificial traerá inevitablemente la destrucción de la humanidad.",
+                finalQuestion: {
+                    question: "¿Cuál es la idea principal del texto?",
+                    options: [
+                        "La IA avanza rápidamente y requiere desarrollo responsable que equilibre beneficios con protección de derechos",
+                        "Debemos prohibir completamente la inteligencia artificial",
+                        "La IA no tiene ningún riesgo y debemos usarla sin límites",
+                        "Solo los científicos pueden usar inteligencia artificial"
+                    ],
+                    correct: 0
+                }
+            },
+            {
+                id: 5,
+                title: "La Crisis del Agua en el Siglo XXI",
+                text: "El agua dulce, recurso que representa apenas el 2.5% del agua del planeta, enfrenta una crisis sin precedentes. El crecimiento poblacional, la contaminación industrial y el cambio climático ejercen presiones combinadas sobre este recurso vital. Actualmente, 2,200 millones de personas carecen de acceso a agua potable segura, y 4,200 millones carecen de servicios de saneamiento adecuados. Las consecuencias son devastadoras: enfermedades hídricas causan más de 800,000 muertes anuales por diarrea. La escasez también genera conflictos geopolíticos; algunos expertos predicen que las guerras del futuro no serán por petróleo sino por agua. Soluciones existen: tecnologías de desalinización, sistemas de captación de lluvia, y mejoras en infraestructura de distribución. Sin embargo, la inversión global en agua es insuficiente y requiere mayor priorización política y financiera.",
+                mainIdeas: [
+                    "Solo 2.5% del agua es dulce y enfrenta crisis",
+                    "2,200 millones carecen de agua potable segura",
+                    "Las enfermedades hídricas causan 800,000 muertes anuales",
+                    "La escasez genera conflictos geopolíticos",
+                    "Existen soluciones pero falta inversión y priorización"
+                ],
+                distractorIdeas: [
+                    "El agua es un recurso ilimitado",
+                    "No existen problemas de acceso al agua",
+                    "Las guerras futuras serán solo por petróleo",
+                    "La desalinización no funciona"
+                ],
+                surveyQuestions: [
+                    { 
+                        question: "¿Qué problema central se tratará?", 
+                        options: [
+                            "La escasez y crisis del recurso hídrico",
+                            "La contaminación del aire urbano",
+                            "El calentamiento de los océanos",
+                            "La tala de bosques tropicales"
+                        ],
+                        correct: 0
+                    },
+                    { 
+                        question: "¿Qué perspectiva temporal sugiere el título?", 
+                        options: [
+                            "Un problema contemporáneo actual",
+                            "Un evento histórico pasado",
+                            "Una predicción del lejano futuro",
+                            "Un mito antiguo sin fundamento"
+                        ],
+                        correct: 0
+                    }
+                ],
+                guidingQuestions: [
+                    { text: "¿Cuáles son las causas y consecuencias de la crisis del agua?", correct: true },
+                    { text: "¿Cómo aprender a nadar correctamente?", correct: false },
+                    { text: "¿Cuál es el océano más grande del mundo?", correct: false },
+                    { text: "¿Cómo construir una piscina?", correct: false }
+                ],
+                wrongMainIdea: "El agua es un recurso abundante y no hay ninguna razón para preocuparse.",
+                finalQuestion: {
+                    question: "¿Cuál es la idea principal del texto?",
+                    options: [
+                        "La crisis del agua afecta a millones y requiere soluciones con mayor inversión y priorización",
+                        "No existe ningún problema con el acceso al agua",
+                        "Las guerras solo ocurren por petróleo",
+                        "La desalinización resolverá todos los problemas sin inversión"
+                    ],
+                    correct: 0
+                }
+            },
+            // Continue with remaining texts (6-15) - abbreviated for space
+            {
+                id: 6,
+                title: "La Revolución de la Educación Online",
+                text: "La educación a distancia ha experimentado una transformación acelerada en los últimos años. Lo que antes era considerado una alternativa de segunda clase, ahora compite en calidad con la educación presencial tradicional. Plataformas como Coursera, edX y Khan Academy democratizan el acceso al conocimiento, permitiendo que estudiantes de todo el mundo accedan a cursos de las mejores universidades. La pandemia aceleró esta tendencia, forzando a instituciones milenarias a adaptar sus metodologías. Los beneficios son claros: flexibilidad de horarios, reducción de costos y acceso global. Sin embargo, persisten desafíos: la brecha digital excluye a poblaciones sin conectividad, la deserción es mayor en cursos online, y la evaluación de competencias prácticas sigue siendo un reto. El futuro educativo será híbrido, combinando lo mejor de la presencialidad con las ventajas digitales.",
+                mainIdeas: ["La educación online ha pasado de alternativa a competencia real", "Las plataformas democratizan el acceso al conocimiento global", "La pandemia aceleró la adopción de metodologías digitales", "Existen beneficios como flexibilidad y reducción de costos", "Persisten desafíos como brecha digital y deserción"],
+                distractorIdeas: ["La educación online es siempre inferior a la presencial", "Todas las personas tienen acceso a Internet", "La pandemia no afectó la educación", "Los cursos online no tienen ningún costo"],
+                surveyQuestions: [{ question: "¿Qué transformación se analizará?", options: ["El cambio en los modelos educativos hacia lo digital", "La historia de las escuelas tradicionales", "Técnicas de estudio para exámenes", "El mercado de libros de texto"], correct: 0 }],
+                guidingQuestions: [{ text: "¿Cuáles son los beneficios y desafíos de la educación online?", correct: true }, { text: "¿Cómo obtener el mejor título universitario?", correct: false }, { text: "¿Cuántos años dura una carrera universitaria?", correct: false }, { text: "¿Qué universidad es la mejor del mundo?", correct: false }],
+                wrongMainIdea: "La educación online nunca podrá igualar la calidad de la educación presencial tradicional."
+            },
+            {
+                id: 7,
+                title: "El Auge de las Energías Renovables",
+                text: "Las energías renovables están redefiniendo la matriz energética global a un ritmo sin precedentes. La solar y eólica han experimentado reducciones de costos dramáticas: el precio de la energía solar ha caído un 89% en la última década. Países como Dinamarca ya generan más del 50% de su electricidad desde fuentes renovables. Esta transición no solo es ambientalmente necesaria sino económicamente ventajosa, creando millones de empleos verdes. Sin embargo, la intermitencia de estas fuentes plantea desafíos técnicos: el sol no brilla de noche y el viento no sopla constantemente. Las soluciones incluyen baterías de almacenamiento, redes inteligentes y complementación entre fuentes. La transición energética también enfrenta resistencias políticas y económicas de industrias fósiles establecidas. A pesar de los obstáculos, la tendencia es irreversible y acelerada.",
+                mainIdeas: ["Las renovables redefinen la matriz energética global", "Los costos solares han caído 89% en una década", "Dinamarca genera más del 50% con renovables", "La intermitencia plantea desafíos técnicos", "Existen resistencias pero la tendencia es irreversible"],
+                distractorIdeas: ["Las energías renovables son demasiado caras", "El petróleo es la única fuente viable de energía", "No existe ningún país usando renovables", "El cambio climático no es real"],
+                surveyQuestions: [{ question: "¿Qué tema se desarrollará?", options: ["El crecimiento de fuentes energéticas sostenibles", "La historia del petróleo y el carbón", "Técnicas de ahorro de electricidad en casa", "El mercado de acciones energéticas"], correct: 0 }],
+                guidingQuestions: [{ text: "¿Cuáles son los avances y desafíos de las energías renovables?", correct: true }, { text: "¿Cómo ahorrar dinero en la factura eléctrica?", correct: false }, { text: "¿Cuál es el precio del petróleo hoy?", correct: false }, { text: "¿Cómo construir un panel solar casero?", correct: false }],
+                wrongMainIdea: "Los combustibles fósiles son la única opción realista para el futuro energético mundial."
+            },
+            {
+                id: 8,
+                title: "La Neuroplasticidad del Cerebro Humano",
+                text: "El cerebro humano posee una capacidad extraordinaria de reorganizarse y adaptarse, propiedad conocida como neuroplasticidad. Contrario a la creencia antigua de que el cerebro adulto es estático, investigaciones recientes demuestran que las conexiones neuronales se modifican continuamente en respuesta a experiencias, aprendizaje y lesiones. Esta plasticidad explica la recuperación después de accidentes cerebrovasculares y la capacidad de adquirir nuevas habilidades a cualquier edad. El aprendizaje de idiomas, instrumentos musicales o deportes genera nuevas conexiones sinápticas. Factores como el ejercicio, la dieta y el sueño influyen positivamente en esta capacidad. Sin embargo, la plasticidad también tiene un lado oscuro: puede reforzar hábitos nocivos y patrones de pensamiento negativos. Comprender la neuroplasticidad ha revolucionado la rehabilitación neurológica y la psicoterapia, ofreciendo esperanza para condiciones previamente consideradas intratables.",
+                mainIdeas: ["El cerebro puede reorganizarse y adaptarse continuamente", "Las conexiones se modifican con experiencias y aprendizaje", "Explica recuperación tras lesiones y nueva aprendizaje", "Factores como ejercicio y dieta influyen positivamente", "También puede reforzar hábitos nocivos"],
+                distractorIdeas: ["El cerebro no puede cambiar después de la infancia", "Las lesiones cerebrales son siempre permanentes", "El aprendizaje no tiene ningún efecto en el cerebro", "La neuroplasticidad no existe realmente"],
+                surveyQuestions: [{ question: "¿Qué capacidad del cerebro se explorará?", options: ["Su habilidad para modificarse y adaptarse", "Su estructura física inmutable", "Su tamaño comparado con otros animales", "Su peso promedio en humanos"], correct: 0 }],
+                guidingQuestions: [{ text: "¿Qué es la neuroplasticidad y cuáles son sus implicaciones?", correct: true }, { text: "¿Cómo aumentar la memoria rápidamente?", correct: false }, { text: "¿Cuánto pesa el cerebro humano?", correct: false }, { text: "¿Qué alimentos son mejores para el cerebro?", correct: false }],
+                wrongMainIdea: "El cerebro humano es completamente estático después de la niñez y no puede cambiar."
+            },
+            {
+                id: 9,
+                title: "El Impacto del Comercio Justo",
+                text: "El comercio justo representa un movimiento global que busca equilibrar las asimetrías del mercado internacional. Mediante precios mínimos garantizados, los productores de países en desarrollo reciben compensación justa por sus productos, protegiéndolos de la volatilidad de los mercados. Este modelo beneficia a más de 1.7 millones de agricultores en 73 países, permitiéndoles invertir en educación, salud y desarrollo comunitario. Los consumidores, a su vez, reciben productos de calidad con trazabilidad ética. Sin embargo, el comercio justo enfrenta críticas: algunos argumentan que los costos de certificación excluyen a los productores más pequeños, y que el modelo no aborda estructuralmente las desigualdades del sistema comercial global. A pesar de las limitaciones, ha demostrado que el comercio puede ser una herramienta de desarrollo cuando se diseñan mecanismos que prioricen el bienestar de los productores.",
+                mainIdeas: ["Busca equilibrar asimetrías del mercado internacional", "Beneficia a 1.7 millones de agricultores en 73 países", "Permite inversión en educación, salud y comunidad", "Los consumidores reciben productos con trazabilidad ética", "Existen críticas sobre exclusión y limitaciones estructurales"],
+                distractorIdeas: ["El comercio justo no beneficia a nadie", "Todos los productos son comercio justo", "El mercado libre resuelve todos los problemas", "Los agricultores no necesitan apoyo económico"],
+                surveyQuestions: [{ question: "¿Qué movimiento económico se analizará?", options: ["Un modelo de comercio con justicia social", "Las tarifas de importación tradicionales", "El libre mercado sin regulaciones", "El comercio de productos de lujo"], correct: 0 }],
+                guidingQuestions: [{ text: "¿Cuáles son los beneficios y limitaciones del comercio justo?", correct: true }, { text: "¿Cómo ganar dinero vendiendo productos?", correct: false }, { text: "¿Cuál es el mejor país para importar?", correct: false }, { text: "¿Cómo crear una empresa de exportación?", correct: false }],
+                wrongMainIdea: "El comercio justo no tiene ningún impacto real y es solo una estrategia de marketing."
+            },
+            {
+                id: 10,
+                title: "La Urbanización y sus Desafíos",
+                text: "La humanidad atraviesa una transición urbana sin precedentes: para 2050, el 68% de la población mundial vivirá en ciudades. Esta concentración genera eficiencias económicas, acceso a servicios y oportunidades de empleo. Sin embargo, también produce desafíos críticos: congestionamiento vehicular, contaminación atmosférica, escasez de vivienda asequible y segregación socioeconómica. Las megaciudades como Tokio, Delhi y São Paulo ejemplifican tanto el dinamismo urbano como sus problemas asociados. Soluciones innovadoras emergen: ciudades inteligentes con sensores para optimizar servicios, sistemas de transporte público integrados, y arquitectura verde que reduce islas de calor. El urbanismo participativo involucra a ciudadanos en la planificación. El éxito de las ciudades futuras dependerá de su capacidad para ser inclusivas, sostenibles y resilientes ante crisis climáticas y sanitarias.",
+                mainIdeas: ["Para 2050, el 68% vivirá en ciudades", "Genera eficiencias pero también desafíos críticos", "Existen problemas como contaminación y segregación", "Surgen soluciones como ciudades inteligentes", "El éxito depende de inclusión y sostenibilidad"],
+                distractorIdeas: ["La urbanización no tiene ningún beneficio", "Todas las ciudades funcionan perfectamente", "La contaminación urbana no existe", "Las ciudades son inherentemente malas"],
+                surveyQuestions: [{ question: "¿Qué fenómeno demográfico se analizará?", options: ["El crecimiento de la población urbana y sus implicaciones", "El declive de las áreas rurales", "La historia de las civilizaciones antiguas", "Las técnicas de construcción modernas"], correct: 0 }],
+                guidingQuestions: [{ text: "¿Cuáles son los beneficios y desafíos de la urbanización creciente?", correct: true }, { text: "¿Cómo conseguir un apartamento barato?", correct: false }, { text: "¿Cuál es la mejor ciudad para vivir?", correct: false }, { text: "¿Cómo evitar el tráfico en la ciudad?", correct: false }],
+                wrongMainIdea: "La urbanización es completamente negativa y deberíamos evitar las ciudades."
+            },
+            {
+                id: 11,
+                title: "La Psicología del Consumo",
+                text: "El comportamiento del consumidor está determinado por complejos factores psicológicos que las empresas han aprendido a explotar. El marketing emocional apela a deseos subconscientes, mientras que técnicas de escasez artificial generan urgencia de compra. Los algoritmos de redes sociales personalizan publicidad basándose en patrones de comportamiento, creando un ciclo de consumo impulsivo. La dopamina liberada durante las compras genera satisfacción temporal pero puede conducir a adicción al consumo. La sociedad de consumo ha normalizado la obsolescencia programada y la moda rápida, perpetuando ciclos de compra innecesaria. Movimientos como el minimalismo y el consumo consciente proponen alternativas, enfatizando la calidad sobre la cantidad y la experiencia sobre la posesión. La educación financiera y la reflexión crítica son herramientas para tomar decisiones de compra más racionales.",
+                mainIdeas: ["El consumo está determinado por factores psicológicos", "El marketing emocional apela a deseos subconscientes", "Los algoritmos personalizan publicidad y crean ciclos", "La dopamina puede generar adicción al consumo", "Alternativas como minimalismo proponen consumo consciente"],
+                distractorIdeas: ["El consumo siempre es una decisión racional", "El marketing no afecta las decisiones de compra", "Todas las compras son necesarias", "No existe la adicción al consumo"],
+                surveyQuestions: [{ question: "¿Qué aspecto del comportamiento se explorará?", options: ["Los factores psicológicos detrás de las compras", "Las estadísticas de ventas globales", "La historia del dinero", "Los métodos de pago electrónicos"], correct: 0 }],
+                guidingQuestions: [{ text: "¿Qué factores psicológicos influyen en las decisiones de consumo?", correct: true }, { text: "¿Cómo conseguir descuentos en tiendas?", correct: false }, { text: "¿Cuál es la mejor tarjeta de crédito?", correct: false }, { text: "¿Cómo ganar más dinero?", correct: false }],
+                wrongMainIdea: "Todas las decisiones de compra son completamente racionales y conscientes."
+            },
+            {
+                id: 12,
+                title: "El Futuro del Transporte Autónomo",
+                text: "Los vehículos autónomos representan una de las transformaciones tecnológicas más significativas del siglo XXI. Empresas como Tesla, Waymo y fabricantes tradicionales compiten por liderar esta revolución. Los beneficios potenciales son enormes: reducción de accidentes causados por error humano, mayor eficiencia del tráfico, y movilidad para personas con discapacidades. Sin embargo, desafíos persistentes retrasan la adopción masiva: condiciones climáticas adversas, decisiones éticas en situaciones de emergencia, y la transición de vehículos mixtos en las carreteras. El impacto económico también es preocupante: millones de conductores profesionales podrían perder sus empleos. Los marcos regulatorios están evolucionando lentamente, creando incertidumbre legal. A pesar de los obstáculos, la mayoría de expertos predice que el transporte autónomo será realidad común para 2035, transformando fundamentalmente la movilidad urbana.",
+                mainIdeas: ["Los vehículos autónomos transformarán la movilidad", "Los beneficios incluyen reducción de accidentes y mayor eficiencia", "Existen desafíos técnicos, éticos y económicos", "Millones de conductores podrían perder empleos", "Se predice adopción común para 2035"],
+                distractorIdeas: ["Los vehículos autónomos ya funcionan perfectamente", "No hay ningún beneficio en la automatización", "Los coches autoconducidos son ciencia ficción imposible", "Nadie perderá su trabajo por la tecnología"],
+                surveyQuestions: [{ question: "¿Qué tecnología se analizará?", options: ["Vehículos que pueden conducirse sin intervención humana", "Nuevos modelos de automóviles deportivos", "Sistemas de navegación GPS", "Técnicas de mantenimiento automotriz"], correct: 0 }],
+                guidingQuestions: [{ text: "¿Cuáles son los beneficios y desafíos del transporte autónomo?", correct: true }, { text: "¿Cuál es el mejor auto para comprar?", correct: false }, { text: "¿Cómo obtener licencia de conducir?", correct: false }, { text: "¿Cuánto cuesta un Tesla?", correct: false }],
+                wrongMainIdea: "Los vehículos autónomos son imposibles y nunca serán realidad."
+            },
+            {
+                id: 13,
+                title: "La Importancia del Sueño",
+                text: "El sueño desempeña funciones críticas para la salud física y mental que la ciencia apenas comienza a comprender completamente. Durante el descanso, el cerebro consolida memorias, elimina toxinas acumuladas y regula hormonas esenciales. La privación crónica de sueño está vinculada a obesidad, diabetes, enfermedades cardiovasculares y deterioro cognitivo. Un adulto promedio necesita entre 7 y 9 horas de sueño, aunque la sociedad moderna ha normalizado el déficit de sueño. Los dispositivos electrónicos con luz azul interfieren con la melatonina, dificultando el descanso. La cultura de productividad que glorifica el poco sueño es contraproducente: el descanso adecuado mejora significativamente el rendimiento. Estrategias como mantener horarios regulares, crear ambientes oscuros y limitar pantallas antes de dormir pueden mejorar drásticamente la calidad del sueño.",
+                mainIdeas: ["El sueño es crítico para salud física y mental", "Consolida memorias y elimina toxinas cerebrales", "La privación está vinculada a múltiples enfermedades", "Se necesitan 7-9 horas aunque se normaliza el déficit", "Existen estrategias efectivas para mejorar el descanso"],
+                distractorIdeas: ["El sueño no tiene ninguna función importante", "Dormir poco es señal de productividad", "Todos necesitan exactamente 8 horas", "Los dispositivos no afectan el sueño"],
+                surveyQuestions: [{ question: "¿Qué aspecto de la salud se abordará?", options: ["La función del descanso en el bienestar humano", "Técnicas para dormir menos", "La historia de las camas y colchones", "Trastornos respiratorios nocturnos"], correct: 0 }],
+                guidingQuestions: [{ text: "¿Por qué es importante el sueño y cómo mejorarlo?", correct: true }, { text: "¿Cómo dormir solo 4 horas sin problemas?", correct: false }, { text: "¿Cuál es la mejor almohada del mercado?", correct: false }, { text: "¿Cómo despertarse sin alarma?", correct: false }],
+                wrongMainIdea: "El sueño es tiempo perdido y dormir poco es señal de una persona exitosa."
+            },
+            {
+                id: 14,
+                title: "La Crisis de la Biodiversidad",
+                text: "La Tierra enfrenta una crisis de biodiversidad comparable a las grandes extinciones del pasado geológico. La tasa actual de extinción es 100 a 1,000 veces mayor que el ritmo natural, principalmente debido a actividades humanas. La destrucción de hábitats, la contaminación, el cambio climático y la sobreexplotación amenazan ecosistemas enteros. Las consecuencias trascienden consideraciones éticas: la biodiversidad sustenta servicios ecosistémicos valorados en 125 a 140 trillones de dólares anuales, incluyendo polinización, purificación del agua y regulación climática. La pérdida de especies reduce la resiliencia de los ecosistemas frente a perturbaciones. Acuerdos internacionales como el Convenio sobre Diversidad Biológica establecen metas de conservación, pero su implementación es insuficiente. Estrategias de protección van desde áreas naturales protegidas hasta bancos de semillas y tecnologías de restauración ecológica.",
+                mainIdeas: ["La tasa de extinción es 100-1000 veces mayor que la natural", "Causas principales: destrucción de hábitat y contaminación", "Servicios ecosistémicos valen 125-140 trillones anuales", "La pérdida reduce resiliencia ecosistémica", "Existen estrategias de protección pero implementación insuficiente"],
+                distractorIdeas: ["La extinción de especies no es un problema real", "Los humanos no afectan la biodiversidad", "Los servicios ecosistémicos no tienen valor económico", "No es necesario proteger áreas naturales"],
+                surveyQuestions: [{ question: "¿Qué problema ambiental se analizará?", options: ["La pérdida acelerada de especies y ecosistemas", "La contaminación del aire urbano", "El calentamiento de los océanos", "La erosión de los suelos agrícolas"], correct: 0 }],
+                guidingQuestions: [{ text: "¿Cuáles son las causas y consecuencias de la crisis de biodiversidad?", correct: true }, { text: "¿Cómo ver animales salvajes de cerca?", correct: false }, { text: "¿Cuántas especies existen en el mundo?", correct: false }, { text: "¿Qué mascota es mejor para tener en casa?", correct: false }],
+                wrongMainIdea: "La pérdida de biodiversidad no tiene consecuencias importantes para los humanos."
+            },
+            {
+                id: 15,
+                title: "La Transformación Digital de las Empresas",
+                text: "La transformación digital ha dejado de ser opcional para convertirse en imperativo de supervivencia empresarial. Empresas que no se adapten a las nuevas tecnologías corren el riesgo de volverse obsoletas. Esta transformación abarca desde la adopción de computación en la nube hasta inteligencia artificial y análisis de datos. Los beneficios incluyen mayor eficiencia operativa, personalización de productos y nuevos modelos de negocio. Sin embargo, el proceso es complejo: requiere cambios culturales profundos, inversión significativa y capacitación continua del personal. El 70% de las iniciativas de transformación digital fracasan, principalmente por resistencia al cambio organizacional y falta de visión estratégica. Las empresas exitosas entienden que la transformación digital no es solo tecnología, sino una revisión fundamental de cómo crean valor para los clientes en la era digital.",
+                mainIdeas: ["La transformación digital es un imperativo de supervivencia", "Abarca desde nube hasta inteligencia artificial", "Los beneficios incluyen eficiencia y personalización", "El 70% de iniciativas fracasan por resistencia cultural", "Requiere revisión fundamental de creación de valor"],
+                distractorIdeas: ["La transformación digital es innecesaria para muchas empresas", "Solo las empresas de tecnología necesitan digitalizarse", "La resistencia al cambio no es un problema real", "La transformación digital siempre tiene éxito"],
+                surveyQuestions: [{ question: "¿Qué proceso organizacional se analizará?", options: ["La adaptación de empresas a tecnologías digitales", "La historia de las corporaciones tradicionales", "Métodos de contabilidad empresarial", "Técnicas de marketing tradicional"], correct: 0 }],
+                guidingQuestions: [{ text: "¿Qué implica la transformación digital y por qué muchas iniciativas fracasan?", correct: true }, { text: "¿Cómo crear una página web empresarial?", correct: false }, { text: "¿Cuál es la mejor empresa de tecnología?", correct: false }, { text: "¿Cómo ganar dinero con una startup?", correct: false }],
+                wrongMainIdea: "La transformación digital es innecesaria y las empresas tradicionales funcionan perfectamente sin cambios."
+            }
+        ];
+
+        // ============================================
+        // STATE
+        // ============================================
+        let state = {
+            currentExercise: 0,
+            streak: 0,
+            currentStep: 1,
+            selectedText: null,
+            selectedSurveyAnswer: null,
+            selectedQuestionAnswer: null,
+            selectedReciteAnswers: [],
+            selectedReviewAnswer: null,
+            timerInterval: null,
+            readTimeRemaining: 100,
+            shuffledTexts: [],
+            isTransitioning: false
+        };
+
+        // ============================================
+        // DOM ELEMENTS
+        // ============================================
+        const elements = {
+            introSection: document.getElementById('intro-section'),
+            exerciseSection: document.getElementById('exercise-section'),
+            successSection: document.getElementById('success-section')
+        };
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function hideAllSections() {
+            elements.introSection.classList.add('hidden');
+            elements.exerciseSection.classList.add('hidden');
+            elements.successSection.classList.add('hidden');
+        }
+
+        function showSection(section) {
+            section.classList.remove('hidden');
+        }
+
+        function updateStreakDisplay() {
+            for (let i = 1; i <= 5; i++) {
+                const dot = document.getElementById(`streak-${i}`);
+                if (i <= state.streak) {
+                    dot.classList.add('filled');
+                } else {
+                    dot.classList.remove('filled');
+                }
+            }
+        }
+
+        function updateStepIndicators() {
+            for (let i = 1; i <= 5; i++) {
+                const dot = document.getElementById(`dot-${i}`);
+                const conn = document.getElementById(`conn-${i}`);
+                
+                dot.classList.remove('completed', 'active', 'pending');
+                
+                if (i < state.currentStep) {
+                    dot.classList.add('completed');
+                    if (conn) conn.classList.add('completed');
+                } else if (i === state.currentStep) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.add('pending');
+                }
+            }
+        }
+
+        function updateProgressBar() {
+            const progress = ((state.currentStep - 1) / 5) * 100;
+            document.getElementById('progress-bar').style.width = progress + '%';
+        }
+
+        function showStep(stepNum) {
+            // Hide all steps first
+            for (let i = 1; i <= 5; i++) {
+                const card = document.getElementById(`step-${i}-card`);
+                card.classList.remove('active', 'exit');
+            }
+            
+            // Show current step with animation
+            const currentCard = document.getElementById(`step-${stepNum}-card`);
+            currentCard.classList.add('active');
+            
+            updateStepIndicators();
+            updateProgressBar();
+        }
+
+        function transitionToStep(nextStep) {
+            if (state.isTransitioning) return;
+            state.isTransitioning = true;
+            
+            const currentCard = document.getElementById(`step-${state.currentStep}-card`);
+            const nextCard = document.getElementById(`step-${nextStep}-card`);
+            
+            // Exit current card
+            currentCard.classList.remove('active');
+            currentCard.classList.add('exit');
+            
+            setTimeout(() => {
+                currentCard.classList.remove('exit');
+                state.currentStep = nextStep;
+                showStep(nextStep);
+                state.isTransitioning = false;
+            }, 400);
+        }
+
+        function resetExerciseState() {
+            state.currentStep = 1;
+            state.selectedSurveyAnswer = null;
+            state.selectedQuestionAnswer = null;
+            state.selectedReciteAnswers = [];
+            state.selectedReviewAnswer = null;
+            state.readTimeRemaining = 100;
+            state.isTransitioning = false;
+            
+            if (state.timerInterval) {
+                clearInterval(state.timerInterval);
+                state.timerInterval = null;
+            }
+            
+            // Reset all buttons
+            document.getElementById('survey-btn').disabled = true;
+            document.getElementById('question-btn').disabled = true;
+            document.getElementById('read-btn').disabled = true;
+            document.getElementById('recite-btn').disabled = true;
+            document.getElementById('review-btn').disabled = true;
+            
+            document.getElementById('feedback-section').classList.add('hidden');
+            
+            showStep(1);
+        }
+
+        // ============================================
+        // STEP 1: SURVEY
+        // ============================================
+        function loadStep1() {
+            const text = state.selectedText;
+            
+            document.getElementById('text-title').textContent = text.title;
+            
+            const surveyQ = text.surveyQuestions[Math.floor(Math.random() * text.surveyQuestions.length)];
+            document.getElementById('survey-question').textContent = surveyQ.question;
+            
+            const optionsContainer = document.getElementById('survey-options');
+            optionsContainer.innerHTML = '';
+            
+            surveyQ.options.forEach((option, index) => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'option-item';
+                optionDiv.dataset.correct = index === surveyQ.correct;
+                optionDiv.innerHTML = `
+                    <div class="option-indicator"></div>
+                    <span>${option}</span>
+                `;
+                
+                optionDiv.addEventListener('click', () => selectSurveyOption(optionDiv, index));
+                optionsContainer.appendChild(optionDiv);
+            });
+        }
+
+        function selectSurveyOption(element, index) {
+            document.querySelectorAll('#survey-options .option-item').forEach(div => {
+                div.classList.remove('selected');
+            });
+            element.classList.add('selected');
+            state.selectedSurveyAnswer = index;
+            document.getElementById('survey-btn').disabled = false;
+        }
+
+        document.getElementById('survey-btn').addEventListener('click', () => {
+            const options = document.querySelectorAll('#survey-options .option-item');
+            let isCorrect = false;
+            
+            options.forEach(opt => {
+                if (opt.dataset.correct === 'true') {
+                    opt.classList.add('correct');
+                    if (opt.classList.contains('selected')) isCorrect = true;
+                } else if (opt.classList.contains('selected')) {
+                    opt.classList.add('incorrect');
+                }
+                opt.classList.add('disabled');
+            });
+            
+            if (isCorrect) {
+                setTimeout(() => {
+                    transitionToStep(2);
+                    loadStep2();
+                }, 800);
+            } else {
+                handleFailure();
+            }
+        });
+
+        // ============================================
+        // STEP 2: QUESTION
+        // ============================================
+        function loadStep2() {
+            const text = state.selectedText;
+            
+            document.getElementById('full-text').textContent = text.text;
+            
+            const optionsContainer = document.getElementById('question-options');
+            optionsContainer.innerHTML = '';
+            
+            text.guidingQuestions.forEach((question) => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'option-item';
+                optionDiv.dataset.correct = question.correct;
+                optionDiv.innerHTML = `
+                    <div class="option-indicator"></div>
+                    <span>${question.text}</span>
+                `;
+                
+                optionDiv.addEventListener('click', () => selectQuestionOption(optionDiv, question.correct));
+                optionsContainer.appendChild(optionDiv);
+            });
+        }
+
+        function selectQuestionOption(element, isCorrect) {
+            document.querySelectorAll('#question-options .option-item').forEach(div => {
+                div.classList.remove('selected');
+            });
+            element.classList.add('selected');
+            state.selectedQuestionAnswer = isCorrect;
+            document.getElementById('question-btn').disabled = false;
+        }
+
+        document.getElementById('question-btn').addEventListener('click', () => {
+            const isCorrect = state.selectedQuestionAnswer === true;
+            
+            const options = document.querySelectorAll('#question-options .option-item');
+            options.forEach(opt => {
+                opt.classList.add('disabled');
+                if (opt.dataset.correct === 'true') {
+                    opt.classList.add('correct');
+                } else if (opt.classList.contains('selected')) {
+                    opt.classList.add('incorrect');
+                }
+            });
+            
+            if (isCorrect) {
+                setTimeout(() => {
+                    transitionToStep(3);
+                    loadStep3();
+                }, 800);
+            } else {
+                handleFailure();
+            }
+        });
+
+        // ============================================
+        // STEP 3: READ
+        // ============================================
+        function loadStep3() {
+            const text = state.selectedText;
+            
+            document.getElementById('read-text').textContent = text.text;
+            document.getElementById('read-btn').disabled = true;
+            document.getElementById('read-timer').textContent = '1:40';
+            document.getElementById('read-timer').classList.remove('warning', 'danger');
+            document.getElementById('read-progress').style.strokeDashoffset = 0;
+            
+            state.readTimeRemaining = 100;
+            startReadTimer();
+        }
+
+        function startReadTimer() {
+            const timerDisplay = document.getElementById('read-timer');
+            const progressCircle = document.getElementById('read-progress');
+            const circumference = 2 * Math.PI * 44;
+            
+            if (state.timerInterval) {
+                clearInterval(state.timerInterval);
+            }
+            
+            const updateTimer = () => {
+                const minutes = Math.floor(state.readTimeRemaining / 60);
+                const seconds = state.readTimeRemaining % 60;
+                timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                const progress = (100 - state.readTimeRemaining) / 100;
+                progressCircle.style.strokeDashoffset = circumference * (1 - progress);
+                
+                timerDisplay.classList.remove('warning', 'danger');
+                if (state.readTimeRemaining <= 20) {
+                    timerDisplay.classList.add('danger');
+                } else if (state.readTimeRemaining <= 40) {
+                    timerDisplay.classList.add('warning');
+                }
+                
+                if (state.readTimeRemaining <= 0) {
+                    clearInterval(state.timerInterval);
+                    state.timerInterval = null;
+                    document.getElementById('read-btn').disabled = false;
+                }
+                
+                state.readTimeRemaining--;
+            };
+            
+            updateTimer();
+            state.timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        document.getElementById('read-btn').addEventListener('click', () => {
+            transitionToStep(4);
+            loadStep4();
+        });
+
+        // ============================================
+        // STEP 4: RECITE
+        // ============================================
+        function loadStep4() {
+            const text = state.selectedText;
+            state.selectedReciteAnswers = [];
+            
+            const optionsContainer = document.getElementById('recite-options');
+            optionsContainer.innerHTML = '';
+            
+            const allIdeas = [
+                ...text.mainIdeas.map(idea => ({ text: idea, correct: true })),
+                ...text.distractorIdeas.map(idea => ({ text: idea, correct: false }))
+            ];
+            
+            const shuffledIdeas = shuffleArray(allIdeas);
+            
+            shuffledIdeas.forEach((idea, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'checkbox-item';
+                itemDiv.dataset.correct = idea.correct;
+                itemDiv.dataset.index = index;
+                itemDiv.innerHTML = `
+                    <div class="checkbox-box"></div>
+                    <span>${idea.text}</span>
+                `;
+                
+                itemDiv.addEventListener('click', () => toggleReciteOption(itemDiv, index));
+                optionsContainer.appendChild(itemDiv);
+            });
+        }
+
+        function toggleReciteOption(element, index) {
+            element.classList.toggle('checked');
+            
+            const idx = state.selectedReciteAnswers.indexOf(index);
+            if (idx > -1) {
+                state.selectedReciteAnswers.splice(idx, 1);
+            } else {
+                state.selectedReciteAnswers.push(index);
+            }
+            
+            document.getElementById('recite-btn').disabled = state.selectedReciteAnswers.length === 0;
+        }
+
+        document.getElementById('recite-btn').addEventListener('click', () => {
+            const items = document.querySelectorAll('#recite-options .checkbox-item');
+            let totalCorrect = 0;
+            let selectedCorrect = 0;
+            
+            items.forEach((item) => {
+                const isCorrect = item.dataset.correct === 'true';
+                const isSelected = item.classList.contains('checked');
+                
+                item.classList.add('disabled');
+                
+                if (isCorrect) {
+                    totalCorrect++;
+                    if (isSelected) {
+                        selectedCorrect++;
+                        item.classList.add('correct');
+                    }
+                } else if (isSelected) {
+                    item.classList.add('incorrect');
+                }
+            });
+            
+            const correctSelection = selectedCorrect === totalCorrect && 
+                                     state.selectedReciteAnswers.length === totalCorrect;
+            
+            if (correctSelection) {
+                setTimeout(() => {
+                    transitionToStep(5);
+                    loadStep5();
+                }, 800);
+            } else {
+                handleFailure();
+            }
+        });
+
+        // ============================================
+        // STEP 5: REVIEW
+        // ============================================
+        function loadStep5() {
+            const text = state.selectedText;
+            
+            document.getElementById('review-text').textContent = text.text;
+            
+            const optionsContainer = document.getElementById('review-options');
+            optionsContainer.innerHTML = '';
+            
+            const options = [
+                { text: text.wrongMainIdea, isWrong: true },
+                { text: text.mainIdeas[0], isWrong: false },
+                { text: text.mainIdeas[1] || text.mainIdeas[0], isWrong: false },
+                { text: text.mainIdeas[2] || text.mainIdeas[0], isWrong: false }
+            ];
+            
+            const shuffledOptions = shuffleArray(options);
+            
+            shuffledOptions.forEach((option) => {
+                const optionDiv = document.createElement('div');
+                optionDiv.className = 'option-item';
+                optionDiv.dataset.isWrong = option.isWrong;
+                optionDiv.innerHTML = `
+                    <div class="option-indicator"></div>
+                    <span>${option.text}</span>
+                `;
+                
+                optionDiv.addEventListener('click', () => selectReviewOption(optionDiv, option.isWrong));
+                optionsContainer.appendChild(optionDiv);
+            });
+        }
+
+        function selectReviewOption(element, isWrong) {
+            document.querySelectorAll('#review-options .option-item').forEach(div => {
+                div.classList.remove('selected');
+            });
+            element.classList.add('selected');
+            state.selectedReviewAnswer = isWrong;
+            document.getElementById('review-btn').disabled = false;
+        }
+
+        document.getElementById('review-btn').addEventListener('click', () => {
+            const isCorrect = state.selectedReviewAnswer === true;
+            
+            const options = document.querySelectorAll('#review-options .option-item');
+            options.forEach(opt => {
+                opt.classList.add('disabled');
+                if (opt.dataset.isWrong === 'true') {
+                    opt.classList.add('correct');
+                } else if (opt.classList.contains('selected')) {
+                    opt.classList.add('incorrect');
+                }
+            });
+            
+            if (isCorrect) {
+                state.streak++;
+                updateStreakDisplay();
+                
+                if (state.streak >= 5) {
+                    setTimeout(() => {
+                        hideAllSections();
+                        showSection(elements.successSection);
+                    }, 800);
+                } else {
+                    showSuccessFeedback();
+                }
+            } else {
+                handleFailure();
+            }
+        });
+
+        // ============================================
+        // FEEDBACK HANDLERS
+        // ============================================
+        function handleFailure() {
+            state.streak = 0;
+            updateStreakDisplay();
+            
+            const feedbackSection = document.getElementById('feedback-section');
+            feedbackSection.innerHTML = `
+                <div class="feedback-box error">
+                    <div class="flex items-center gap-3 mb-3">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M15 9l-6 6M9 9l6 6"/>
+                        </svg>
+                        <span class="font-bold text-xl" style="color: var(--error);">Respuesta Incorrecta</span>
+                    </div>
+                    <p class="text-lg">La racha se ha reiniciado. Debes completar 5 ejercicios seguidos correctamente.</p>
+                    <div class="text-center mt-6">
+                        <button id="retry-btn" class="btn btn-primary btn-lg">
+                            Intentar de Nuevo
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 4v6h6M23 20v-6h-6"/>
+                                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+            feedbackSection.classList.remove('hidden');
+            
+            document.getElementById('retry-btn').addEventListener('click', nextExercise);
+        }
+
+        function showSuccessFeedback() {
+            const feedbackSection = document.getElementById('feedback-section');
+            feedbackSection.innerHTML = `
+                <div class="feedback-box success">
+                    <div class="flex items-center gap-3 mb-3">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <path d="M22 4L12 14.01l-3-3"/>
+                        </svg>
+                        <span class="font-bold text-xl" style="color: var(--success);">¡Ejercicio Completado!</span>
+                    </div>
+                    <p class="text-lg">Racha actual: <strong>${state.streak}/5</strong>. Continúa así para desbloquear el cuestionario.</p>
+                    <div class="text-center mt-6">
+                        <button id="continue-exercise-btn" class="btn btn-primary btn-lg">
+                            Siguiente Ejercicio
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+            feedbackSection.classList.remove('hidden');
+            
+            document.getElementById('continue-exercise-btn').addEventListener('click', nextExercise);
+        }
+
+        function nextExercise() {
+            state.currentExercise++;
+            
+            if (state.currentExercise >= 15) {
+                state.currentExercise = 0;
+                state.shuffledTexts = shuffleArray(textBank);
+            }
+            
+            state.selectedText = state.shuffledTexts[state.currentExercise];
+            document.getElementById('exercise-number').textContent = state.currentExercise + 1;
+            
+            document.getElementById('feedback-section').classList.add('hidden');
+            resetExerciseState();
+            loadStep1();
+        }
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        document.getElementById('start-training').addEventListener('click', () => {
+            state.shuffledTexts = shuffleArray(textBank);
+            state.currentExercise = 0;
+            state.streak = 0;
+            state.selectedText = state.shuffledTexts[0];
+            
+            document.getElementById('exercise-number').textContent = 1;
+            updateStreakDisplay();
+            
+            hideAllSections();
+            showSection(elements.exerciseSection);
+            
+            resetExerciseState();
+            loadStep1();
+        });
+
+        document.getElementById('continue-btn').addEventListener('click', () => {
+            window.location.href = 'LCS1D2D.html';
+        });
+    </script>
+</body>
+</html>
