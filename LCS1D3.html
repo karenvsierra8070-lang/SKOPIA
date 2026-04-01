@@ -267,6 +267,15 @@
             overflow: hidden;
             animation: slideUp 0.6s ease;
         }
+        /* Indicador de desbloqueo */
+.unlock-status {
+    animation: pulseUnlock 2s infinite ease-in-out;
+}
+
+@keyframes pulseUnlock {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
 
         @keyframes slideUp {
             from {
@@ -3027,41 +3036,103 @@
                 saveProgress();
             }
             
-            // Mostrar resultados
-            function showResults() {
-                currentView = 'results';
-                questionCard.style.display = 'none';
-                resultsContainer.style.display = 'block';
-                
-                const endTime = Date.now();
-                totalTimeSpent += Math.floor((endTime - startTime) / 1000);
-                
-                const finalScore = Math.min(score, MAX_SCORE);
-                const percentage = Math.round((finalScore / MAX_SCORE) * 100);
-                
-                scoreDisplay.textContent = `${finalScore}/300`;
-                correctAnswersEl.textContent = Math.floor(finalScore / POINTS_CORRECT);
-                
-                const totalMinutes = Math.floor(totalTimeSpent / 60);
-                const totalSeconds = totalTimeSpent % 60;
-                timeSpentEl.textContent = `${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}`;
-                
-                currentStreakStat.textContent = maxStreak;
-                
-                if (percentage >= 90) {
-                    resultsMessage.textContent = '¡Excelente! Has dominado el concepto de ideas principales.';
-                    starsRating.innerHTML = '⭐⭐⭐';
-                } else if (percentage >= 60) {
-                    resultsMessage.textContent = '¡Buen trabajo! Tienes una comprensión sólida del tema.';
-                    starsRating.innerHTML = '⭐⭐';
-                } else {
-                    resultsMessage.textContent = 'Sigue practicando. Repasa los conceptos clave para mejorar.';
-                    starsRating.innerHTML = '⭐';
-                }
-                
-                createConfetti();
-                saveProgress(true);
-            }
+           // Mostrar resultados
+function showResults() {
+    currentView = 'results';
+    questionCard.style.display = 'none';
+    resultsContainer.style.display = 'block';
+    
+    const endTime = Date.now();
+    totalTimeSpent += Math.floor((endTime - startTime) / 1000);
+    
+    const finalScore = Math.min(score, MAX_SCORE);
+    const percentage = Math.round((finalScore / MAX_SCORE) * 100);
+    
+    scoreDisplay.textContent = `${finalScore}/300`;
+    correctAnswersEl.textContent = Math.floor(finalScore / POINTS_CORRECT);
+    
+    const totalMinutes = Math.floor(totalTimeSpent / 60);
+    const totalSeconds = totalTimeSpent % 60;
+    timeSpentEl.textContent = `${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}`;
+    
+    currentStreakStat.textContent = maxStreak;
+    
+    // ============================================
+    // SISTEMA DE DESBLOQUEO - LCS1D4
+    // ============================================
+    const MIN_SCORE_TO_UNLOCK = 180;
+    const isUnlocked = finalScore >= MIN_SCORE_TO_UNLOCK;
+    
+    // Guardar estado de desbloqueo en localStorage
+    const unlockData = {
+        unlocked: isUnlocked,
+        score: finalScore,
+        maxScore: MAX_SCORE,
+        percentage: percentage,
+        unlockedAt: isUnlocked ? new Date().toISOString() : null,
+        quizSource: 'LCS1D3'
+    };
+    localStorage.setItem('skopia_LCS1D4_unlock', JSON.stringify(unlockData));
+    
+    // Mostrar mensaje según puntuación
+    if (finalScore >= 240) {
+        resultsMessage.textContent = '¡Excelente! Has dominado el concepto de ideas principales.';
+        starsRating.innerHTML = '⭐⭐⭐';
+    } else if (finalScore >= 180) {
+        resultsMessage.textContent = '¡Buen trabajo! Has desbloqueado el siguiente nivel.';
+        starsRating.innerHTML = '⭐⭐';
+    } else {
+        resultsMessage.textContent = `Necesitas al menos 180 puntos para desbloquear el siguiente nivel. Obtuviste ${finalScore}.`;
+        starsRating.innerHTML = '⭐';
+    }
+    
+    // Agregar indicador visual de desbloqueo
+    const unlockIndicator = document.createElement('div');
+    unlockIndicator.className = 'unlock-status';
+    unlockIndicator.style.cssText = `
+        margin: 20px 0;
+        padding: 20px;
+        border-radius: 15px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    `;
+    
+    if (isUnlocked) {
+        unlockIndicator.style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(76, 175, 80, 0.1))';
+        unlockIndicator.style.border = '2px solid #4caf50';
+        unlockIndicator.style.color = '#2e7d32';
+        unlockIndicator.innerHTML = '<i class="fas fa-unlock"></i> ¡LCS1D4 Desbloqueado!';
+    } else {
+        unlockIndicator.style.background = 'linear-gradient(135deg, rgba(244, 67, 54, 0.2), rgba(244, 67, 54, 0.1))';
+        unlockIndicator.style.border = '2px solid #f44336';
+        unlockIndicator.style.color = '#c62828';
+        unlockIndicator.innerHTML = `<i class="fas fa-lock"></i> LCS1D4 Bloqueado (Necesitas ${MIN_SCORE_TO_UNLOCK - finalScore} puntos más)`;
+    }
+    
+    // Insertar antes de los botones de acción
+    const actionButtons = resultsContainer.querySelector('.action-buttons');
+    actionButtons.parentNode.insertBefore(unlockIndicator, actionButtons);
+    
+    createConfetti();
+    saveProgress(true);
+}
+            // Función para verificar si LCS1D4 está desbloqueado
+function checkLCS1D4Unlock() {
+    const unlockData = localStorage.getItem('skopia_LCS1D4_unlock');
+    if (!unlockData) return { unlocked: false, reason: 'no_data' };
+    
+    const data = JSON.parse(unlockData);
+    return {
+        unlocked: data.unlocked === true,
+        score: data.score || 0,
+        percentage: data.percentage || 0,
+        reason: data.unlocked ? 'unlocked' : 'score_too_low'
+    };
+}
             
             // Actualizar progreso
             function updateProgress() {
