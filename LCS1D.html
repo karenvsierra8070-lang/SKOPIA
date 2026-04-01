@@ -17,17 +17,17 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebas
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
 
 const firebaseConfig = {
-apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
-projectId: "skopia-aa786",
-storageBucket: "skopia-aa786.firebasestorage.app",
-messagingSenderId: "719823055099",
-appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+    apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+    projectId: "skopia-aa786",
+    storageBucket: "skopia-aa786.firebasestorage.app",
+    messagingSenderId: "719823055099",
+    appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
 };
 
 if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-firebaseConfig.authDomain = "localhost";
+    firebaseConfig.authDomain = "localhost";
 } else {
-firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+    firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
 }
 
 const app = initializeApp(firebaseConfig);
@@ -35,27 +35,31 @@ const auth = getAuth(app);
 window.auth = auth;
 
 onAuthStateChanged(auth, (user) => {
-if (!user) {
-window.location.href = 'index.html';
-return;
-}
-console.log("Usuario autenticado:", user.email);
-window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+    if (!user) {
+        window.location.href = 'index.html';
+        return;
+    }
+    console.log("Usuario autenticado:", user.email);
+    window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
 });
 </script>
 
 <style>
 :root {
---color-crema: #fdfbf5;
---color-oliva-claro: #bec092;
---color-oliva-medio: #5a6133;
---color-oliva-oscuro: #272b00;
---color-sombra: rgba(39, 43, 0, 0.1);
---color-dorado: #ffd700;
---color-plata: #c0c0c0;
---color-bronce: #cd7f32;
---float-color: var(--color-oliva-oscuro);
---float-color-hover: var(--color-oliva-medio);
+    --color-crema: #fdfbf5;
+    --color-oliva-claro: #bec092;
+    --color-oliva-medio: #5a6133;
+    --color-oliva-oscuro: #272b00;
+    --color-sombra: rgba(39, 43, 0, 0.1);
+    --color-dorado: #ffd700;
+    --color-plata: #c0c0c0;
+    --color-bronce: #cd7f32;
+    --color-correcto: #4caf50;
+    --color-incorrecto: #f44336;
+    --color-azul: #2196f3;
+    --color-amarillo: #ffeb3b;
+    --float-color: var(--color-oliva-oscuro);
+    --float-color-hover: var(--color-oliva-medio);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -94,6 +98,9 @@ body { font-family: 'Roboto', sans-serif; background: linear-gradient(135deg, va
 
 .quiz-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 25px var(--color-sombra); transition: all 0.3s ease; cursor: pointer; position: relative; }
 .quiz-card:hover { transform: translateY(-8px); box-shadow: 0 15px 40px rgba(39, 43, 0, 0.2); }
+.quiz-card.locked { opacity: 0.85; cursor: not-allowed; }
+.quiz-card.locked:hover { transform: translateY(-4px); }
+.quiz-card.warning { border: 3px solid var(--color-amarillo); }
 
 .card-header { height: 120px; background: linear-gradient(135deg, var(--color-oliva-medio), var(--color-oliva-oscuro)); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
 .card-header::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); animation: pulse 3s ease-in-out infinite; }
@@ -103,10 +110,38 @@ body { font-family: 'Roboto', sans-serif; background: linear-gradient(135deg, va
 .card-badge { position: absolute; top: 15px; right: 15px; background: var(--color-dorado); color: var(--color-oliva-oscuro); padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; z-index: 2; }
 .card-badge.silver { background: var(--color-plata); }
 .card-badge.bronze { background: var(--color-bronce); }
+.card-badge.locked-badge { background: var(--color-incorrecto); color: white; }
+.card-badge.warning-badge { background: var(--color-amarillo); color: var(--color-oliva-oscuro); }
+
+.lock-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 10; }
+.lock-overlay i { font-size: 4rem; color: white; opacity: 0.9; }
 
 .card-body { padding: 25px; }
 .card-title { font-family: 'Patrick Hand', cursive; font-size: 1.5rem; color: var(--color-oliva-oscuro); margin-bottom: 10px; }
 .card-description { font-size: 0.95rem; color: var(--color-oliva-medio); margin-bottom: 15px; line-height: 1.5; }
+
+.unlock-requirement { 
+    background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(244, 67, 54, 0.05)); 
+    border-left: 4px solid var(--color-incorrecto); 
+    padding: 12px 15px; 
+    border-radius: 8px; 
+    margin-bottom: 15px; 
+    font-size: 0.9rem; 
+    color: var(--color-oliva-oscuro); 
+}
+.unlock-requirement i { color: var(--color-incorrecto); margin-right: 8px; }
+.unlock-requirement .required-score { font-weight: 700; color: var(--color-incorrecto); }
+
+.warning-box { 
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.15), rgba(255, 193, 7, 0.05)); 
+    border-left: 4px solid var(--color-amarillo); 
+    padding: 12px 15px; 
+    border-radius: 8px; 
+    margin-bottom: 15px; 
+    font-size: 0.9rem; 
+    color: var(--color-oliva-oscuro); 
+}
+.warning-box i { color: #f39c12; margin-right: 8px; }
 
 .card-stats { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .card-stat { display: flex; align-items: center; gap: 5px; font-size: 0.9rem; color: var(--color-oliva-oscuro); }
@@ -122,418 +157,771 @@ body { font-family: 'Roboto', sans-serif; background: linear-gradient(135deg, va
 
 .start-btn { background: var(--color-oliva-oscuro); color: white; border: none; padding: 10px 20px; border-radius: 25px; font-size: 0.9rem; font-weight: bold; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; }
 .start-btn:hover { background: var(--color-oliva-medio); transform: scale(1.05); }
+.start-btn.locked-btn { background: #999; cursor: not-allowed; }
+.start-btn.locked-btn:hover { transform: none; background: #999; }
+.start-btn.warning-btn { background: linear-gradient(135deg, #f39c12, #e67e22); }
 
 .floating-icons { position: fixed; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; z-index: 2000; }
 .floating-icons button { background: var(--float-color); color: white; width: 50px; height: 50px; border-radius: 50%; border: none; font-size: 18px; display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0,0,0,0.12); cursor: pointer; transition: transform .15s ease, background .15s ease; }
 .floating-icons button:hover { transform: scale(1.08); background: var(--float-color-hover); }
 
-.toast { position: fixed; right: 20px; bottom: 20px; background: #fff7e6; border-left: 6px solid var(--color-oliva-medio); padding: 16px 20px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); z-index: 3000; display: none; font-size: 1rem; max-width: 350px; }
-.toast.show { display: block; }
+.toast { 
+    position: fixed; 
+    right: 20px; 
+    bottom: 20px; 
+    background: #fff; 
+    border-left: 6px solid var(--color-oliva-medio); 
+    padding: 16px 20px; 
+    border-radius: 8px; 
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15); 
+    z-index: 3000; 
+    display: none; 
+    font-size: 1rem; 
+    max-width: 380px; 
+}
+.toast.show { display: block; animation: slideInRight 0.3s ease; }
+.toast.error { border-left-color: var(--color-incorrecto); }
+.toast.warning { border-left-color: var(--color-amarillo); }
+.toast.success { border-left-color: var(--color-correcto); }
+
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(100px); }
+    to { opacity: 1; transform: translateX(0); }
+}
 
 .close-btn { position: fixed; top: 20px; left: 20px; background: var(--color-oliva-oscuro); color: white; width: 40px; height: 40px; border-radius: 50%; border: none; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, background-color 0.2s; z-index: 1001; }
 .close-btn:hover { transform: scale(1.1); background-color: var(--color-oliva-medio); }
 
+/* Modal de confirmación */
+.confirm-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    justify-content: center;
+    align-items: center;
+    z-index: 5000;
+    backdrop-filter: blur(5px);
+}
+
+.confirm-modal.active {
+    display: flex;
+}
+
+.confirm-content {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 450px;
+    width: 90%;
+    text-align: center;
+    animation: modalPop 0.3s ease;
+}
+
+@keyframes modalPop {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.confirm-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+}
+
+.confirm-title {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 1.8rem;
+    color: var(--color-oliva-oscuro);
+    margin-bottom: 15px;
+}
+
+.confirm-message {
+    font-size: 1rem;
+    color: var(--color-oliva-medio);
+    line-height: 1.6;
+    margin-bottom: 25px;
+}
+
+.confirm-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.confirm-btn {
+    padding: 12px 25px;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.confirm-btn.cancel {
+    background: #e0e0e0;
+    color: var(--color-oliva-oscuro);
+}
+
+.confirm-btn.cancel:hover {
+    background: #d0d0d0;
+}
+
+.confirm-btn.proceed {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+}
+
+.confirm-btn.proceed:hover {
+    transform: scale(1.05);
+}
+
 @media (max-width: 768px) {
-.hero-title { font-size: 2rem; }
-.library-grid { grid-template-columns: 1fr; gap: 20px; }
-.stats-bar { gap: 20px; }
-.stat-number { font-size: 1.5rem; }
+    .hero-title { font-size: 2rem; }
+    .library-grid { grid-template-columns: 1fr; gap: 20px; }
+    .stats-bar { gap: 20px; }
+    .stat-number { font-size: 1.5rem; }
+    .confirm-buttons { flex-direction: column; }
 }
 </style>
 </head>
 
 <body>
 <nav class="navbar">
-<div class="hamburger" id="hamburger-menu"><span></span><span></span><span></span></div>
-<div class="user-dropdown" id="user-dropdown">
-<a href="cuenta.html">Mi Cuenta</a>
-<a href="configuracion.html">Configuración</a>
-<a href="notificaciones.html">Notificaciones</a>
-<hr>
-<a href="index.html" id="logout-btn">Cerrar Sesión</a>
-</div>
+    <div class="hamburger" id="hamburger-menu"><span></span><span></span><span></span></div>
+    <div class="user-dropdown" id="user-dropdown">
+        <a href="cuenta.html">Mi Cuenta</a>
+        <a href="configuracion.html">Configuración</a>
+        <a href="notificaciones.html">Notificaciones</a>
+        <hr>
+        <a href="index.html" id="logout-btn">Cerrar Sesión</a>
+    </div>
 </nav>
 
 <button class="close-btn" id="close-btn" title="Volver a lección">&times;</button>
 
 <section class="hero-section">
-<div class="hero-content">
-<div class="library-icon">📚</div>
-<h1 class="hero-title">Biblioteca de Cuestionarios</h1>
-<p class="hero-subtitle">Selecciona un banco de preguntas para poner a prueba tus habilidades en Ideas Principales</p>
-</div>
+    <div class="hero-content">
+        <div class="library-icon">📚</div>
+        <h1 class="hero-title">Biblioteca de Cuestionarios</h1>
+        <p class="hero-subtitle">Selecciona un banco de preguntas para poner a prueba tus habilidades en Ideas Principales</p>
+    </div>
 </section>
 
 <div class="stats-bar">
-<div class="stat-item">
-<div class="stat-number" id="total-completed">0</div>
-<div class="stat-label">Cuestionarios Completados</div>
-</div>
-<div class="stat-item">
-<div class="stat-number" id="average-score">0%</div>
-<div class="stat-label">Puntaje Promedio</div>
-</div>
-<div class="stat-item">
-<div class="stat-number" id="best-streak">0</div>
-<div class="stat-label">Mejor Racha</div>
-</div>
-<div class="stat-item">
-<div class="stat-number" id="total-points">0</div>
-<div class="stat-label">Puntos Ganados</div>
-</div>
+    <div class="stat-item">
+        <div class="stat-number" id="total-completed">0</div>
+        <div class="stat-label">Cuestionarios Completados</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number" id="average-score">0%</div>
+        <div class="stat-label">Puntaje Promedio</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number" id="best-streak">0</div>
+        <div class="stat-label">Mejor Racha</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number" id="total-points">0</div>
+        <div class="stat-label">Puntos Ganados</div>
+    </div>
 </div>
 
 <main class="main-content">
-<div class="container">
-<div class="section-header">
-<h2 class="section-title">Bancos de Preguntas Disponibles</h2>
-<p class="section-description">Cada cuestionario contiene 10 preguntas aleatorias sobre Ideas Principales</p>
-</div>
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Bancos de Preguntas Disponibles</h2>
+            <p class="section-description">Cada cuestionario contiene 10 preguntas aleatorias sobre Ideas Principales</p>
+        </div>
 
-<div class="library-grid">
-<!-- Banco 1 -->
-<div class="quiz-card" onclick="startQuiz('LCS1D1.html')">
-<div class="card-header">
-<div class="card-icon">📖</div>
-<div class="card-badge">Nuevo</div>
-</div>
-<div class="card-body">
-<h3 class="card-title">Banco 1: Fundamentos</h3>
-<p class="card-description">Preguntas básicas sobre identificación de ideas principales en textos sencillos</p>
-<div class="card-stats">
-<div class="card-stat">
-<i class="fas fa-question-circle"></i>
-<span>10 preguntas</span>
-</div>
-<div class="card-stat">
-<i class="fas fa-clock"></i>
-<span>15 min</span>
-</div>
-</div>
-<div class="progress-bar">
-<div class="progress-fill" style="width: 0%"></div>
-</div>
-<div class="card-footer">
-<div class="difficulty">
-<span class="difficulty-star filled">★</span>
-<span class="difficulty-star">★</span>
-<span class="difficulty-star">★</span>
-</div>
-<button class="start-btn">
-Comenzar <i class="fas fa-arrow-right"></i>
-</button>
-</div>
-</div>
-</div>
-
-<!-- Banco 2 -->
-<div class="quiz-card" onclick="startQuiz('LCS1D2.html')">
-<div class="card-header" style="background: linear-gradient(135deg, #4a90e2, #357abd);">
-<div class="card-icon">🎯</div>
-<div class="card-badge">Popular</div>
-</div>
-<div class="card-body">
-<h3 class="card-title">Banco 2: Textos Académicos</h3>
-<p class="card-description">Identificación de ideas principales en textos educativos y científicos</p>
-<div class="card-stats">
-<div class="card-stat">
-<i class="fas fa-question-circle"></i>
-<span>10 preguntas</span>
-</div>
-<div class="card-stat">
-<i class="fas fa-clock"></i>
-<span>20 min</span>
-</div>
-</div>
-<div class="progress-bar">
-<div class="progress-fill" style="width: 30%"></div>
-</div>
-<div class="card-footer">
-<div class="difficulty">
-<span class="difficulty-star filled">★</span>
-<span class="difficulty-star filled">★</span>
-<span class="difficulty-star">★</span>
-</div>
-<button class="start-btn">
-Continuar <i class="fas fa-play"></i>
-</button>
-</div>
-</div>
-</div>
-
-<!-- Banco 3 -->
-<div class="quiz-card" onclick="startQuiz('LCS1D3.html')">
-<div class="card-header" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
-<div class="card-icon">🔥</div>
-<div class="card-badge silver">Desafío</div>
-</div>
-<div class="card-body">
-<h3 class="card-title">Banco 3: Textos Complejos</h3>
-<p class="card-description">Preguntas avanzadas con textos largos y múltiples ideas principales</p>
-<div class="card-stats">
-<div class="card-stat">
-<i class="fas fa-question-circle"></i>
-<span>10 preguntas</span>
-</div>
-<div class="card-stat">
-<i class="fas fa-clock"></i>
-<span>25 min</span>
-</div>
-</div>
-<div class="progress-bar">
-<div class="progress-fill" style="width: 60%"></div>
-</div>
-<div class="card-footer">
-<div class="difficulty">
-<span class="difficulty-star filled">★</span>
-<span class="difficulty-star filled">★</span>
-<span class="difficulty-star filled">★</span>
-</div>
-<button class="start-btn">
-Reanudar <i class="fas fa-redo"></i>
-</button>
-</div>
-</div>
-</div>
-
-<!-- Banco 4 -->
-<div class="quiz-card" onclick="startQuiz('LCS1D4.html')">
-<div class="card-header" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
-<div class="card-icon">💎</div>
-<div class="card-badge bronze">Premium</div>
-</div>
-<div class="card-body">
-<h3 class="card-title">Banco 4: Prensa y Medios</h3>
-<p class="card-description">Análisis de ideas principales en artículos de noticias y reportajes</p>
-<div class="card-stats">
-<div class="card-stat">
-<i class="fas fa-question-circle"></i>
-<span>10 preguntas</span>
-</div>
-<div class="card-stat">
-<i class="fas fa-clock"></i>
-<span>18 min</span>
-</div>
-</div>
-<div class="progress-bar">
-<div class="progress-fill" style="width: 0%"></div>
-</div>
-<div class="card-footer">
-<div class="difficulty">
-<span class="difficulty-star filled">★</span>
-<span class="difficulty-star filled">★</span>
-<span class="difficulty-star">★</span>
-</div>
-<button class="start-btn">
-Desbloquear <i class="fas fa-lock"></i>
-</button>
-</div>
-</div>
-</div>
-
-<!-- Banco 5 -->
-<div class="quiz-card" onclick="startQuiz('LCS1D5.html')">
-<div class="card-header" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
-<div class="card-icon">🏆</div>
-<div class="card-badge">Élite</div>
-</div>
-<div class="card-body">
-<h3 class="card-title">Banco 5: Maestro</h3>
-<p class="card-description">El desafío final: textos literarios y filosóficos complejos</p>
-<div class="card-stats">
-<div class="card-stat">
-<i class="fas fa-question-circle"></i>
-<span>10 preguntas</span>
-</div>
-<div class="card-stat">
-<i class="fas fa-clock"></i>
-<span>30 min</span>
-</div>
-</div>
-<div class="progress-bar">
-<div class="progress-fill" style="width: 0%"></div>
-</div>
-<div class="card-footer">
-<div class="difficulty">
-<span class="difficulty-star filled">★</span>
-<span class="difficulty-star filled">★</span>
-<span class="difficulty-star filled">★</span>
-</div>
-<button class="start-btn">
-Comenzar <i class="fas fa-crown"></i>
-</button>
-</div>
-</div>
-</div>
-</div>
-</div>
+        <div class="library-grid" id="library-grid">
+            <!-- Las tarjetas se generarán dinámicamente -->
+        </div>
+    </div>
 </main>
 
 <div class="floating-icons" aria-hidden="false">
-<button id="btn-misiones" title="Misiones">🎯</button>
-<button id="btn-nivel" title="Nivel actual">⭐</button>
-<button id="btn-progreso" title="Progreso">📊</button>
+    <button id="btn-misiones" title="Misiones">🎯</button>
+    <button id="btn-nivel" title="Nivel actual">⭐</button>
+    <button id="btn-progreso" title="Progreso">📊</button>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<!-- Modal de confirmación para LCS1D5 -->
+<div class="confirm-modal" id="confirm-modal">
+    <div class="confirm-content">
+        <div class="confirm-icon">⚠️</div>
+        <h3 class="confirm-title">¿Estás seguro?</h3>
+        <p class="confirm-message" id="confirm-message">
+            Se recomienda completar el Banco 4 antes de intentar el Banco 5. 
+            Este cuestionario es más avanzado y asume que ya dominas los conceptos anteriores.
+        </p>
+        <div class="confirm-buttons">
+            <button class="confirm-btn cancel" id="confirm-cancel">
+                <i class="fas fa-arrow-left"></i> Volver
+            </button>
+            <button class="confirm-btn proceed" id="confirm-proceed">
+                Continuar de todas formas <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-// Datos de progreso simulados
-const quizProgress = {
-'LCS1D1.html': { completed: false, score: 0, progress: 0 },
-'LCS1D2.html': { completed: false, score: 75, progress: 30 },
-'LCS1D3.html': { completed: false, score: 85, progress: 60 },
-'LCS1D4.html': { completed: false, score: 0, progress: 0, locked: true },
-'LCS1D5.html': { completed: false, score: 0, progress: 0 }
-};
+    // ============================================
+    // CONFIGURACIÓN DE CUESTIONARIOS Y BLOQUEOS
+    // ============================================
+    const MIN_SCORE_TO_UNLOCK = 180; // Puntuación mínima para desbloquear
+    
+    // Definición de cuestionarios
+    const quizConfig = {
+        'LCS1D1.html': {
+            id: 1,
+            title: 'Banco 1: Fundamentos',
+            description: 'Preguntas básicas sobre identificación de ideas principales en textos sencillos',
+            icon: '📖',
+            headerGradient: 'linear-gradient(135deg, #5a6133, #272b00)',
+            badge: 'Nuevo',
+            badgeClass: '',
+            questions: 10,
+            time: '15 min',
+            difficulty: 1,
+            locked: false,
+            requires: null,
+            requiresScore: 0
+        },
+        'LCS1D2.html': {
+            id: 2,
+            title: 'Banco 2: Textos Académicos',
+            description: 'Identificación de ideas principales en textos educativos y científicos',
+            icon: '🎯',
+            headerGradient: 'linear-gradient(135deg, #4a90e2, #357abd)',
+            badge: 'Popular',
+            badgeClass: 'silver',
+            questions: 10,
+            time: '20 min',
+            difficulty: 2,
+            locked: false,
+            requires: null,
+            requiresScore: 0
+        },
+        'LCS1D3.html': {
+            id: 3,
+            title: 'Banco 3: Textos Complejos',
+            description: 'Preguntas avanzadas con textos largos y múltiples ideas principales',
+            icon: '🔥',
+            headerGradient: 'linear-gradient(135deg, #e74c3c, #c0392b)',
+            badge: 'Desafío',
+            badgeClass: 'silver',
+            questions: 10,
+            time: '25 min',
+            difficulty: 3,
+            locked: false,
+            requires: null,
+            requiresScore: 0
+        },
+        'LCS1D4.html': {
+            id: 4,
+            title: 'Banco 4: Prensa y Medios',
+            description: 'Análisis de ideas principales en artículos de noticias y reportajes',
+            icon: '💎',
+            headerGradient: 'linear-gradient(135deg, #9b59b6, #8e44ad)',
+            badge: 'Premium',
+            badgeClass: 'bronze',
+            questions: 10,
+            time: '18 min',
+            difficulty: 2,
+            locked: true, // Bloqueado por defecto
+            requires: 'LCS1D3.html', // Requiere completar LCS1D3
+            requiresScore: MIN_SCORE_TO_UNLOCK // Con al menos 180 puntos
+        },
+        'LCS1D5.html': {
+            id: 5,
+            title: 'Banco 5: Maestro',
+            description: 'El desafío final: textos literarios y filosóficos complejos',
+            icon: '🏆',
+            headerGradient: 'linear-gradient(135deg, #f39c12, #e67e22)',
+            badge: 'Élite',
+            badgeClass: '',
+            questions: 10,
+            time: '30 min',
+            difficulty: 3,
+            locked: false, // No está bloqueado técnicamente
+            requires: 'LCS1D4.html', // Pero se recomienda haber hecho LCS1D4
+            requiresScore: 0, // No requiere puntuación específica
+            showWarning: true // Mostrar advertencia si no completó LCS1D4
+        }
+    };
 
-// Elementos del DOM
-const hamburgerMenu = document.getElementById('hamburger-menu');
-const userDropdown = document.getElementById('user-dropdown');
-const logoutBtn = document.getElementById('logout-btn');
-const closeBtn = document.getElementById('close-btn');
-const toast = document.getElementById('toast');
+    // Elementos del DOM
+    const hamburgerMenu = document.getElementById('hamburger-menu');
+    const userDropdown = document.getElementById('user-dropdown');
+    const logoutBtn = document.getElementById('logout-btn');
+    const closeBtn = document.getElementById('close-btn');
+    const toast = document.getElementById('toast');
+    const libraryGrid = document.getElementById('library-grid');
+    const confirmModal = document.getElementById('confirm-modal');
+    const confirmCancel = document.getElementById('confirm-cancel');
+    const confirmProceed = document.getElementById('confirm-proceed');
+    const confirmMessage = document.getElementById('confirm-message');
 
-// Actualizar estadísticas
-function updateStats() {
-const completed = Object.values(quizProgress).filter(q => q.completed).length;
-const scores = Object.values(quizProgress).map(q => q.score).filter(s => s > 0);
-const average = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
-const totalPoints = Object.values(quizProgress).reduce((sum, q) => sum + (q.completed ? 100 : 0), 0);
+    let pendingQuizUrl = null;
 
-document.getElementById('total-completed').textContent = completed;
-document.getElementById('average-score').textContent = average + '%';
-document.getElementById('best-streak').textContent = '3';
-document.getElementById('total-points').textContent = totalPoints;
-}
+    // ============================================
+    // FUNCIONES DE GESTIÓN DE PROGRESO
+    // ============================================
 
-// Función para iniciar cuestionario
-function startQuiz(url) {
-const progress = quizProgress[url];
+    // Obtener datos de desbloqueo de LCS1D4
+    function getLCS1D4UnlockData() {
+        const data = localStorage.getItem('skopia_LCS1D4_unlock');
+        if (!data) return null;
+        try {
+            return JSON.parse(data);
+        } catch (e) {
+            return null;
+        }
+    }
 
-if (progress.locked) {
-showToast('🔒 Este cuestionario está bloqueado. Completa los anteriores para desbloquearlo.');
-return;
-}
+    // Verificar si un cuestionario está desbloqueado
+    function isQuizUnlocked(quizUrl) {
+        const config = quizConfig[quizUrl];
+        if (!config) return true;
+        
+        // Si no está bloqueado por defecto, verificar requisitos
+        if (!config.locked && !config.requires) return true;
+        
+        // Si está bloqueado, verificar si se cumplen los requisitos
+        if (config.locked && config.requires) {
+            const unlockData = getLCS1D4UnlockData();
+            if (!unlockData) return false;
+            
+            // Verificar que el unlockData corresponde al cuestionario correcto
+            if (config.requires === 'LCS1D3.html') {
+                return unlockData.unlocked === true && unlockData.score >= (config.requiresScore || 0);
+            }
+        }
+        
+        return !config.locked;
+    }
 
-// Guardar progreso actual
-localStorage.setItem('currentQuiz', url);
-localStorage.setItem('quizProgress', JSON.stringify(quizProgress));
+    // Verificar si se debe mostrar advertencia para LCS1D5
+    function shouldShowWarning(quizUrl) {
+        const config = quizConfig[quizUrl];
+        if (!config || !config.showWarning) return false;
+        
+        // Verificar si LCS1D4 ha sido completado
+        const history = getQuizHistory();
+        const d4Completed = history.some(q => 
+            q.quizId === 'LCS1D4.html' || 
+            q.quizId === 'LCS1D4' || 
+            q.quizSource === 'LCS1D4.html'
+        );
+        
+        // También verificar en el progreso guardado
+        const d4Progress = localStorage.getItem('skopia_quiz_progress_LCS1D4');
+        let d4HasProgress = false;
+        if (d4Progress) {
+            try {
+                const progress = JSON.parse(d4Progress);
+                d4HasProgress = progress.completed === true;
+            } catch (e) {
+                d4HasProgress = false;
+            }
+        }
+        
+        return !(d4Completed || d4HasProgress);
+    }
 
-// Mostrar mensaje y redirigir
-if (progress.progress > 0 && !progress.completed) {
-showToast('📚 Reanudando cuestionario anterior...');
-} else {
-showToast('🚀 Iniciando nuevo cuestionario...');
-}
+    // Obtener historial de cuestionarios
+    function getQuizHistory() {
+        const history = localStorage.getItem('skopia_quiz_history');
+        if (!history) return [];
+        try {
+            return JSON.parse(history);
+        } catch (e) {
+            return [];
+        }
+    }
 
-setTimeout(() => {
-window.location.href = url;
-}, 1000);
-}
+    // Obtener progreso de un cuestionario específico
+    function getQuizProgress(quizUrl) {
+        const progressKey = `skopia_quiz_progress_${quizUrl.replace('.html', '')}`;
+        const progress = localStorage.getItem(progressKey);
+        if (!progress) return null;
+        try {
+            return JSON.parse(progress);
+        } catch (e) {
+            return null;
+        }
+    }
 
-// Función para mostrar notificaciones
-function showToast(message, duration = 3000) {
-toast.textContent = message;
-toast.classList.add('show');
-setTimeout(() => {
-toast.classList.remove('show');
-}, duration);
-}
+    // Obtener estadísticas globales
+    function getGlobalStats() {
+        const stats = localStorage.getItem('skopia_global_stats');
+        if (!stats) return {
+            totalCompleted: 0,
+            averageScore: 0,
+            bestStreak: 0,
+            totalPoints: 0
+        };
+        try {
+            return JSON.parse(stats);
+        } catch (e) {
+            return {
+                totalCompleted: 0,
+                averageScore: 0,
+                bestStreak: 0,
+                totalPoints: 0
+            };
+        }
+    }
 
-// Event listeners
-hamburgerMenu.addEventListener('click', () => {
-userDropdown.classList.toggle('active');
+    // ============================================
+    // RENDERIZADO DE TARJETAS
+    // ============================================
+
+    function renderQuizCards() {
+        libraryGrid.innerHTML = '';
+        
+        Object.entries(quizConfig).forEach(([url, config]) => {
+            const isUnlocked = isQuizUnlocked(url);
+            const showWarning = shouldShowWarning(url);
+            const progress = getQuizProgress(url);
+            
+            const card = document.createElement('div');
+            card.className = 'quiz-card';
+            if (!isUnlocked) card.classList.add('locked');
+            if (showWarning && isUnlocked) card.classList.add('warning');
+            
+            // Calcular progreso
+            let progressPercent = 0;
+            let scoreDisplay = '';
+            if (progress) {
+                if (progress.completed) {
+                    progressPercent = 100;
+                    scoreDisplay = `${progress.score || 0}/300`;
+                } else if (progress.currentQuestionIndex > 0) {
+                    progressPercent = (progress.currentQuestionIndex / 10) * 100;
+                }
+            }
+            
+            // Generar estrellas de dificultad
+            const stars = Array(3).fill(0).map((_, i) => 
+                `<span class="difficulty-star ${i < config.difficulty ? 'filled' : ''}">★</span>`
+            ).join('');
+            
+            // Determinar estado del botón
+            let buttonText = 'Comenzar';
+            let buttonIcon = '<i class="fas fa-arrow-right"></i>';
+            let buttonClass = '';
+            
+            if (!isUnlocked) {
+                buttonText = 'Bloqueado';
+                buttonIcon = '<i class="fas fa-lock"></i>';
+                buttonClass = 'locked-btn';
+            } else if (progress?.completed) {
+                buttonText = 'Reintentar';
+                buttonIcon = '<i class="fas fa-redo"></i>';
+            } else if (progressPercent > 0) {
+                buttonText = 'Continuar';
+                buttonIcon = '<i class="fas fa-play"></i>';
+            } else if (showWarning) {
+                buttonText = 'Comenzar';
+                buttonIcon = '<i class="fas fa-exclamation-triangle"></i>';
+                buttonClass = 'warning-btn';
+            }
+            
+            // Determinar badge
+            let badgeHtml = config.badge ? `<div class="card-badge ${config.badgeClass}">${config.badge}</div>` : '';
+            if (!isUnlocked) {
+                badgeHtml = `<div class="card-badge locked-badge"><i class="fas fa-lock"></i> Bloqueado</div>`;
+            } else if (showWarning) {
+                badgeHtml = `<div class="card-badge warning-badge"><i class="fas fa-exclamation-triangle"></i> Recomendación</div>`;
+            }
+            
+            // Lock overlay para bloqueados
+            let lockOverlay = '';
+            if (!isUnlocked) {
+                lockOverlay = `<div class="lock-overlay"><i class="fas fa-lock"></i></div>`;
+            }
+            
+            // Requisito de desbloqueo
+            let requirementHtml = '';
+            if (!isUnlocked && config.requires) {
+                const unlockData = getLCS1D4UnlockData();
+                const currentScore = unlockData?.score || 0;
+                requirementHtml = `
+                    <div class="unlock-requirement">
+                        <i class="fas fa-info-circle"></i>
+                        Completa <strong>Banco 3</strong> con al menos 
+                        <span class="required-score">${config.requiresScore} puntos</span>
+                        ${currentScore > 0 ? `<br><small>Tu mejor puntaje: ${currentScore}/300</small>` : ''}
+                    </div>
+                `;
+            }
+            
+            // Advertencia para LCS1D5
+            let warningHtml = '';
+            if (showWarning && isUnlocked) {
+                warningHtml = `
+                    <div class="warning-box">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Se recomienda completar el <strong>Banco 4</strong> antes de este cuestionario.
+                    </div>
+                `;
+            }
+            
+            card.innerHTML = `
+                <div class="card-header" style="background: ${config.headerGradient};">
+                    <div class="card-icon">${config.icon}</div>
+                    ${badgeHtml}
+                    ${lockOverlay}
+                </div>
+                <div class="card-body">
+                    <h3 class="card-title">${config.title}</h3>
+                    <p class="card-description">${config.description}</p>
+                    ${requirementHtml}
+                    ${warningHtml}
+                    <div class="card-stats">
+                        <div class="card-stat">
+                            <i class="fas fa-question-circle"></i>
+                            <span>${config.questions} preguntas</span>
+                        </div>
+                        <div class="card-stat">
+                            <i class="fas fa-clock"></i>
+                            <span>${config.time}</span>
+                        </div>
+                        ${scoreDisplay ? `
+                        <div class="card-stat">
+                            <i class="fas fa-star"></i>
+                            <span>${scoreDisplay}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${progressPercent}%"></div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="difficulty">
+                            ${stars}
+                        </div>
+                        <button class="start-btn ${buttonClass}" data-url="${url}" ${!isUnlocked ? 'disabled' : ''}>
+                            ${buttonText} ${buttonIcon}
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            libraryGrid.appendChild(card);
+        });
+        
+        // Agregar event listeners a los botones
+        document.querySelectorAll('.start-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const url = btn.dataset.url;
+                if (url) handleQuizStart(url);
+            });
+        });
+        
+        // Agregar click a las tarjetas
+        document.querySelectorAll('.quiz-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const btn = card.querySelector('.start-btn');
+                if (btn) {
+                    const url = btn.dataset.url;
+                    if (url) handleQuizStart(url);
+                }
+            });
+        });
+    }
+
+    // ============================================
+    // MANEJO DE INICIO DE CUESTIONARIO
+    // ============================================
+
+    function handleQuizStart(url) {
+        const config = quizConfig[url];
+        if (!config) return;
+        
+        const isUnlocked = isQuizUnlocked(url);
+        const showWarning = shouldShowWarning(url);
+        
+        // Si está bloqueado, mostrar mensaje
+        if (!isUnlocked) {
+            showToast(`🔒 Este cuestionario está bloqueado. Completa el Banco 3 con al menos ${config.requiresScore} puntos para desbloquearlo.`, 'error');
+            return;
+        }
+        
+        // Si debe mostrar advertencia (LCS1D5 sin completar LCS1D4)
+        if (showWarning) {
+            pendingQuizUrl = url;
+            confirmMessage.innerHTML = `
+                Se recomienda completar el <strong>Banco 4: Prensa y Medios</strong> antes de intentar el Banco 5. 
+                Este cuestionario es más avanzado y asume que ya dominas los conceptos anteriores.<br><br>
+                <small>¿Deseas continuar de todas formas?</small>
+            `;
+            confirmModal.classList.add('active');
+            return;
+        }
+        
+        // Si todo está bien, iniciar cuestionario
+        proceedToQuiz(url);
+    }
+
+    function proceedToQuiz(url) {
+        const config = quizConfig[url];
+        const progress = getQuizProgress(url);
+        
+        // Guardar cuestionario actual
+        localStorage.setItem('currentQuiz', url);
+        
+        // Mostrar mensaje apropiado
+        if (progress?.completed) {
+            showToast('🔄 Iniciando nuevo intento...', 'success');
+        } else if (progress?.currentQuestionIndex > 0) {
+            showToast('📚 Reanudando cuestionario...', 'success');
+        } else {
+            showToast('🚀 Iniciando cuestionario...', 'success');
+        }
+        
+        // Redirigir después de un breve delay
+        setTimeout(() => {
+            window.location.href = url;
+        }, 800);
+    }
+
+    // ============================================
+    // ACTUALIZACIÓN DE ESTADÍSTICAS
+    // ============================================
+
+    function updateStats() {
+        const stats = getGlobalStats();
+        
+        document.getElementById('total-completed').textContent = stats.totalCompleted || 0;
+        document.getElementById('average-score').textContent = (stats.averageScore || 0) + '%';
+        document.getElementById('best-streak').textContent = stats.bestStreak || 0;
+        document.getElementById('total-points').textContent = stats.totalPoints || 0;
+    }
+
+    // ============================================
+    // FUNCIONES DE UI
+    // ============================================
+
+    function showToast(message, type = '', duration = 4000) {
+        toast.textContent = message;
+        toast.className = 'toast show';
+        if (type) toast.classList.add(type);
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, duration);
+    }
+
+    // ============================================
+    // EVENT LISTENERS
+    // ============================================
+
+    hamburgerMenu.addEventListener('click', () => {
+        userDropdown.classList.toggle('active');
+    });
+
+    logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
+            signOut(window.auth).then(() => window.location.href = 'index.html');
+        });
+    });
+
+    closeBtn.addEventListener('click', () => {
+        window.location.href = 'LCS1.html';
+    });
+
+    window.addEventListener('click', (event) => {
+        if (!event.target.closest('.navbar')) {
+            userDropdown.classList.remove('active');
+        }
+    });
+
+    // Modal de confirmación
+    confirmCancel.addEventListener('click', () => {
+        confirmModal.classList.remove('active');
+        pendingQuizUrl = null;
+    });
+
+    confirmProceed.addEventListener('click', () => {
+        confirmModal.classList.remove('active');
+        if (pendingQuizUrl) {
+            proceedToQuiz(pendingQuizUrl);
+            pendingQuizUrl = null;
+        }
+    });
+
+    // Cerrar modal con Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && confirmModal.classList.contains('active')) {
+            confirmModal.classList.remove('active');
+            pendingQuizUrl = null;
+        }
+    });
+
+    // Floating icons
+    document.getElementById('btn-misiones').addEventListener('click', () => {
+        showToast('🎯 Misiones próximamente...');
+    });
+
+    document.getElementById('btn-nivel').addEventListener('click', () => {
+        showToast('⭐ Nivel actual: Aprendiz');
+    });
+
+    document.getElementById('btn-progreso').addEventListener('click', () => {
+        showToast('📊 Progreso general disponible en tu perfil');
+    });
+
+    // ============================================
+    // INICIALIZACIÓN
+    // ============================================
+
+    // Renderizar tarjetas
+    renderQuizCards();
+    
+    // Actualizar estadísticas
+    updateStats();
+
+    // Animación de entrada para las tarjetas
+    const cards = document.querySelectorAll('.quiz-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        setTimeout(() => {
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+
+    // Efecto parallax sutil en el hero
+    window.addEventListener('scroll', () => {
+        const scrolled = window.pageYOffset;
+        const hero = document.querySelector('.hero-section');
+        if (hero && scrolled < 500) {
+            hero.style.transform = `translateY(${scrolled * 0.5}px)`;
+        }
+    });
+
+    // Escuchar cambios en localStorage (para sincronización entre pestañas)
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'skopia_LCS1D4_unlock' || e.key === 'skopia_quiz_history' || e.key === 'skopia_global_stats') {
+            renderQuizCards();
+            updateStats();
+        }
+    });
 });
-
-logoutBtn.addEventListener('click', () => {
-import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
-signOut(window.auth).then(() => window.location.href = 'index.html');
-});
-});
-
-closeBtn.addEventListener('click', () => {
-window.location.href = 'LCS1.html';
-});
-
-window.addEventListener('click', (event) => {
-if (!event.target.closest('.navbar')) {
-userDropdown.classList.remove('active');
-}
-});
-
-// Floating icons
-document.getElementById('btn-misiones').addEventListener('click', () => {
-showToast('🎯 Misiones próximamente...');
-});
-
-document.getElementById('btn-nivel').addEventListener('click', () => {
-showToast('⭐ Nivel actual: Aprendiz');
-});
-
-document.getElementById('btn-progreso').addEventListener('click', () => {
-showToast('📊 Progreso general: 45%');
-});
-
-// Inicializar
-updateStats();
-
-// Animación de entrada para las tarjetas
-const cards = document.querySelectorAll('.quiz-card');
-cards.forEach((card, index) => {
-card.style.opacity = '0';
-card.style.transform = 'translateY(30px)';
-setTimeout(() => {
-card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-card.style.opacity = '1';
-card.style.transform = 'translateY(0)';
-}, index * 100);
-});
-
-// Efecto parallax sutil en el hero
-window.addEventListener('scroll', () => {
-const scrolled = window.pageYOffset;
-const hero = document.querySelector('.hero-section');
-if (hero && scrolled < 500) {
-hero.style.transform = `translateY(${scrolled * 0.5}px)`;
-}
-});
-});
-
-// Hacer la función accesible globalmente
-window.startQuiz = function(url) {
-const progress = {
-'LCS1D1.html': { completed: false, score: 0, progress: 0 },
-'LCS1D2.html': { completed: false, score: 75, progress: 30 },
-'LCS1D3.html': { completed: false, score: 85, progress: 60 },
-'LCS1D4.html': { completed: false, score: 0, progress: 0, locked: true },
-'LCS1D5.html': { completed: false, score: 0, progress: 0 }
-};
-
-const toast = document.getElementById('toast');
-
-if (progress[url].locked) {
-toast.textContent = '🔒 Este cuestionario está bloqueado. Completa los anteriores para desbloquearlo.';
-toast.classList.add('show');
-setTimeout(() => toast.classList.remove('show'), 3000);
-return;
-}
-
-localStorage.setItem('currentQuiz', url);
-localStorage.setItem('quizProgress', JSON.stringify(progress));
-
-if (progress[url].progress > 0 && !progress[url].completed) {
-toast.textContent = '📚 Reanudando cuestionario anterior...';
-} else {
-toast.textContent = '🚀 Iniciando nuevo cuestionario...';
-}
-toast.classList.add('show');
-
-setTimeout(() => {
-window.location.href = url;
-}, 1000);
-};
 </script>
 </body>
 </html>
