@@ -487,56 +487,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Verificar si un cuestionario está desbloqueado
-    function isQuizUnlocked(quizUrl) {
-        const config = quizConfig[quizUrl];
-        if (!config) return true;
-        
-        // Si no está bloqueado por defecto, verificar requisitos
-        if (!config.locked && !config.requires) return true;
-        
-        // Si está bloqueado, verificar si se cumplen los requisitos
-        if (config.locked && config.requires) {
-            const unlockData = getLCS1D4UnlockData();
-            if (!unlockData) return false;
-            
-            // Verificar que el unlockData corresponde al cuestionario correcto
-            if (config.requires === 'LCS1D3.html') {
-                return unlockData.unlocked === true && unlockData.score >= (config.requiresScore || 0);
-            }
-        }
-        
-        return !config.locked;
-    }
-
-    // Verificar si se debe mostrar advertencia para LCS1D5
-    function shouldShowWarning(quizUrl) {
-        const config = quizConfig[quizUrl];
-        if (!config || !config.showWarning) return false;
-        
-        // Verificar si LCS1D4 ha sido completado
-        const history = getQuizHistory();
-        const d4Completed = history.some(q => 
-            q.quizId === 'LCS1D4.html' || 
-            q.quizId === 'LCS1D4' || 
-            q.quizSource === 'LCS1D4.html'
-        );
-        
-        // También verificar en el progreso guardado
-        const d4Progress = localStorage.getItem('skopia_quiz_progress_LCS1D4');
-        let d4HasProgress = false;
-        if (d4Progress) {
-            try {
-                const progress = JSON.parse(d4Progress);
-                d4HasProgress = progress.completed === true;
-            } catch (e) {
-                d4HasProgress = false;
-            }
-        }
-        
-        return !(d4Completed || d4HasProgress);
-    }
-
     // Obtener historial de cuestionarios
     function getQuizHistory() {
         const history = localStorage.getItem('skopia_quiz_history');
@@ -550,7 +500,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Obtener progreso de un cuestionario específico
     function getQuizProgress(quizUrl) {
-        const progressKey = `skopia_quiz_progress_${quizUrl.replace('.html', '')}`;
+        const cleanId = quizUrl.replace('.html', '');
+        const progressKey = `skopia_quiz_progress_${cleanId}`;
         const progress = localStorage.getItem(progressKey);
         if (!progress) return null;
         try {
@@ -579,6 +530,98 @@ document.addEventListener('DOMContentLoaded', () => {
                 totalPoints: 0
             };
         }
+    }
+
+    // ============================================
+    // FUNCIONES DE LÓGICA DE ESTADO (CORREGIDAS)
+    // ============================================
+
+    // Verificar si un cuestionario está desbloqueado
+    function isQuizUnlocked(quizUrl) {
+        const config = quizConfig[quizUrl];
+        if (!config) return true;
+        
+        // Si no está marcado como bloqueado, está desbloqueado
+        if (!config.locked) return true;
+        
+        // Si está bloqueado, verificar requisitos
+        if (config.locked && config.requires) {
+            const requiredId = config.requires.replace('.html', '');
+            
+            // 1. Verificar historial
+            const history = getQuizHistory();
+            const historyMatch = history.find(q => {
+                const qId = (q.quizId || '').replace('.html', '');
+                return qId === requiredId;
+            });
+            
+            if (historyMatch && historyMatch.score >= config.requiresScore) {
+                return true;
+            }
+
+            // 2. Verificar progreso guardado
+            const progressKey = `skopia_quiz_progress_${requiredId}`;
+            const progressData = localStorage.getItem(progressKey);
+            
+            if (progressData) {
+                try {
+                    const progress = JSON.parse(progressData);
+                    if (progress.completed && progress.score >= config.requiresScore) {
+                        return true;
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            // 3. Verificar datos específicos de desbloqueo
+            const unlockData = getLCS1D4UnlockData();
+            if (unlockData && unlockData.unlocked && unlockData.score >= config.requiresScore) {
+                return true;
+            }
+            
+            return false;
+        }
+        
+        return true;
+    }
+
+    // Verificar si se debe mostrar advertencia (CORREGIDO)
+    function shouldShowWarning(quizUrl) {
+        const config = quizConfig[quizUrl];
+        
+        // Si no tiene la flag de advertencia activa, no mostrar
+        if (!config || !config.showWarning) return false;
+        
+        // Obtener el requisito (ej: LCS1D4.html)
+        const requiredQuiz = config.requires;
+        if (!requiredQuiz) return false;
+        
+        // Normalizar ID (quitar .html)
+        const requiredId = requiredQuiz.replace('.html', '');
+        
+        // 1. Buscar en el historial
+        const history = getQuizHistory();
+        const foundInHistory = history.some(q => {
+            const qId = (q.quizId || '').replace('.html', '');
+            const qSource = (q.quizSource || '').replace('.html', '');
+            return qId === requiredId || qSource === requiredId;
+        });
+        
+        // 2. Buscar en progreso guardado
+        const progressKey = `skopia_quiz_progress_${requiredId}`;
+        const progressData = localStorage.getItem(progressKey);
+        let foundInProgress = false;
+        
+        if (progressData) {
+            try {
+                const progress = JSON.parse(progressData);
+                foundInProgress = progress.completed === true;
+            } catch (e) {
+                foundInProgress = false;
+            }
+        }
+        
+        // Si NO se encontró en ninguno, mostrar advertencia (return true)
+        return !(foundInHistory || foundInProgress);
     }
 
     // ============================================
@@ -797,19 +840,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ============================================
-    // ACTUALIZACIÓN DE ESTADÍSTICAS (CORREGIDO)
+    // ACTUALIZACIÓN DE ESTADÍSTICAS
     // ============================================
 
     function updateStats() {
         const history = getQuizHistory();
         
-        // Contar cuestionarios ÚNICOS completados (que tienen score/nota)
+        // Contar cuestionarios ÚNICOS completados
         const completedQuizzes = new Set();
         let totalScore = 0;
         let scoresCount = 0;
         
         history.forEach(entry => {
-            // Si tiene score y es mayor a 0, cuenta como completado
             if (entry.score !== undefined && entry.score > 0) {
                 completedQuizzes.add(entry.quizId);
                 totalScore += entry.score;
@@ -818,7 +860,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         const totalCompleted = completedQuizzes.size;
-        // Promedio de 0 a 300
         const averageScore = scoresCount > 0 ? Math.round(totalScore / scoresCount) : 0;
         
         // Actualizar display
@@ -936,7 +977,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Escuchar cambios en localStorage (para sincronización entre pestañas)
+    // Escuchar cambios en localStorage
     window.addEventListener('storage', (e) => {
         if (e.key === 'skopia_LCS1D4_unlock' || e.key === 'skopia_quiz_history' || e.key === 'skopia_global_stats') {
             renderQuizCards();
