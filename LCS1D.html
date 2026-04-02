@@ -317,7 +317,7 @@ body { font-family: 'Roboto', sans-serif; background: linear-gradient(135deg, va
         <div class="stat-label">Cuestionarios Completados</div>
     </div>
     <div class="stat-item">
-        <div class="stat-number" id="average-score">0%</div>
+        <div class="stat-number" id="average-score">0/300</div>
         <div class="stat-label">Puntaje Promedio</div>
     </div>
     <div class="stat-item">
@@ -797,14 +797,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ============================================
-    // ACTUALIZACIÓN DE ESTADÍSTICAS
+    // ACTUALIZACIÓN DE ESTADÍSTICAS (CORREGIDO)
     // ============================================
 
     function updateStats() {
-        const stats = getGlobalStats();
+        const history = getQuizHistory();
         
-        document.getElementById('total-completed').textContent = stats.totalCompleted || 0;
-        document.getElementById('average-score').textContent = (stats.averageScore || 0) + '%';
+        // Contar cuestionarios ÚNICOS completados (que tienen score/nota)
+        const completedQuizzes = new Set();
+        let totalScore = 0;
+        let scoresCount = 0;
+        
+        history.forEach(entry => {
+            // Si tiene score y es mayor a 0, cuenta como completado
+            if (entry.score !== undefined && entry.score > 0) {
+                completedQuizzes.add(entry.quizId);
+                totalScore += entry.score;
+                scoresCount++;
+            }
+        });
+        
+        const totalCompleted = completedQuizzes.size;
+        // Promedio de 0 a 300
+        const averageScore = scoresCount > 0 ? Math.round(totalScore / scoresCount) : 0;
+        
+        // Actualizar display
+        document.getElementById('total-completed').textContent = totalCompleted;
+        document.getElementById('average-score').textContent = averageScore + '/300';
+        
+        // Para best streak y total points, usar globalStats
+        const stats = getGlobalStats();
         document.getElementById('best-streak').textContent = stats.bestStreak || 0;
         document.getElementById('total-points').textContent = stats.totalPoints || 0;
     }
