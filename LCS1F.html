@@ -33,10 +33,10 @@
         window.auth = auth;
         window.db = db;
         
-        // CORRECCION: Exportar funciones Firebase globalmente
-        window.dbRef = ref;
-        window.dbSet = set;
-        window.dbGet = get;
+        // CORRECCION 1: Exportar funciones globalmente
+        window.ref = ref;
+        window.set = set;
+        window.get = get;
 
         onAuthStateChanged(auth, (user) => {
             if (!user) {
@@ -306,7 +306,7 @@
             background: #fafafa;
         }
 
-        .option-item:hover:not(.disabled) {
+        .option-item:hover {
             border-color: var(--accent-blue-light);
             background: #f0f4f8;
         }
@@ -316,10 +316,10 @@
             background: #e8f0f8;
         }
 
-        .option-item.disabled {
-            cursor: not-allowed;
-            opacity: 0.6;
+        /* CORRECCION 2: CSS para bloquear opciones */
+        .option-item.blocked {
             pointer-events: none;
+            opacity: 0.7;
         }
 
         .option-letter {
@@ -592,7 +592,7 @@
         <div class="exam-card paper-texture" style="padding: 30px;">
             <div id="questionsContainer"></div>
             
-            <div id="submitArea" style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--border-gray);">
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--border-gray);">
                 <p style="margin-bottom: 15px; color: var(--fg-medium);">
                     Ha respondido <strong id="answeredCount">0</strong> de 30 preguntas.
                 </p>
@@ -675,6 +675,7 @@
         // INICIALIZACION
         // ============================================
         document.addEventListener('DOMContentLoaded', async () => {
+            // Esperar usuario
             if (window.currentUser) {
                 currentUserId = window.currentUser.uid;
                 initApp();
@@ -688,15 +689,18 @@
 
         async function initApp() {
             try {
+                // Mostrar inicial usuario
                 if (window.currentUser) {
                     const email = window.currentUser.email || 'U';
                     userAvatar.textContent = email.charAt(0).toUpperCase();
                 }
 
+                // Verificar bloqueo
                 loadingText.textContent = 'Verificando estado...';
                 const isBlocked = await checkBlockStatus();
                 if (isBlocked) return;
 
+                // Cargar preguntas
                 loadingText.textContent = 'Cargando preguntas...';
                 const loaded = await loadQuestions();
                 if (!loaded) {
@@ -704,10 +708,12 @@
                     return;
                 }
 
+                // Verificar progreso guardado
                 loadingText.textContent = 'Sincronizando...';
                 const savedProgress = await loadProgress();
                 
-                if (savedProgress && savedProgress.examStarted && !savedProgress.examFinished && savedProgress.questionIds) {
+                if (savedProgress && savedProgress.examStarted && !savedProgress.examFinished) {
+                    // Continuar examen
                     examQuestions = savedProgress.questionIds.map(id => 
                         allQuestions.find(q => q.id === id)
                     ).filter(q => q);
@@ -725,6 +731,7 @@
                     }
                 }
 
+                // Mostrar intro
                 loadingScreen.classList.add('hidden');
                 topNav.style.display = 'flex';
                 progressBar.style.display = 'block';
@@ -746,10 +753,12 @@
                 
                 const data = await response.json();
                 
+                // Tu JSON es un array directo
                 if (!Array.isArray(data)) {
                     throw new Error('El JSON debe ser un array');
                 }
 
+                // Filtrar por tag "ideas principales"
                 allQuestions = data.filter(q => {
                     return q.tags && Array.isArray(q.tags) && q.tags.includes('ideas principales');
                 });
@@ -761,6 +770,7 @@
                     throw new Error('No hay preguntas con tag "ideas principales"');
                 }
 
+                // Si hay menos de 30, duplicar
                 while (allQuestions.length < CONFIG.totalQuestions) {
                     allQuestions = [...allQuestions, ...allQuestions];
                 }
@@ -778,9 +788,10 @@
         async function checkBlockStatus() {
             let blockedUntil = null;
 
-            if (window.db && currentUserId && window.dbRef && window.dbGet) {
+            // Revisar Firebase
+            if (window.db && currentUserId && window.ref && window.get) {
                 try {
-                    const snapshot = await window.dbGet(window.dbRef(window.db, `users/${currentUserId}/lcs1f/blockedUntil`));
+                    const snapshot = await window.get(window.ref(window.db, `users/${currentUserId}/lcs1f/blockedUntil`));
                     if (snapshot.exists()) {
                         blockedUntil = snapshot.val();
                     }
@@ -789,6 +800,7 @@
                 }
             }
 
+            // Revisar localStorage
             const localBlocked = localStorage.getItem('lcs1f_blocked_until');
             if (localBlocked) {
                 const localTime = parseInt(localBlocked);
@@ -833,10 +845,10 @@
         // SINCRONIZACION
         // ============================================
         async function syncProgress() {
-            if (!window.db || !currentUserId || !window.dbRef || !window.dbSet) return;
+            if (!window.db || !currentUserId || !window.ref || !window.set) return;
 
             try {
-                await window.dbSet(window.dbRef(window.db, `users/${currentUserId}/lcs1f`), {
+                await window.set(window.ref(window.db, `users/${currentUserId}/lcs1f`), {
                     answers: userAnswers,
                     timeRemaining: timeRemaining,
                     examStarted: examStarted,
@@ -850,10 +862,10 @@
         }
 
         async function loadProgress() {
-            if (!window.db || !currentUserId || !window.dbRef || !window.dbGet) return null;
+            if (!window.db || !currentUserId || !window.ref || !window.get) return null;
 
             try {
-                const snapshot = await window.dbGet(window.dbRef(window.db, `users/${currentUserId}/lcs1f`));
+                const snapshot = await window.get(window.ref(window.db, `users/${currentUserId}/lcs1f`));
                 return snapshot.val();
             } catch (e) {
                 return null;
@@ -866,11 +878,11 @@
         document.getElementById('startBtn').addEventListener('click', startExam);
 
         function startExam() {
+            // Seleccionar 30 aleatorias
             const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
             examQuestions = shuffled.slice(0, CONFIG.totalQuestions);
 
             examStarted = true;
-            examFinished = false;
             userAnswers = {};
             timeRemaining = CONFIG.timeLimit;
 
@@ -879,6 +891,7 @@
             startTimer();
             syncProgress();
 
+            // Sincronizar cada 10 segundos
             setInterval(syncProgress, 10000);
         }
 
@@ -900,6 +913,7 @@
                 const num = index + 1;
                 const blockNum = Math.ceil(num / CONFIG.questionsPerBlock);
 
+                // Separar texto de la pregunta
                 let textBlock = '';
                 let questionText = question.pregunta || '';
                 
@@ -945,14 +959,12 @@
         // SELECCIONAR RESPUESTA - CORREGIDO
         // ============================================
         window.selectAnswer = function(questionId, optionIndex) {
-            // CORRECCION: Bloquear si el examen ya termino
-            if (examFinished) {
-                console.log('Examen finalizado, no se pueden cambiar respuestas');
-                return;
-            }
+            // CORRECCION: Bloquear si ya se envio
+            if (examFinished) return;
 
             userAnswers[questionId] = optionIndex;
 
+            // Actualizar UI
             const card = document.getElementById(`question-${questionId}`);
             if (card) {
                 card.querySelectorAll('.option-item').forEach((opt, i) => {
@@ -962,6 +974,7 @@
 
             updateProgress();
 
+            // Verificar descanso
             const answered = Object.keys(userAnswers).length;
             if (answered === 10 || answered === 20) {
                 showRest();
@@ -1030,20 +1043,15 @@
             // Prevenir doble envio
             if (examFinished) return;
             
-            // Marcar como finalizado INMEDIATAMENTE
+            // Marcar como terminado
             examFinished = true;
             
-            // Detener timer
             clearInterval(mainTimerInterval);
             
-            // Deshabilitar boton
+            // CORRECCION: Deshabilitar boton y bloquear opciones
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
-            
-            // CORRECCION: Bloquear TODAS las opciones visualmente
-            document.querySelectorAll('.option-item').forEach(opt => {
-                opt.classList.add('disabled');
-            });
+            document.querySelectorAll('.option-item').forEach(opt => opt.classList.add('blocked'));
 
             // Calcular score
             let correct = 0;
@@ -1073,30 +1081,22 @@
                 resultData.blockedUntil = blockedUntil;
                 localStorage.setItem('lcs1f_blocked_until', blockedUntil.toString());
             } else {
+                // Desbloquear LCS2
                 await unlockLCS2();
             }
 
             // Guardar en Firebase
-            if (window.db && currentUserId && window.dbRef && window.dbSet) {
-                try {
-                    await window.dbSet(window.dbRef(window.db, `users/${currentUserId}/lcs1f`), resultData);
-                } catch (e) {
-                    console.warn('Error guardando en Firebase:', e);
-                }
+            if (window.db && currentUserId && window.ref && window.set) {
+                await window.set(window.ref(window.db, `users/${currentUserId}/lcs1f`), resultData);
             }
 
-            // Mostrar resultados
             showResults(score, correct, passed);
-        }
+        };
 
         async function unlockLCS2() {
             localStorage.setItem('lcs2_unlocked', 'true');
-            if (window.db && currentUserId && window.dbRef && window.dbSet) {
-                try {
-                    await window.dbSet(window.dbRef(window.db, `users/${currentUserId}/lcs2_unlocked`), true);
-                } catch (e) {
-                    console.warn('Error desbloqueando LCS2:', e);
-                }
+            if (window.db && currentUserId && window.ref && window.set) {
+                await window.set(window.ref(window.db, `users/${currentUserId}/lcs2_unlocked`), true);
             }
         }
 
@@ -1157,7 +1157,6 @@
                 `}
             `;
 
-            // Mostrar overlay
             resultsOverlay.classList.add('active');
         }
 
@@ -1185,6 +1184,7 @@
             }
         };
 
+        // User dropdown
         userAvatar.addEventListener('click', () => {
             userDropdown.classList.toggle('active');
         });
