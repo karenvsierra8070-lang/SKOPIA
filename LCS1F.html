@@ -11,7 +11,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-        import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
+        import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
@@ -38,7 +38,6 @@
                 window.location.href = 'index.html';
                 return;
             }
-            console.log("Usuario autenticado:", user.email);
             window.currentUser = user;
             window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
         });
@@ -58,8 +57,6 @@
             --success: #2e7d32;
             --error: #c62828;
             --warning: #f57c00;
-            --color-crema: #fdfbf5;
-            --color-oliva-oscuro: #272b00;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -147,11 +144,6 @@
             transition: width 0.5s ease;
         }
 
-        .paper-texture {
-            background: var(--bg-paper);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
         .intro-section, .exam-section {
             max-width: 900px;
             margin: 0 auto;
@@ -221,6 +213,12 @@
         .btn-primary:hover {
             background: var(--accent-blue-light);
             transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background: #999;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .btn-secondary {
@@ -295,7 +293,7 @@
             background: #fafafa;
         }
 
-        .option-item:hover {
+        .option-item:hover:not(.disabled) {
             border-color: var(--accent-blue-light);
             background: #f0f4f8;
         }
@@ -303,6 +301,11 @@
         .option-item.selected {
             border-color: var(--accent-blue);
             background: #e8f0f8;
+        }
+
+        .option-item.disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
         }
 
         .option-letter {
@@ -323,31 +326,45 @@
             color: white;
         }
 
-        .rest-overlay, .results-overlay, .blocked-overlay {
+        /* OVERLAYS - IMPORTANTE */
+        .overlay {
             position: fixed;
-            inset: 0;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             display: none;
             align-items: center;
             justify-content: center;
-            z-index: 2000;
+            z-index: 5000;
             padding: 20px;
         }
 
-        .rest-overlay { background: rgba(30, 58, 95, 0.95); }
-        .results-overlay { background: rgba(0,0,0,0.85); }
-        .blocked-overlay { background: var(--accent-blue); }
-
-        .rest-overlay.active, .results-overlay.active, .blocked-overlay.active {
-            display: flex;
+        .overlay.active {
+            display: flex !important;
         }
 
-        .rest-card, .results-card, .blocked-card {
+        .rest-overlay {
+            background: rgba(30, 58, 95, 0.95);
+        }
+
+        .results-overlay {
+            background: rgba(0, 0, 0, 0.85);
+        }
+
+        .blocked-overlay {
+            background: var(--accent-blue);
+        }
+
+        .overlay-card {
             background: white;
             padding: 50px;
             border-radius: 12px;
             text-align: center;
             max-width: 450px;
             width: 100%;
+            position: relative;
+            z-index: 6000;
         }
 
         .score-circle {
@@ -377,12 +394,15 @@
 
         .loading-screen {
             position: fixed;
-            inset: 0;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: var(--accent-blue);
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 3000;
+            z-index: 9999;
         }
 
         .loading-screen.hidden { display: none; }
@@ -457,7 +477,7 @@
             .timer-display { font-size: 1.3rem; }
             .intro-body, .exam-card { padding: 20px; }
             .question-card { padding: 15px; }
-            .rest-card, .results-card, .blocked-card { padding: 30px 20px; }
+            .overlay-card { padding: 30px 20px; }
         }
     </style>
 </head>
@@ -471,15 +491,33 @@
         </div>
     </div>
 
-    <!-- Blocked Screen -->
-    <div id="blockedOverlay" class="blocked-overlay">
-        <div class="blocked-card">
+    <!-- Blocked Overlay -->
+    <div id="blockedOverlay" class="overlay blocked-overlay">
+        <div class="overlay-card">
             <i class="fas fa-clock" style="font-size: 4rem; color: var(--warning); margin-bottom: 20px;"></i>
             <h2 class="font-serif" style="font-size: 1.8rem; margin-bottom: 15px;">Examen Bloqueado</h2>
             <p style="color: var(--fg-medium); margin-bottom: 10px;">Debes esperar antes de volver a presentar este examen.</p>
             <p style="font-size: 0.9rem; color: var(--fg-light); margin-bottom: 20px;">Tiempo restante:</p>
             <div id="blockTimer" style="font-size: 2.5rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 25px;">--:--:--</div>
             <button onclick="window.location.href='LCS1D.html'" class="btn-primary">Ir a Estudiar</button>
+        </div>
+    </div>
+
+    <!-- Rest Overlay -->
+    <div id="restOverlay" class="overlay rest-overlay">
+        <div class="overlay-card">
+            <i class="fas fa-coffee" style="font-size: 4rem; color: var(--accent-blue); margin-bottom: 20px;"></i>
+            <h2 class="font-serif" style="font-size: 1.8rem; margin-bottom: 10px;">Descanso Obligatorio</h2>
+            <p style="color: var(--fg-medium); margin-bottom: 20px;">Ha completado un bloque de preguntas.</p>
+            <div id="restTimer" style="font-size: 4rem; font-weight: 700; color: var(--accent-blue);">45</div>
+            <p style="font-size: 0.9rem; color: var(--fg-light); margin-top: 10px;">El examen continuara automaticamente</p>
+        </div>
+    </div>
+
+    <!-- Results Overlay -->
+    <div id="resultsOverlay" class="overlay results-overlay">
+        <div class="overlay-card" id="resultsCard">
+            <!-- Contenido dinamico -->
         </div>
     </div>
 
@@ -572,37 +610,19 @@
 
     <!-- Exam Section -->
     <section id="examSection" class="exam-section" style="display: none;">
-        <div class="exam-card paper-texture" style="padding: 30px;">
+        <div class="exam-card" style="padding: 30px;">
             <div id="questionsContainer"></div>
             
-            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--border-gray);">
+            <div id="submitArea" style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--border-gray);">
                 <p style="margin-bottom: 15px; color: var(--fg-medium);">
                     Ha respondido <strong id="answeredCount">0</strong> de 30 preguntas.
                 </p>
-                <button id="submitBtn" class="btn-primary" onclick="submitExam()">
+                <button id="submitBtn" class="btn-primary">
                     <i class="fas fa-paper-plane"></i> ENVIAR EXAMEN
                 </button>
             </div>
         </div>
     </section>
-
-    <!-- Rest Overlay -->
-    <div id="restOverlay" class="rest-overlay">
-        <div class="rest-card">
-            <i class="fas fa-coffee" style="font-size: 4rem; color: var(--accent-blue); margin-bottom: 20px;"></i>
-            <h2 class="font-serif" style="font-size: 1.8rem; margin-bottom: 10px;">Descanso Obligatorio</h2>
-            <p style="color: var(--fg-medium); margin-bottom: 20px;">Ha completado un bloque de preguntas.</p>
-            <div id="restTimer" style="font-size: 4rem; font-weight: 700; color: var(--accent-blue);">45</div>
-            <p style="font-size: 0.9rem; color: var(--fg-light); margin-top: 10px;">El examen continuara automaticamente</p>
-        </div>
-    </div>
-
-    <!-- Results Overlay -->
-    <div id="resultsOverlay" class="results-overlay">
-        <div class="results-card" id="resultsCard">
-            <!-- Content inserted dynamically -->
-        </div>
-    </div>
 
     <script>
         // ============================================
@@ -619,7 +639,7 @@
         };
 
         // ============================================
-        // ESTADO
+        // ESTADO GLOBAL - INICIALIZADO ANTES DE USAR
         // ============================================
         let allQuestions = [];
         let examQuestions = [];
@@ -629,14 +649,19 @@
         let examStarted = false;
         let examFinished = false;
         let currentUserId = null;
+        let questionsRendered = false;
 
         // ============================================
-        // ELEMENTOS DOM
+        // REFERENCIAS DOM
         // ============================================
         const loadingScreen = document.getElementById('loadingScreen');
         const loadingText = document.getElementById('loadingText');
         const blockedOverlay = document.getElementById('blockedOverlay');
         const blockTimer = document.getElementById('blockTimer');
+        const restOverlay = document.getElementById('restOverlay');
+        const restTimerEl = document.getElementById('restTimer');
+        const resultsOverlay = document.getElementById('resultsOverlay');
+        const resultsCard = document.getElementById('resultsCard');
         const topNav = document.getElementById('topNav');
         const progressBar = document.getElementById('progressBar');
         const introSection = document.getElementById('introSection');
@@ -646,18 +671,15 @@
         const progressText = document.getElementById('progressText');
         const progressFill = document.getElementById('progressFill');
         const answeredCount = document.getElementById('answeredCount');
-        const restOverlay = document.getElementById('restOverlay');
-        const restTimerEl = document.getElementById('restTimer');
-        const resultsOverlay = document.getElementById('resultsOverlay');
-        const resultsCard = document.getElementById('resultsCard');
         const userAvatar = document.getElementById('userAvatar');
         const userDropdown = document.getElementById('userDropdown');
+        const startBtn = document.getElementById('startBtn');
+        const submitBtn = document.getElementById('submitBtn');
 
         // ============================================
         // INICIALIZACION
         // ============================================
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Esperar usuario
+        document.addEventListener('DOMContentLoaded', () => {
             if (window.currentUser) {
                 currentUserId = window.currentUser.uid;
                 initApp();
@@ -672,9 +694,8 @@
         async function initApp() {
             try {
                 // Mostrar inicial usuario
-                if (window.currentUser) {
-                    const email = window.currentUser.email || 'U';
-                    userAvatar.textContent = email.charAt(0).toUpperCase();
+                if (window.currentUser && window.currentUser.email) {
+                    userAvatar.textContent = window.currentUser.email.charAt(0).toUpperCase();
                 }
 
                 // Verificar bloqueo
@@ -686,7 +707,7 @@
                 loadingText.textContent = 'Cargando preguntas...';
                 const loaded = await loadQuestions();
                 if (!loaded) {
-                    showError('No se pudieron cargar las preguntas');
+                    showError('No se pudieron cargar las preguntas. Verifica que preguntas.json existe.');
                     return;
                 }
 
@@ -694,8 +715,7 @@
                 loadingText.textContent = 'Sincronizando...';
                 const savedProgress = await loadProgress();
                 
-                if (savedProgress && savedProgress.examStarted && !savedProgress.examFinished) {
-                    // Continuar examen
+                if (savedProgress && savedProgress.examStarted && !savedProgress.examFinished && savedProgress.questionIds) {
                     examQuestions = savedProgress.questionIds.map(id => 
                         allQuestions.find(q => q.id === id)
                     ).filter(q => q);
@@ -708,7 +728,7 @@
                         showExam();
                         renderQuestions();
                         startTimer();
-                        syncProgress();
+                        setInterval(syncProgress, 10000);
                         return;
                     }
                 }
@@ -735,7 +755,6 @@
                 
                 const data = await response.json();
                 
-                // Tu JSON es un array directo
                 if (!Array.isArray(data)) {
                     throw new Error('El JSON debe ser un array');
                 }
@@ -745,8 +764,8 @@
                     return q.tags && Array.isArray(q.tags) && q.tags.includes('ideas principales');
                 });
 
-                console.log(`Total preguntas JSON: ${data.length}`);
-                console.log(`Preguntas 'ideas principales': ${allQuestions.length}`);
+                console.log('Total preguntas JSON:', data.length);
+                console.log('Preguntas "ideas principales":', allQuestions.length);
 
                 if (allQuestions.length === 0) {
                     throw new Error('No hay preguntas con tag "ideas principales"');
@@ -759,7 +778,7 @@
 
                 return true;
             } catch (error) {
-                console.error('Error cargando preguntas:', error);
+                console.error('Error cargando:', error);
                 return false;
             }
         }
@@ -770,7 +789,6 @@
         async function checkBlockStatus() {
             let blockedUntil = null;
 
-            // Revisar Firebase
             if (window.db && currentUserId) {
                 try {
                     const snapshot = await get(ref(window.db, `users/${currentUserId}/lcs1f/blockedUntil`));
@@ -782,7 +800,6 @@
                 }
             }
 
-            // Revisar localStorage
             const localBlocked = localStorage.getItem('lcs1f_blocked_until');
             if (localBlocked) {
                 const localTime = parseInt(localBlocked);
@@ -827,7 +844,7 @@
         // SINCRONIZACION
         // ============================================
         async function syncProgress() {
-            if (!window.db || !currentUserId) return;
+            if (!window.db || !currentUserId || examFinished) return;
 
             try {
                 await set(ref(window.db, `users/${currentUserId}/lcs1f`), {
@@ -839,7 +856,7 @@
                     lastSync: Date.now()
                 });
             } catch (e) {
-                console.warn('Error sincronizando:', e);
+                console.warn('Error sync:', e);
             }
         }
 
@@ -857,14 +874,14 @@
         // ============================================
         // INICIAR EXAMEN
         // ============================================
-        document.getElementById('startBtn').addEventListener('click', startExam);
+        startBtn.addEventListener('click', startExam);
 
         function startExam() {
-            // Seleccionar 30 aleatorias
             const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
             examQuestions = shuffled.slice(0, CONFIG.totalQuestions);
 
             examStarted = true;
+            examFinished = false;
             userAnswers = {};
             timeRemaining = CONFIG.timeLimit;
 
@@ -872,8 +889,6 @@
             renderQuestions();
             startTimer();
             syncProgress();
-
-            // Sincronizar cada 10 segundos
             setInterval(syncProgress, 10000);
         }
 
@@ -890,12 +905,12 @@
         // ============================================
         function renderQuestions() {
             questionsContainer.innerHTML = '';
+            questionsRendered = true;
 
             examQuestions.forEach((question, index) => {
                 const num = index + 1;
                 const blockNum = Math.ceil(num / CONFIG.questionsPerBlock);
 
-                // Separar texto de la pregunta
                 let textBlock = '';
                 let questionText = question.pregunta || '';
                 
@@ -908,12 +923,14 @@
                 const card = document.createElement('div');
                 card.className = 'question-card';
                 card.id = `question-${question.id}`;
+                card.dataset.questionId = question.id;
 
                 let optionsHtml = (question.opciones || []).map((opt, i) => {
                     const letter = String.fromCharCode(65 + i);
                     const isSelected = userAnswers[question.id] === i;
                     return `
                         <div class="option-item ${isSelected ? 'selected' : ''}" 
+                             data-option-index="${i}"
                              onclick="selectAnswer('${question.id}', ${i})">
                             <div class="option-letter">${letter}</div>
                             <div class="option-text">${opt}</div>
@@ -938,9 +955,15 @@
         }
 
         // ============================================
-        // SELECCIONAR RESPUESTA
+        // SELECCIONAR RESPUESTA - CORREGIDO
         // ============================================
         window.selectAnswer = function(questionId, optionIndex) {
+            // BLOQUEAR si el examen ya termino
+            if (examFinished) {
+                console.log('Examen ya finalizado, no se pueden cambiar respuestas');
+                return;
+            }
+
             userAnswers[questionId] = optionIndex;
 
             // Actualizar UI
@@ -971,7 +994,16 @@
         // TIMER
         // ============================================
         function startTimer() {
+            if (mainTimerInterval) {
+                clearInterval(mainTimerInterval);
+            }
+
             mainTimerInterval = setInterval(() => {
+                if (examFinished) {
+                    clearInterval(mainTimerInterval);
+                    return;
+                }
+
                 timeRemaining--;
 
                 const minutes = Math.floor(timeRemaining / 60);
@@ -994,19 +1026,30 @@
         // ============================================
         // DESCANSO
         // ============================================
+        let restInterval = null;
+        let previousBlockAnswered = 0;
+
         function showRest() {
+            const currentAnswered = Object.keys(userAnswers).length;
+            
+            // Solo mostrar descanso si es un nuevo bloque
+            if (currentAnswered === previousBlockAnswered) return;
+            previousBlockAnswered = currentAnswered;
+
             clearInterval(mainTimerInterval);
             restOverlay.classList.add('active');
 
             let restTime = CONFIG.restDuration;
             restTimerEl.textContent = restTime;
 
-            const interval = setInterval(() => {
+            if (restInterval) clearInterval(restInterval);
+
+            restInterval = setInterval(() => {
                 restTime--;
                 restTimerEl.textContent = restTime;
 
                 if (restTime <= 0) {
-                    clearInterval(interval);
+                    clearInterval(restInterval);
                     restOverlay.classList.remove('active');
                     startTimer();
                 }
@@ -1014,11 +1057,33 @@
         }
 
         // ============================================
-        // ENVIAR EXAMEN
+        // ENVIAR EXAMEN - CORREGIDO
         // ============================================
-        window.submitExam = async function() {
-            clearInterval(mainTimerInterval);
+        submitBtn.addEventListener('click', submitExam);
+
+        async function submitExam() {
+            // Prevenir doble envio
+            if (examFinished) {
+                console.log('Ya se envio el examen');
+                return;
+            }
+
+            // Marcar como finalizado INMEDIATAMENTE
             examFinished = true;
+
+            // Detener timer
+            if (mainTimerInterval) {
+                clearInterval(mainTimerInterval);
+            }
+
+            // Deshabilitar boton
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+
+            // BLOQUEAR TODAS LAS OPCIONES
+            document.querySelectorAll('.option-item').forEach(opt => {
+                opt.classList.add('disabled');
+            });
 
             // Calcular score
             let correct = 0;
@@ -1035,10 +1100,10 @@
 
             // Guardar resultado
             const resultData = {
-                score,
-                correct,
+                score: score,
+                correct: correct,
                 total: CONFIG.totalQuestions,
-                passed,
+                passed: passed,
                 completedAt: Date.now(),
                 examFinished: true
             };
@@ -1048,37 +1113,45 @@
                 resultData.blockedUntil = blockedUntil;
                 localStorage.setItem('lcs1f_blocked_until', blockedUntil.toString());
             } else {
-                // Desbloquear LCS2
                 await unlockLCS2();
             }
 
             // Guardar en Firebase
             if (window.db && currentUserId) {
-                await set(ref(window.db, `users/${currentUserId}/lcs1f`), resultData);
+                try {
+                    await set(ref(window.db, `users/${currentUserId}/lcs1f`), resultData);
+                } catch (e) {
+                    console.warn('Error guardando resultado:', e);
+                }
             }
 
+            // Mostrar resultados
             showResults(score, correct, passed);
-        };
+        }
 
         async function unlockLCS2() {
             localStorage.setItem('lcs2_unlocked', 'true');
             if (window.db && currentUserId) {
-                await set(ref(window.db, `users/${currentUserId}/lcs2_unlocked`), true);
+                try {
+                    await set(ref(window.db, `users/${currentUserId}/lcs2_unlocked`), true);
+                } catch (e) {
+                    console.warn('Error desbloqueando LCS2:', e);
+                }
             }
         }
 
         // ============================================
-        // RESULTADOS
+        // MOSTRAR RESULTADOS - CORREGIDO
         // ============================================
         function showResults(score, correct, passed) {
             const percentage = Math.round((correct / CONFIG.totalQuestions) * 100);
 
             let message = '';
-            if (score >= 270) message = '¡Excelente! Dominio excepcional.';
-            else if (score >= 240) message = '¡Muy bien! Solido entendimiento.';
+            if (score >= 270) message = '¡Excelente! Dominio excepcional de ideas principales.';
+            else if (score >= 240) message = '¡Muy bien! Tienes un solido entendimiento.';
             else if (score >= 180) message = '¡Felicitaciones! Has aprobado el examen.';
             else if (score >= 150) message = 'Estas muy cerca. Un poco mas de practica.';
-            else message = 'Necesitas reforzar tus habilidades.';
+            else message = 'Necesitas reforzar tus habilidades de identificacion de ideas principales.';
 
             resultsCard.innerHTML = `
                 <h2 class="font-serif" style="font-size: 2rem; color: var(--accent-blue); margin-bottom: 25px;">
@@ -1124,6 +1197,7 @@
                 `}
             `;
 
+            // MOSTRAR OVERLAY
             resultsOverlay.classList.add('active');
         }
 
@@ -1167,6 +1241,13 @@
             import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
                 signOut(window.auth).then(() => window.location.href = 'index.html');
             });
+        });
+
+        // Importar ref para Firebase
+        import("https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js").then(({ ref, set, get }) => {
+            window.ref = ref;
+            window.set = set;
+            window.get = get;
         });
     </script>
 </body>
