@@ -26,9 +26,7 @@
             --warning: #f57c00;
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             font-family: 'Source Sans 3', sans-serif;
@@ -37,9 +35,7 @@
             line-height: 1.6;
         }
 
-        .font-serif {
-            font-family: 'Merriweather', serif;
-        }
+        .font-serif { font-family: 'Merriweather', serif; }
 
         .paper-texture {
             background: var(--bg-paper);
@@ -195,14 +191,6 @@
             z-index: 100;
         }
 
-        .rest-card {
-            background: white;
-            padding: 48px;
-            border-radius: 8px;
-            text-align: center;
-            max-width: 400px;
-        }
-
         .results-overlay {
             position: fixed;
             inset: 0;
@@ -214,7 +202,7 @@
             padding: 20px;
         }
 
-        .results-card {
+        .results-card, .blocked-card, .error-card, .rest-card {
             background: white;
             padding: 48px;
             border-radius: 8px;
@@ -247,10 +235,9 @@
             box-shadow: 0 8px 24px rgba(198, 40, 40, 0.4);
         }
 
-        .blocked-overlay {
+        .blocked-overlay, .error-overlay {
             position: fixed;
             inset: 0;
-            background: var(--accent-blue);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -258,20 +245,14 @@
             padding: 20px;
         }
 
-        .blocked-card {
-            background: white;
-            padding: 48px;
-            border-radius: 8px;
-            text-align: center;
-            max-width: 450px;
-            width: 100%;
-        }
+        .blocked-overlay { background: var(--accent-blue); }
+        .error-overlay { background: var(--error); }
 
         .watermark {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            opacity: 0.1;
+            opacity: 0.05;
             font-size: 120px;
             font-weight: 900;
             color: var(--accent-blue);
@@ -279,14 +260,11 @@
             z-index: 0;
         }
 
-        @media print {
-            .no-print { display: none; }
-        }
+        @media print { .no-print { display: none; } }
 
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
                 transition-duration: 0.01ms !important;
             }
         }
@@ -300,20 +278,36 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .stagger-1 { animation-delay: 0.1s; }
-        .stagger-2 { animation-delay: 0.2s; }
-        .stagger-3 { animation-delay: 0.3s; }
+        .text-block {
+            background: #f8f8f5;
+            padding: 16px 20px;
+            border-radius: 4px;
+            border-left: 4px solid var(--accent-gold);
+            margin-bottom: 16px;
+            line-height: 1.8;
+        }
     </style>
 </head>
 <body class="min-h-screen">
-    <!-- Watermark -->
     <div class="watermark font-serif">ICFES</div>
 
     <!-- Loading Screen -->
     <div id="loadingScreen" class="fixed inset-0 bg-[var(--accent-blue)] flex items-center justify-center z-50">
         <div class="text-center text-white">
             <div class="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p class="text-lg">Cargando examen...</p>
+            <p id="loadingText" class="text-lg">Cargando examen...</p>
+        </div>
+    </div>
+
+    <!-- Error Screen -->
+    <div id="errorScreen" class="error-overlay hidden">
+        <div class="error-card">
+            <svg class="w-16 h-16 mx-auto mb-4 text-[var(--error)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <h2 class="font-serif text-2xl font-bold text-[var(--fg-dark)] mb-4">Error al Cargar</h2>
+            <p id="errorMessage" class="text-[var(--fg-medium)] mb-6">No se pudieron cargar las preguntas.</p>
+            <button onclick="location.reload()" class="btn-primary">Reintentar</button>
         </div>
     </div>
 
@@ -327,15 +321,12 @@
             <p class="text-[var(--fg-medium)] mb-4">Debes esperar antes de volver a presentar este examen.</p>
             <p class="text-sm text-[var(--fg-light)] mb-6">Tiempo restante:</p>
             <div id="blockTimer" class="timer-display text-3xl mb-6">--:--:--</div>
-            <button onclick="goToStudy()" class="btn-primary">
-                Ir a Estudiar
-            </button>
+            <button onclick="goToStudy()" class="btn-primary">Ir a Estudiar</button>
         </div>
     </div>
 
     <!-- Main Content -->
     <div id="mainContent" class="hidden">
-        <!-- Header -->
         <header class="icfes-header text-white py-6 no-print">
             <div class="max-w-6xl mx-auto px-4">
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -357,23 +348,22 @@
             </div>
         </header>
 
-        <!-- Progress Bar -->
         <div class="progress-bar no-print">
             <div id="progressFill" class="progress-fill" style="width: 0%"></div>
         </div>
 
-        <!-- Instructions Section -->
+        <!-- Instructions -->
         <section id="instructionsSection" class="max-w-4xl mx-auto px-4 py-8">
             <div class="paper-texture p-8 rounded-lg shadow-lg border border-[var(--border-gray)]">
                 <div class="mb-8 text-center border-b border-[var(--border-gray)] pb-6">
                     <h2 class="font-serif text-2xl font-bold text-[var(--accent-blue)] mb-2">INSTRUCCIONES GENERALES</h2>
-                    <p class="text-[var(--fg-light)]">Examen Clasificatorio de Lectura Crítica</p>
+                    <p class="text-[var(--fg-light)]">Examen Clasificatorio de Lectura Critica</p>
                 </div>
 
                 <div class="space-y-4 text-[var(--fg-medium)]">
                     <div class="flex gap-4">
                         <span class="font-bold text-[var(--accent-blue)]">1.</span>
-                        <p>Este examen consta de <strong>30 preguntas</strong> sobre identificación de ideas principales en textos.</p>
+                        <p>Este examen consta de <strong>30 preguntas</strong> sobre identificacion de ideas principales en textos.</p>
                     </div>
                     <div class="flex gap-4">
                         <span class="font-bold text-[var(--accent-blue)]">2.</span>
@@ -381,11 +371,11 @@
                     </div>
                     <div class="flex gap-4">
                         <span class="font-bold text-[var(--accent-blue)]">3.</span>
-                        <p>Después de cada bloque de <strong>10 preguntas</strong>, tendrá un descanso obligatorio de <strong>45 segundos</strong>.</p>
+                        <p>Despues de cada bloque de <strong>10 preguntas</strong>, tendra un descanso obligatorio de <strong>45 segundos</strong>.</p>
                     </div>
                     <div class="flex gap-4">
                         <span class="font-bold text-[var(--accent-blue)]">4.</span>
-                        <p>La puntuación va de <strong>0 a 300 puntos</strong>. Todas las preguntas tienen el mismo valor.</p>
+                        <p>La puntuacion va de <strong>0 a 300 puntos</strong>. Todas las preguntas tienen el mismo valor.</p>
                     </div>
                     <div class="flex gap-4">
                         <span class="font-bold text-[var(--accent-blue)]">5.</span>
@@ -393,25 +383,11 @@
                     </div>
                     <div class="flex gap-4">
                         <span class="font-bold text-[var(--accent-blue)]">6.</span>
-                        <p>Para aprobar necesita <strong>180 puntos o más</strong>. Esto desbloqueará el siguiente nivel.</p>
+                        <p>Para aprobar necesita <strong>180 puntos o mas</strong>. Esto desbloqueara el siguiente nivel.</p>
                     </div>
                     <div class="flex gap-4">
                         <span class="font-bold text-[var(--accent-blue)]">7.</span>
-                        <p>Si no aprueba, deberá esperar <strong>12 horas</strong> antes de volver a presentar el examen.</p>
-                    </div>
-                    <div class="flex gap-4">
-                        <span class="font-bold text-[var(--accent-blue)]">8.</span>
-                        <p>Seleccione una única respuesta para cada pregunta. Puede cambiar su respuesta antes de enviar.</p>
-                    </div>
-                </div>
-
-                <div class="mt-8 pt-6 border-t border-[var(--border-gray)]">
-                    <div class="bg-[#f0f4f8] p-4 rounded-lg">
-                        <p class="text-sm text-[var(--fg-medium)]">
-                            <strong class="text-[var(--accent-blue)]">Nota importante:</strong> 
-                            Su progreso se guarda automáticamente. Si cierra el navegador, podrá continuar donde lo dejó 
-                            desde el mismo dispositivo u otro sincronizado con su cuenta.
-                        </p>
+                        <p>Si no aprueba, debera esperar <strong>12 horas</strong> antes de volver a presentar el examen.</p>
                     </div>
                 </div>
 
@@ -423,33 +399,24 @@
             </div>
         </section>
 
-        <!-- Questions Section -->
+        <!-- Questions -->
         <section id="questionsSection" class="max-w-4xl mx-auto px-4 py-8 hidden">
             <div class="paper-texture p-6 md:p-8 rounded-lg shadow-lg border border-[var(--border-gray)]">
-                <!-- Block Header -->
                 <div id="blockHeader" class="mb-6 pb-4 border-b border-[var(--border-gray)]">
                     <div class="flex justify-between items-center">
-                        <h3 class="font-serif text-xl font-bold text-[var(--accent-blue)]">
-                            Bloque <span id="currentBlock">1</span> de 3
-                        </h3>
-                        <span class="text-sm text-[var(--fg-light)]">Preguntas 1-10</span>
+                        <h3 class="font-serif text-xl font-bold text-[var(--accent-blue)]">Examen en Curso</h3>
+                        <span class="text-sm text-[var(--fg-light)]">Todas las preguntas visibles</span>
                     </div>
                 </div>
 
-                <!-- Questions Container -->
-                <div id="questionsContainer" class="space-y-8">
-                    <!-- Questions will be inserted here -->
-                </div>
+                <div id="questionsContainer" class="space-y-8"></div>
 
-                <!-- Submit Button -->
-                <div id="submitContainer" class="mt-8 pt-6 border-t border-[var(--border-gray)] hidden">
+                <div id="submitContainer" class="mt-8 pt-6 border-t border-[var(--border-gray)]">
                     <div class="text-center">
                         <p class="text-[var(--fg-medium)] mb-4">
                             Ha respondido <strong id="answeredCount">0</strong> de 30 preguntas.
                         </p>
-                        <button id="submitBtn" onclick="submitExam()" class="btn-primary">
-                            ENVIAR EXAMEN
-                        </button>
+                        <button id="submitBtn" onclick="submitExam()" class="btn-primary">ENVIAR EXAMEN</button>
                     </div>
                 </div>
             </div>
@@ -463,18 +430,15 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             <h2 class="font-serif text-2xl font-bold text-[var(--accent-blue)] mb-2">Descanso Obligatorio</h2>
-            <p class="text-[var(--fg-medium)] mb-6">Ha completado un bloque de preguntas. Descanse unos momentos.</p>
+            <p class="text-[var(--fg-medium)] mb-6">Ha completado un bloque de preguntas.</p>
             <div id="restTimer" class="timer-display text-4xl mb-4">45</div>
-            <p class="text-sm text-[var(--fg-light)]">El examen continuará automáticamente</p>
         </div>
     </div>
 
     <!-- Results Overlay -->
     <div id="resultsOverlay" class="results-overlay hidden">
         <div class="results-card">
-            <div id="resultsContent">
-                <!-- Results will be inserted here -->
-            </div>
+            <div id="resultsContent"></div>
         </div>
     </div>
 
@@ -483,7 +447,7 @@
         // CONFIGURACIÓN FIREBASE
         // ============================================
         const firebaseConfig = {
-            apiKey: "AIzaSyC7xJ Downsampler-Placeholder-Change-Me",
+            apiKey: "TU_API_KEY",
             authDomain: "tu-proyecto.firebaseapp.com",
             databaseURL: "https://tu-proyecto-default-rtdb.firebaseio.com",
             projectId: "tu-proyecto",
@@ -492,33 +456,17 @@
             appId: "1:123456789:web:abcdef"
         };
 
-        // Inicializar Firebase
-        let database = null;
-        let userId = null;
-        let firebaseConnected = false;
-
-        try {
-            firebase.initializeApp(firebaseConfig);
-            database = firebase.database();
-            userId = localStorage.getItem('lcs_user_id') || 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('lcs_user_id', userId);
-            firebaseConnected = true;
-        } catch (e) {
-            console.warn('Firebase no disponible, usando localStorage:', e);
-            firebaseConnected = false;
-        }
-
         // ============================================
         // VARIABLES GLOBALES (inicializadas primero)
         // ============================================
         const EXAM_CONFIG = {
             totalQuestions: 30,
-            timeLimit: 60 * 60, // 1 hora en segundos
+            timeLimit: 60 * 60,
             questionsPerBlock: 10,
-            restDuration: 45, // segundos
+            restDuration: 45,
             passingScore: 180,
             maxScore: 300,
-            blockDuration: 12 * 60 * 60 * 1000 // 12 horas en ms
+            blockDuration: 12 * 60 * 60 * 1000
         };
 
         let allQuestions = [];
@@ -531,48 +479,109 @@
         let examStarted = false;
         let examFinished = false;
         let syncInterval = null;
+        let database = null;
+        let userId = null;
+        let firebaseConnected = false;
 
         // ============================================
-        // CARGAR PREGUNTAS
+        // INICIALIZAR FIREBASE
+        // ============================================
+        function initFirebase() {
+            try {
+                if (typeof firebase !== 'undefined') {
+                    firebase.initializeApp(firebaseConfig);
+                    database = firebase.database();
+                    userId = localStorage.getItem('lcs_user_id');
+                    if (!userId) {
+                        userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                        localStorage.setItem('lcs_user_id', userId);
+                    }
+                    firebaseConnected = true;
+                }
+            } catch (e) {
+                console.warn('Firebase no disponible:', e);
+                firebaseConnected = false;
+            }
+        }
+
+        // ============================================
+        // CARGAR PREGUNTAS - CORREGIDO PARA ARRAY DIRECTO
         // ============================================
         async function loadQuestions() {
+            const loadingText = document.getElementById('loadingText');
+            
             try {
+                loadingText.textContent = 'Conectando con el servidor...';
+                
                 const response = await fetch('preguntas.json');
+                
+                if (!response.ok) {
+                    throw new Error(`No se encuentra preguntas.json (Error ${response.status})`);
+                }
+                
+                loadingText.textContent = 'Procesando preguntas...';
+                
+                // TU JSON ES UN ARRAY DIRECTO, NO UN OBJETO
                 const data = await response.json();
                 
-                // Filtrar solo preguntas de ideas principales
-                allQuestions = data.preguntas.filter(q => 
-                    q.tags && q.tags.includes('ideas principales')
-                );
+                // Verificar que es un array
+                if (!Array.isArray(data)) {
+                    throw new Error('El JSON debe ser un array directo [ {...}, {...} ]');
+                }
                 
-                console.log(`Preguntas de ideas principales encontradas: ${allQuestions.length}`);
+                loadingText.textContent = 'Filtrando preguntas de ideas principales...';
+                
+                // FILTRAR SOLO LAS QUE TIENEN EL TAG "ideas principales"
+                allQuestions = data.filter(q => {
+                    // Verificar que existe tags y es un array
+                    if (!q.tags || !Array.isArray(q.tags)) return false;
+                    // Buscar el tag exacto
+                    return q.tags.includes('ideas principales');
+                });
+                
+                console.log('========================================');
+                console.log('Total preguntas en JSON:', data.length);
+                console.log('Preguntas con tag "ideas principales":', allQuestions.length);
+                console.log('========================================');
+                
+                if (allQuestions.length === 0) {
+                    throw new Error('No se encontraron preguntas con el tag "ideas principales"');
+                }
                 
                 if (allQuestions.length < EXAM_CONFIG.totalQuestions) {
-                    console.warn('No hay suficientes preguntas de ideas principales');
-                    // Duplicar si es necesario para llegar a 30
+                    console.warn(`Solo hay ${allQuestions.length} preguntas, se necesitan ${EXAM_CONFIG.totalQuestions}`);
+                    // Duplicar para llegar a 30
+                    const original = [...allQuestions];
                     while (allQuestions.length < EXAM_CONFIG.totalQuestions) {
-                        allQuestions = [...allQuestions, ...allQuestions];
+                        allQuestions = [...allQuestions, ...original];
                     }
                 }
                 
                 return true;
+                
             } catch (error) {
                 console.error('Error cargando preguntas:', error);
+                showError(error.message);
                 return false;
             }
         }
 
         // ============================================
-        // SINCRONIZACIÓN FIREBASE
+        // MOSTRAR ERROR
+        // ============================================
+        function showError(message) {
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('errorScreen').classList.remove('hidden');
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        // ============================================
+        // SINCRONIZACIÓN
         // ============================================
         async function syncToFirebase(data) {
             if (!firebaseConnected || !database) return;
-            
             try {
-                await database.ref(`users/${userId}/lcs1f`).set({
-                    ...data,
-                    lastSync: Date.now()
-                });
+                await database.ref(`users/${userId}/lcs1f`).set({ ...data, lastSync: Date.now() });
             } catch (e) {
                 console.warn('Error sincronizando:', e);
             }
@@ -580,52 +589,43 @@
 
         async function loadFromFirebase() {
             if (!firebaseConnected || !database) return null;
-            
             try {
                 const snapshot = await database.ref(`users/${userId}/lcs1f`).once('value');
                 return snapshot.val();
             } catch (e) {
-                console.warn('Error cargando desde Firebase:', e);
                 return null;
             }
         }
 
         async function syncProgress() {
-            const data = {
+            await syncToFirebase({
                 answers: userAnswers,
                 timeRemaining: timeRemaining,
                 currentBlock: currentBlock,
                 examStarted: examStarted,
                 examFinished: examFinished,
-                questions: examQuestions.map(q => q.id)
-            };
-            await syncToFirebase(data);
+                questionIds: examQuestions.map(q => q.id)
+            });
         }
 
         // ============================================
         // VERIFICAR BLOQUEO
         // ============================================
         async function checkBlockStatus() {
-            // Primero intentar cargar desde Firebase
             const firebaseData = await loadFromFirebase();
-            
             let blockedUntil = null;
             
             if (firebaseData && firebaseData.blockedUntil) {
                 blockedUntil = firebaseData.blockedUntil;
             } else {
-                // Fallback a localStorage
                 const localBlocked = localStorage.getItem('lcs1f_blocked_until');
-                if (localBlocked) {
-                    blockedUntil = parseInt(localBlocked);
-                }
+                if (localBlocked) blockedUntil = parseInt(localBlocked);
             }
             
             if (blockedUntil && Date.now() < blockedUntil) {
                 showBlockedScreen(blockedUntil);
                 return true;
             }
-            
             return false;
         }
 
@@ -636,36 +636,18 @@
             const updateTimer = () => {
                 const remaining = blockedUntil - Date.now();
                 if (remaining <= 0) {
+                    localStorage.removeItem('lcs1f_blocked_until');
                     location.reload();
                     return;
                 }
-                
                 const hours = Math.floor(remaining / (1000 * 60 * 60));
                 const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
                 const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
-                
                 document.getElementById('blockTimer').textContent = 
-                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
             };
-            
             updateTimer();
             setInterval(updateTimer, 1000);
-        }
-
-        // ============================================
-        // VERIFICAR DESBLOQUEO DE LCS2
-        // ============================================
-        async function checkLCS2Unlock() {
-            if (!firebaseConnected || !database) {
-                return localStorage.getItem('lcs2_unlocked') === 'true';
-            }
-            
-            try {
-                const snapshot = await database.ref(`users/${userId}/lcs2_unlocked`).once('value');
-                return snapshot.val() === true;
-            } catch (e) {
-                return localStorage.getItem('lcs2_unlocked') === 'true';
-            }
         }
 
         async function unlockLCS2() {
@@ -679,52 +661,45 @@
         // INICIALIZAR EXAMEN
         // ============================================
         async function initExam() {
-            const loaded = await loadQuestions();
-            if (!loaded) {
-                alert('Error cargando las preguntas. Por favor, recargue la página.');
-                return;
-            }
+            initFirebase();
             
-            // Verificar si está bloqueado
+            const loaded = await loadQuestions();
+            if (!loaded) return;
+            
             const isBlocked = await checkBlockStatus();
             if (isBlocked) return;
             
-            // Intentar recuperar progreso
             const savedData = await loadFromFirebase();
             
-            if (savedData && savedData.examStarted && !savedData.examFinished && savedData.questions) {
-                // Recuperar examen en progreso
-                examQuestions = savedData.questions.map(id => 
-                    allQuestions.find(q => q.id === id)
-                ).filter(q => q);
+            if (savedData && savedData.examStarted && !savedData.examFinished && savedData.questionIds) {
+                examQuestions = savedData.questionIds.map(id => allQuestions.find(q => q.id === id)).filter(q => q);
                 
-                userAnswers = savedData.answers || {};
-                timeRemaining = savedData.timeRemaining || EXAM_CONFIG.timeLimit;
-                currentBlock = savedData.currentBlock || 1;
-                examStarted = true;
-                
-                document.getElementById('loadingScreen').classList.add('hidden');
-                document.getElementById('mainContent').classList.remove('hidden');
-                document.getElementById('instructionsSection').classList.add('hidden');
-                document.getElementById('questionsSection').classList.remove('hidden');
-                
-                renderAllQuestions();
-                startMainTimer();
-                
-                // Iniciar sincronización periódica
-                syncInterval = setInterval(syncProgress, 5000);
-            } else {
-                // Mostrar instrucciones
-                document.getElementById('loadingScreen').classList.add('hidden');
-                document.getElementById('mainContent').classList.remove('hidden');
+                if (examQuestions.length === EXAM_CONFIG.totalQuestions) {
+                    userAnswers = savedData.answers || {};
+                    timeRemaining = savedData.timeRemaining || EXAM_CONFIG.timeLimit;
+                    currentBlock = savedData.currentBlock || 1;
+                    examStarted = true;
+                    
+                    document.getElementById('loadingScreen').classList.add('hidden');
+                    document.getElementById('mainContent').classList.remove('hidden');
+                    document.getElementById('instructionsSection').classList.add('hidden');
+                    document.getElementById('questionsSection').classList.remove('hidden');
+                    
+                    renderAllQuestions();
+                    startMainTimer();
+                    syncInterval = setInterval(syncProgress, 5000);
+                    return;
+                }
             }
+            
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
         }
 
         // ============================================
         // COMENZAR EXAMEN
         // ============================================
         function startExam() {
-            // Seleccionar 30 preguntas aleatorias
             const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
             examQuestions = shuffled.slice(0, EXAM_CONFIG.totalQuestions);
             
@@ -738,11 +713,7 @@
             
             renderAllQuestions();
             startMainTimer();
-            
-            // Guardar estado inicial
             syncProgress();
-            
-            // Iniciar sincronización periódica
             syncInterval = setInterval(syncProgress, 5000);
         }
 
@@ -757,38 +728,35 @@
                 const questionNum = index + 1;
                 const blockNum = Math.ceil(questionNum / EXAM_CONFIG.questionsPerBlock);
                 
-                const questionHtml = `
-                    <div class="question-card p-6 fade-in" data-block="${blockNum}" style="animation-delay: ${index * 0.05}s">
+                let textBlock = '';
+                let questionText = question.pregunta || '';
+                
+                if (questionText.includes('\n\n')) {
+                    const parts = questionText.split('\n\n');
+                    textBlock = parts[0];
+                    questionText = parts.slice(1).join('\n\n');
+                }
+                
+                container.innerHTML += `
+                    <div class="question-card p-6 fade-in" data-block="${blockNum}" data-id="${question.id}">
                         <div class="flex items-start gap-4 mb-4">
-                            <span class="bg-[var(--accent-blue)] text-white font-bold px-3 py-1 rounded text-sm">
-                                ${questionNum}
-                            </span>
-                            <div class="flex-1">
-                                <p class="text-[var(--fg-light)] text-sm mb-2 uppercase tracking-wide">
-                                    Bloque ${blockNum}
-                                </p>
-                            </div>
+                            <span class="bg-[var(--accent-blue)] text-white font-bold px-3 py-1 rounded text-sm flex-shrink-0">${questionNum}</span>
+                            <span class="text-[var(--fg-light)] text-sm">Bloque ${blockNum}</span>
                         </div>
                         
-                        ${question.texto ? `
-                            <div class="bg-[#f8f8f5] p-4 rounded mb-4 border-l-4 border-[var(--accent-gold)]">
-                                <p class="text-[var(--fg-medium)] italic leading-relaxed">${question.texto}</p>
-                            </div>
-                        ` : ''}
+                        ${textBlock ? `<div class="text-block"><p class="whitespace-pre-wrap">${textBlock}</p></div>` : ''}
                         
-                        <p class="text-[var(--fg-dark)] font-medium mb-4 text-lg">${question.pregunta}</p>
+                        <p class="text-[var(--fg-dark)] font-medium mb-4 text-lg">${questionText}</p>
                         
                         <div class="space-y-3">
-                            ${question.opciones.map((opcion, optIndex) => {
+                            ${(question.opciones || []).map((opcion, optIndex) => {
                                 const letters = ['A', 'B', 'C', 'D'];
                                 const isSelected = userAnswers[question.id] === optIndex;
                                 return `
                                     <div class="option-item ${isSelected ? 'selected' : ''}" 
                                          onclick="selectAnswer('${question.id}', ${optIndex})"
-                                         role="button"
-                                         tabindex="0"
-                                         aria-pressed="${isSelected}"
-                                         onkeydown="if(event.key==='Enter'||event.key===' ')selectAnswer('${question.id}', ${optIndex})">
+                                         role="button" tabindex="0"
+                                         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectAnswer('${question.id}', ${optIndex})}">
                                         <span class="option-letter">${letters[optIndex]}</span>
                                         <span class="flex-1">${opcion}</span>
                                     </div>
@@ -797,8 +765,6 @@
                         </div>
                     </div>
                 `;
-                
-                container.innerHTML += questionHtml;
             });
             
             updateProgress();
@@ -810,122 +776,71 @@
         function selectAnswer(questionId, optionIndex) {
             userAnswers[questionId] = optionIndex;
             
-            // Actualizar UI
-            const questionCards = document.querySelectorAll('.question-card');
-            questionCards.forEach(card => {
-                const question = examQuestions.find(q => q.id === questionId);
-                if (!question) return;
-                
-                const options = card.querySelectorAll('.option-item');
-                options.forEach((opt, idx) => {
-                    if (idx === optionIndex) {
-                        opt.classList.add('selected');
-                        opt.setAttribute('aria-pressed', 'true');
-                    } else {
-                        opt.classList.remove('selected');
-                        opt.setAttribute('aria-pressed', 'false');
-                    }
+            const card = document.querySelector(`[data-id="${questionId}"]`);
+            if (card) {
+                card.querySelectorAll('.option-item').forEach((opt, idx) => {
+                    opt.classList.toggle('selected', idx === optionIndex);
                 });
-            });
+            }
             
             updateProgress();
             
-            // Guardar progreso
+            const answered = Object.keys(userAnswers).length;
+            if (answered === 10 || answered === 20) {
+                showRestScreen();
+            }
+            
             syncProgress();
         }
 
-        // ============================================
-        // ACTUALIZAR PROGRESO
-        // ============================================
         function updateProgress() {
             const answered = Object.keys(userAnswers).length;
             const total = EXAM_CONFIG.totalQuestions;
-            
             document.getElementById('progressText').textContent = `${answered}/${total}`;
             document.getElementById('progressFill').style.width = `${(answered / total) * 100}%`;
-            
-            // Actualizar contador en submit
-            if (document.getElementById('answeredCount')) {
-                document.getElementById('answeredCount').textContent = answered;
-            }
-            
-            // Mostrar botón de envío en el último bloque
-            if (currentBlock === 3 || answered >= EXAM_CONFIG.questionsPerBlock * 2) {
-                document.getElementById('submitContainer').classList.remove('hidden');
-            }
+            document.getElementById('answeredCount').textContent = answered;
         }
 
         // ============================================
-        // TIMER PRINCIPAL
+        // TIMERS
         // ============================================
         function startMainTimer() {
             const timerDisplay = document.getElementById('mainTimer');
             
             mainTimerInterval = setInterval(() => {
                 timeRemaining--;
-                
                 const minutes = Math.floor(timeRemaining / 60);
                 const seconds = timeRemaining % 60;
+                timerDisplay.textContent = `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
                 
-                timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                
-                // Alertas de tiempo
                 timerDisplay.classList.remove('warning', 'danger');
-                if (timeRemaining <= 300 && timeRemaining > 60) {
-                    timerDisplay.classList.add('warning');
-                } else if (timeRemaining <= 60) {
-                    timerDisplay.classList.add('danger');
-                }
+                if (timeRemaining <= 300 && timeRemaining > 60) timerDisplay.classList.add('warning');
+                else if (timeRemaining <= 60) timerDisplay.classList.add('danger');
                 
-                // Tiempo agotado
-                if (timeRemaining <= 0) {
-                    submitExam();
-                }
-                
-                // Sincronizar cada 30 segundos
-                if (timeRemaining % 30 === 0) {
-                    syncProgress();
-                }
+                if (timeRemaining <= 0) submitExam();
+                if (timeRemaining % 30 === 0) syncProgress();
             }, 1000);
         }
 
-        // ============================================
-        // MOSTRAR DESCANSO
-        // ============================================
         function showRestScreen() {
             clearInterval(mainTimerInterval);
-            
             document.getElementById('restOverlay').classList.remove('hidden');
             let restTime = EXAM_CONFIG.restDuration;
-            
             const restDisplay = document.getElementById('restTimer');
             restDisplay.textContent = restTime;
             
             restTimerInterval = setInterval(() => {
                 restTime--;
                 restDisplay.textContent = restTime;
-                
                 if (restTime <= 0) {
                     clearInterval(restTimerInterval);
                     document.getElementById('restOverlay').classList.add('hidden');
                     currentBlock++;
-                    updateBlockHeader();
                     startMainTimer();
+                    const nextBlock = document.querySelector(`[data-block="${currentBlock}"]`);
+                    if (nextBlock) nextBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             }, 1000);
-        }
-
-        function updateBlockHeader() {
-            document.getElementById('currentBlock').textContent = currentBlock;
-            const startQ = (currentBlock - 1) * EXAM_CONFIG.questionsPerBlock + 1;
-            const endQ = currentBlock * EXAM_CONFIG.questionsPerBlock;
-            document.querySelector('#blockHeader span:last-child').textContent = `Preguntas ${startQ}-${endQ}`;
-            
-            // Scroll al inicio del bloque
-            const firstQuestion = document.querySelector(`[data-block="${currentBlock}"]`);
-            if (firstQuestion) {
-                firstQuestion.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
         }
 
         // ============================================
@@ -934,162 +849,72 @@
         async function submitExam() {
             clearInterval(mainTimerInterval);
             clearInterval(syncInterval);
-            
             examFinished = true;
             
-            // Calcular puntuación
             let correct = 0;
             examQuestions.forEach(question => {
-                if (userAnswers[question.id] === question.correcta) {
-                    correct++;
-                }
+                if (userAnswers[question.id] === question.respuestaCorrecta) correct++;
             });
             
             const score = Math.round((correct / EXAM_CONFIG.totalQuestions) * EXAM_CONFIG.maxScore);
             const passed = score >= EXAM_CONFIG.passingScore;
             
-            // Guardar resultado en Firebase
-            const resultData = {
-                score: score,
-                correct: correct,
-                total: EXAM_CONFIG.totalQuestions,
-                passed: passed,
-                completedAt: Date.now(),
-                examFinished: true
-            };
+            const resultData = { score, correct, total: EXAM_CONFIG.totalQuestions, passed, completedAt: Date.now(), examFinished: true };
             
             if (!passed) {
-                // Bloquear por 12 horas
                 const blockedUntil = Date.now() + EXAM_CONFIG.blockDuration;
                 resultData.blockedUntil = blockedUntil;
-                
-                if (firebaseConnected && database) {
-                    await database.ref(`users/${userId}/lcs1f`).update(resultData);
-                }
                 localStorage.setItem('lcs1f_blocked_until', blockedUntil.toString());
             } else {
-                // Desbloquear LCS2
                 await unlockLCS2();
-                if (firebaseConnected && database) {
-                    await database.ref(`users/${userId}/lcs1f`).update(resultData);
-                }
             }
             
-            // Mostrar resultados
+            await syncToFirebase(resultData);
             showResults(score, correct, passed);
         }
 
-        // ============================================
-        // MOSTRAR RESULTADOS
-        // ============================================
         function showResults(score, correct, passed) {
-            const overlay = document.getElementById('resultsOverlay');
-            const content = document.getElementById('resultsContent');
-            
             const percentage = Math.round((correct / EXAM_CONFIG.totalQuestions) * 100);
             
-            let motivationalMessage = '';
-            if (score >= 270) {
-                motivationalMessage = '¡Excelente trabajo! Has demostrado un dominio excepcional en la identificación de ideas principales.';
-            } else if (score >= 240) {
-                motivationalMessage = '¡Muy bien! Tienes un sólido entendimiento de las ideas principales en los textos.';
-            } else if (score >= 180) {
-                motivationalMessage = '¡Felicitaciones! Has aprobado el examen y demostrado las competencias necesarias.';
-            } else if (score >= 150) {
-                motivationalMessage = 'Estás muy cerca de aprobar. Un poco más de práctica y lo lograrás.';
-            } else if (score >= 100) {
-                motivationalMessage = 'Necesitas reforzar tus habilidades de identificación de ideas principales.';
-            } else {
-                motivationalMessage = 'Te recomendamos estudiar más el material antes de volver a intentarlo.';
-            }
+            let message = score >= 270 ? '¡Excelente trabajo! Dominio excepcional.' :
+                          score >= 240 ? '¡Muy bien! Solido entendimiento.' :
+                          score >= 180 ? '¡Felicitaciones! Has aprobado.' :
+                          score >= 150 ? 'Muy cerca de aprobar.' :
+                          'Necesitas reforzar tus habilidades.';
             
-            content.innerHTML = `
-                <h2 class="font-serif text-2xl font-bold text-[var(--accent-blue)] mb-6">
-                    Resultado del Examen
-                </h2>
-                
-                <div class="score-circle ${passed ? 'score-passed' : 'score-failed'}">
-                    ${score}
-                </div>
-                
-                <p class="text-lg text-[var(--fg-medium)] mb-2">
-                    ${passed ? 'APROBADO' : 'NO APROBADO'}
-                </p>
-                
-                <p class="text-sm text-[var(--fg-light)] mb-6">
-                    Respuestas correctas: ${correct} de ${EXAM_CONFIG.totalQuestions} (${percentage}%)
-                </p>
-                
-                <p class="text-[var(--fg-medium)] mb-8 italic">
-                    "${motivationalMessage}"
-                </p>
-                
+            document.getElementById('resultsContent').innerHTML = `
+                <h2 class="font-serif text-2xl font-bold text-[var(--accent-blue)] mb-6">Resultado del Examen</h2>
+                <div class="score-circle ${passed ? 'score-passed' : 'score-failed'}">${score}</div>
+                <p class="text-lg mb-2 font-semibold ${passed ? 'text-[var(--success)]' : 'text-[var(--error)]'}">${passed ? 'APROBADO' : 'NO APROBADO'}</p>
+                <p class="text-sm text-[var(--fg-light)] mb-6">Correctas: ${correct}/${EXAM_CONFIG.totalQuestions} (${percentage}%)</p>
+                <p class="text-[var(--fg-medium)] mb-8 italic">"${message}"</p>
                 <div class="bg-[#f5f5f0] p-4 rounded-lg mb-6">
-                    <p class="text-sm text-[var(--fg-medium)]">
-                        <strong>Puntuación mínima requerida:</strong> ${EXAM_CONFIG.passingScore} puntos
-                    </p>
+                    <p class="text-sm text-[var(--fg-medium)]"><strong>Minimo requerido:</strong> ${EXAM_CONFIG.passingScore} puntos</p>
                 </div>
-                
                 ${passed ? `
-                    <div class="space-y-3">
-                        <p class="text-[var(--success)] font-semibold">
-                            Has desbloqueado: LCS2 - Ideas Secundarias
-                        </p>
-                        <button onclick="goToLCS2()" class="btn-primary w-full">
-                            Continuar al Siguiente Nivel
-                        </button>
-                    </div>
+                    <p class="text-[var(--success)] font-semibold mb-3">Has desbloqueado: LCS2 - Ideas Secundarias</p>
+                    <button onclick="goToLCS2()" class="btn-primary w-full">Continuar</button>
                 ` : `
-                    <div class="space-y-3">
-                        <p class="text-[var(--error)] font-semibold">
-                            Debes esperar 12 horas antes de volver a presentar el examen.
-                        </p>
-                        <button onclick="goToStudy()" class="btn-secondary w-full">
-                            Volver a Estudiar
-                        </button>
-                    </div>
+                    <p class="text-[var(--error)] font-semibold mb-3">Espera 12 horas para reintentar.</p>
+                    <button onclick="goToStudy()" class="btn-secondary w-full">Volver a Estudiar</button>
                 `}
             `;
             
-            overlay.classList.remove('hidden');
+            document.getElementById('resultsOverlay').classList.remove('hidden');
         }
 
-        // ============================================
-        // NAVEGACIÓN
-        // ============================================
-        function goToStudy() {
-            window.location.href = 'LCS1D.html';
-        }
+        function goToStudy() { window.location.href = 'LCS1D.html'; }
+        function goToLCS2() { window.location.href = 'LCS2.html'; }
 
-        function goToLCS2() {
-            window.location.href = 'LCS2.html';
-        }
-
-        // ============================================
-        // PREVENIR PÉRDIDA DE DATOS
-        // ============================================
         window.addEventListener('beforeunload', (e) => {
             if (examStarted && !examFinished) {
                 syncProgress();
                 e.preventDefault();
-                e.returnValue = 'Si cierra esta página, su progreso se guardará pero el tiempo seguirá corriendo.';
-                return e.returnValue;
+                e.returnValue = '';
             }
         });
 
-        // ============================================
-        // INICIAR APLICACIÓN
-        // ============================================
         document.addEventListener('DOMContentLoaded', initExam);
-
-        // Detectar cuando se completa un bloque (scroll)
-        let lastBlockViewed = 1;
-        const observerOptions = {
-            threshold: 0.5
-        };
-
-        // Nota: El descanso se podría implementar con el observer, 
-        // pero para simplificar lo mostramos solo al enviar
     </script>
 </body>
 </html>
