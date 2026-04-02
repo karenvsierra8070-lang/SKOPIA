@@ -15,6 +15,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
@@ -32,7 +33,9 @@ if (window.location.hostname === "localhost" || window.location.hostname === "12
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 window.auth = auth;
+window.db = db;
 
 onAuthStateChanged(auth, (user) => {
     if (!user) {
@@ -279,6 +282,25 @@ body { font-family: 'Roboto', sans-serif; background: linear-gradient(135deg, va
     transform: scale(1.05);
 }
 
+/* Loading indicator */
+.loading-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+    color: var(--color-oliva-medio);
+}
+
+.loading-indicator i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 @media (max-width: 768px) {
     .hero-title { font-size: 2rem; }
     .library-grid { grid-template-columns: 1fr; gap: 20px; }
@@ -313,19 +335,27 @@ body { font-family: 'Roboto', sans-serif; background: linear-gradient(135deg, va
 
 <div class="stats-bar">
     <div class="stat-item">
-        <div class="stat-number" id="total-completed">0</div>
+        <div class="stat-number" id="total-completed">
+            <div class="loading-indicator"><i class="fas fa-spinner"></i> Cargando...</div>
+        </div>
         <div class="stat-label">Cuestionarios Completados</div>
     </div>
     <div class="stat-item">
-        <div class="stat-number" id="average-score">0/300</div>
+        <div class="stat-number" id="average-score">
+            <div class="loading-indicator"><i class="fas fa-spinner"></i></div>
+        </div>
         <div class="stat-label">Puntaje Promedio</div>
     </div>
     <div class="stat-item">
-        <div class="stat-number" id="best-streak">0</div>
+        <div class="stat-number" id="best-streak">
+            <div class="loading-indicator"><i class="fas fa-spinner"></i></div>
+        </div>
         <div class="stat-label">Mejor Racha</div>
     </div>
     <div class="stat-item">
-        <div class="stat-number" id="total-points">0</div>
+        <div class="stat-number" id="total-points">
+            <div class="loading-indicator"><i class="fas fa-spinner"></i></div>
+        </div>
         <div class="stat-label">Puntos Ganados</div>
     </div>
 </div>
@@ -338,7 +368,9 @@ body { font-family: 'Roboto', sans-serif; background: linear-gradient(135deg, va
         </div>
 
         <div class="library-grid" id="library-grid">
-            <!-- Las tarjetas se generarán dinámicamente -->
+            <div class="loading-indicator" style="grid-column: 1 / -1;">
+                <i class="fas fa-spinner"></i> Cargando cuestionarios...
+            </div>
         </div>
     </div>
 </main>
@@ -374,11 +406,10 @@ body { font-family: 'Roboto', sans-serif; background: linear-gradient(135deg, va
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     // ============================================
-    // CONFIGURACIÓN DE CUESTIONARIOS Y BLOQUEOS
+    // CONFIGURACIÓN DE CUESTIONARIOS
     // ============================================
-    const MIN_SCORE_TO_UNLOCK = 180; // Puntuación mínima para desbloquear
+    const MIN_SCORE_TO_UNLOCK = 180;
     
-    // Definición de cuestionarios
     const quizConfig = {
         'LCS1D1.html': {
             id: 1,
@@ -436,9 +467,9 @@ document.addEventListener('DOMContentLoaded', () => {
             questions: 10,
             time: '18 min',
             difficulty: 2,
-            locked: true, // Bloqueado por defecto
-            requires: 'LCS1D3.html', // Requiere completar LCS1D3
-            requiresScore: MIN_SCORE_TO_UNLOCK // Con al menos 180 puntos
+            locked: true,
+            requires: 'LCS1D3.html',
+            requiresScore: MIN_SCORE_TO_UNLOCK
         },
         'LCS1D5.html': {
             id: 5,
@@ -451,10 +482,10 @@ document.addEventListener('DOMContentLoaded', () => {
             questions: 10,
             time: '30 min',
             difficulty: 3,
-            locked: false, // No está bloqueado técnicamente
-            requires: 'LCS1D4.html', // Pero se recomienda haber hecho LCS1D4
-            requiresScore: 0, // No requiere puntuación específica
-            showWarning: true // Mostrar advertencia si no completó LCS1D4
+            locked: false,
+            requires: 'LCS1D4.html',
+            requiresScore: 0,
+            showWarning: true
         }
     };
 
@@ -471,13 +502,176 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmMessage = document.getElementById('confirm-message');
 
     let pendingQuizUrl = null;
+    let currentUser = null;
+    let userStats = null;
 
     // ============================================
-    // FUNCIONES DE GESTIÓN DE PROGRESO
+    // FUNCIONES DE FIRESTORE
     // ============================================
 
-    // Obtener datos de desbloqueo de LCS1D4
+    // Cargar estadísticas del usuario desde Firestore
+    async function loadUserStats(user) {
+        if (!user) return null;
+        
+        try {
+            const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js");
+            const userDoc = await getDoc(doc(window.db, 'users', user.uid));
+            
+            if (userDoc.exists()) {
+                return userDoc.data();
+            }
+            return null;
+        } catch (error) {
+            console.error('Error cargando datos del usuario:', error);
+            return null;
+        }
+    }
+
+    // Guardar estadísticas del usuario en Firestore
+    async function saveUserStats(user, stats) {
+        if (!user) return;
+        
+        try {
+            const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js");
+            await setDoc(doc(window.db, 'users', user.uid), stats, { merge: true });
+        } catch (error) {
+            console.error('Error guardando datos del usuario:', error);
+        }
+    }
+
+    // Sincronizar localStorage con Firestore
+    async function syncWithFirestore(user) {
+        if (!user) return;
+        
+        // Cargar datos de Firestore
+        const firestoreStats = await loadUserStats(user);
+        
+        // Cargar datos locales
+        const localHistory = getLocalHistory();
+        const localStats = calculateStatsFromHistory(localHistory);
+        
+        if (firestoreStats) {
+            // Comparar y usar los datos más recientes/completos
+            const firestoreHistory = firestoreStats.quizHistory || [];
+            const firestoreCompleted = countCompletedFromHistory(firestoreHistory);
+            
+            // Si Firestore tiene más datos, usar esos
+            if (firestoreCompleted >= localStats.totalCompleted) {
+                userStats = firestoreStats;
+                // Actualizar localStorage con datos de Firestore
+                localStorage.setItem('skopia_quiz_history', JSON.stringify(firestoreHistory));
+                localStorage.setItem('skopia_global_stats', JSON.stringify({
+                    totalCompleted: firestoreStats.totalCompleted || 0,
+                    averageScore: firestoreStats.averageScore || 0,
+                    bestStreak: firestoreStats.bestStreak || 0,
+                    totalPoints: firestoreStats.totalPoints || 0
+                }));
+            } else {
+                // Si local tiene más datos, subir a Firestore
+                userStats = {
+                    ...localStats,
+                    quizHistory: localHistory,
+                    lastSync: new Date().toISOString()
+                };
+                await saveUserStats(user, userStats);
+            }
+        } else {
+            // No hay datos en Firestore, subir los locales
+            userStats = {
+                ...localStats,
+                quizHistory: localHistory,
+                createdAt: new Date().toISOString(),
+                lastSync: new Date().toISOString()
+            };
+            await saveUserStats(user, userStats);
+        }
+        
+        return userStats;
+    }
+
+    // ============================================
+    // FUNCIONES LOCALES (localStorage)
+    // ============================================
+
+    function getLocalHistory() {
+        const history = localStorage.getItem('skopia_quiz_history');
+        if (!history) return [];
+        try {
+            return JSON.parse(history);
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function getQuizProgress(quizUrl) {
+        const progressKey = `skopia_quiz_progress_${quizUrl.replace('.html', '')}`;
+        const progress = localStorage.getItem(progressKey);
+        if (!progress) return null;
+        try {
+            return JSON.parse(progress);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function calculateStatsFromHistory(history) {
+        const completedQuizzes = new Set();
+        let totalScore = 0;
+        let scoresCount = 0;
+        let bestStreak = 0;
+        let currentStreak = 0;
+        let totalPoints = 0;
+        
+        // Ordenar por fecha
+        const sorted = [...history].sort((a, b) => 
+            new Date(b.completedAt || 0) - new Date(a.completedAt || 0)
+        );
+        
+        sorted.forEach(entry => {
+            if (entry.score !== undefined && entry.score > 0) {
+                completedQuizzes.add(entry.quizId);
+                totalScore += entry.score;
+                scoresCount++;
+                totalPoints += entry.score;
+                
+                // Calcular racha
+                if (entry.score >= 180) {
+                    currentStreak++;
+                    if (currentStreak > bestStreak) bestStreak = currentStreak;
+                } else {
+                    currentStreak = 0;
+                }
+            }
+        });
+        
+        return {
+            totalCompleted: completedQuizzes.size,
+            averageScore: scoresCount > 0 ? Math.round(totalScore / scoresCount) : 0,
+            bestStreak: bestStreak,
+            totalPoints: totalPoints
+        };
+    }
+
+    function countCompletedFromHistory(history) {
+        const completed = new Set();
+        history.forEach(entry => {
+            if (entry.score !== undefined && entry.score > 0) {
+                completed.add(entry.quizId);
+            }
+        });
+        return completed.size;
+    }
+
+    // ============================================
+    // VERIFICACIÓN DE BLOQUEOS
+    // ============================================
+
     function getLCS1D4UnlockData() {
+        // Primero intentar desde Firestore
+        if (userStats && userStats.unlocks && userStats.unlocks.LCS1D4) {
+            return userStats.unlocks.LCS1D4;
+        }
+        // Fallback a localStorage
         const data = localStorage.getItem('skopia_LCS1D4_unlock');
         if (!data) return null;
         try {
@@ -487,20 +681,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Verificar si un cuestionario está desbloqueado
     function isQuizUnlocked(quizUrl) {
         const config = quizConfig[quizUrl];
         if (!config) return true;
         
-        // Si no está bloqueado por defecto, verificar requisitos
         if (!config.locked && !config.requires) return true;
         
-        // Si está bloqueado, verificar si se cumplen los requisitos
         if (config.locked && config.requires) {
             const unlockData = getLCS1D4UnlockData();
             if (!unlockData) return false;
             
-            // Verificar que el unlockData corresponde al cuestionario correcto
             if (config.requires === 'LCS1D3.html') {
                 return unlockData.unlocked === true && unlockData.score >= (config.requiresScore || 0);
             }
@@ -509,20 +699,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return !config.locked;
     }
 
-    // Verificar si se debe mostrar advertencia para LCS1D5
     function shouldShowWarning(quizUrl) {
         const config = quizConfig[quizUrl];
         if (!config || !config.showWarning) return false;
         
-        // Verificar si LCS1D4 ha sido completado
-        const history = getQuizHistory();
+        // Verificar en el historial
+        const history = userStats?.quizHistory || getLocalHistory();
         const d4Completed = history.some(q => 
             q.quizId === 'LCS1D4.html' || 
             q.quizId === 'LCS1D4' || 
             q.quizSource === 'LCS1D4.html'
         );
         
-        // También verificar en el progreso guardado
         const d4Progress = localStorage.getItem('skopia_quiz_progress_LCS1D4');
         let d4HasProgress = false;
         if (d4Progress) {
@@ -537,52 +725,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return !(d4Completed || d4HasProgress);
     }
 
-    // Obtener historial de cuestionarios
-    function getQuizHistory() {
-        const history = localStorage.getItem('skopia_quiz_history');
-        if (!history) return [];
-        try {
-            return JSON.parse(history);
-        } catch (e) {
-            return [];
-        }
-    }
-
-    // Obtener progreso de un cuestionario específico
-    function getQuizProgress(quizUrl) {
-        const progressKey = `skopia_quiz_progress_${quizUrl.replace('.html', '')}`;
-        const progress = localStorage.getItem(progressKey);
-        if (!progress) return null;
-        try {
-            return JSON.parse(progress);
-        } catch (e) {
-            return null;
-        }
-    }
-
-    // Obtener estadísticas globales
-    function getGlobalStats() {
-        const stats = localStorage.getItem('skopia_global_stats');
-        if (!stats) return {
-            totalCompleted: 0,
-            averageScore: 0,
-            bestStreak: 0,
-            totalPoints: 0
-        };
-        try {
-            return JSON.parse(stats);
-        } catch (e) {
-            return {
-                totalCompleted: 0,
-                averageScore: 0,
-                bestStreak: 0,
-                totalPoints: 0
-            };
-        }
-    }
-
     // ============================================
-    // RENDERIZADO DE TARJETAS
+    // RENDERIZADO
     // ============================================
 
     function renderQuizCards() {
@@ -598,7 +742,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!isUnlocked) card.classList.add('locked');
             if (showWarning && isUnlocked) card.classList.add('warning');
             
-            // Calcular progreso
             let progressPercent = 0;
             let scoreDisplay = '';
             if (progress) {
@@ -610,12 +753,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            // Generar estrellas de dificultad
             const stars = Array(3).fill(0).map((_, i) => 
                 `<span class="difficulty-star ${i < config.difficulty ? 'filled' : ''}">★</span>`
             ).join('');
             
-            // Determinar estado del botón
             let buttonText = 'Comenzar';
             let buttonIcon = '<i class="fas fa-arrow-right"></i>';
             let buttonClass = '';
@@ -636,7 +777,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 buttonClass = 'warning-btn';
             }
             
-            // Determinar badge
             let badgeHtml = config.badge ? `<div class="card-badge ${config.badgeClass}">${config.badge}</div>` : '';
             if (!isUnlocked) {
                 badgeHtml = `<div class="card-badge locked-badge"><i class="fas fa-lock"></i> Bloqueado</div>`;
@@ -644,13 +784,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 badgeHtml = `<div class="card-badge warning-badge"><i class="fas fa-exclamation-triangle"></i> Recomendación</div>`;
             }
             
-            // Lock overlay para bloqueados
-            let lockOverlay = '';
-            if (!isUnlocked) {
-                lockOverlay = `<div class="lock-overlay"><i class="fas fa-lock"></i></div>`;
-            }
+            let lockOverlay = !isUnlocked ? `<div class="lock-overlay"><i class="fas fa-lock"></i></div>` : '';
             
-            // Requisito de desbloqueo
             let requirementHtml = '';
             if (!isUnlocked && config.requires) {
                 const unlockData = getLCS1D4UnlockData();
@@ -665,7 +800,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }
             
-            // Advertencia para LCS1D5
             let warningHtml = '';
             if (showWarning && isUnlocked) {
                 warningHtml = `
@@ -720,7 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
             libraryGrid.appendChild(card);
         });
         
-        // Agregar event listeners a los botones
+        // Event listeners
         document.querySelectorAll('.start-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -729,7 +863,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
         
-        // Agregar click a las tarjetas
         document.querySelectorAll('.quiz-card').forEach(card => {
             card.addEventListener('click', () => {
                 const btn = card.querySelector('.start-btn');
@@ -739,6 +872,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
+    }
+
+    // ============================================
+    // ACTUALIZAR ESTADÍSTICAS EN PANTALLA
+    // ============================================
+
+    function updateStatsDisplay() {
+        const stats = userStats || calculateStatsFromHistory(getLocalHistory());
+        
+        document.getElementById('total-completed').textContent = stats.totalCompleted || 0;
+        document.getElementById('average-score').textContent = (stats.averageScore || 0) + '/300';
+        document.getElementById('best-streak').textContent = stats.bestStreak || 0;
+        document.getElementById('total-points').textContent = stats.totalPoints || 0;
     }
 
     // ============================================
@@ -752,13 +898,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const isUnlocked = isQuizUnlocked(url);
         const showWarning = shouldShowWarning(url);
         
-        // Si está bloqueado, mostrar mensaje
         if (!isUnlocked) {
             showToast(`🔒 Este cuestionario está bloqueado. Completa el Banco 3 con al menos ${config.requiresScore} puntos para desbloquearlo.`, 'error');
             return;
         }
         
-        // Si debe mostrar advertencia (LCS1D5 sin completar LCS1D4)
         if (showWarning) {
             pendingQuizUrl = url;
             confirmMessage.innerHTML = `
@@ -770,18 +914,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Si todo está bien, iniciar cuestionario
         proceedToQuiz(url);
     }
 
     function proceedToQuiz(url) {
-        const config = quizConfig[url];
         const progress = getQuizProgress(url);
-        
-        // Guardar cuestionario actual
         localStorage.setItem('currentQuiz', url);
         
-        // Mostrar mensaje apropiado
         if (progress?.completed) {
             showToast('🔄 Iniciando nuevo intento...', 'success');
         } else if (progress?.currentQuestionIndex > 0) {
@@ -790,49 +929,13 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('🚀 Iniciando cuestionario...', 'success');
         }
         
-        // Redirigir después de un breve delay
         setTimeout(() => {
             window.location.href = url;
         }, 800);
     }
 
     // ============================================
-    // ACTUALIZACIÓN DE ESTADÍSTICAS (CORREGIDO)
-    // ============================================
-
-    function updateStats() {
-        const history = getQuizHistory();
-        
-        // Contar cuestionarios ÚNICOS completados (que tienen score/nota)
-        const completedQuizzes = new Set();
-        let totalScore = 0;
-        let scoresCount = 0;
-        
-        history.forEach(entry => {
-            // Si tiene score y es mayor a 0, cuenta como completado
-            if (entry.score !== undefined && entry.score > 0) {
-                completedQuizzes.add(entry.quizId);
-                totalScore += entry.score;
-                scoresCount++;
-            }
-        });
-        
-        const totalCompleted = completedQuizzes.size;
-        // Promedio de 0 a 300
-        const averageScore = scoresCount > 0 ? Math.round(totalScore / scoresCount) : 0;
-        
-        // Actualizar display
-        document.getElementById('total-completed').textContent = totalCompleted;
-        document.getElementById('average-score').textContent = averageScore + '/300';
-        
-        // Para best streak y total points, usar globalStats
-        const stats = getGlobalStats();
-        document.getElementById('best-streak').textContent = stats.bestStreak || 0;
-        document.getElementById('total-points').textContent = stats.totalPoints || 0;
-    }
-
-    // ============================================
-    // FUNCIONES DE UI
+    // UI HELPERS
     // ============================================
 
     function showToast(message, type = '', duration = 4000) {
@@ -870,7 +973,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Modal de confirmación
     confirmCancel.addEventListener('click', () => {
         confirmModal.classList.remove('active');
         pendingQuizUrl = null;
@@ -884,7 +986,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Cerrar modal con Escape
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && confirmModal.classList.contains('active')) {
             confirmModal.classList.remove('active');
@@ -892,55 +993,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Floating icons
-    document.getElementById('btn-misiones').addEventListener('click', () => {
-        showToast('🎯 Misiones próximamente...');
-    });
-
-    document.getElementById('btn-nivel').addEventListener('click', () => {
-        showToast('⭐ Nivel actual: Aprendiz');
-    });
-
-    document.getElementById('btn-progreso').addEventListener('click', () => {
-        showToast('📊 Progreso general disponible en tu perfil');
-    });
+    document.getElementById('btn-misiones').addEventListener('click', () => showToast('🎯 Misiones próximamente...'));
+    document.getElementById('btn-nivel').addEventListener('click', () => showToast('⭐ Nivel actual: Aprendiz'));
+    document.getElementById('btn-progreso').addEventListener('click', () => showToast('📊 Progreso general disponible en tu perfil'));
 
     // ============================================
     // INICIALIZACIÓN
     // ============================================
 
-    // Renderizar tarjetas
-    renderQuizCards();
-    
-    // Actualizar estadísticas
-    updateStats();
-
-    // Animación de entrada para las tarjetas
-    const cards = document.querySelectorAll('.quiz-card');
-    cards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(30px)';
-        setTimeout(() => {
-            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 100);
+    // Escuchar cuando el usuario esté listo
+    window.addEventListener('userReady', async (e) => {
+        currentUser = e.detail.user;
+        
+        // Sincronizar con Firestore
+        await syncWithFirestore(currentUser);
+        
+        // Renderizar tarjetas
+        renderQuizCards();
+        
+        // Actualizar estadísticas
+        updateStatsDisplay();
+        
+        // Animación de entrada
+        const cards = document.querySelectorAll('.quiz-card');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(30px)';
+            setTimeout(() => {
+                card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
     });
 
-    // Efecto parallax sutil en el hero
+    // Parallax en hero
     window.addEventListener('scroll', () => {
         const scrolled = window.pageYOffset;
         const hero = document.querySelector('.hero-section');
         if (hero && scrolled < 500) {
             hero.style.transform = `translateY(${scrolled * 0.5}px)`;
-        }
-    });
-
-    // Escuchar cambios en localStorage (para sincronización entre pestañas)
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'skopia_LCS1D4_unlock' || e.key === 'skopia_quiz_history' || e.key === 'skopia_global_stats') {
-            renderQuizCards();
-            updateStats();
         }
     });
 });
