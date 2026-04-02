@@ -11,41 +11,6 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
-            projectId: "skopia-aa786",
-            storageBucket: "skopia-aa786.firebasestorage.app",
-            messagingSenderId: "719823055099",
-            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        
-        window.db = db;
-        window.authModule = { onAuthStateChanged, auth };
-        
-        // Esperar usuario
-        window.addEventListener('userReady', (e) => {
-            checkExamStatus(e.detail.user);
-        });
-        
-        onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                window.location.href = 'index.html';
-            } else {
-                window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
-            }
-        });
-    </script>
-
     <style>
         :root {
             --color-fondo: #f4f4f4;
@@ -55,10 +20,9 @@
             --color-borde: #cccccc;
             --color-primario: #004a8f; /* Estilo ICFES Azul */
             --color-primario-oscuro: #003366;
-            --color-acento: #d4a853; /* Dorado para énfasis */
+            --color-acento: #d4a853;
             --color-correcto: #28a745;
             --color-error: #dc3545;
-            --color-bloqueo: #ffc107;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -68,6 +32,9 @@
             background-color: var(--color-fondo);
             color: var(--color-texto);
             line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
 
         /* Header Fijo */
@@ -85,22 +52,13 @@
             align-items: center;
         }
 
-        .header-title {
-            display: flex;
-            flex-direction: column;
-        }
-
         .header-title h1 {
             font-size: 1.2rem;
             font-weight: 700;
             letter-spacing: 1px;
             text-transform: uppercase;
         }
-
-        .header-title span {
-            font-size: 0.8rem;
-            opacity: 0.8;
-        }
+        .header-title span { font-size: 0.8rem; opacity: 0.8; }
 
         .timer-box {
             background: white;
@@ -134,15 +92,32 @@
             box-shadow: 0 0 15px rgba(0,0,0,0.1);
             padding: 40px;
             border-top: 10px solid var(--color-primario);
+            flex: 1;
         }
 
-        /* Portada / Instrucciones */
-        .instructions-section {
-            border-bottom: 2px solid var(--color-fondo);
-            padding-bottom: 30px;
-            margin-bottom: 30px;
+        /* Pantalla de Carga */
+        .loading-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
         }
+        .spinner {
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid var(--color-primario);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+        /* Instrucciones */
         .section-title {
             font-family: 'Merriweather', serif;
             font-size: 1.8rem;
@@ -157,13 +132,10 @@
             border: 1px solid #e0e0e0;
             padding: 20px;
             border-radius: 5px;
-            margin-bottom: 20px;
-        }
-
-        .instructions-box p {
-            margin-bottom: 10px;
+            margin-bottom: 30px;
             font-size: 0.95rem;
         }
+        .instructions-box p { margin-bottom: 8px; }
 
         .user-info {
             display: grid;
@@ -172,32 +144,17 @@
             background: #f0f4f8;
             padding: 15px;
             border-radius: 5px;
+            margin-bottom: 40px;
         }
-
-        .info-field label {
-            display: block;
-            font-size: 0.8rem;
-            color: var(--color-texto-claro);
-            margin-bottom: 3px;
-        }
-        .info-field strong {
-            font-size: 1rem;
-        }
+        .info-field label { display: block; font-size: 0.8rem; color: var(--color-texto-claro); }
+        .info-field strong { font-size: 1rem; }
 
         /* Preguntas */
-        .questions-wrapper {
-        }
-
         .question-block {
             margin-bottom: 40px;
             padding-bottom: 20px;
             border-bottom: 1px dashed var(--color-borde);
         }
-
-        .question-block:last-child {
-            border-bottom: none;
-        }
-
         .q-meta {
             display: flex;
             justify-content: space-between;
@@ -205,13 +162,7 @@
             font-size: 0.85rem;
             color: var(--color-texto-claro);
         }
-
-        .q-text {
-            font-size: 1.05rem;
-            margin-bottom: 15px;
-            font-weight: 500;
-        }
-
+        .q-text { font-size: 1.05rem; margin-bottom: 15px; font-weight: 500; }
         .q-passage {
             background: #f8f9fa;
             border-left: 3px solid var(--color-primario);
@@ -223,11 +174,7 @@
             white-space: pre-wrap;
         }
 
-        .options-list {
-            display: grid;
-            gap: 10px;
-        }
-
+        .options-list { display: grid; gap: 10px; }
         .option-item {
             display: flex;
             align-items: flex-start;
@@ -238,25 +185,11 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-
-        .option-item:hover {
-            background: #f0f7ff;
-            border-color: var(--color-primario);
-        }
-
-        .option-item.selected {
-            background: #e3f2fd;
-            border-color: var(--color-primario);
-            border-width: 2px;
-        }
-
-        .option-item input {
-            display: none;
-        }
-
+        .option-item:hover { background: #f0f7ff; border-color: var(--color-primario); }
+        .option-item.selected { background: #e3f2fd; border-color: var(--color-primario); border-width: 2px; }
+        
         .option-circle {
-            width: 24px;
-            height: 24px;
+            width: 24px; height: 24px;
             border-radius: 50%;
             border: 2px solid #999;
             display: flex;
@@ -267,19 +200,14 @@
             flex-shrink: 0;
             color: #999;
         }
-
         .option-item.selected .option-circle {
             border-color: var(--color-primario);
             background: var(--color-primario);
             color: white;
         }
+        .option-text { font-size: 0.95rem; padding-top: 2px; }
 
-        .option-text {
-            font-size: 0.95rem;
-            padding-top: 2px;
-        }
-
-        /* Navegación y Envío */
+        /* Navegación Inferior */
         .submit-nav {
             position: fixed;
             bottom: 0;
@@ -292,13 +220,9 @@
             justify-content: space-between;
             align-items: center;
             z-index: 900;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
         }
-
-        .progress-indicator {
-            font-size: 0.9rem;
-            color: var(--color-texto-claro);
-        }
-
+        .progress-indicator { font-size: 0.9rem; color: var(--color-texto-claro); }
         .btn-submit {
             background: var(--color-primario);
             color: white;
@@ -310,108 +234,50 @@
             cursor: pointer;
             transition: background 0.3s;
         }
+        .btn-submit:hover { background: var(--color-primario-oscuro); }
 
-        .btn-submit:hover {
-            background: var(--color-primario-oscuro);
-        }
-
-        /* Modal de Descanso */
+        /* Modales */
         .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.8);
-            display: none;
-            justify-content: center;
-            align-items: center;
+            display: none; justify-content: center; align-items: center;
             z-index: 2000;
         }
-
         .modal-content {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            text-align: center;
-            max-width: 400px;
-            width: 90%;
+            background: white; padding: 40px; border-radius: 10px;
+            text-align: center; max-width: 400px; width: 90%;
         }
-
-        .modal-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            color: var(--color-primario);
-        }
-
-        .modal-title {
-            font-size: 1.5rem;
-            margin-bottom: 10px;
-            font-family: 'Merriweather', serif;
-        }
-
-        .countdown {
-            font-size: 3rem;
-            font-weight: 700;
-            color: var(--color-primario);
-            margin: 20px 0;
-        }
+        .modal-icon { font-size: 3rem; margin-bottom: 15px; color: var(--color-primario); }
+        .modal-title { font-size: 1.5rem; margin-bottom: 10px; font-family: 'Merriweather', serif; }
+        .countdown { font-size: 3rem; font-weight: 700; color: var(--color-primario); margin: 20px 0; }
 
         /* Pantalla de Resultados */
         .results-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: white;
-            z-index: 3000;
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            padding: 20px;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; z-index: 3000;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; padding: 20px;
         }
-
-        .results-score {
-            font-size: 5rem;
-            font-weight: 700;
-            color: var(--color-primario);
-            margin-bottom: 10px;
-        }
-
-        .results-msg {
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-        }
-
+        .results-score { font-size: 5rem; font-weight: 700; color: var(--color-primario); margin-bottom: 10px; }
+        .results-msg { font-size: 1.5rem; margin-bottom: 20px; }
         .btn-action {
-            background: var(--color-primario);
-            color: white;
-            padding: 15px 40px;
-            border-radius: 50px;
-            text-decoration: none;
-            font-weight: 700;
-            margin-top: 20px;
-            display: inline-block;
+            background: var(--color-primario); color: white;
+            padding: 15px 40px; border-radius: 50px; text-decoration: none;
+            font-weight: 700; margin-top: 20px; display: inline-block;
         }
+        .btn-action.secondary { background: #6c757d; }
 
-        .btn-action.secondary {
-            background: #6c757d;
-        }
-
-        /* Bloqueo */
+        /* Pantalla de Bloqueo */
         .blocked-screen {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            text-align: center;
-            padding: 20px;
-            background: #f8d7da;
-            color: #721c24;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            height: 100vh; text-align: center; padding: 20px;
+            background: #f8d7da; color: #721c24;
+        }
+
+        @media (max-width: 768px) {
+            .booklet-container { padding: 20px; margin-top: 80px; }
+            .header-title h1 { font-size: 1rem; }
+            .user-info { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -429,6 +295,13 @@
         </div>
     </header>
 
+    <!-- Pantalla de Carga Inicial -->
+    <div class="loading-screen" id="loading-screen">
+        <div class="spinner"></div>
+        <h3>Verificando datos...</h3>
+        <p id="loading-msg">Preparando evaluación</p>
+    </div>
+
     <!-- Contenedor del Cuadernillo -->
     <div class="booklet-container" id="exam-content" style="display:none;">
         
@@ -437,7 +310,7 @@
             <h2 class="section-title">Instrucciones Generales</h2>
             <div class="instructions-box">
                 <p>1. Esta prueba consta de <strong>30 preguntas</strong> sobre <strong>Ideas Principales</strong>.</p>
-                <p>2. Dispone de <strong>60 minutos</strong> para resolverla. El tiempo comienza al cargar el examen.</p>
+                <p>2. Dispone de <strong>60 minutos</strong> para resolverla.</p>
                 <p>3. No hay penalización por respuestas incorrectas.</p>
                 <p>4. Puede tomar un descanso breve cada 10 preguntas (45 segundos).</p>
                 <p>5. <strong>Aprobar</strong>: Obtener 180 puntos o más.</p>
@@ -468,7 +341,7 @@
         <div class="progress-indicator">
             Respondidas: <span id="answered-count">0</span> / 30
         </div>
-        <button class="btn-submit" id="finish-btn" onclick="finishExam()">
+        <button class="btn-submit" id="finish-btn">
             <i class="fas fa-paper-plane"></i> Enviar Examen
         </button>
     </div>
@@ -491,114 +364,151 @@
         <p style="font-size:1.2rem; color:#666;">Puntos de 300 posibles</p>
         <p class="results-msg" id="final-msg"></p>
         
-        <div id="results-actions">
-            <!-- Acciones dinámicas -->
-        </div>
+        <div id="results-actions"></div>
     </div>
 
     <!-- Pantalla de Bloqueo -->
-    <div class="blocked-screen" id="blocked-screen" style="display:none;">
+    <div class="blocked-screen" id="blocked-screen">
         <i class="fas fa-ban" style="font-size:4rem; margin-bottom:20px;"></i>
         <h2>Intento No Disponible</h2>
         <p id="block-msg">Debes esperar para volver a presentar el examen.</p>
         <a href="LCS1D.html" class="btn-action secondary" style="margin-top:20px;">Volver al Módulo de Estudio</a>
     </div>
 
+    <!-- Firebase y Lógica Principal (Todo en uno) -->
     <script type="module">
-        import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
-        // Variables globales de estado
-        let questions = [];
-        let userAnswers = {}; // Formato { qIndex: optionIndex }
-        let totalQuestions = 30;
-        let examStartTime;
-        let userId;
-        let userName = "Estudiante";
-        
-        // Temporizadores
-        let mainTimerInterval;
-        let remainingTimeSeconds = 3600; // 60 min
-        
-        // Breaks
-        let breakPoints = [9, 19]; // Después de la pregunta 10 y 20 (índice 9 y 19)
-        let breakTime = 45;
-
-        // --- 1. Inicialización y Seguridad ---
-        window.checkExamStatus = async (user) => {
-            userId = user.uid;
-            userName = user.displayName || user.email.split('@')[0];
-            document.getElementById('display-name').textContent = userName;
-            document.getElementById('display-date').textContent = new Date().toLocaleDateString();
-
-            const userRef = doc(window.db, "users", userId);
-            const userSnap = await getDoc(userRef);
-
-            // Verificar si está bloqueado
-            if (userSnap.exists() && userSnap.data().examLockUntil) {
-                const lockTime = userSnap.data().examLockUntil.toDate().getTime();
-                const now = Date.now();
-                
-                if (now < lockTime) {
-                    // AÚN BLOQUEADO
-                    showBlockedScreen(lockTime);
-                    return;
-                }
-            }
-
-            // Verificar si ya aprobó (para evitar volver a hacer el examen fácilmente)
-            if (userSnap.exists() && userSnap.data().LCS1F_passed === true) {
-                showResults(300, true, true); // Mostrar resultado de aprobado
-                return;
-            }
-
-            // Si está desbloqueado, iniciar examen
-            initExam();
+        // Configuración Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
         };
 
-        function showBlockedScreen(lockTime) {
-            document.getElementById('exam-content').style.display = 'none';
-            document.getElementById('submit-nav').style.display = 'none';
-            document.getElementById('blocked-screen').style.display = 'flex';
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // Variables de Estado
+        let questions = [];
+        let userAnswers = {};
+        let totalQuestions = 30;
+        let examStartTime;
+        let userId = null;
+        let userName = "Estudiante";
+        let remainingTimeSeconds = 3600;
+        let mainTimerInterval = null;
+        let breakPoints = [9, 19]; // Índices 9 y 19 (preguntas 10 y 20)
+        
+        // Elementos DOM
+        const loadingScreen = document.getElementById('loading-screen');
+        const loadingMsg = document.getElementById('loading-msg');
+        const examContent = document.getElementById('exam-content');
+        const submitNav = document.getElementById('submit-nav');
+        const blockedScreen = document.getElementById('blocked-screen');
+        const resultsScreen = document.getElementById('results-screen');
+
+        // --- Lógica Principal ---
+        
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+            } else {
+                userId = user.uid;
+                userName = user.displayName || user.email.split('@')[0];
+                document.getElementById('display-name').textContent = userName;
+                document.getElementById('display-date').textContent = new Date().toLocaleDateString();
+                checkExamStatus();
+            }
+        });
+
+        async function checkExamStatus() {
+            loadingMsg.textContent = "Verificando elegibilidad...";
             
-            // Calcular tiempo restante
+            try {
+                const userRef = doc(db, "users", userId);
+                const userSnap = await getDoc(userRef);
+
+                if (userSnap.exists() && userSnap.data().examLockUntil) {
+                    const lockTime = userSnap.data().examLockUntil.toDate().getTime();
+                    const now = Date.now();
+                    
+                    if (now < lockTime) {
+                        showBlockedScreen(lockTime);
+                        return;
+                    }
+                }
+
+                if (userSnap.exists() && userSnap.data().LCS1F_passed === true) {
+                    showResults(300, true, true); 
+                    return;
+                }
+
+                // Si pasa validaciones, iniciar
+                initExam();
+
+            } catch (error) {
+                console.error("Error verificando estado:", error);
+                alert("Error de conexión. Recarga la página.");
+            }
+        }
+
+        function showBlockedScreen(lockTime) {
+            loadingScreen.style.display = 'none';
+            blockedScreen.style.display = 'flex';
+            
             const diff = lockTime - Date.now();
+            if(diff < 0) {
+                 initExam();
+                 return;
+            }
             const hours = Math.floor(diff / 3600000);
             const minutes = Math.floor((diff % 3600000) / 60000);
             document.getElementById('block-msg').textContent = `Debes esperar aproximadamente ${hours} horas y ${minutes} minutos para un nuevo intento.`;
         }
 
         async function initExam() {
+            loadingMsg.textContent = "Cargando preguntas...";
             await loadQuestions();
+            
+            if(questions.length === 0) {
+                alert("No se pudieron cargar las preguntas. Revisa preguntas.json");
+                return;
+            }
+
             renderQuestions();
             
-            document.getElementById('exam-content').style.display = 'block';
-            document.getElementById('submit-nav').style.display = 'flex';
+            loadingScreen.style.display = 'none';
+            examContent.style.display = 'block';
+            submitNav.style.display = 'flex';
             
-            // Iniciar Timer
             examStartTime = Date.now();
             startMainTimer();
             
-            // Guardar inicio en Firestore (para sincronización simple)
-            await setDoc(doc(window.db, "users", userId), {
+            // Guardar inicio
+            await setDoc(doc(db, "users", userId), {
                 examStartTime: serverTimestamp()
             }, { merge: true });
         }
 
-        // --- 2. Carga de Preguntas ---
         async function loadQuestions() {
             try {
                 const res = await fetch('preguntas.json');
                 const data = await res.json();
                 
-                // Filtrar: Todos los de "ideas principales"
+                // Filtrar SOLO "ideas principales"
                 let filtered = data.filter(q => q.tags && q.tags.includes("ideas principales"));
                 
-                // Aleatorizar y tomar 30
+                // Mezclar y tomar 30
                 questions = shuffleArray(filtered).slice(0, totalQuestions);
                 
             } catch (e) {
                 console.error("Error cargando JSON", e);
-                alert("Error crítico al cargar preguntas.");
             }
         }
 
@@ -606,7 +516,6 @@
             return [...arr].sort(() => Math.random() - 0.5);
         }
 
-        // --- 3. Renderizado (Cuadernillo) ---
         function renderQuestions() {
             const container = document.getElementById('questions-container');
             container.innerHTML = '';
@@ -614,9 +523,8 @@
             questions.forEach((q, index) => {
                 const block = document.createElement('div');
                 block.className = 'question-block';
-                block.id = `q-block-${index}`;
 
-                // Separar pasaje y pregunta si existe formato específico
+                // Limpieza de texto
                 const parts = q.pregunta.split('\n\n');
                 const passageText = parts[0];
                 const questionText = parts[1] || q.pregunta;
@@ -631,8 +539,7 @@
                     
                     <div class="options-list">
                         ${q.opciones.map((op, i) => `
-                            <div class="option-item" onclick="selectOption(${index}, ${i}, this)">
-                                <input type="radio" name="q${index}" id="q${index}o${i}">
+                            <div class="option-item" onclick="window.selectOpt(${index}, ${i}, this)">
                                 <div class="option-circle">${String.fromCharCode(65 + i)}</div>
                                 <div class="option-text">${op}</div>
                             </div>
@@ -643,64 +550,54 @@
             });
         }
 
-        // --- 4. Interacción ---
-        window.selectOption = (qIndex, oIndex, element) => {
-            // Quitar selección anterior en este bloque
+        // Función global para el onclick
+        window.selectOpt = (qIndex, oIndex, element) => {
             const parent = element.closest('.options-list');
             parent.querySelectorAll('.option-item').forEach(el => el.classList.remove('selected'));
-            
-            // Añadir selección
             element.classList.add('selected');
             
-            // Guardar
             userAnswers[qIndex] = oIndex;
-            
-            // Actualizar contador
             document.getElementById('answered-count').textContent = Object.keys(userAnswers).length;
 
-            // Lógica de Descanso (Breaks)
-            // Si acabamos de responder la pregunta 10 o 20 (índice 9 o 19)
+            // Lógica de descanso
             if (breakPoints.includes(qIndex)) {
                 triggerBreak();
             }
         };
 
-        // --- 5. Temporizador Principal ---
         function startMainTimer() {
+            clearInterval(mainTimerInterval);
             mainTimerInterval = setInterval(() => {
                 remainingTimeSeconds--;
                 
                 const mins = Math.floor(remainingTimeSeconds / 60);
                 const secs = remainingTimeSeconds % 60;
                 
-                const display = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-                document.getElementById('time-display').textContent = display;
+                document.getElementById('time-display').textContent = 
+                    `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
                 
-                if (remainingTimeSeconds <= 300) { // Últimos 5 min
+                if (remainingTimeSeconds <= 300) {
                     document.getElementById('main-timer').classList.add('danger');
                 }
 
                 if (remainingTimeSeconds <= 0) {
                     clearInterval(mainTimerInterval);
-                    finishExam(true); // Forzar envío por tiempo
+                    finishExam(true);
                 }
             }, 1000);
         }
 
-        // --- 6. Sistema de Descanso ---
         function triggerBreak() {
-            // Pausar timer principal (opcional, en ICFES real sigue corriendo, aquí pausamos para ser justos con los 45s)
             clearInterval(mainTimerInterval);
-            
             document.getElementById('break-modal').style.display = 'flex';
+            document.getElementById('continue-break-btn').style.display = 'none';
             
-            let bt = breakTime;
+            let bt = 45;
             document.getElementById('break-timer').textContent = bt;
             
             const breakInterval = setInterval(() => {
                 bt--;
                 document.getElementById('break-timer').textContent = bt;
-                
                 if (bt <= 0) {
                     clearInterval(breakInterval);
                     document.getElementById('continue-break-btn').style.display = 'block';
@@ -710,62 +607,54 @@
 
         window.closeBreak = () => {
             document.getElementById('break-modal').style.display = 'none';
-            // Reanudar timer
             startMainTimer();
         };
 
-        // --- 7. Finalización y Cálculo ---
-        window.finishExam = async (timeout = false) => {
-            if (!timeout && remainingTimeSeconds > 0) {
+        // Botón Enviar
+        document.getElementById('finish-btn').addEventListener('click', () => finishExam(false));
+
+        async function finishExam(timeout) {
+            if (!timeout) {
                 if (!confirm("¿Está seguro de que desea finalizar el examen? No podrá cambiar sus respuestas.")) return;
             }
             
             clearInterval(mainTimerInterval);
             
-            // Calcular Puntaje
-            // Puntos por pregunta = 300 / 30 = 10 puntos
             let score = 0;
-            let correctCount = 0;
-            
             questions.forEach((q, index) => {
                 if (userAnswers[index] === q.respuestaCorrecta) {
-                    score += 10;
-                    correctCount++;
+                    score += 10; // 300 pts / 30 preguntas = 10 pts c/u
                 }
             });
 
-            // Determinar resultado
             const approved = score >= 180;
             
-            // Actualizar UI
             showResults(score, approved, false);
             
-            // Guardar en Firebase
-            const userRef = doc(window.db, "users", userId);
+            const userRef = doc(db, "users", userId);
             const dataToSave = {
                 LCS1F_score: score,
-                LCS1F_date: serverTimestamp(),
-                LCS1F_correct: correctCount
+                LCS1F_date: serverTimestamp()
             };
 
             if (approved) {
                 dataToSave.LCS1F_passed = true;
-                dataToSave.currentLevel = "LCS2"; // Desbloquear siguiente tema
-                // Eliminar bloqueos previos si existían
+                dataToSave.currentLevel = "LCS2";
                 dataToSave.examLockUntil = null; 
             } else {
-                // Bloquear por 12 horas (12 * 60 * 60 * 1000 ms)
+                // Bloquear 12 horas
                 const lockDate = new Date(Date.now() + (12 * 60 * 60 * 1000));
                 dataToSave.examLockUntil = lockDate;
             }
 
             await setDoc(userRef, dataToSave, { merge: true });
-        };
+        }
 
         function showResults(score, approved, alreadyPassed) {
-            document.getElementById('exam-content').style.display = 'none';
-            document.getElementById('submit-nav').style.display = 'none';
-            document.getElementById('results-screen').style.display = 'flex';
+            loadingScreen.style.display = 'none';
+            examContent.style.display = 'none';
+            submitNav.style.display = 'none';
+            resultsScreen.style.display = 'flex';
             
             document.getElementById('final-score').textContent = score;
             
@@ -774,7 +663,7 @@
             
             if (approved) {
                 document.getElementById('final-score').style.color = "var(--color-correcto)";
-                msgEl.textContent = "¡Felicidades! Has aprobado la evaluación de clasificación.";
+                msgEl.textContent = alreadyPassed ? "Ya has aprobado esta evaluación." : "¡Felicidades! Has aprobado la evaluación de clasificación.";
                 actionsEl.innerHTML = `
                     <p style="color:green; margin-bottom:20px;">Has desbloqueado: <strong>Ideas Secundarias (LCS2)</strong></p>
                     <a href="LCS2.html" class="btn-action">
@@ -792,7 +681,6 @@
                 `;
             }
         }
-
     </script>
 </body>
 </html>
