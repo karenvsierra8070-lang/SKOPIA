@@ -15,7 +15,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-        // AÑADIDO: Importar base de datos
+        // AÑADIDO: Importar Database para sincronizar entre dispositivos
         import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
 
         const firebaseConfig = {
@@ -45,7 +45,6 @@
                 window.location.href = 'index.html';
                 return;
             }
-            // Disparamos el evento con el usuario
             window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
         });
     </script>
@@ -72,7 +71,11 @@
             --brillo-color: #ffeb3b;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'Poppins', sans-serif;
@@ -143,11 +146,32 @@
             color: var(--color-crema);
             font-weight: 500;
             transition: all 0.3s ease;
+            position: relative;
         }
-        .user-dropdown a:hover { background: rgba(190, 192, 146, 0.15); }
-        .user-dropdown hr { border: none; border-top: 1px solid rgba(190, 192, 146, 0.2); margin: 0; }
+        .user-dropdown a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 28px;
+            width: 0;
+            height: 2px;
+            background: var(--color-oliva-claro);
+            transition: width 0.3s ease;
+        }
+        .user-dropdown a:hover::after {
+            width: calc(100% - 56px);
+        }
+        .user-dropdown a:hover {
+            background: rgba(190, 192, 146, 0.15);
+            padding-left: 35px;
+        }
+        .user-dropdown hr {
+            border: none;
+            border-top: 1px solid rgba(190, 192, 146, 0.2);
+            margin: 0;
+        }
 
-        /* --- BOSQUE Y CAMINO --- */
+        /* --- BOSQUE MODERNO INMERSIVO --- */
         .forest-container {
             flex-grow: 1;
             position: relative;
@@ -155,19 +179,40 @@
             height: 100vh;
             overflow: hidden;
             background: 
+                /* Imagen de fondo con transparencia */
                 url('0401b62baa6a8ddb9327432e365369a5.jpg') center/cover no-repeat,
+                /* Gradientes superpuestos para mantener la atmósfera */
+                radial-gradient(ellipse at 20% 80%, rgba(46, 125, 50, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(46, 125, 50, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(255, 235, 59, 0.05) 0%, transparent 70%),
                 linear-gradient(180deg, rgba(15, 31, 15, 0.7) 0%, rgba(10, 15, 10, 0.7) 100%);
+            /* Ajustamos la opacidad de la imagen de fondo */
         }
+
+        /* Añadimos una capa adicional para controlar la transparencia de la imagen */
         .forest-container::before {
             content: '';
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 31, 15, 0.4);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 31, 15, 0.4); /* Capa semitransparente para oscurecer la imagen */
             z-index: 1;
             pointer-events: none;
         }
 
-        .ambient-particles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+        /* --- PARTÍCULAS AMBIENTALES --- */
+        .ambient-particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
         .particle {
             position: absolute;
             background: var(--brillo-color);
@@ -175,13 +220,25 @@
             opacity: 0;
             animation: floatUp 8s infinite ease-in-out;
         }
+
         @keyframes floatUp {
-            0% { transform: translateY(100vh) scale(0); opacity: 0; }
-            10% { opacity: 0.8; }
-            90% { opacity: 0.8; }
-            100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.8;
+            }
+            90% {
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(-10vh) scale(1.5);
+                opacity: 0;
+            }
         }
 
+        /* --- CAMINO MODERNO Y GRANDE --- */
         .forest-path {
             position: absolute;
             left: 50%;
@@ -192,41 +249,91 @@
             z-index: 3;
             overflow: hidden;
         }
+
         .path-surface {
             position: absolute;
             left: 50%;
             top: 0;
             width: 200px;
             height: 0;
-            background: linear-gradient(180deg, var(--camino-color) 0%, var(--camino-borde) 100%);
+            background: linear-gradient(180deg, 
+                var(--camino-color) 0%, 
+                var(--camino-borde) 100%);
             transform: translateX(-50%);
             border-radius: 100px 100px 0 0;
-            box-shadow: inset 0 -10px 30px rgba(0, 0, 0, 0.4), 0 10px 40px rgba(0, 0, 0, 0.3);
+            box-shadow: 
+                inset 0 -10px 30px rgba(0, 0, 0, 0.4),
+                0 10px 40px rgba(0, 0, 0, 0.3);
             transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
         }
-        .path-surface.revealed { height: 100%; animation: pathReveal 2s ease-out forwards; }
-        @keyframes pathReveal {
-            0% { height: 0; border-radius: 100px 100px 0 0; }
-            100% { height: 100%; border-radius: 100px; }
+
+        .path-surface::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                repeating-linear-gradient(0deg, 
+                    transparent, 
+                    transparent 30px, 
+                    rgba(139, 115, 85, 0.1) 30px, 
+                    rgba(139, 115, 85, 0.1) 60px);
+            border-radius: 100px 100px 0 0;
         }
 
+        .path-surface.revealed {
+            height: 100%;
+            animation: pathReveal 2s ease-out forwards;
+        }
+
+        @keyframes pathReveal {
+            0% {
+                height: 0;
+                border-radius: 100px 100px 0 0;
+            }
+            50% {
+                height: 50%;
+                border-radius: 100px;
+            }
+            100% {
+                height: 100%;
+                border-radius: 100px;
+            }
+        }
+
+        /* --- EFECTOS DE BRILLO EN EL CAMINO --- */
         .path-glow {
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(ellipse at center, rgba(255, 235, 59, 0.3) 0%, transparent 70%);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, 
+                rgba(255, 235, 59, 0.3) 0%, 
+                transparent 70%);
             opacity: 0;
             animation: glowPulse 3s ease-in-out infinite;
         }
-        @keyframes glowPulse { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
 
-        /* --- NODOS --- */
+        @keyframes glowPulse {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        /* --- NODOS MODERNOS --- */
         .path-nodes {
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             z-index: 5;
         }
+
         .forest-node {
             position: absolute;
             left: 50%;
@@ -243,8 +350,12 @@
             opacity: 0;
             transform: translateX(-50%) scale(0.8);
         }
-        .forest-node.visible { opacity: 1; transform: translateX(-50%) scale(1); }
-        
+
+        .forest-node.visible {
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
+        }
+
         .forest-node-circle {
             width: 100px;
             height: 100px;
@@ -254,37 +365,76 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), inset 0 -5px 15px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.2);
+            box-shadow: 
+                0 15px 35px rgba(0, 0, 0, 0.4),
+                inset 0 -5px 15px rgba(0, 0, 0, 0.3),
+                0 0 0 3px rgba(255, 255, 255, 0.2);
             position: relative;
             overflow: hidden;
             transition: all 0.4s ease;
         }
+
         .forest-node-circle::before {
             content: '';
             position: absolute;
-            top: -50%; left: -50%; width: 200%; height: 200%;
-            background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.2) 50%, transparent 70%);
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, 
+                transparent 30%, 
+                rgba(255, 255, 255, 0.2) 50%, 
+                transparent 70%);
             animation: shimmer 4s infinite linear;
         }
-        @keyframes shimmer { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .forest-node:hover .forest-node-circle { transform: scale(1.1); }
+        @keyframes shimmer {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .forest-node:hover .forest-node-circle {
+            transform: scale(1.15);
+            box-shadow: 
+                0 20px 45px rgba(0, 0, 0, 0.5),
+                inset 0 -5px 15px rgba(0, 0, 0, 0.3),
+                0 0 0 5px rgba(255, 255, 255, 0.4);
+        }
 
         .forest-node.locked .forest-node-circle {
             background: linear-gradient(135deg, #4a5568 0%, #718096 100%);
             cursor: not-allowed;
             opacity: 0.8;
         }
+
         .forest-node.completed .forest-node-circle {
             background: linear-gradient(135deg, var(--color-verde) 0%, #66BB6A 100%);
-            box-shadow: 0 15px 35px rgba(76, 175, 80, 0.4), 0 0 0 3px rgba(255, 255, 255, 0.3);
+            box-shadow: 
+                0 15px 35px rgba(76, 175, 80, 0.4),
+                inset 0 -5px 15px rgba(0, 0, 0, 0.3),
+                0 0 0 3px rgba(255, 255, 255, 0.3);
         }
 
-        .node-icon { font-size: 2.2rem; color: var(--color-crema); margin-bottom: 8px; text-shadow: 0 3px 6px rgba(0, 0, 0, 0.4); position: relative; z-index: 2; }
+        .node-icon {
+            font-size: 2.2rem;
+            color: var(--color-crema);
+            margin-bottom: 8px;
+            text-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+            position: relative;
+            z-index: 2;
+            transition: transform 0.3s ease;
+        }
+
+        .forest-node:hover .node-icon {
+            transform: scale(1.1);
+        }
+
         .node-number {
             position: absolute;
-            top: -12px; right: -12px;
-            width: 36px; height: 36px;
+            top: -12px;
+            right: -12px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--color-crema) 0%, #ffffff 100%);
             color: var(--color-oliva-oscuro);
@@ -294,9 +444,11 @@
             font-weight: 700;
             font-size: 1.1rem;
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+            border: 2px solid var(--color-oliva-medio);
             z-index: 3;
             font-family: 'Orbitron', sans-serif;
         }
+
         .node-label {
             font-family: 'Patrick Hand', cursive;
             font-size: 0.9rem;
@@ -307,9 +459,11 @@
             margin-top: 8px;
             max-width: 120px;
         }
+
         .lock-icon {
             position: absolute;
-            top: 50%; left: 50%;
+            top: 50%;
+            left: 50%;
             transform: translate(-50%, -50%);
             font-size: 2.2rem;
             color: var(--color-crema);
@@ -317,45 +471,60 @@
             z-index: 2;
         }
 
-        /* Posiciones Verticales */
+        /* --- POSICIONES VERTICALES MEJORADAS --- */
         .node-1 { top: 12%; }
         .node-2 { top: 30%; }
         .node-3 { top: 48%; }
         .node-4 { top: 66%; }
         .node-5 { top: 84%; }
 
-        /* --- PANDA Y DECORACIÓN --- */
+        /* --- PANDA MODERNO --- */
         .panda-guide {
             position: absolute;
-            top: 50%; left: 12%;
+            top: 50%;
+            left: 12%;
             transform: translate(-50%, -50%);
-            width: 180px; height: 180px;
+            width: 180px;
+            height: 180px;
             z-index: 4;
             animation: pandaFloat 5s ease-in-out infinite;
             filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.4));
         }
+
         @keyframes pandaFloat {
             0%, 100% { transform: translate(-50%, -50%) translateX(0) rotate(-2deg); }
+            25% { transform: translate(-50%, -50%) translateX(-10px) rotate(1deg); }
             50% { transform: translate(-50%, -50%) translateX(0) rotate(0deg); }
+            75% { transform: translate(-50%, -50%) translateX(10px) rotate(-1deg); }
         }
-        .panda-svg { width: 100%; height: 100%; }
 
+        .panda-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* --- FLECHAS MODERNAS --- */
         .path-arrows {
             position: absolute;
-            left: 50%; top: 0;
-            width: 100%; height: 100%;
+            left: 50%;
+            top: 0;
+            width: 100%;
+            height: 100%;
             transform: translateX(-50%);
             z-index: 3;
             pointer-events: none;
         }
+
         .arrow-indicator {
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
-            width: 40px; height: 40px;
+            width: 40px;
+            height: 40px;
             opacity: 0;
             animation: arrowBounce 2s ease-in-out infinite;
         }
+
         .arrow-indicator::after {
             content: '⬇';
             font-size: 28px;
@@ -365,19 +534,81 @@
             text-align: center;
             filter: drop-shadow(0 0 10px rgba(190, 192, 146, 0.5));
         }
-        @keyframes arrowBounce { 0%, 100% { opacity: 0.3; transform: translateX(-50%) translateY(0); } 50% { opacity: 0.8; transform: translateX(-50%) translateY(5px); } }
+
+        @keyframes arrowBounce {
+            0%, 100% { 
+                opacity: 0.3; 
+                transform: translateX(-50%) translateY(0); 
+            }
+            50% { 
+                opacity: 0.8; 
+                transform: translateX(-50%) translateY(5px); 
+            }
+        }
+
         .arrow-1 { top: 20%; animation-delay: 0.5s; }
         .arrow-2 { top: 37%; animation-delay: 1s; }
         .arrow-3 { top: 54%; animation-delay: 1.5s; }
         .arrow-4 { top: 71%; animation-delay: 2s; }
 
-        /* --- BOTONES Y PANELES --- */
+        /* --- ELEMENTOS DECORATIVOS MODERNOS --- */
+        .modern-trees {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .modern-tree {
+            position: absolute;
+            bottom: 0;
+            width: 300px;
+            height: 400px;
+            opacity: 0.15;
+            filter: blur(2px);
+        }
+
+        .modern-tree::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 200px;
+            background: linear-gradient(to top, var(--arbol-color), transparent);
+            border-radius: 40px 40px 0 0;
+        }
+
+        .modern-tree::after {
+            content: '';
+            position: absolute;
+            bottom: 150px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, var(--arbol-color) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .tree-1 { left: -50px; height: 450px; }
+        .tree-2 { left: 100px; height: 380px; }
+        .tree-3 { right: 50px; height: 420px; }
+        .tree-4 { right: -100px; height: 400px; }
+
+        /* --- BOTÓN MODERNO --- */
         .close-btn {
             position: fixed;
-            top: 20px; left: 20px;
+            top: 20px;
+            left: 20px;
             background: linear-gradient(135deg, var(--color-oliva-medio) 0%, var(--color-oliva-oscuro) 100%);
             color: var(--color-crema);
-            width: 56px; height: 56px;
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
             border: none;
             font-size: 24px;
@@ -389,8 +620,14 @@
             z-index: 1001;
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
         }
-        .close-btn:hover { transform: scale(1.1) rotate(90deg); }
 
+        .close-btn:hover {
+            transform: scale(1.1) rotate(90deg);
+            background: linear-gradient(135deg, var(--color-oliva-claro) 0%, var(--color-oliva-medio) 100%);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        /* --- PANELS LATERALES MODERNOS --- */
         .floating-icons {
             position: fixed;
             right: 20px;
@@ -401,10 +638,12 @@
             gap: 15px;
             z-index: 2000;
         }
+
         .floating-icons button {
             background: linear-gradient(135deg, var(--color-oliva-oscuro) 0%, var(--color-oliva-medio) 100%);
             color: var(--color-crema);
-            width: 56px; height: 56px;
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
             border: none;
             font-size: 22px;
@@ -414,7 +653,12 @@
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .floating-icons button:hover { transform: scale(1.1) translateY(-3px); }
+
+        .floating-icons button:hover { 
+            transform: scale(1.1) translateY(-3px); 
+            background: linear-gradient(135deg, var(--color-oliva-medio) 0%, var(--color-oliva-claro) 100%);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+        }
 
         .panel-box {
             position: fixed;
@@ -436,21 +680,74 @@
             font-size: 1.1rem;
             color: var(--color-crema);
         }
-        .panel-box.active { display: block; animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-50%) translateX(20px); } to { opacity: 1; transform: translateY(-50%) translateX(0); } }
 
-        .panel-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom: 15px; border-bottom: 1px solid rgba(190, 192, 146, 0.2); }
-        .panel-header h3 { margin:0; font-size:1.8rem; color:var(--color-oliva-claro); font-weight: 600; }
-        .close-panel { background:none; border:none; font-size:1.6rem; cursor:pointer; color:var(--color-oliva-claro); transition: transform 0.3s ease; }
-        .close-panel:hover { transform: rotate(90deg); }
+        .panel-box.active { 
+            display: block; 
+            animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
-        .mission-row { padding:16px; border-radius:12px; margin-bottom:12px; background:rgba(190, 192, 146, 0.1); box-shadow: 0 4px 12px rgba(0,0,0,0.2); display:flex; justify-content:space-between; align-items:center; transition: all 0.3s ease; }
-        .mission-row:hover { background: rgba(190, 192, 146, 0.15); transform: translateX(-5px); }
-        .mission-row.completed { opacity:0.7; text-decoration:line-through; background:rgba(76, 175, 80, 0.15); }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50%) translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(-50%) translateX(0);
+            }
+        }
+
+        .panel-header { 
+            display:flex; 
+            justify-content:space-between; 
+            align-items:center; 
+            margin-bottom:20px; 
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(190, 192, 146, 0.2);
+        }
+        .panel-header h3 { 
+            margin:0; 
+            font-size:1.8rem; 
+            color:var(--color-oliva-claro); 
+            font-weight: 600;
+        }
+        .close-panel { 
+            background:none; 
+            border:none; 
+            font-size:1.6rem; 
+            cursor:pointer; 
+            color:var(--color-oliva-claro); 
+            transition: transform 0.3s ease;
+        }
+        .close-panel:hover {
+            transform: rotate(90deg);
+        }
+
+        .mission-row { 
+            padding:16px; 
+            border-radius:12px; 
+            margin-bottom:12px; 
+            background:rgba(190, 192, 146, 0.1); 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
+            display:flex; 
+            justify-content:space-between; 
+            align-items:center; 
+            transition: all 0.3s ease;
+        }
+        .mission-row:hover {
+            background: rgba(190, 192, 146, 0.15);
+            transform: translateX(-5px);
+        }
+        .mission-row.completed { 
+            opacity:0.7; 
+            text-decoration:line-through; 
+            background:rgba(76, 175, 80, 0.15); 
+        }
 
         .toast {
             position: fixed;
-            right: 20px; bottom: 20px;
+            right: 20px;
+            bottom: 20px;
             background: linear-gradient(135deg, rgba(39, 43, 0, 0.98) 0%, rgba(15, 31, 15, 0.98) 100%);
             backdrop-filter: blur(20px);
             border-left: 6px solid var(--color-oliva-claro);
@@ -464,25 +761,50 @@
             color: var(--color-crema);
             animation: toastSlide 0.4s ease;
         }
-        @keyframes toastSlide { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        .toast.show { display: block; }
-        .info { font-family: 'Poppins', sans-serif; color:var(--color-crema); font-size:1rem; margin-bottom:12px; line-height: 1.5; }
 
-        /* Responsive */
+        @keyframes toastSlide {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast.show { display: block; }
+        .info { 
+            font-family: 'Poppins', sans-serif; 
+            color:var(--color-crema); 
+            font-size:1rem; 
+            margin-bottom:12px; 
+            line-height: 1.5;
+        }
+
+        /* --- RESPONSIVE DESIGN MODERNO --- */
         @media (max-width: 1024px) {
             .panel-box { right: 10px; width: 92%; top: 55%; transform: translateY(-55%); }
             .floating-icons { right: 10px; }
             .forest-node-circle { width: 90px; height: 90px; }
+            .node-icon { font-size: 2rem; }
+            .node-label { font-size: 0.8rem; }
             .panda-guide { width: 150px; height: 150px; left: 8%; }
             .forest-path { width: 240px; }
             .path-surface { width: 160px; }
         }
+
         @media (max-width: 768px) {
             .forest-node-circle { width: 80px; height: 80px; }
             .node-icon { font-size: 1.8rem; }
+            .node-label { font-size: 0.7rem; }
+            .node-number { width: 32px; height: 32px; font-size: 1rem; }
             .panda-guide { width: 120px; height: 120px; left: 5%; }
             .forest-path { width: 200px; }
             .path-surface { width: 120px; }
+            .arrow-indicator { width: 35px; height: 35px; }
+            .arrow-indicator::after { font-size: 24px; }
+            .forest-node { width: 120px; height: 120px; }
         }
     </style>
     <script type="module" src="./global-settings.js"></script>
@@ -503,23 +825,32 @@
     <button class="close-btn" id="close-btn" title="Volver a módulos">&times;</button>
 
     <div class="forest-container">
+        <!-- Partículas ambientales -->
         <div class="ambient-particles">
             <div class="particle" style="width: 6px; height: 6px; left: 10%; animation-delay: 0s;"></div>
             <div class="particle" style="width: 4px; height: 4px; left: 25%; animation-delay: 2s;"></div>
             <div class="particle" style="width: 8px; height: 8px; left: 40%; animation-delay: 1s;"></div>
             <div class="particle" style="width: 5px; height: 5px; left: 60%; animation-delay: 3s;"></div>
             <div class="particle" style="width: 7px; height: 7px; left: 75%; animation-delay: 1.5s;"></div>
+            <div class="particle" style="width: 4px; height: 4px; left: 85%; animation-delay: 2.5s;"></div>
+            <div class="particle" style="width: 6px; height: 6px; left: 95%; animation-delay: 0.5s;"></div>
         </div>
         
-        <div class="modern-trees" style="position:absolute; width:100%; height:100%; z-index:2; pointer-events:none;">
-            <!-- Decorative trees simplified for code brevity -->
+        <!-- Árboles modernos de fondo -->
+        <div class="modern-trees">
+            <div class="modern-tree tree-1"></div>
+            <div class="modern-tree tree-2"></div>
+            <div class="modern-tree tree-3"></div>
+            <div class="modern-tree tree-4"></div>
         </div>
         
+        <!-- Camino vertical principal con animación -->
         <div class="forest-path">
             <div class="path-surface" id="path-surface">
                 <div class="path-glow"></div>
             </div>
             
+            <!-- Flechas indicadoras verticales -->
             <div class="path-arrows">
                 <div class="arrow-indicator arrow-1"></div>
                 <div class="arrow-indicator arrow-2"></div>
@@ -527,8 +858,8 @@
                 <div class="arrow-indicator arrow-4"></div>
             </div>
             
+            <!-- Nodos del camino vertical -->
             <div class="path-nodes">
-                <!-- Nivel 1: Siempre desbloqueado -->
                 <div class="forest-node node-1" id="node-1" data-level="1" data-target="LCS1.html">
                     <div class="forest-node-circle">
                         <div class="node-number">1</div>
@@ -537,7 +868,6 @@
                     <div class="node-label">Ideas principales</div>
                 </div>
                 
-                <!-- Nivel 2: Requiere LCS1F >= 180 -->
                 <div class="forest-node node-2 locked" id="node-2" data-level="2" data-target="LCS2.html">
                     <div class="forest-node-circle">
                         <div class="node-number">2</div>
@@ -547,7 +877,6 @@
                     <div class="node-label">Ideas secundarias</div>
                 </div>
                 
-                <!-- Nivel 3: Requiere LCS2F -->
                 <div class="forest-node node-3 locked" id="node-3" data-level="3" data-target="LCS3.html">
                     <div class="forest-node-circle">
                         <div class="node-number">3</div>
@@ -557,7 +886,6 @@
                     <div class="node-label">Parafraseo</div>
                 </div>
                 
-                <!-- Nivel 4: Requiere LCS3F -->
                 <div class="forest-node node-4 locked" id="node-4" data-level="4" data-target="LCS4.html">
                     <div class="forest-node-circle">
                         <div class="node-number">4</div>
@@ -567,7 +895,6 @@
                     <div class="node-label">Referencias textuales</div>
                 </div>
                 
-                <!-- Nivel 5: Requiere LCS4F -->
                 <div class="forest-node node-5 locked" id="node-5" data-level="5" data-target="LCS5.html">
                     <div class="forest-node-circle">
                         <div class="node-number">5</div>
@@ -579,74 +906,115 @@
             </div>
         </div>
         
-        <!-- Panda -->
+        <!-- Panda guía moderno -->
         <div class="panda-guide">
             <svg class="panda-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <!-- Cuerpo principal -->
                 <ellipse cx="100" cy="130" rx="45" ry="35" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+                
+                <!-- Cabeza -->
                 <circle cx="100" cy="80" r="40" fill="#ffffff" stroke="#333333" stroke-width="2"/>
-                <circle cx="70" cy="60" r="15" fill="#333333"/>
-                <circle cx="130" cy="60" r="15" fill="#333333"/>
+                
+                <!-- Orejas -->
+                <circle cx="70" cy="60" r="15" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+                <circle cx="130" cy="60" r="15" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+                <circle cx="70" cy="60" r="8" fill="#333333"/>
+                <circle cx="130" cy="60" r="8" fill="#333333"/>
+                <circle cx="70" cy="60" r="4" fill="#ff69b4"/>
+                <circle cx="130" cy="60" r="4" fill="#ff69b4"/>
+                
+                <!-- Ojos -->
                 <ellipse cx="85" cy="75" rx="8" ry="10" fill="#333333"/>
                 <ellipse cx="115" cy="75" rx="8" ry="10" fill="#333333"/>
                 <circle cx="87" cy="73" r="3" fill="#ffffff"/>
                 <circle cx="117" cy="73" r="3" fill="#ffffff"/>
+                
+                <!-- Nariz -->
                 <ellipse cx="100" cy="85" rx="6" ry="4" fill="#333333"/>
+                
+                <!-- Boca -->
                 <path d="M 90 95 Q 100 105 110 95" stroke="#333333" stroke-width="2" fill="none" stroke-linecap="round"/>
+                
+                <!-- Brazos -->
                 <ellipse cx="60" cy="120" rx="12" ry="25" fill="#ffffff" stroke="#333333" stroke-width="2" transform="rotate(-30 60 120)"/>
                 <ellipse cx="140" cy="120" rx="12" ry="25" fill="#ffffff" stroke="#333333" stroke-width="2" transform="rotate(30 140 120)"/>
+                
+                <!-- Patas -->
                 <ellipse cx="75" cy="155" rx="10" ry="20" fill="#ffffff" stroke="#333333" stroke-width="2"/>
                 <ellipse cx="125" cy="155" rx="10" ry="20" fill="#ffffff" stroke="#333333" stroke-width="2"/>
+                
+                <!-- Patches (manchas características) -->
+                <ellipse cx="85" cy="130" rx="8" ry="12" fill="#333333" opacity="0.8"/>
+                <ellipse cx="115" cy="125" rx="6" ry="10" fill="#333333" opacity="0.8"/>
+                <circle cx="95" cy="145" r="5" fill="#333333" opacity="0.7"/>
+                <circle cx="105" cy="140" r="4" fill="#333333" opacity="0.7"/>
             </svg>
         </div>
     </div>
 
-    <div class="floating-icons">
+    <div class="floating-icons" aria-hidden="false">
         <button id="btn-misiones" title="Misiones">🎯</button>
         <button id="btn-nivel" title="Nivel actual">⭐</button>
         <button id="btn-progreso" title="Progreso">📊</button>
+        <button id="btn-analisis" title="Análisis">📈</button>
     </div>
 
-    <div class="panel-box" id="panel-misiones">
+    <div class="panel-box" id="panel-misiones" aria-hidden="true">
         <div class="panel-header">
             <h3>Misiones</h3>
             <button class="close-panel" data-close="misiones">&times;</button>
         </div>
         <div id="misiones-content"></div>
     </div>
-    <div class="panel-box" id="panel-nivel">
+    <div class="panel-box" id="panel-nivel" aria-hidden="true">
         <div class="panel-header">
             <h3>Tu nivel</h3>
             <button class="close-panel" data-close="nivel">&times;</button>
         </div>
         <div id="nivel-content"></div>
     </div>
-    <div class="panel-box" id="panel-progreso">
+    <div class="panel-box" id="panel-progreso" aria-hidden="true">
         <div class="panel-header">
             <h3>Progreso</h3>
             <button class="close-panel" data-close="progreso">&times;</button>
         </div>
         <div id="progreso-content"></div>
     </div>
+    <div class="panel-box" id="panel-analisis" aria-hidden="true">
+        <div class="panel-header">
+            <h3>Análisis (promedio 0–300)</h3>
+            <button class="close-panel" data-close="analisis">&times;</button>
+        </div>
+        <div id="analisis-content">
+            <div id="analisis-stats" style="margin-top:12px;"></div>
+        </div>
+    </div>
 
     <div class="toast" id="mission-toast" role="status" aria-live="polite"></div>
     <audio id="mission-sound" src="mission.mp3" preload="auto"></audio>
 
-    <script type="module">
-        // Importar funciones de base de datos necesarias
-        import { ref, get } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
-
+    <script>
         document.addEventListener('DOMContentLoaded', () => {
             console.log("DOM Cargado. Inicializando Camino Moderno del Bosque...");
 
             // --- CONSTANTES Y VARIABLES ---
             const MISSIONS_KEY = 'skopia_missions_v1';
             const USER_PROFILE_KEY = 'skopia_user_profile_v1';
-            const LC_PROGRESS_KEY = 'skopia_lc_progress_v1'; // Key local para respaldo
+            const GAME_PROGRESS_KEY = 'skopia_game_progress_v1';
+            const LC_PROGRESS_KEY = 'skopia_lc_progress_v1';
             let toastTimer = null;
 
             const missionsTemplate = [
                 { id: 1, title: "Completa tu primer examen", points: 50 },
                 { id: 2, title: "Logra al menos 180/300 en un examen", points: 80 },
+                { id: 3, title: "Lee toda la teoría de una lección", points: 40 },
+                { id: 4, title: "Termina una sesión de estudio sin salir", points: 50 },
+                { id: 5, title: "Gana tu primer juego", points: 50 },
+                { id: 6, title: "Usa una pista o ayuda en un juego", points: 30 },
+                { id: 7, title: "Repite un examen para mejorar tu nota", points: 50 },
+                { id: 8, title: "Cambia tu nombre de usuario", points: 40 },
+                { id: 9, title: "Acumula tus primeras 200 estrellas", points: 30 },
+                { id: 10, title: "Completa 3 misiones seguidas", points: 50 },
                 { id: 11, title: "Logra 240/300 en un examen", points: 150 },
                 { id: 12, title: "Completa un examen sin errores (300/300)", points: 200 },
                 { id: 100, title: "🏆 Maestro del Saber Pro: completa todo el sistema", points: 200 }
@@ -665,7 +1033,128 @@
                 { idx: 10, name: "Rey/Reina Skópia", min: 9500, max: Infinity }
             ];
 
-            // --- FUNCIONES DE UTILIDAD ---
+            // --- FUNCIONES PRINCIPALES ---
+
+            function initMissions() {
+                if (!localStorage.getItem(MISSIONS_KEY)) {
+                    const initial = missionsTemplate.map(m => ({ ...m, completed: false }));
+                    localStorage.setItem(MISSIONS_KEY, JSON.stringify(initial));
+                    console.log("Misiones inicializadas.");
+                }
+            }
+            function initUserProfile() {
+                if (!localStorage.getItem(USER_PROFILE_KEY)) {
+                    const initial = { originalEmail: "", nameChangeMissionCompleted: false };
+                    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(initial));
+                }
+            }
+            
+            // MODIFICADO: Función para sincronizar progreso con Firebase
+            async function syncProgressFromFirebase(user) {
+                const uid = user.uid;
+                const db = window.db;
+                if (!db) return;
+
+                try {
+                    const scoresRef = window.ref(db, `users/${uid}/exam_scores`);
+                    const snapshot = await window.get(scoresRef);
+                    const scores = snapshot.exists() ? snapshot.val() : {};
+                    
+                    console.log("Notas sincronizadas desde Firebase:", scores);
+
+                    // 1. Verificar redirección a LC2.html
+                    // Si LCS5F está completado con 180 o más
+                    if (scores.LCS5F && scores.LCS5F.score >= 180) {
+                        console.log("Nivel 5 completado con 180+. Redirigiendo a LC2.html");
+                        // Mostrar transición o esperar un momento
+                        setTimeout(() => { window.location.href = 'LC2.html'; }, 1500);
+                        return;
+                    }
+
+                    // 2. Actualizar nodos del mapa
+                    updateMapNodes(scores);
+
+                } catch (error) {
+                    console.error("Error sincronizando progreso:", error);
+                    showMissionToast("Error al sincronizar progreso.", 3000);
+                }
+            }
+
+            // MODIFICADO: Actualizar nodos basados en notas de Firebase
+            function updateMapNodes(scores) {
+                // Definir estructura de requisitos
+                // Nodo 1: Siempre desbloqueado. Se completa con LCS1F >= 180.
+                // Nodo 2: Se desbloquea con LCS1F >= 180. Se completa con LCS2F >= 180.
+                // Nodo 3: Se desbloquea con LCS2F >= 180. Se completa con LCS3F >= 180.
+                // Nodo 4: Se desbloquea con LCS3F >= 180. Se completa con LCS4F >= 180.
+                // Nodo 5: Se desbloquea con LCS4F >= 180. Se completa con LCS5F >= 180.
+
+                for (let i = 1; i <= 5; i++) {
+                    const node = document.getElementById(`node-${i}`);
+                    if (!node) continue;
+
+                    // Identificadores de examen
+                    const currentExamId = `LCS${i}F`; // Examen de este nivel
+                    const prevExamId = `LCS${i-1}F`; // Examen del nivel anterior
+                    
+                    let isUnlocked = false;
+                    let isCompleted = false;
+
+                    // Lógica de Desbloqueo
+                    if (i === 1) {
+                        isUnlocked = true; // El primero siempre desbloqueado
+                    } else {
+                        // Requiere nota del examen anterior
+                        if (scores[prevExamId] && scores[prevExamId].score >= 180) {
+                            isUnlocked = true;
+                        }
+                    }
+
+                    // Lógica de Completado
+                    if (scores[currentExamId] && scores[currentExamId].score >= 180) {
+                        isCompleted = true;
+                    }
+
+                    // Aplicar clases CSS
+                    node.classList.remove('locked', 'completed', 'visible');
+                    
+                    // Mostrar nodo (animación)
+                    setTimeout(() => node.classList.add('visible'), 100 * i);
+
+                    if (isCompleted) {
+                        node.classList.add('completed');
+                        // Ocultar candado si existe
+                        const lock = node.querySelector('.lock-icon');
+                        if (lock) lock.style.display = 'none';
+                    } else if (isUnlocked) {
+                        node.classList.remove('locked');
+                        const lock = node.querySelector('.lock-icon');
+                        if (lock) lock.style.display = 'none';
+                    } else {
+                        node.classList.add('locked');
+                        const lock = node.querySelector('.lock-icon');
+                        if (lock) lock.style.display = 'block'; // Asegurar que el candado esté visible
+                    }
+                }
+            }
+
+            function completeMission(id) {
+                console.log(`>>> Llamada a completeMission con ID: ${id}`);
+                const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
+                const mission = data.find(m => m.id === id);
+                if (mission && !mission.completed) {
+                    mission.completed = true;
+                    localStorage.setItem(MISSIONS_KEY, JSON.stringify(data));
+                    console.log(`!!! MISIÓN COMPLETADA: ID=${id}, Titulo="${mission.title}", Puntos=${mission.points} !!!`);
+                    
+                    document.getElementById('mission-sound').play().catch(e => console.log("Error al reproducir sonido:", e));
+                    showMissionToast(`¡Misión completada: ${mission.title} (+${mission.points}⭐)!`, 5000);
+                    updateAllDisplays();
+                } else {
+                    console.log(`>>> Misión ${id} ya estaba completada o no existe.`);
+                }
+            }
+
             function showMissionToast(text, ms = 60000) {
                 const toast = document.getElementById('mission-toast');
                 toast.innerHTML = `<strong>${text}</strong>`;
@@ -678,154 +1167,12 @@
                 const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
                 return data.reduce((sum, m) => sum + (m.completed ? m.points : 0), 0);
             }
-            
             function getLevelFromPoints(total) {
                 for (let i = LEVELS.length - 1; i >= 0; i--) if (total >= LEVELS[i].min) return LEVELS[i];
                 return LEVELS[0];
             }
-
-            function completeMission(id) {
-                const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
-                const mission = data.find(m => m.id === id);
-                if (mission && !mission.completed) {
-                    mission.completed = true;
-                    localStorage.setItem(MISSIONS_KEY, JSON.stringify(data));
-                    document.getElementById('mission-sound').play().catch(e => {});
-                    showMissionToast(`¡Misión completada: ${mission.title} (+${mission.points}⭐)!`, 5000);
-                    updateAllDisplays();
-                }
-            }
-
-            function initMissions() {
-                if (!localStorage.getItem(MISSIONS_KEY)) {
-                    const initial = missionsTemplate.map(m => ({ ...m, completed: false }));
-                    localStorage.setItem(MISSIONS_KEY, JSON.stringify(initial));
-                }
-            }
-
-            // --- LÓGICA DE DESBLOQUEO Y SINCRONIZACIÓN (FIREBASE) ---
-            
-            // Esta función se llama cuando el usuario está listo
-            async function checkProgressAndSync(user) {
-                const uid = user.uid;
-                const db = window.db;
-                
-                try {
-                    // 1. Leer notas desde Firebase
-                    const scoresRef = ref(db, `users/${uid}/exam_scores`);
-                    const snapshot = await get(scoresRef);
-                    const scores = snapshot.exists() ? snapshot.val() : {};
-                    
-                    console.log("Notas obtenidas de Firebase:", scores);
-
-                    // 2. VERIFICAR REDIRECCIÓN A LC2.html
-                    // Si LCS5F está completado con 180 o más
-                    if (scores.LCS5F && scores.LCS5F.score >= 180) {
-                        console.log("Usuario completó LCS5 con 180+. Redirigiendo a LC2.html");
-                        // Pequeño delay para que vea la pantalla
-                        setTimeout(() => { window.location.href = 'LC2.html'; }, 1000);
-                        return; // Detener ejecución aquí
-                    }
-
-                    // 3. ACTUALIZAR NODOS DEL MAPA
-                    updateMapNodes(scores);
-
-                } catch (error) {
-                    console.error("Error obteniendo progreso:", error);
-                    showMissionToast("Error al sincronizar progreso.", 3000);
-                }
-            }
-
-            function updateMapNodes(scores) {
-                // Definir los nodos y sus requisitos
-                // Formato: [ID_Nodo, ID_Examen_Requerido_para_desbloquear]
-                // Nota: Node 1 siempre desbloqueado
-                const nodesConfig = [
-                    { id: 'node-1', examId: null },      // Siempre desbloqueado
-                    { id: 'node-2', examId: 'LCS1F' },   // Requiere LCS1F
-                    { id: 'node-3', examId: 'LCS2F' },   // Requiere LCS2F
-                    { id: 'node-4', examId: 'LCS3F' },   // Requiere LCS3F
-                    { id: 'node-5', examId: 'LCS4F' }    // Requiere LCS4F
-                ];
-
-                // Iterar sobre cada nodo para decidir estado
-                nodesConfig.forEach((config, index) => {
-                    const node = document.getElementById(config.id);
-                    if (!node) return;
-
-                    let isUnlocked = false;
-                    let isCompleted = false;
-
-                    // Lógica de Desbloqueo
-                    if (index === 0) {
-                        // Nodo 1 siempre desbloqueado
-                        isUnlocked = true;
-                    } else {
-                        // Nodos siguientes: verificar nota del examen anterior
-                        const prevExamId = nodesConfig[index - 1].examId; // null para node-1, pero no entra aquí
-                        const requiredExam = config.examId; // Examen que desbloquea ESTE nodo
-                        
-                        // Verificamos si el examen ANTERIOR (que es el que desbloquea este nodo) existe
-                        // Para Node 2 (index 1), necesita LCS1F.
-                        // config.examId para Node 2 es LCS1F.
-                        const examScore = scores[requiredExam];
-                        
-                        if (examScore && examScore.score >= 180) {
-                            isUnlocked = true;
-                            // Si el examen que desbloquea este nodo está hecho, el nodo anterior está completado
-                            // Pero visualmente marcamos el nodo ANTERIOR como completado
-                            const prevNode = document.getElementById(nodesConfig[index-1].id);
-                            if(prevNode) {
-                                prevNode.classList.add('completed');
-                                prevNode.classList.remove('locked');
-                                // Quitar candado visual si existe
-                                const lock = prevNode.querySelector('.lock-icon');
-                                if(lock) lock.style.display = 'none';
-                            }
-                        }
-                    }
-
-                    // Lógica de Completado del NODO ACTUAL
-                    // Si el examen de ESTE nivel está aprobado
-                    // Para Node 1: LCS1F
-                    // Para Node 2: LCS2F, etc.
-                    // Como node-1 no tiene config.examId, necesitamos un mapeo directo
-                    const nodeLevel = index + 1;
-                    const currentExamId = `LCS${nodeLevel}F`;
-                    
-                    if (scores[currentExamId] && scores[currentExamId].score >= 180) {
-                        isCompleted = true;
-                    }
-
-                    // Aplicar Clases CSS
-                    node.classList.remove('locked', 'completed', 'visible');
-                    
-                    if (isCompleted) {
-                        node.classList.add('completed', 'visible');
-                        const lock = node.querySelector('.lock-icon');
-                        if(lock) lock.style.display = 'none';
-                    } else if (isUnlocked) {
-                        node.classList.add('visible');
-                        node.classList.remove('locked');
-                        const lock = node.querySelector('.lock-icon');
-                        if(lock) lock.style.display = 'none';
-                    } else {
-                        node.classList.add('locked', 'visible'); // Visible pero bloqueado
-                        const lock = node.querySelector('.lock-icon');
-                        if(lock) lock.style.display = 'block';
-                    }
-                });
-
-                // Animación de entrada escalonada
-                const nodes = document.querySelectorAll('.forest-node');
-                nodes.forEach((node, index) => {
-                    setTimeout(() => {
-                        node.classList.add('visible');
-                    }, 200 * (index + 1));
-                });
-                
-                // Iniciar animación del camino
-                document.getElementById('path-surface').classList.add('revealed');
+            function getCompletedCount() {
+                return JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").filter(m => m.completed).length;
             }
 
             // --- RENDER FUNCTIONS ---
@@ -841,104 +1188,134 @@
                 incompleteMissions.forEach(m => {
                     const div = document.createElement('div');
                     div.className = 'mission-row';
-                    div.innerHTML = `<div style="flex:1"><div style="font-weight:600;">${m.id}. ${m.title}</div><div style="font-size:0.9rem; opacity:0.8">${m.points} ⭐</div></div>`;
+                    div.innerHTML = `<div style="flex:1"><div style="font-weight:600; color:var(--color-crema)">${m.id}. ${m.title}</div><div style="font-size:1rem; color:var(--color-oliva-claro)">${m.points} ⭐</div></div>`;
                     container.appendChild(div);
                 });
             }
-            
             function renderLevel() {
                 const total = getTotalPoints();
                 const level = getLevelFromPoints(total);
+                const neededForNext = (level.max === Infinity) ? 0 : (level.max - total + 1);
                 const progressPct = (level.max === Infinity) ? 100 : Math.min(100, Math.round(((total - level.min) / (level.max - level.min)) * 100));
                 document.getElementById('nivel-content').innerHTML = `
-                    <div class="info"><strong>Nivel:</strong> ${level.name}</div>
+                    <div class="info"><strong>Nivel:</strong> ${level.name} (${level.idx})</div>
                     <div class="info"><strong>Puntos:</strong> ${total} ⭐</div>
-                    <div style="background:rgba(190, 192, 146, 0.2);border-radius:12px;padding:10px;margin-top:15px">
-                        <div style="height:14px;background:linear-gradient(90deg,var(--color-oliva-claro),var(--color-oliva-medio));width:${progressPct}%;border-radius:10px"></div>
-                    </div>
+                    <div class="info"><strong>Progreso:</strong> ${progressPct}%</div>
+                    <div style="background:rgba(190, 192, 146, 0.2);border-radius:12px;padding:10px;margin-top:15px"><div style="height:14px;background:linear-gradient(90deg,var(--color-oliva-claro),var(--color-oliva-medio));width:${progressPct}%;border-radius:10px"></div></div>
+                    ${level.max === Infinity ? '<div class="info" style="margin-top:15px">¡Nivel máximo!</div>' : `<div class="info" style="margin-top:15px">Para subir: ${neededForNext} ⭐</div>`}
                 `;
             }
-
             function renderProgress() {
                 const total = getTotalPoints();
-                const pct = Math.min(100, Math.round((total / 9500) * 100));
+                const topTarget = 9500;
+                const pct = Math.min(100, Math.round((total / topTarget) * 100));
                 document.getElementById('progreso-content').innerHTML = `
                     <div class="info"><strong>Puntos:</strong> ${total} ⭐</div>
                     <div class="info"><strong>Progreso Global:</strong> ${pct}%</div>
-                    <div style="background:rgba(190, 192, 146, 0.2);border-radius:12px;padding:10px;margin-top:15px">
-                        <div style="height:14px;background:linear-gradient(90deg,var(--color-oliva-claro),var(--color-oliva-medio));width:${pct}%;border-radius:10px"></div>
-                    </div>
+                    <div style="background:rgba(190, 192, 146, 0.2);border-radius:12px;padding:10px;margin-top:15px"><div style="height:14px;background:linear-gradient(90deg,var(--color-oliva-claro),var(--color-oliva-medio));width:${pct}%;border-radius:10px"></div></div>
+                    <div class="info" style="margin-top:15px"><strong>Misiones:</strong> ${getCompletedCount()}/100</div>
                 `;
             }
-
-            function updateAllDisplays() {
-                renderMissions(); renderLevel(); renderProgress();
+            function renderAnalysis() {
+                document.getElementById('analisis-stats').innerHTML = '<div class="info">Análisis de exámenes (pendiente de implementar).</div>';
             }
-
+            function updateAllDisplays() {
+                renderMissions(); renderLevel(); renderProgress(); renderAnalysis();
+            }
             function closeAllPanels() {
                 document.querySelectorAll('.panel-box').forEach(p => p.classList.remove('active'));
             }
 
             // --- EVENT LISTENERS ---
-            
-            // Escuchar evento de usuario listo (desde el script de Firebase en el head)
             window.addEventListener('userReady', (e) => {
                 const user = e.detail.user;
-                console.log("Usuario listo:", user.uid);
-                checkProgressAndSync(user);
+                console.log("Evento 'userReady' recibido para:", user.email);
+                
+                // Sincronizar progreso desde Firebase (esto maneja desbloqueos y redirección)
+                syncProgressFromFirebase(user);
+
+                // Lógica de misiones local
+                const userProfile = JSON.parse(localStorage.getItem(USER_PROFILE_KEY) || "{}");
+
+                if (!userProfile.originalEmail) {
+                    userProfile.originalEmail = user.email;
+                    userProfile.nameChangeMissionCompleted = false;
+                    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
+                    console.log("Perfil de usuario inicializado por primera vez. Email original guardado:", userProfile.originalEmail);
+                }
+
+                if (!userProfile.nameChangeMissionCompleted) {
+                    console.log("Comprobando misión 8 (cambiar nombre)...");
+                    const hasChangedName = user.displayName && user.displayName !== userProfile.originalEmail;
+                    if (hasChangedName) {
+                        console.log(`¡Cambio de nombre detectado! Original: "${userProfile.originalEmail}", Nuevo: "${user.displayName}". Completando misión 8.`);
+                        completeMission(8);
+                        userProfile.nameChangeMissionCompleted = true;
+                        localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
+                    } else {
+                        console.log("No se detectó cambio de nombre. DisplayName actual:", user.displayName);
+                    }
+                } else {
+                    console.log("Misión 8 ya fue completada anteriormente.");
+                }
             });
 
-            // Menú hamburguesa
             document.getElementById('hamburger-menu').addEventListener('click', () => {
                 document.getElementById('user-dropdown').classList.toggle('active');
             });
-            
-            // Cerrar sesión
             document.getElementById('logout-btn').addEventListener('click', () => {
                 import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
                     signOut(window.auth).then(() => window.location.href = 'index.html');
                 });
             });
-
-            // Cerrar paneles al hacer clic fuera
             window.addEventListener('click', (event) => {
                 if (!event.target.closest('.navbar')) document.getElementById('user-dropdown').classList.remove('active');
                 const isIcon = event.target.closest('.floating-icons');
                 const isPanel = event.target.closest('.panel-box');
                 if (!isIcon && !isPanel) closeAllPanels();
             });
-
-            // Botón volver
             document.getElementById('close-btn').addEventListener('click', () => window.location.href = 'modulos.html');
 
-            // Click en Nodos
+            // Event listeners para los nodos del mapa
             document.querySelectorAll('.forest-node').forEach(node => {
                 node.addEventListener('click', function() {
-                    // Si está bloqueado, mostrar mensaje
+                    const level = parseInt(this.dataset.level);
+                    const target = this.dataset.target;
+                    
+                    // Verificar si el nivel está bloqueado
                     if (this.classList.contains('locked')) {
                         showMissionToast("🔒 Debes completar el examen anterior con 180+ puntos para desbloquear este nivel.", 3000);
                         return;
                     }
-                    // Si no, navegar
-                    const target = this.dataset.target;
-                    if(target) window.location.href = target;
+                    
+                    // Si no está bloqueado, navegar
+                    window.location.href = target;
                 });
             });
 
-            // Paneles flotantes
+            // **EVENT LISTENERS DE ICONOS (FUNCIONANDO)**
             document.getElementById('btn-misiones').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-misiones').classList.add('active'); renderMissions(); });
             document.getElementById('btn-nivel').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-nivel').classList.add('active'); renderLevel(); });
             document.getElementById('btn-progreso').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-progreso').classList.add('active'); renderProgress(); });
-            
+            document.getElementById('btn-analisis').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-analisis').classList.add('active'); renderAnalysis(); });
             document.querySelectorAll('.close-panel').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     document.getElementById('panel-' + e.target.getAttribute('data-close')).classList.remove('active');
                 });
             });
 
-            // --- INICIALIZACIÓN ---
-            initMissions();
+            // --- INICIALIZACIÓN Y ANIMACIÓN ---
+            initMissions(); 
+            initUserProfile(); 
             updateAllDisplays();
+            
+            // Iniciar animación del camino
+            setTimeout(() => {
+                const pathSurface = document.getElementById('path-surface');
+                if (pathSurface) {
+                    pathSurface.classList.add('revealed');
+                }
+            }, 500);
             
             console.log("Camino Moderno del Bosque inicializado.");
         });
