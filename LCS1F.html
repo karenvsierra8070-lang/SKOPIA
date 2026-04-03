@@ -575,7 +575,8 @@
             restDuration: 45,
             passingScore: 180,
             maxScore: 300,
-            blockDuration: 3 * 60 * 60 * 1000 // CAMBIADO: 3 horas en lugar de 12
+            blockDuration: 3 * 60 * 60 * 1000,
+            examKey: 'lcs1f' // Identificador único para este examen en Firebase
         };
 
         let allQuestions = [];
@@ -670,6 +671,34 @@
 
             updateTimer();
             setInterval(updateTimer, 1000);
+        }
+
+        // =====================================================
+        // FUNCIÓN NUEVA: Guardar progreso en Firebase
+        // =====================================================
+        async function saveExamProgressToFirebase(userId, score, passed) {
+            try {
+                const progressRef = window.ref(window.db, `users/${userId}/lc_progress/${CONFIG.examKey}`);
+                const dataToSave = {
+                    score: score,
+                    completed: passed,
+                    completedAt: passed ? new Date().toISOString() : null,
+                    lastAttempt: new Date().toISOString()
+                };
+                
+                await window.set(progressRef, dataToSave);
+                
+                // Respaldo en localStorage
+                const localProgress = JSON.parse(localStorage.getItem('skopia_lc_progress_v1') || '{}');
+                localProgress[CONFIG.examKey] = dataToSave;
+                localStorage.setItem('skopia_lc_progress_v1', JSON.stringify(localProgress));
+                
+                console.log("✅ Progreso guardado en Firebase:", dataToSave);
+                return true;
+            } catch (error) {
+                console.error("❌ Error guardando en Firebase:", error);
+                return false;
+            }
         }
 
         document.getElementById('startBtn').addEventListener('click', startExam);
@@ -800,6 +829,9 @@
 
         submitBtn.addEventListener('click', submitExam);
 
+        // =====================================================
+        // FUNCIÓN MODIFICADA: submitExam ahora guarda en Firebase
+        // =====================================================
         async function submitExam() {
             if (examFinished) return;
             
@@ -817,6 +849,11 @@
 
             const score = Math.round((correct / CONFIG.totalQuestions) * CONFIG.maxScore);
             const passed = score >= CONFIG.passingScore;
+
+            // 🔥 GUARDAR EN FIREBASE
+            if (currentUserId) {
+                await saveExamProgressToFirebase(currentUserId, score, passed);
+            }
 
             if (!passed) {
                 const blockedUntil = Date.now() + CONFIG.blockDuration;
