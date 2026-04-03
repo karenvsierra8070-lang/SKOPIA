@@ -440,7 +440,7 @@
             <p style="color: var(--fg-medium); margin-bottom: 10px;">Debes esperar antes de volver a presentar este examen.</p>
             <p style="font-size: 0.9rem; color: var(--fg-light); margin-bottom: 20px;">Tiempo restante:</p>
             <div id="blockTimer" style="font-size: 2.5rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 25px;">--:--:--</div>
-            <button onclick="window.location.href='LCS1D.html'" class="btn-primary">Ir a Estudiar</button>
+            <button onclick="window.location.href='LCDASHBOARD.html'" class="btn-primary">Volver al Dashboard</button>
         </div>
     </div>
 
@@ -619,7 +619,7 @@
             if (window.currentUser && window.currentUser.email) {
                 userAvatar.textContent = window.currentUser.email.charAt(0).toUpperCase();
             }
-            checkBlockStatus();
+            await checkBlockStatus();
         }
 
         async function loadQuestions() {
@@ -639,7 +639,38 @@
             }
         }
 
+        // =====================================================
+        // FUNCIÓN CORREGIDA: Verificar bloqueo en Firebase Y localStorage
+        // =====================================================
         async function checkBlockStatus() {
+            // Primero verificar Firebase
+            if (currentUserId) {
+                try {
+                    const progressRef = window.ref(window.db, `users/${currentUserId}/lc_progress/${CONFIG.examKey}`);
+                    const snapshot = await window.get(progressRef);
+                    
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
+                        
+                        // Si hay un bloqueo en Firebase y sigue activo
+                        if (data.blockedUntil && Date.now() < data.blockedUntil) {
+                            console.log("🚫 Bloqueo encontrado en Firebase, tiempo restante:", data.blockedUntil - Date.now());
+                            localStorage.setItem('lcs1f_blocked_until', data.blockedUntil.toString());
+                            showBlockedScreen(data.blockedUntil);
+                            return;
+                        }
+                        
+                        // Si ya completó el examen con 180+
+                        if (data.completed && data.score >= CONFIG.passingScore) {
+                            console.log("✅ Examen ya aprobado con:", data.score);
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error verificando bloqueo en Firebase:", error);
+                }
+            }
+            
+            // Si no hay bloqueo en Firebase, verificar localStorage
             const localBlocked = localStorage.getItem('lcs1f_blocked_until');
             if (localBlocked && Date.now() < parseInt(localBlocked)) {
                 showBlockedScreen(parseInt(localBlocked));
@@ -670,17 +701,24 @@
         }
 
         // =====================================================
-        // FUNCIÓN: Guardar progreso en Firebase
+        // FUNCIÓN CORREGIDA: Guardar progreso Y bloqueo en Firebase
         // =====================================================
         async function saveExamProgressToFirebase(userId, score, passed) {
             try {
                 const progressRef = window.ref(window.db, `users/${userId}/lc_progress/${CONFIG.examKey}`);
-                const dataToSave = {
+                
+                let dataToSave = {
                     score: score,
                     completed: passed,
                     completedAt: passed ? new Date().toISOString() : null,
                     lastAttempt: new Date().toISOString()
                 };
+                
+                // Si no aprobó, guardar el bloqueo también
+                if (!passed) {
+                    const blockedUntil = Date.now() + CONFIG.blockDuration;
+                    dataToSave.blockedUntil = blockedUntil;
+                }
                 
                 await window.set(progressRef, dataToSave);
                 
@@ -825,9 +863,6 @@
 
         submitBtn.addEventListener('click', submitExam);
 
-        // =====================================================
-        // FUNCIÓN: Submit Exam (muestra resultados inmediato)
-        // =====================================================
         async function submitExam() {
             if (examFinished) return;
             
