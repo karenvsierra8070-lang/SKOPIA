@@ -15,8 +15,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-        // AÑADIDO: Importar Database para sincronizar entre dispositivos
-        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
+        import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
@@ -34,17 +33,21 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getDatabase(app); // Inicializar DB
+        const db = getDatabase(app);
+        
         window.auth = auth;
         window.db = db;
         window.ref = ref;
+        window.set = set;
         window.get = get;
+        window.onValue = onValue;
 
         onAuthStateChanged(auth, (user) => {
             if (!user) {
                 window.location.href = 'index.html';
                 return;
             }
+            window.currentUser = user;
             window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
         });
     </script>
@@ -86,6 +89,43 @@
             flex-direction: column;
             overflow-x: hidden;
             position: relative;
+        }
+
+        /* Pantalla de carga */
+        .loading-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bosque-fondo);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(190, 192, 146, 0.3);
+            border-top-color: var(--color-oliva-claro);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            font-size: 1.1rem;
+            color: var(--color-oliva-claro);
         }
 
         /* --- NAVBAR MODERNA --- */
@@ -179,17 +219,12 @@
             height: 100vh;
             overflow: hidden;
             background: 
-                /* Imagen de fondo con transparencia */
-                url('0401b62baa6a8ddb9327432e365369a5.jpg') center/cover no-repeat,
-                /* Gradientes superpuestos para mantener la atmósfera */
                 radial-gradient(ellipse at 20% 80%, rgba(46, 125, 50, 0.15) 0%, transparent 50%),
                 radial-gradient(ellipse at 80% 20%, rgba(46, 125, 50, 0.1) 0%, transparent 50%),
                 radial-gradient(ellipse at 50% 50%, rgba(255, 235, 59, 0.05) 0%, transparent 70%),
-                linear-gradient(180deg, rgba(15, 31, 15, 0.7) 0%, rgba(10, 15, 10, 0.7) 100%);
-            /* Ajustamos la opacidad de la imagen de fondo */
+                linear-gradient(180deg, rgba(15, 31, 15, 0.9) 0%, rgba(10, 15, 10, 0.9) 100%);
         }
 
-        /* Añadimos una capa adicional para controlar la transparencia de la imagen */
         .forest-container::before {
             content: '';
             position: absolute;
@@ -197,7 +232,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(15, 31, 15, 0.4); /* Capa semitransparente para oscurecer la imagen */
+            background: rgba(15, 31, 15, 0.4);
             z-index: 1;
             pointer-events: none;
         }
@@ -222,20 +257,10 @@
         }
 
         @keyframes floatUp {
-            0% {
-                transform: translateY(100vh) scale(0);
-                opacity: 0;
-            }
-            10% {
-                opacity: 0.8;
-            }
-            90% {
-                opacity: 0.8;
-            }
-            100% {
-                transform: translateY(-10vh) scale(1.5);
-                opacity: 0;
-            }
+            0% { transform: translateY(100vh) scale(0); opacity: 0; }
+            10% { opacity: 0.8; }
+            90% { opacity: 0.8; }
+            100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
         }
 
         /* --- CAMINO MODERNO Y GRANDE --- */
@@ -256,14 +281,10 @@
             top: 0;
             width: 200px;
             height: 0;
-            background: linear-gradient(180deg, 
-                var(--camino-color) 0%, 
-                var(--camino-borde) 100%);
+            background: linear-gradient(180deg, var(--camino-color) 0%, var(--camino-borde) 100%);
             transform: translateX(-50%);
             border-radius: 100px 100px 0 0;
-            box-shadow: 
-                inset 0 -10px 30px rgba(0, 0, 0, 0.4),
-                0 10px 40px rgba(0, 0, 0, 0.3);
+            box-shadow: inset 0 -10px 30px rgba(0, 0, 0, 0.4), 0 10px 40px rgba(0, 0, 0, 0.3);
             transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
@@ -276,12 +297,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: 
-                repeating-linear-gradient(0deg, 
-                    transparent, 
-                    transparent 30px, 
-                    rgba(139, 115, 85, 0.1) 30px, 
-                    rgba(139, 115, 85, 0.1) 60px);
+            background: repeating-linear-gradient(0deg, transparent, transparent 30px, rgba(139, 115, 85, 0.1) 30px, rgba(139, 115, 85, 0.1) 60px);
             border-radius: 100px 100px 0 0;
         }
 
@@ -291,18 +307,9 @@
         }
 
         @keyframes pathReveal {
-            0% {
-                height: 0;
-                border-radius: 100px 100px 0 0;
-            }
-            50% {
-                height: 50%;
-                border-radius: 100px;
-            }
-            100% {
-                height: 100%;
-                border-radius: 100px;
-            }
+            0% { height: 0; border-radius: 100px 100px 0 0; }
+            50% { height: 50%; border-radius: 100px; }
+            100% { height: 100%; border-radius: 100px; }
         }
 
         /* --- EFECTOS DE BRILLO EN EL CAMINO --- */
@@ -312,9 +319,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: radial-gradient(ellipse at center, 
-                rgba(255, 235, 59, 0.3) 0%, 
-                transparent 70%);
+            background: radial-gradient(ellipse at center, rgba(255, 235, 59, 0.3) 0%, transparent 70%);
             opacity: 0;
             animation: glowPulse 3s ease-in-out infinite;
         }
@@ -365,10 +370,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            box-shadow: 
-                0 15px 35px rgba(0, 0, 0, 0.4),
-                inset 0 -5px 15px rgba(0, 0, 0, 0.3),
-                0 0 0 3px rgba(255, 255, 255, 0.2);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), inset 0 -5px 15px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.2);
             position: relative;
             overflow: hidden;
             transition: all 0.4s ease;
@@ -381,10 +383,7 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: linear-gradient(45deg, 
-                transparent 30%, 
-                rgba(255, 255, 255, 0.2) 50%, 
-                transparent 70%);
+            background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.2) 50%, transparent 70%);
             animation: shimmer 4s infinite linear;
         }
 
@@ -395,10 +394,7 @@
 
         .forest-node:hover .forest-node-circle {
             transform: scale(1.15);
-            box-shadow: 
-                0 20px 45px rgba(0, 0, 0, 0.5),
-                inset 0 -5px 15px rgba(0, 0, 0, 0.3),
-                0 0 0 5px rgba(255, 255, 255, 0.4);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), inset 0 -5px 15px rgba(0, 0, 0, 0.3), 0 0 0 5px rgba(255, 255, 255, 0.4);
         }
 
         .forest-node.locked .forest-node-circle {
@@ -409,10 +405,7 @@
 
         .forest-node.completed .forest-node-circle {
             background: linear-gradient(135deg, var(--color-verde) 0%, #66BB6A 100%);
-            box-shadow: 
-                0 15px 35px rgba(76, 175, 80, 0.4),
-                inset 0 -5px 15px rgba(0, 0, 0, 0.3),
-                0 0 0 3px rgba(255, 255, 255, 0.3);
+            box-shadow: 0 15px 35px rgba(76, 175, 80, 0.4), inset 0 -5px 15px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(255, 255, 255, 0.3);
         }
 
         .node-icon {
@@ -458,6 +451,22 @@
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
             margin-top: 8px;
             max-width: 120px;
+        }
+
+        .node-score {
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, var(--color-verde) 0%, #388E3C 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            z-index: 4;
+            white-space: nowrap;
         }
 
         .lock-icon {
@@ -536,14 +545,8 @@
         }
 
         @keyframes arrowBounce {
-            0%, 100% { 
-                opacity: 0.3; 
-                transform: translateX(-50%) translateY(0); 
-            }
-            50% { 
-                opacity: 0.8; 
-                transform: translateX(-50%) translateY(5px); 
-            }
+            0%, 100% { opacity: 0.3; transform: translateX(-50%) translateY(0); }
+            50% { opacity: 0.8; transform: translateX(-50%) translateY(5px); }
         }
 
         .arrow-1 { top: 20%; animation-delay: 0.5s; }
@@ -687,51 +690,43 @@
         }
 
         @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-50%) translateX(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(-50%) translateX(0);
-            }
+            from { opacity: 0; transform: translateY(-50%) translateX(20px); }
+            to { opacity: 1; transform: translateY(-50%) translateX(0); }
         }
 
         .panel-header { 
-            display:flex; 
-            justify-content:space-between; 
-            align-items:center; 
-            margin-bottom:20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px; 
             padding-bottom: 15px;
             border-bottom: 1px solid rgba(190, 192, 146, 0.2);
         }
         .panel-header h3 { 
-            margin:0; 
-            font-size:1.8rem; 
-            color:var(--color-oliva-claro); 
+            margin: 0; 
+            font-size: 1.8rem; 
+            color: var(--color-oliva-claro); 
             font-weight: 600;
         }
         .close-panel { 
-            background:none; 
-            border:none; 
-            font-size:1.6rem; 
-            cursor:pointer; 
-            color:var(--color-oliva-claro); 
+            background: none; 
+            border: none; 
+            font-size: 1.6rem; 
+            cursor: pointer; 
+            color: var(--color-oliva-claro); 
             transition: transform 0.3s ease;
         }
-        .close-panel:hover {
-            transform: rotate(90deg);
-        }
+        .close-panel:hover { transform: rotate(90deg); }
 
         .mission-row { 
-            padding:16px; 
-            border-radius:12px; 
-            margin-bottom:12px; 
-            background:rgba(190, 192, 146, 0.1); 
+            padding: 16px; 
+            border-radius: 12px; 
+            margin-bottom: 12px; 
+            background: rgba(190, 192, 146, 0.1); 
             box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
-            display:flex; 
-            justify-content:space-between; 
-            align-items:center; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
             transition: all 0.3s ease;
         }
         .mission-row:hover {
@@ -739,9 +734,9 @@
             transform: translateX(-5px);
         }
         .mission-row.completed { 
-            opacity:0.7; 
-            text-decoration:line-through; 
-            background:rgba(76, 175, 80, 0.15); 
+            opacity: 0.7; 
+            text-decoration: line-through; 
+            background: rgba(76, 175, 80, 0.15); 
         }
 
         .toast {
@@ -763,22 +758,16 @@
         }
 
         @keyframes toastSlide {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
 
         .toast.show { display: block; }
         .info { 
             font-family: 'Poppins', sans-serif; 
-            color:var(--color-crema); 
-            font-size:1rem; 
-            margin-bottom:12px; 
+            color: var(--color-crema); 
+            font-size: 1rem; 
+            margin-bottom: 12px; 
             line-height: 1.5;
         }
 
@@ -807,10 +796,15 @@
             .forest-node { width: 120px; height: 120px; }
         }
     </style>
-    <script type="module" src="./global-settings.js"></script>
 </head>
 
 <body>
+    <!-- Pantalla de carga -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Cargando tu progreso...</div>
+    </div>
+
     <nav class="navbar">
         <div class="hamburger" id="hamburger-menu"><span></span><span></span><span></span></div>
         <div class="user-dropdown" id="user-dropdown">
@@ -866,6 +860,7 @@
                         <i class="fas fa-lightbulb node-icon"></i>
                     </div>
                     <div class="node-label">Ideas principales</div>
+                    <div class="node-score" id="score-1" style="display: none;"></div>
                 </div>
                 
                 <div class="forest-node node-2 locked" id="node-2" data-level="2" data-target="LCS2.html">
@@ -875,6 +870,7 @@
                         <i class="fas fa-lock lock-icon"></i>
                     </div>
                     <div class="node-label">Ideas secundarias</div>
+                    <div class="node-score" id="score-2" style="display: none;"></div>
                 </div>
                 
                 <div class="forest-node node-3 locked" id="node-3" data-level="3" data-target="LCS3.html">
@@ -884,6 +880,7 @@
                         <i class="fas fa-lock lock-icon"></i>
                     </div>
                     <div class="node-label">Parafraseo</div>
+                    <div class="node-score" id="score-3" style="display: none;"></div>
                 </div>
                 
                 <div class="forest-node node-4 locked" id="node-4" data-level="4" data-target="LCS4.html">
@@ -893,6 +890,7 @@
                         <i class="fas fa-lock lock-icon"></i>
                     </div>
                     <div class="node-label">Referencias textuales</div>
+                    <div class="node-score" id="score-4" style="display: none;"></div>
                 </div>
                 
                 <div class="forest-node node-5 locked" id="node-5" data-level="5" data-target="LCS5.html">
@@ -902,6 +900,7 @@
                         <i class="fas fa-lock lock-icon"></i>
                     </div>
                     <div class="node-label">Evaluación final</div>
+                    <div class="node-score" id="score-5" style="display: none;"></div>
                 </div>
             </div>
         </div>
@@ -909,41 +908,24 @@
         <!-- Panda guía moderno -->
         <div class="panda-guide">
             <svg class="panda-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                <!-- Cuerpo principal -->
                 <ellipse cx="100" cy="130" rx="45" ry="35" fill="#ffffff" stroke="#333333" stroke-width="2"/>
-                
-                <!-- Cabeza -->
                 <circle cx="100" cy="80" r="40" fill="#ffffff" stroke="#333333" stroke-width="2"/>
-                
-                <!-- Orejas -->
                 <circle cx="70" cy="60" r="15" fill="#ffffff" stroke="#333333" stroke-width="2"/>
                 <circle cx="130" cy="60" r="15" fill="#ffffff" stroke="#333333" stroke-width="2"/>
                 <circle cx="70" cy="60" r="8" fill="#333333"/>
                 <circle cx="130" cy="60" r="8" fill="#333333"/>
                 <circle cx="70" cy="60" r="4" fill="#ff69b4"/>
                 <circle cx="130" cy="60" r="4" fill="#ff69b4"/>
-                
-                <!-- Ojos -->
                 <ellipse cx="85" cy="75" rx="8" ry="10" fill="#333333"/>
                 <ellipse cx="115" cy="75" rx="8" ry="10" fill="#333333"/>
                 <circle cx="87" cy="73" r="3" fill="#ffffff"/>
                 <circle cx="117" cy="73" r="3" fill="#ffffff"/>
-                
-                <!-- Nariz -->
                 <ellipse cx="100" cy="85" rx="6" ry="4" fill="#333333"/>
-                
-                <!-- Boca -->
                 <path d="M 90 95 Q 100 105 110 95" stroke="#333333" stroke-width="2" fill="none" stroke-linecap="round"/>
-                
-                <!-- Brazos -->
                 <ellipse cx="60" cy="120" rx="12" ry="25" fill="#ffffff" stroke="#333333" stroke-width="2" transform="rotate(-30 60 120)"/>
                 <ellipse cx="140" cy="120" rx="12" ry="25" fill="#ffffff" stroke="#333333" stroke-width="2" transform="rotate(30 140 120)"/>
-                
-                <!-- Patas -->
                 <ellipse cx="75" cy="155" rx="10" ry="20" fill="#ffffff" stroke="#333333" stroke-width="2"/>
                 <ellipse cx="125" cy="155" rx="10" ry="20" fill="#ffffff" stroke="#333333" stroke-width="2"/>
-                
-                <!-- Patches (manchas características) -->
                 <ellipse cx="85" cy="130" rx="8" ry="12" fill="#333333" opacity="0.8"/>
                 <ellipse cx="115" cy="125" rx="6" ry="10" fill="#333333" opacity="0.8"/>
                 <circle cx="95" cy="145" r="5" fill="#333333" opacity="0.7"/>
@@ -956,7 +938,6 @@
         <button id="btn-misiones" title="Misiones">🎯</button>
         <button id="btn-nivel" title="Nivel actual">⭐</button>
         <button id="btn-progreso" title="Progreso">📊</button>
-        <button id="btn-analisis" title="Análisis">📈</button>
     </div>
 
     <div class="panel-box" id="panel-misiones" aria-hidden="true">
@@ -980,345 +961,387 @@
         </div>
         <div id="progreso-content"></div>
     </div>
-    <div class="panel-box" id="panel-analisis" aria-hidden="true">
-        <div class="panel-header">
-            <h3>Análisis (promedio 0–300)</h3>
-            <button class="close-panel" data-close="analisis">&times;</button>
-        </div>
-        <div id="analisis-content">
-            <div id="analisis-stats" style="margin-top:12px;"></div>
-        </div>
-    </div>
 
     <div class="toast" id="mission-toast" role="status" aria-live="polite"></div>
     <audio id="mission-sound" src="mission.mp3" preload="auto"></audio>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log("DOM Cargado. Inicializando Camino Moderno del Bosque...");
+    <script type="module">
+        import { ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
+        import { signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
 
-            // --- CONSTANTES Y VARIABLES ---
-            const MISSIONS_KEY = 'skopia_missions_v1';
-            const USER_PROFILE_KEY = 'skopia_user_profile_v1';
-            const GAME_PROGRESS_KEY = 'skopia_game_progress_v1';
-            const LC_PROGRESS_KEY = 'skopia_lc_progress_v1';
-            let toastTimer = null;
+        // === CONSTANTES ===
+        const PASSING_SCORE = 180;
+        const LC_PROGRESS_KEY = 'skopia_lc_progress_local';
+        
+        // Estructura de niveles
+        const LEVELS_CONFIG = {
+            1: { exam: 'lcs1f', name: 'Ideas principales' },
+            2: { exam: 'lcs2f', name: 'Ideas secundarias' },
+            3: { exam: 'lcs3f', name: 'Parafraseo' },
+            4: { exam: 'lcs4f', name: 'Referencias textuales' },
+            5: { exam: 'lcs5f', name: 'Evaluación final' }
+        };
 
-            const missionsTemplate = [
-                { id: 1, title: "Completa tu primer examen", points: 50 },
-                { id: 2, title: "Logra al menos 180/300 en un examen", points: 80 },
-                { id: 3, title: "Lee toda la teoría de una lección", points: 40 },
-                { id: 4, title: "Termina una sesión de estudio sin salir", points: 50 },
-                { id: 5, title: "Gana tu primer juego", points: 50 },
-                { id: 6, title: "Usa una pista o ayuda en un juego", points: 30 },
-                { id: 7, title: "Repite un examen para mejorar tu nota", points: 50 },
-                { id: 8, title: "Cambia tu nombre de usuario", points: 40 },
-                { id: 9, title: "Acumula tus primeras 200 estrellas", points: 30 },
-                { id: 10, title: "Completa 3 misiones seguidas", points: 50 },
-                { id: 11, title: "Logra 240/300 en un examen", points: 150 },
-                { id: 12, title: "Completa un examen sin errores (300/300)", points: 200 },
-                { id: 100, title: "🏆 Maestro del Saber Pro: completa todo el sistema", points: 200 }
-            ];
+        const LEVELS = [
+            { idx: 1, name: "Novato/a", min: 0, max: 299 }, 
+            { idx: 2, name: "Aprendiz/a", min: 300, max: 799 },
+            { idx: 3, name: "Explorador/a", min: 800, max: 1499 }, 
+            { idx: 4, name: "Analista", min: 1500, max: 2499 },
+            { idx: 5, name: "Estratega", min: 2500, max: 3699 }, 
+            { idx: 6, name: "Sabio/a", min: 3700, max: 4999 },
+            { idx: 7, name: "Maestro/a", min: 5000, max: 6499 }, 
+            { idx: 8, name: "Élite", min: 6500, max: 7999 },
+            { idx: 9, name: "Leyenda", min: 8000, max: 9499 }, 
+            { idx: 10, name: "Rey/Reina Skópia", min: 9500, max: Infinity }
+        ];
 
-            const LEVELS = [
-                { idx: 1, name: "Novato/a", min: 0, max: 299 }, 
-                { idx: 2, name: "Aprendiz/a", min: 300, max: 799 },
-                { idx: 3, name: "Explorador/a", min: 800, max: 1499 }, 
-                { idx: 4, name: "Analista", min: 1500, max: 2499 },
-                { idx: 5, name: "Estratega", min: 2500, max: 3699 }, 
-                { idx: 6, name: "Sabio/a", min: 3700, max: 4999 },
-                { idx: 7, name: "Maestro/a", min: 5000, max: 6499 }, 
-                { idx: 8, name: "Élite", min: 6500, max: 7999 },
-                { idx: 9, name: "Leyenda", min: 8000, max: 9499 }, 
-                { idx: 10, name: "Rey/Reina Skópia", min: 9500, max: Infinity }
-            ];
+        const missionsTemplate = [
+            { id: 1, title: "Completa tu primer examen", points: 50 },
+            { id: 2, title: "Logra al menos 180/300 en un examen", points: 80 },
+            { id: 3, title: "Completa todos los niveles de LC", points: 500 },
+            { id: 4, title: "Logra 240/300 en un examen", points: 150 },
+            { id: 5, title: "Completa un examen sin errores (300/300)", points: 200 }
+        ];
 
-            // --- FUNCIONES PRINCIPALES ---
+        // === VARIABLES GLOBALES ===
+        let lcProgress = {};
+        let toastTimer = null;
+        let currentUser = null;
 
-            function initMissions() {
-                if (!localStorage.getItem(MISSIONS_KEY)) {
-                    const initial = missionsTemplate.map(m => ({ ...m, completed: false }));
-                    localStorage.setItem(MISSIONS_KEY, JSON.stringify(initial));
-                    console.log("Misiones inicializadas.");
-                }
-            }
-            function initUserProfile() {
-                if (!localStorage.getItem(USER_PROFILE_KEY)) {
-                    const initial = { originalEmail: "", nameChangeMissionCompleted: false };
-                    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(initial));
-                }
-            }
-            
-            // MODIFICADO: Función para sincronizar progreso con Firebase
-            async function syncProgressFromFirebase(user) {
-                const uid = user.uid;
-                const db = window.db;
-                if (!db) return;
+        // === FUNCIONES DE PROGRESO ===
 
-                try {
-                    const scoresRef = window.ref(db, `users/${uid}/exam_scores`);
-                    const snapshot = await window.get(scoresRef);
-                    const scores = snapshot.exists() ? snapshot.val() : {};
-                    
-                    console.log("Notas sincronizadas desde Firebase:", scores);
-
-                    // 1. Verificar redirección a LC2.html
-                    // Si LCS5F está completado con 180 o más
-                    if (scores.LCS5F && scores.LCS5F.score >= 180) {
-                        console.log("Nivel 5 completado con 180+. Redirigiendo a LC2.html");
-                        // Mostrar transición o esperar un momento
-                        setTimeout(() => { window.location.href = 'LC2.html'; }, 1500);
-                        return;
-                    }
-
-                    // 2. Actualizar nodos del mapa
-                    updateMapNodes(scores);
-
-                } catch (error) {
-                    console.error("Error sincronizando progreso:", error);
-                    showMissionToast("Error al sincronizar progreso.", 3000);
-                }
-            }
-
-            // MODIFICADO: Actualizar nodos basados en notas de Firebase
-            function updateMapNodes(scores) {
-                // Definir estructura de requisitos
-                // Nodo 1: Siempre desbloqueado. Se completa con LCS1F >= 180.
-                // Nodo 2: Se desbloquea con LCS1F >= 180. Se completa con LCS2F >= 180.
-                // Nodo 3: Se desbloquea con LCS2F >= 180. Se completa con LCS3F >= 180.
-                // Nodo 4: Se desbloquea con LCS3F >= 180. Se completa con LCS4F >= 180.
-                // Nodo 5: Se desbloquea con LCS4F >= 180. Se completa con LCS5F >= 180.
-
-                for (let i = 1; i <= 5; i++) {
-                    const node = document.getElementById(`node-${i}`);
-                    if (!node) continue;
-
-                    // Identificadores de examen
-                    const currentExamId = `LCS${i}F`; // Examen de este nivel
-                    const prevExamId = `LCS${i-1}F`; // Examen del nivel anterior
-                    
-                    let isUnlocked = false;
-                    let isCompleted = false;
-
-                    // Lógica de Desbloqueo
-                    if (i === 1) {
-                        isUnlocked = true; // El primero siempre desbloqueado
-                    } else {
-                        // Requiere nota del examen anterior
-                        if (scores[prevExamId] && scores[prevExamId].score >= 180) {
-                            isUnlocked = true;
-                        }
-                    }
-
-                    // Lógica de Completado
-                    if (scores[currentExamId] && scores[currentExamId].score >= 180) {
-                        isCompleted = true;
-                    }
-
-                    // Aplicar clases CSS
-                    node.classList.remove('locked', 'completed', 'visible');
-                    
-                    // Mostrar nodo (animación)
-                    setTimeout(() => node.classList.add('visible'), 100 * i);
-
-                    if (isCompleted) {
-                        node.classList.add('completed');
-                        // Ocultar candado si existe
-                        const lock = node.querySelector('.lock-icon');
-                        if (lock) lock.style.display = 'none';
-                    } else if (isUnlocked) {
-                        node.classList.remove('locked');
-                        const lock = node.querySelector('.lock-icon');
-                        if (lock) lock.style.display = 'none';
-                    } else {
-                        node.classList.add('locked');
-                        const lock = node.querySelector('.lock-icon');
-                        if (lock) lock.style.display = 'block'; // Asegurar que el candado esté visible
-                    }
-                }
-            }
-
-            function completeMission(id) {
-                console.log(`>>> Llamada a completeMission con ID: ${id}`);
-                const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
-                const mission = data.find(m => m.id === id);
-                if (mission && !mission.completed) {
-                    mission.completed = true;
-                    localStorage.setItem(MISSIONS_KEY, JSON.stringify(data));
-                    console.log(`!!! MISIÓN COMPLETADA: ID=${id}, Titulo="${mission.title}", Puntos=${mission.points} !!!`);
-                    
-                    document.getElementById('mission-sound').play().catch(e => console.log("Error al reproducir sonido:", e));
-                    showMissionToast(`¡Misión completada: ${mission.title} (+${mission.points}⭐)!`, 5000);
-                    updateAllDisplays();
-                } else {
-                    console.log(`>>> Misión ${id} ya estaba completada o no existe.`);
-                }
-            }
-
-            function showMissionToast(text, ms = 60000) {
-                const toast = document.getElementById('mission-toast');
-                toast.innerHTML = `<strong>${text}</strong>`;
-                toast.classList.add('show');
-                if (toastTimer) clearTimeout(toastTimer);
-                toastTimer = setTimeout(() => toast.classList.remove('show'), ms);
-            }
-
-            function getTotalPoints() {
-                const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
-                return data.reduce((sum, m) => sum + (m.completed ? m.points : 0), 0);
-            }
-            function getLevelFromPoints(total) {
-                for (let i = LEVELS.length - 1; i >= 0; i--) if (total >= LEVELS[i].min) return LEVELS[i];
-                return LEVELS[0];
-            }
-            function getCompletedCount() {
-                return JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").filter(m => m.completed).length;
-            }
-
-            // --- RENDER FUNCTIONS ---
-            function renderMissions() {
-                const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
-                const container = document.getElementById('misiones-content');
-                container.innerHTML = '';
-                const incompleteMissions = data.filter(m => !m.completed).slice(0, 3);
-                if (incompleteMissions.length === 0) {
-                    container.innerHTML = '<div class="info">¡Felicidades! Has completado todas las misiones.</div>';
-                    return;
-                }
-                incompleteMissions.forEach(m => {
-                    const div = document.createElement('div');
-                    div.className = 'mission-row';
-                    div.innerHTML = `<div style="flex:1"><div style="font-weight:600; color:var(--color-crema)">${m.id}. ${m.title}</div><div style="font-size:1rem; color:var(--color-oliva-claro)">${m.points} ⭐</div></div>`;
-                    container.appendChild(div);
-                });
-            }
-            function renderLevel() {
-                const total = getTotalPoints();
-                const level = getLevelFromPoints(total);
-                const neededForNext = (level.max === Infinity) ? 0 : (level.max - total + 1);
-                const progressPct = (level.max === Infinity) ? 100 : Math.min(100, Math.round(((total - level.min) / (level.max - level.min)) * 100));
-                document.getElementById('nivel-content').innerHTML = `
-                    <div class="info"><strong>Nivel:</strong> ${level.name} (${level.idx})</div>
-                    <div class="info"><strong>Puntos:</strong> ${total} ⭐</div>
-                    <div class="info"><strong>Progreso:</strong> ${progressPct}%</div>
-                    <div style="background:rgba(190, 192, 146, 0.2);border-radius:12px;padding:10px;margin-top:15px"><div style="height:14px;background:linear-gradient(90deg,var(--color-oliva-claro),var(--color-oliva-medio));width:${progressPct}%;border-radius:10px"></div></div>
-                    ${level.max === Infinity ? '<div class="info" style="margin-top:15px">¡Nivel máximo!</div>' : `<div class="info" style="margin-top:15px">Para subir: ${neededForNext} ⭐</div>`}
-                `;
-            }
-            function renderProgress() {
-                const total = getTotalPoints();
-                const topTarget = 9500;
-                const pct = Math.min(100, Math.round((total / topTarget) * 100));
-                document.getElementById('progreso-content').innerHTML = `
-                    <div class="info"><strong>Puntos:</strong> ${total} ⭐</div>
-                    <div class="info"><strong>Progreso Global:</strong> ${pct}%</div>
-                    <div style="background:rgba(190, 192, 146, 0.2);border-radius:12px;padding:10px;margin-top:15px"><div style="height:14px;background:linear-gradient(90deg,var(--color-oliva-claro),var(--color-oliva-medio));width:${pct}%;border-radius:10px"></div></div>
-                    <div class="info" style="margin-top:15px"><strong>Misiones:</strong> ${getCompletedCount()}/100</div>
-                `;
-            }
-            function renderAnalysis() {
-                document.getElementById('analisis-stats').innerHTML = '<div class="info">Análisis de exámenes (pendiente de implementar).</div>';
-            }
-            function updateAllDisplays() {
-                renderMissions(); renderLevel(); renderProgress(); renderAnalysis();
-            }
-            function closeAllPanels() {
-                document.querySelectorAll('.panel-box').forEach(p => p.classList.remove('active'));
-            }
-
-            // --- EVENT LISTENERS ---
-            window.addEventListener('userReady', (e) => {
-                const user = e.detail.user;
-                console.log("Evento 'userReady' recibido para:", user.email);
+        // Cargar progreso desde Firebase
+        async function loadProgressFromFirebase(userId) {
+            try {
+                const progressRef = ref(window.db, `users/${userId}/lc_progress`);
+                const snapshot = await get(progressRef);
                 
-                // Sincronizar progreso desde Firebase (esto maneja desbloqueos y redirección)
-                syncProgressFromFirebase(user);
-
-                // Lógica de misiones local
-                const userProfile = JSON.parse(localStorage.getItem(USER_PROFILE_KEY) || "{}");
-
-                if (!userProfile.originalEmail) {
-                    userProfile.originalEmail = user.email;
-                    userProfile.nameChangeMissionCompleted = false;
-                    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
-                    console.log("Perfil de usuario inicializado por primera vez. Email original guardado:", userProfile.originalEmail);
-                }
-
-                if (!userProfile.nameChangeMissionCompleted) {
-                    console.log("Comprobando misión 8 (cambiar nombre)...");
-                    const hasChangedName = user.displayName && user.displayName !== userProfile.originalEmail;
-                    if (hasChangedName) {
-                        console.log(`¡Cambio de nombre detectado! Original: "${userProfile.originalEmail}", Nuevo: "${user.displayName}". Completando misión 8.`);
-                        completeMission(8);
-                        userProfile.nameChangeMissionCompleted = true;
-                        localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
-                    } else {
-                        console.log("No se detectó cambio de nombre. DisplayName actual:", user.displayName);
-                    }
+                if (snapshot.exists()) {
+                    lcProgress = snapshot.val();
+                    console.log("Progreso cargado desde Firebase:", lcProgress);
                 } else {
-                    console.log("Misión 8 ya fue completada anteriormente.");
+                    lcProgress = {};
+                    console.log("No hay progreso en Firebase, iniciando nuevo.");
                 }
-            });
+                
+                // También guardar en localStorage como respaldo
+                localStorage.setItem(LC_PROGRESS_KEY, JSON.stringify(lcProgress));
+                
+                return lcProgress;
+            } catch (error) {
+                console.error("Error cargando progreso de Firebase:", error);
+                // Intentar cargar desde localStorage
+                const localData = localStorage.getItem(LC_PROGRESS_KEY);
+                if (localData) {
+                    lcProgress = JSON.parse(localData);
+                }
+                return lcProgress;
+            }
+        }
 
-            document.getElementById('hamburger-menu').addEventListener('click', () => {
-                document.getElementById('user-dropdown').classList.toggle('active');
-            });
-            document.getElementById('logout-btn').addEventListener('click', () => {
-                import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
-                    signOut(window.auth).then(() => window.location.href = 'index.html');
-                });
-            });
-            window.addEventListener('click', (event) => {
-                if (!event.target.closest('.navbar')) document.getElementById('user-dropdown').classList.remove('active');
-                const isIcon = event.target.closest('.floating-icons');
-                const isPanel = event.target.closest('.panel-box');
-                if (!isIcon && !isPanel) closeAllPanels();
-            });
-            document.getElementById('close-btn').addEventListener('click', () => window.location.href = 'modulos.html');
+        // Verificar si un examen fue completado con la puntuación requerida
+        function isExamCompleted(examKey, minScore = PASSING_SCORE) {
+            const examData = lcProgress[examKey];
+            if (!examData) return false;
+            return examData.completed === true && examData.score >= minScore;
+        }
 
-            // Event listeners para los nodos del mapa
-            document.querySelectorAll('.forest-node').forEach(node => {
-                node.addEventListener('click', function() {
-                    const level = parseInt(this.dataset.level);
-                    const target = this.dataset.target;
-                    
-                    // Verificar si el nivel está bloqueado
-                    if (this.classList.contains('locked')) {
-                        showMissionToast("🔒 Debes completar el examen anterior con 180+ puntos para desbloquear este nivel.", 3000);
-                        return;
-                    }
-                    
-                    // Si no está bloqueado, navegar
-                    window.location.href = target;
-                });
-            });
-
-            // **EVENT LISTENERS DE ICONOS (FUNCIONANDO)**
-            document.getElementById('btn-misiones').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-misiones').classList.add('active'); renderMissions(); });
-            document.getElementById('btn-nivel').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-nivel').classList.add('active'); renderLevel(); });
-            document.getElementById('btn-progreso').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-progreso').classList.add('active'); renderProgress(); });
-            document.getElementById('btn-analisis').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-analisis').classList.add('active'); renderAnalysis(); });
-            document.querySelectorAll('.close-panel').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    document.getElementById('panel-' + e.target.getAttribute('data-close')).classList.remove('active');
-                });
-            });
-
-            // --- INICIALIZACIÓN Y ANIMACIÓN ---
-            initMissions(); 
-            initUserProfile(); 
-            updateAllDisplays();
+        // Verificar si un nivel está desbloqueado
+        function isLevelUnlocked(level) {
+            if (level === 1) return true; // Nivel 1 siempre desbloqueado
             
+            const previousExam = LEVELS_CONFIG[level - 1]?.exam;
+            if (!previousExam) return false;
+            
+            return isExamCompleted(previousExam);
+        }
+
+        // Verificar si el módulo completo está terminado
+        function isModuleCompleted() {
+            return isExamCompleted('lcs5f');
+        }
+
+        // Actualizar la UI de los nodos
+        function updateMapNodes() {
+            for (let i = 1; i <= 5; i++) {
+                const node = document.getElementById(`node-${i}`);
+                const scoreEl = document.getElementById(`score-${i}`);
+                if (!node) continue;
+
+                const examKey = LEVELS_CONFIG[i].exam;
+                const examData = lcProgress[examKey];
+                const isCompleted = examData && examData.completed && examData.score >= PASSING_SCORE;
+                const isUnlocked = isLevelUnlocked(i);
+
+                // Remover clases previas
+                node.classList.remove('locked', 'completed');
+
+                // Remover ícono de candado previo si existe
+                const existingLock = node.querySelector('.lock-icon');
+                if (existingLock) existingLock.remove();
+
+                if (isCompleted) {
+                    node.classList.add('completed');
+                    // Mostrar puntuación
+                    if (scoreEl && examData) {
+                        scoreEl.textContent = `${examData.score}/300`;
+                        scoreEl.style.display = 'block';
+                    }
+                } else if (!isUnlocked) {
+                    node.classList.add('locked');
+                    // Agregar candado si no existe
+                    const circle = node.querySelector('.forest-node-circle');
+                    if (circle && !circle.querySelector('.lock-icon')) {
+                        const lockIcon = document.createElement('i');
+                        lockIcon.className = 'fas fa-lock lock-icon';
+                        circle.appendChild(lockIcon);
+                    }
+                    if (scoreEl) scoreEl.style.display = 'none';
+                } else {
+                    // Desbloqueado pero no completado
+                    if (scoreEl) scoreEl.style.display = 'none';
+                }
+            }
+        }
+
+        // Verificar si debe redirigir a LC2.html
+        function checkModuleCompletion() {
+            if (isModuleCompleted()) {
+                console.log("¡Módulo completado! Redirigiendo a LC2.html...");
+                // Guardar flag de módulo completado
+                localStorage.setItem('lc1_module_completed', 'true');
+                // Redirigir
+                window.location.href = 'LC2.html';
+                return true;
+            }
+            return false;
+        }
+
+        // === FUNCIONES DE UI ===
+
+        function showMissionToast(text, ms = 5000) {
+            const toast = document.getElementById('mission-toast');
+            toast.innerHTML = `<strong>${text}</strong>`;
+            toast.classList.add('show');
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), ms);
+        }
+
+        function hideLoading() {
+            const loadingScreen = document.getElementById('loadingScreen');
+            loadingScreen.classList.add('hidden');
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 500);
+        }
+
+        function getTotalPoints() {
+            let total = 0;
+            // Puntos por exámenes completados
+            for (let i = 1; i <= 5; i++) {
+                const examKey = LEVELS_CONFIG[i].exam;
+                if (isExamCompleted(examKey)) {
+                    const examData = lcProgress[examKey];
+                    if (examData && examData.score) {
+                        total += Math.round(examData.score / 3); // Puntos basados en score
+                    }
+                }
+            }
+            return total;
+        }
+
+        function getLevelFromPoints(total) {
+            for (let i = LEVELS.length - 1; i >= 0; i--) {
+                if (total >= LEVELS[i].min) return LEVELS[i];
+            }
+            return LEVELS[0];
+        }
+
+        // === RENDER FUNCTIONS ===
+
+        function renderMissions() {
+            const container = document.getElementById('misiones-content');
+            container.innerHTML = '';
+            
+            const completedExams = Object.keys(lcProgress).filter(key => 
+                lcProgress[key].completed && lcProgress[key].score >= PASSING_SCORE
+            ).length;
+
+            let html = '';
+            
+            // Misión 1: Primer examen
+            html += `<div class="mission-row ${completedExams >= 1 ? 'completed' : ''}">
+                <div><strong>1.</strong> Completa tu primer examen</div>
+                <div>${completedExams >= 1 ? '✅' : '⏳'}</div>
+            </div>`;
+            
+            // Misión 2: 180+ puntos
+            const has180 = Object.values(lcProgress).some(e => e.score >= 180);
+            html += `<div class="mission-row ${has180 ? 'completed' : ''}">
+                <div><strong>2.</strong> Logra al menos 180/300</div>
+                <div>${has180 ? '✅' : '⏳'}</div>
+            </div>`;
+            
+            // Misión 3: Completar módulo
+            html += `<div class="mission-row ${isModuleCompleted() ? 'completed' : ''}">
+                <div><strong>3.</strong> Completa todos los niveles</div>
+                <div>${isModuleCompleted() ? '✅' : '⏳'}</div>
+            </div>`;
+
+            container.innerHTML = html;
+        }
+
+        function renderLevel() {
+            const total = getTotalPoints();
+            const level = getLevelFromPoints(total);
+            const progressPct = level.max === Infinity ? 100 : Math.min(100, Math.round(((total - level.min) / (level.max - level.min)) * 100));
+            
+            document.getElementById('nivel-content').innerHTML = `
+                <div class="info"><strong>Nivel:</strong> ${level.name} (${level.idx})</div>
+                <div class="info"><strong>Puntos:</strong> ${total} ⭐</div>
+                <div class="info"><strong>Progreso:</strong> ${progressPct}%</div>
+                <div style="background:rgba(190, 192, 146, 0.2);border-radius:12px;padding:10px;margin-top:15px">
+                    <div style="height:14px;background:linear-gradient(90deg,var(--color-oliva-claro),var(--color-oliva-medio));width:${progressPct}%;border-radius:10px"></div>
+                </div>
+            `;
+        }
+
+        function renderProgress() {
+            const total = getTotalPoints();
+            const completedExams = Object.keys(lcProgress).filter(key => 
+                lcProgress[key].completed && lcProgress[key].score >= PASSING_SCORE
+            ).length;
+
+            document.getElementById('progreso-content').innerHTML = `
+                <div class="info"><strong>Puntos totales:</strong> ${total} ⭐</div>
+                <div class="info"><strong>Exámenes aprobados:</strong> ${completedExams}/5</div>
+                <div style="background:rgba(190, 192, 146, 0.2);border-radius:12px;padding:10px;margin-top:15px">
+                    <div style="height:14px;background:linear-gradient(90deg,var(--color-oliva-claro),var(--color-oliva-medio));width:${(completedExams / 5) * 100}%;border-radius:10px"></div>
+                </div>
+                <div class="info" style="margin-top:15px">
+                    ${isModuleCompleted() ? '🎉 ¡Módulo completado! Próxima vez irás a LC2.' : 'Completa los 5 niveles para desbloquear el siguiente módulo.'}
+                </div>
+            `;
+        }
+
+        function updateAllDisplays() {
+            renderMissions();
+            renderLevel();
+            renderProgress();
+            updateMapNodes();
+        }
+
+        function closeAllPanels() {
+            document.querySelectorAll('.panel-box').forEach(p => p.classList.remove('active'));
+        }
+
+        // === EVENT LISTENERS ===
+
+        window.addEventListener('userReady', async (e) => {
+            currentUser = e.detail.user;
+            console.log("Usuario autenticado:", currentUser.email);
+
+            // Cargar progreso
+            await loadProgressFromFirebase(currentUser.uid);
+
+            // Verificar si debe redirigir
+            if (checkModuleCompletion()) {
+                return; // Se va a redirigir
+            }
+
+            // Ocultar carga y mostrar UI
+            hideLoading();
+            updateAllDisplays();
+
             // Iniciar animación del camino
             setTimeout(() => {
                 const pathSurface = document.getElementById('path-surface');
                 if (pathSurface) {
                     pathSurface.classList.add('revealed');
+                    const nodes = document.querySelectorAll('.forest-node');
+                    nodes.forEach((node, index) => {
+                        setTimeout(() => {
+                            node.classList.add('visible');
+                        }, 300 * (index + 1));
+                    });
                 }
             }, 500);
-            
-            console.log("Camino Moderno del Bosque inicializado.");
+
+            // Escuchar cambios en tiempo real
+            const progressRef = ref(window.db, `users/${currentUser.uid}/lc_progress`);
+            onValue(progressRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    lcProgress = snapshot.val();
+                    localStorage.setItem(LC_PROGRESS_KEY, JSON.stringify(lcProgress));
+                    updateAllDisplays();
+                }
+            });
         });
+
+        // Menú hamburguesa
+        document.getElementById('hamburger-menu').addEventListener('click', () => {
+            document.getElementById('user-dropdown').classList.toggle('active');
+        });
+
+        // Logout
+        document.getElementById('logout-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            signOut(window.auth).then(() => window.location.href = 'index.html');
+        });
+
+        // Cerrar dropdown al hacer click fuera
+        window.addEventListener('click', (event) => {
+            if (!event.target.closest('.navbar')) {
+                document.getElementById('user-dropdown').classList.remove('active');
+            }
+            const isIcon = event.target.closest('.floating-icons');
+            const isPanel = event.target.closest('.panel-box');
+            if (!isIcon && !isPanel) closeAllPanels();
+        });
+
+        // Botón volver
+        document.getElementById('close-btn').addEventListener('click', () => {
+            window.location.href = 'modulos.html';
+        });
+
+        // Click en nodos
+        document.querySelectorAll('.forest-node').forEach(node => {
+            node.addEventListener('click', function() {
+                const level = parseInt(this.dataset.level);
+                const target = this.dataset.target;
+                
+                if (isLevelUnlocked(level)) {
+                    window.location.href = target;
+                } else {
+                    const prevLevel = level - 1;
+                    showMissionToast(`🔒 Debes completar el Nivel ${prevLevel} con 180+ puntos para desbloquear este.`, 3000);
+                }
+            });
+        });
+
+        // Paneles
+        document.getElementById('btn-misiones').addEventListener('click', () => {
+            closeAllPanels();
+            document.getElementById('panel-misiones').classList.add('active');
+            renderMissions();
+        });
+        document.getElementById('btn-nivel').addEventListener('click', () => {
+            closeAllPanels();
+            document.getElementById('panel-nivel').classList.add('active');
+            renderLevel();
+        });
+        document.getElementById('btn-progreso').addEventListener('click', () => {
+            closeAllPanels();
+            document.getElementById('panel-progreso').classList.add('active');
+            renderProgress();
+        });
+        document.querySelectorAll('.close-panel').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.getElementById('panel-' + e.target.getAttribute('data-close')).classList.remove('active');
+            });
+        });
+
+        console.log("Dashboard LC inicializado.");
     </script>
 </body>
 </html>
