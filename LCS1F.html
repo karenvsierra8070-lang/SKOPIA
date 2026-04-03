@@ -15,17 +15,13 @@
 
         const firebaseConfig = {
             apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            authDomain: "skopia-aa786.firebaseapp.com",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
             projectId: "skopia-aa786",
             storageBucket: "skopia-aa786.firebasestorage.app",
             messagingSenderId: "719823055099",
             appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
         };
-
-        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-            firebaseConfig.authDomain = "localhost";
-        } else {
-            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
-        }
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -576,7 +572,7 @@
             passingScore: 180,
             maxScore: 300,
             blockDuration: 3 * 60 * 60 * 1000,
-            examKey: 'lcs1f' // Identificador único para este examen en Firebase
+            examKey: 'lcs1f'
         };
 
         let allQuestions = [];
@@ -674,7 +670,7 @@
         }
 
         // =====================================================
-        // FUNCIÓN NUEVA: Guardar progreso en Firebase
+        // FUNCIÓN: Guardar progreso en Firebase
         // =====================================================
         async function saveExamProgressToFirebase(userId, score, passed) {
             try {
@@ -830,7 +826,7 @@
         submitBtn.addEventListener('click', submitExam);
 
         // =====================================================
-        // FUNCIÓN MODIFICADA: submitExam ahora guarda en Firebase
+        // FUNCIÓN: Submit Exam (muestra resultados inmediato)
         // =====================================================
         async function submitExam() {
             if (examFinished) return;
@@ -850,19 +846,23 @@
             const score = Math.round((correct / CONFIG.totalQuestions) * CONFIG.maxScore);
             const passed = score >= CONFIG.passingScore;
 
-            // 🔥 GUARDAR EN FIREBASE
+            // MOSTRAR RESULTADOS INMEDIATAMENTE
+            showResults(score, correct, passed);
+
+            // GUARDAR EN FIREBASE EN SEGUNDO PLANO
             if (currentUserId) {
-                await saveExamProgressToFirebase(currentUserId, score, passed);
+                saveExamProgressToFirebase(currentUserId, score, passed).catch(err => {
+                    console.error("Error guardando en Firebase:", err);
+                });
             }
 
+            // Guardar bloqueo local si no aprobó
             if (!passed) {
                 const blockedUntil = Date.now() + CONFIG.blockDuration;
                 localStorage.setItem('lcs1f_blocked_until', blockedUntil.toString());
             } else {
                 localStorage.setItem('lcs2_unlocked', 'true');
             }
-
-            showResults(score, correct, passed);
         }
 
         function showResults(score, correct, passed) {
@@ -906,8 +906,8 @@
                     <p style="color: var(--success); font-weight: 600; margin-bottom: 15px;">
                         <i class="fas fa-unlock"></i> Has desbloqueado: LCS2 - Ideas Secundarias
                     </p>
-                    <button onclick="window.location.href='LCS2.html'" class="btn-primary">
-                        Continuar al Siguiente Nivel
+                    <button onclick="window.location.href='LCDASHBOARD.html'" class="btn-primary">
+                        Volver al Dashboard
                     </button>
                 ` : `
                     <p style="color: var(--error); font-weight: 600; margin-bottom: 15px;">
