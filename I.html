@@ -14,10 +14,12 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
 
 const firebaseConfig = {
 apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
 authDomain: "skopia-aa786.firebaseapp.com",
+databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
 projectId: "skopia-aa786",
 storageBucket: "skopia-aa786.firebasestorage.app",
 messagingSenderId: "719823055099",
@@ -26,10 +28,20 @@ appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getDatabase(app);
 window.auth = auth;
+window.db = db;
+window.ref = ref;
+window.set = set;
+window.get = get;
 
 onAuthStateChanged(auth, (user) => {
-if (!user) { window.location.href = 'index.html'; }
+    if (!user) { 
+        window.location.href = 'index.html'; 
+        return;
+    }
+    window.currentUser = user;
+    window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
 });
 </script>
 
@@ -290,7 +302,7 @@ body { font-family: var(--font-sans); background-color: var(--color-bg); color: 
                         </ul>
                     </li>
                     <li>
-                        <span><span class="emoji">♟️</span> Laboratorio de estrategias</span>
+                        <span><span class="emoji">♟️</span> Laboratorio de estrategies</span>
                         <ul class="sub-dropdown">
                             <li><a href="E1.html"><span class="emoji">✏️</span> Cómo subrayar bien (con ejemplos)</a></li>
                             <li><a href="E2.html"><span class="emoji">📚</span> Estrategia de resumen por capas</a></li>
@@ -472,10 +484,13 @@ body { font-family: var(--font-sans); background-color: var(--color-bg); color: 
 <!-- SCRIPTS -->
 <script>
 /*************************************************************************
- *  LÓGICA DE MISIONES (RESTAURADA Y CORREGIDA)
+ *  LÓGICA DE MISIONES Y FIREBASE SYNC
  *************************************************************************/
 const MISSIONS_KEY = 'skopia_missions_v1';
 const EXAMS_KEY = 'skopia_exam_scores_by_tag_v1';
+const VISITED_KEY = 'skopia_english_visited';
+
+let currentUserId = null;
 
 const missionsTemplate = [
     { id: 1, title: "Completa tu primer examen", points: 50 },
@@ -490,93 +505,6 @@ const missionsTemplate = [
     { id: 10, title: "Completa 3 misiones seguidas", points: 50 },
     { id: 11, title: "Logra 240/300 en un examen", points: 150 },
     { id: 12, title: "Completa un examen sin errores (300/300)", points: 200 },
-    { id: 13, title: "Gana 3 juegos distintos", points: 60 },
-    { id: 14, title: "Termina una teoría con ejemplo práctico", points: 40 },
-    { id: 15, title: "Participa en una práctica de repaso", points: 30 },
-    { id: 16, title: "Completa 2 exámenes el mismo día", points: 80 },
-    { id: 17, title: "Obtén 500 estrellas acumuladas", points: 50 },
-    { id: 18, title: "Gana un examen con tiempo limitado", points: 80 },
-    { id: 19, title: "Repite un juego hasta mejorar tu resultado", points: 30 },
-    { id: 20, title: "Completa todos los subniveles de un tema (5/5)", points: 100 },
-    { id: 21, title: "Logra 270/300 en un examen", points: 180 },
-    { id: 22, title: "Supera tu propia mejor nota", points: 60 },
-    { id: 23, title: "Termina 5 juegos de práctica", points: 50 },
-    { id: 24, title: "Lee toda la teoría sin usar pistas", points: 40 },
-    { id: 25, title: "Completa todos los subniveles del nivel 6", points: 140 },
-    { id: 26, title: "Suma 1000 estrellas totales", points: 50 },
-    { id: 27, title: "Gana un examen con tiempo limitado", points: 80 },
-    { id: 28, title: "Juega y gana el modo “escape room”", points: 60 },
-    { id: 29, title: "Gana un juego de ahorcado correctamente", points: 50 },
-    { id: 30, title: "Haz un examen de repaso general", points: 70 },
-    { id: 31, title: "Logra 300/300 en dos exámenes seguidos", points: 200 },
-    { id: 32, title: "Completa todos los juegos de un módulo", points: 100 },
-    { id: 33, title: "Termina la teoría de un módulo completo", points: 80 },
-    { id: 34, title: "Gana un juego tipo tablero", points: 60 },
-    { id: 35, title: "Completa una misión cronometrada", points: 80 },
-    { id: 36, title: "Obtén 2000 estrellas acumuladas", points: 60 },
-    { id: 37, title: "Gana un juego sin usar pistas", points: 50 },
-    { id: 38, title: "Revisa tu historial de progreso", points: 30 },
-    { id: 39, title: "Completa 10 misiones seguidas sin fallar", points: 100 },
-    { id: 40, title: "Termina un examen con todos los tiempos perfectos", points: 150 },
-    { id: 41, title: "Completa 5 exámenes con más de 240/300", points: 150 },
-    { id: 42, title: "Termina todos los subniveles del nivel 6", points: 140 },
-    { id: 43, title: "Consigue 3000 estrellas", points: 120 },
-    { id: 44, title: "Estudia 10 días seguidos", points: 130 },
-    { id: 45, title: "Completa 10 misiones", points: 140 },
-    { id: 46, title: "Llega al nivel 6.5", points: 130 },
-    { id: 47, title: "Termina un examen sin errores", points: 150 },
-    { id: 48, title: "Supera tu propio puntaje anterior", points: 140 },
-    { id: 49, title: "Contesta 500 preguntas", points: 130 },
-    { id: 50, title: "Completa un examen en menos de 25 minutos", points: 140 },
-    { id: 51, title: "Alcanza el top 10 por primera vez (local)", points: 150 },
-    { id: 52, title: "Mantente en el top 10 por 3 días (local)", points: 140 },
-    { id: 53, title: "Gana 4000 estrellas", points: 130 },
-    { id: 54, title: "Termina la ruta RC con promedio ≥200", points: 140 },
-    { id: 55, title: "Termina la ruta LC con promedio ≥200", points: 140 },
-    { id: 56, title: "Termina la ruta CC con promedio ≥200", points: 140 },
-    { id: 57, title: "Obtén 250 puntos o más en tres rutas", points: 150 },
-    { id: 58, title: "Crea una racha de 20 aciertos seguidos", points: 140 },
-    { id: 59, title: "Completa 15 misiones", points: 130 },
-    { id: 60, title: "Alcanza el nivel 7", points: 150 },
-    { id: 61, title: "Consigue 6000 estrellas", points: 160 },
-    { id: 62, title: "Estudia 20 días seguidos", points: 170 },
-    { id: 63, title: "Termina todos los niveles de una ruta (10/10)", points: 180 },
-    { id: 64, title: "Contesta 1000 preguntas", points: 160 },
-    { id: 65, title: "Supera a 5 usuarios en el ranking (local)", points: 170 },
-    { id: 66, title: "Alcanza el nivel 8", points: 170 },
-    { id: 67, title: "Termina 20 misiones", points: 160 },
-    { id: 68, title: "Obtén promedio ≥250 puntos en una ruta", points: 180 },
-    { id: 69, title: "Logra 5 exámenes con 250 o más puntos", points: 170 },
-    { id: 70, title: "Termina las rutas RC y LC completas", points: 180 },
-    { id: 71, title: "Mantente en el top 5 (local)", points: 170 },
-    { id: 72, title: "Completa todos los subniveles (50 total)", points: 180 },
-    { id: 73, title: "Gana 8000 estrellas", points: 160 },
-    { id: 74, title: "Termina 25 misiones", points: 170 },
-    { id: 75, title: "Sube de nivel sin fallar un examen", points: 160 },
-    { id: 76, title: "Obtén 280 puntos en un examen", points: 180 },
-    { id: 77, title: "Completa 10 exámenes sin pistas", points: 170 },
-    { id: 78, title: "Obtén 270 o más en las tres rutas", points: 180 },
-    { id: 79, title: "Alcanza el nivel 9", points: 180 },
-    { id: 80, title: "Termina 30 misiones", points: 170 },
-    { id: 81, title: "Gana 10,000 estrellas", points: 190 },
-    { id: 82, title: "Mantente en el top 3 (local)", points: 190 },
-    { id: 83, title: "Termina las tres rutas con promedio ≥250", points: 190 },
-    { id: 84, title: "Completa los 50 subniveles con más de 200 puntos promedio", points: 200 },
-    { id: 85, title: "Llega al nivel 10", points: 200 },
-    { id: 86, title: "Gana 15,000 estrellas", points: 200 },
-    { id: 87, title: "Mantente en el top 3 por 7 días (local)", points: 190 },
-    { id: 88, title: "Consigue 300 puntos en un examen", points: 200 },
-    { id: 89, title: "Termina 40 misiones", points: 190 },
-    { id: 90, title: "Completa todos los exámenes de práctica", points: 190 },
-    { id: 91, title: "Llega a 20,000 estrellas", points: 200 },
-    { id: 92, title: "Termina 50 misiones", points: 190 },
-    { id: 93, title: "Mantente en el top 1 por 3 días (local)", points: 200 },
-    { id: 94, title: "Termina todas las rutas al 100%", points: 200 },
-    { id: 95, title: "Obtén todas las medallas", points: 190 },
-    { id: 96, title: "Consigue 25,000 estrellas", points: 200 },
-    { id: 97, title: "Cumple todas las misiones básicas e intermedias", points: 190 },
-    { id: 98, title: "Mantente activo 30 días seguidos", points: 200 },
-    { id: 99, title: "Llega a 30,000 estrellas", points: 200 },
     { id: 100, title: "🏆 Maestro del Saber Pro: completa todo el sistema", points: 200 }
 ];
 
@@ -593,6 +521,62 @@ const LEVELS = [
     { idx: 10, name: "Rey/Reina Skópia", min: 9500, max: Infinity }
 ];
 
+// =====================================================
+// FIREBASE SYNC FUNCTIONS
+// =====================================================
+async function loadMissionsFromFirebase(userId) {
+    try {
+        const missionsRef = window.ref(window.db, `users/${userId}/missions`);
+        const snapshot = await window.get(missionsRef);
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            localStorage.setItem(MISSIONS_KEY, JSON.stringify(data));
+            return data;
+        }
+    } catch (error) {
+        console.error("Error cargando misiones:", error);
+    }
+    return null;
+}
+
+async function saveMissionsToFirebase(userId, missionsData) {
+    try {
+        const missionsRef = window.ref(window.db, `users/${userId}/missions`);
+        await window.set(missionsRef, missionsData);
+        console.log("✅ Misiones guardadas en Firebase");
+    } catch (error) {
+        console.error("❌ Error guardando misiones:", error);
+    }
+}
+
+async function loadVisitedTopicsFromFirebase(userId) {
+    try {
+        const visitedRef = window.ref(window.db, `users/${userId}/english_visited`);
+        const snapshot = await window.get(visitedRef);
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            localStorage.setItem(VISITED_KEY, JSON.stringify(data));
+            return data;
+        }
+    } catch (error) {
+        console.error("Error cargando temas visitados:", error);
+    }
+    return null;
+}
+
+async function saveVisitedTopicsToFirebase(userId, visitedData) {
+    try {
+        const visitedRef = window.ref(window.db, `users/${userId}/english_visited`);
+        await window.set(visitedRef, visitedData);
+        console.log("✅ Temas visitados guardados en Firebase");
+    } catch (error) {
+        console.error("❌ Error guardando temas visitados:", error);
+    }
+}
+
+// =====================================================
+// MISSION LOGIC
+// =====================================================
 function initMissions() {
     const stored = localStorage.getItem(MISSIONS_KEY);
     if (!stored) {
@@ -663,7 +647,6 @@ function renderProgress() {
 
 function closeAllPanels() { document.querySelectorAll('.panel-box').forEach(p => p.classList.remove('active')); }
 
-// Event listeners para misiones (Corregido para que no falle si el HTML no está listo)
 function setupMissionListeners() {
     const btnMisiones = document.getElementById('btn-misiones');
     const btnNivel = document.getElementById('btn-nivel');
@@ -691,22 +674,49 @@ function completeMission(id) {
     if (!mission.completed) {
         mission.completed = true;
         localStorage.setItem(MISSIONS_KEY, JSON.stringify(data));
+        
+        // Guardar en Firebase
+        if (currentUserId) {
+            saveMissionsToFirebase(currentUserId, data);
+        }
+        
         showMissionToast(`¡Misión completada: ${mission.title} (+${mission.points}⭐)!`);
-        // Update panels if open
         if (document.getElementById('panel-misiones').classList.contains('active')) renderMissions();
         if (document.getElementById('panel-nivel').classList.contains('active')) renderLevel();
         if (document.getElementById('panel-progreso').classList.contains('active')) renderProgress();
     }
 }
 
-// Expose globally so other scripts can call it
 window.SKOPIA = { completeMission, getTotalPoints };
 
 /*************************************************************************
- *  LÓGICA DEL CURSO Y AUTH
+ *  LÓGICA DEL CURSO
  *************************************************************************/
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Auth
+document.addEventListener('DOMContentLoaded', async () => {
+    // Esperar a que el usuario esté autenticado
+    if (window.currentUser) {
+        currentUserId = window.currentUser.uid;
+        await loadData();
+        initApp();
+    } else {
+        window.addEventListener('userReady', async (e) => {
+            currentUserId = e.detail.user.uid;
+            await loadData();
+            initApp();
+        });
+    }
+});
+
+async function loadData() {
+    // Cargar datos de Firebase
+    if (currentUserId) {
+        await loadMissionsFromFirebase(currentUserId);
+        await loadVisitedTopicsFromFirebase(currentUserId);
+    }
+}
+
+function initApp() {
+    // 1. Auth UI
     const hamburger = document.getElementById('hamburger-menu');
     const userDrop = document.getElementById('user-dropdown');
     const logoutBtn = document.getElementById('logout-btn');
@@ -725,93 +735,93 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. Initialize Missions Logic
     initMissions();
-    setupMissionListeners(); // Attach event listeners safely now that DOM is ready
+    setupMissionListeners();
 
     // 3. Course Logic
     const courseData = [
         { blockTitle: "Foundation: Reading & Vocabulary", icon: "fa-book-open", topics: [
             { main: "Reading comprehension", icon: "fa-book", subtopics: [
-                { title: "Main idea", level: "B1", id: 1, desc: "This intensive session is specifically designed to master one of the most critical components of the ICFES Saber Pro English module: identifying the Main Idea. Throughout this lesson, students will develop the analytical skills necessary to distinguish between primary concepts and supporting details within diverse academic and professional texts. By focusing on skimming and scanning techniques, as well as recognizing structural cues and transitional markers, participants will learn how to efficiently synthesize information to capture the author’s core message. This training is essential for improving reading comprehension speed and accuracy, ensuring that students can tackle complex passages under timed conditions while maximizing their score potential on the exam. We will practice with authentic test formats to ensure every learner can confidently pinpoint the central theme, even when it is implied rather than explicitly stated, providing a solid foundation for overall linguistic proficiency in high-stakes testing.", examples: ["Topic sentences."] },
-                { title: "Details", level: "B1", id: 2, desc: "This session focuses on the critical skill of identifying Supporting Details, a fundamental requirement for excelling in the literal comprehension sections of the ICFES Saber Pro. Students will learn to move beyond the general gist of a text to pinpoint specific information, such as dates, names, statistics, and specific reasons that reinforce the main argument. We will explore effective 'scanning' strategies to locate key terms quickly without reading every single word, allowing for better time management during the exam. By analyzing how details function to clarify, prove, or expand upon a central theme, participants will sharpen their ability to answer factual questions with high precision. This module includes guided practice with authentic test-like passages, ensuring that every student can distinguish between relevant evidence and 'distractor' information designed to mislead, ultimately building the rigorous attention to detail needed for a superior score.", examples: ["Scanning."] },
-                { title: "Inferences", level: "B2", id: 3, desc: "This session transitions from literal comprehension to the higher-order thinking required for the Inferences section of the ICFES Saber Pro. Students will learn to 'read between the lines,' using textual evidence and logical reasoning to uncover meanings that are not explicitly stated by the author. We will focus on identifying subtle clues, such as tone, word choice, and contextual implications, to draw accurate conclusions about the author's purpose or underlying message. By practicing with complex passages, participants will develop the ability to synthesize information and make educated guesses that are firmly grounded in the text, rather than relying on personal opinion. This module is crucial for mastering the most challenging questions of the exam, where the correct answer often requires a deep understanding of what is suggested rather than what is written, ultimately sharpening the critical thinking skills necessary for academic and professional success.", examples: ["Implied."] },
-                { title: "Purpose", level: "B2", id: 4, desc: "This session is dedicated to mastering the Author’s Purpose, a pivotal skill for the more advanced communicative competence levels of the ICFES Saber Pro. Students will move beyond understanding what a text says to investigating why it was written, analyzing whether the author’s intent is to inform, persuade, entertain, describe, or criticize. We will examine how specific rhetorical choices, such as the use of persuasive language, objective data, or emotional appeals, signal the underlying objective of a passage. By deconstructing various text types—including advertisements, editorials, and scientific reports—participants will learn to identify the intended audience and the primary goal of the discourse. This training is essential for correctly answering questions that ask about the 'function' of a paragraph or the overall aim of the text, ensuring students can navigate the nuances of academic communication with both speed and critical depth.", examples: ["Persuade."] },
-                { title: "Tone", level: "B2", id: 5, desc: "This session explores the nuanced concept of Author’s Tone, a key element for achieving high-level proficiency in the ICFES Saber Pro. Students will learn to identify the emotional weight and attitude of a text by analyzing specific word choices, punctuation, and sentence structures. We will distinguish between various tones—such as objective, critical, enthusiastic, or cynical—and examine how these attitudes shape the reader's perception of the subject matter. By focusing on 'loaded' language and the presence or absence of bias, participants will develop the sensitivity to detect the author's voice even in complex academic or professional passages. This module is vital for answering questions that ask how the author feels about a topic, providing students with the tools to decode the subtle atmospheric cues that are often the difference between a good score and an outstanding one.", examples: ["Critical."] }
+                { title: "Main idea", level: "B1", id: 1, desc: "Identificar la idea principal es crucial para el ICFES Saber Pro. Aprende a distinguir el concepto central de los detalles de soporte en textos académicos y profesionales.", examples: ["Topic sentences.", "Skimming techniques.", "Key words identification."] },
+                { title: "Details", level: "B1", id: 2, desc: "Los detalles respaldan la idea principal. Practica técnicas de escaneo para localizar información específica como fechas, nombres y estadísticas.", examples: ["Scanning.", "Specific information.", "Supporting evidence."] },
+                { title: "Inferences", level: "B2", id: 3, desc: "Aprende a 'leer entre líneas'. Usa evidencia textual y razonamiento lógico para descubrir significados implícitos por el autor.", examples: ["Implied meaning.", "Logical deduction.", "Context clues."] },
+                { title: "Purpose", level: "B2", id: 4, desc: "¿Por qué fue escrito el texto? Analiza si el autor pretende informar, persuadir, entretener o criticar.", examples: ["Persuade.", "Inform.", "Entertain."] },
+                { title: "Tone", level: "B2", id: 5, desc: "Identifica la actitud del autor - objetivo, crítico, entusiasta o cínico - a través de su elección de palabras.", examples: ["Critical.", "Objective.", "Enthusiastic."] }
             ]},
             { main: "Vocabulary", icon: "fa-search", subtopics: [
-                { title: "Synonyms", level: "B1", id: 6, desc: "This session focuses on mastering Synonyms and Context Clues, an essential skill for the vocabulary-in-context questions frequently found in the ICFES Saber Pro. Students will learn that success on the exam doesn't require memorizing a dictionary, but rather developing the ability to deduce the meaning of unfamiliar words by analyzing the surrounding text. We will explore various strategies to identify linguistic signals, such as definitions, restatements, contrasts, and examples, which act as 'roadmaps' to the correct answer. By practicing how to substitute complex terms with simpler alternatives without changing the sentence's meaning, participants will enhance their reading fluidity and accuracy. This module is designed to build the lexical flexibility needed to navigate academic passages where words often carry specific, nuanced meanings based on their environment, ensuring students can confidently select the most appropriate synonym even when multiple options seem plausible.", examples: ["Happy."] },
-                { title: "Antonyms", level: "B1", id: 7, desc: "This advanced session delves into the strategic use of Antonyms and Contrast Clues, a sophisticated skill set required to navigate the most deceptive vocabulary questions in the ICFES Saber Pro. Students will move beyond simple word meanings to master the logic of opposition, learning how to decipher unknown terms by identifying what they are not. We will focus on recognizing 'reversal' signal words—such as nevertheless, despite, conversely, and on the contrary—which indicate a shift in perspective or a contradiction within the text. By understanding these linguistic pivots, participants will be able to triangulate the meaning of high-level academic vocabulary even when a direct definition is absent. This training is particularly effective for eliminating 'distractor' options in the exam, as it teaches students to use the structural architecture of a sentence to verify their choices, ultimately boosting both their lexical precision and their overall reading comprehension score.", examples: ["Sad."] },
-                { title: "Word formation", level: "B2", id: 8, desc: "This session focuses on the mechanics of Word Formation, a vital skill for deciphering complex vocabulary and mastering the linguistic logic of the ICFES Saber Pro. Students will explore the 'anatomy' of English words by breaking them down into their core components: roots, prefixes, and suffixes. We will analyze how adding a prefix can invert a meaning or how a suffix can transform a verb into a noun or an adjective, allowing participants to expand their lexical range exponentially without the need for rote memorization. By recognizing common Greek and Latin roots and understanding the grammatical function of different endings, learners will develop the ability to 'reconstruct' the meaning of unfamiliar academic terms on the fly. This structural approach is essential for the Part 4 and Part 7 sections of the exam, where accuracy in identifying the correct word form is the key to maintaining flow and ensuring high performance in reading and use of English.", examples: ["Unhappy."] },
-                { title: "Collocations", level: "B2", id: 9, desc: "This session is dedicated to mastering Collocations, the natural combinations of words that 'sound right' to native speakers and are essential for achieving a high score in the Part 4 and Part 7 sections of the ICFES Saber Pro. Rather than focusing on individual words, students will learn to recognize habitual pairings—such as 'make a decision' versus 'do homework'—and understand how certain verbs, nouns, and prepositions are intrinsically linked. We will analyze common patterns, including verb + noun, adjective + noun, and phrasal verbs, which are frequently tested to measure linguistic fluency and precision. By developing an ear for these conventional associations, participants will be able to navigate the 'Use of English' portions of the exam with greater speed and intuition, avoiding the common pitfalls of literal translation from Spanish. This module provides the stylistic polish necessary to transition from basic communication to the advanced, natural-sounding English proficiency required for professional and academic success.", examples: ["Make mistake."] },
-                { title: "Idioms", level: "C1", id: 10, desc: "This session explores the fascinating world of Idioms, which are essential for mastering the more nuanced and conversational aspects of the ICFES Saber Pro English exam. Students will learn that idioms are expressions where the collective meaning is entirely different from the literal definitions of the individual words, such as 'a piece of cake' meaning something very easy. We will focus on identifying these figurative phrases within context, helping participants move beyond literal translation to grasp the cultural and stylistic subtleties of the English language. By analyzing common idiomatic expressions related to time, work, emotions, and problem-solving, learners will improve their ability to decode informal or semi-formal dialogues and texts. This training is crucial for achieving the highest performance levels, as it equips students with the linguistic 'flair' needed to understand native-like communication and correctly interpret the metaphorical language that often appears in the exam’s more advanced reading passages.", examples: ["Piece of cake."] }
+                { title: "Synonyms", level: "B1", id: 6, desc: "Domina los sinónimos y claves de contexto. Deduce el significado de palabras desconocidas analizando el texto circundante.", examples: ["Similar meaning.", "Context clues.", "Word substitution."] },
+                { title: "Antonyms", level: "B1", id: 7, desc: "Usa la lógica de oposición para descifrar términos desconocidos. Identifica palabras señal como 'however' y 'despite'.", examples: ["Opposite meaning.", "Contrast clues.", "Reversal signals."] },
+                { title: "Word formation", level: "B2", id: 8, desc: "Explora la 'anatomía' de las palabras: raíces, prefijos y sufijos. Amplía tu vocabulario exponencialmente.", examples: ["Prefixes.", "Suffixes.", "Root words."] },
+                { title: "Collocations", level: "B2", id: 9, desc: "Las collocations son combinaciones naturales de palabras. Aprende qué suena 'correcto' en inglés.", examples: ["Make a decision.", "Do homework.", "Natural combinations."] },
+                { title: "Idioms", level: "C1", id: 10, desc: "Las expresiones idiomáticas tienen significado figurativo. 'A piece of cake' significa algo muy fácil.", examples: ["Piece of cake.", "Break the ice.", "Hit the books."] }
             ]}
         ]},
         { blockTitle: "Structure: Grammar & Connectors", icon: "fa-puzzle-piece", topics: [
             { main: "Grammar", icon: "fa-cogs", subtopics: [
-                { title: "Tenses", level: "B1", id: 11, desc: "This comprehensive session focuses on mastering Verb Tenses, the grammatical backbone required for accuracy in all sections of the ICFES Saber Pro. Students will move beyond simple conjugation to understand the temporal logic behind each tense, learning how to distinguish between actions that are habitual, currently in progress, completed in the past, or projected into the future. We will analyze the specific 'time markers'—such as already, yet, since, while, and next week—that serve as essential clues for selecting the correct verb form in the Part 7 'cloze' passages. By practicing the nuances between the Present Perfect and Simple Past, or the subtle differences in future intentions, participants will develop the structural precision necessary to maintain consistency in their reading and use of English. This module is designed to eliminate common grammatical errors and provide the clarity needed to interpret the timeline of any academic text, ensuring that students can navigate complex narratives with confidence and speed.", examples: ["Perfect."] },
-                { title: "Prepositions", level: "B1", id: 12, desc: "This session is dedicated to mastering Prepositions, the small but mighty words that often present the greatest challenge for Spanish speakers in the ICFES Saber Pro. Students will learn to navigate the complexities of prepositions of time, place, and movement, while also focusing on the 'dependent prepositions' that are fixed to specific verbs, nouns, and adjectives. We will move beyond literal translation—which often leads to errors—and instead focus on visualizing spatial relationships and memorizing common prepositional phrases. By analyzing how a single preposition can completely alter the meaning of a sentence, participants will sharpen their accuracy for the Part 4 and Part 7 sections of the exam. This training is essential for building the grammatical cohesion necessary to connect ideas smoothly, ensuring that every student can use these 'linguistic glue' words with the precision and natural flow expected at a professional and academic level.", examples: ["On, in."] },
-                { title: "Conditionals", level: "B2", id: 13, desc: "This session is designed to master Conditionals, the complex sentence structures used to discuss hypothetical situations, possibilities, and consequences in the ICFES Saber Pro. Students will learn to navigate the four main types of conditionals—Zero, First, Second, and Third—by identifying their unique 'if-clause' and 'main-clause' combinations. We will focus on how these structures signal different levels of probability, from universal truths and likely future events to purely imaginary scenarios and past regrets. By practicing with academic and professional contexts, participants will develop the ability to recognize subtle shifts in meaning and time, which is essential for accuracy in the reading comprehension and 'cloze' test sections. This module provides the logical framework needed to understand complex arguments and cause-and-effect relationships, ensuring that students can handle high-level linguistic tasks with the precision required for a top-tier score.", examples: ["Zero/First."] },
-                { title: "Modals", level: "B2", id: 14, desc: "This session focuses on Modal Verbs, the versatile auxiliary words that express attitudes such as possibility, obligation, permission, and ability in the ICFES Saber Pro. Students will learn how these 'mood' verbs modify the main verb to indicate whether an action is mandatory (must), recommended (should), possible (might), or prohibited (mustn't). We will pay special attention to the nuanced differences between modals of certainty and deduction, which are frequently tested in reading passages to determine the author's level of confidence in a statement. By analyzing the structural rules—such as the fact that modals never change form and are always followed by the base verb—participants will gain the grammatical accuracy needed for the 'cloze' sections of the exam. This module is essential for correctly interpreting instructions, advice, and logical conclusions within academic and professional texts, providing students with the tools to navigate the subtle degrees of necessity and probability that define advanced English communication.", examples: ["Must."] },
-                { title: "Passive", level: "B2", id: 15, desc: "This session is dedicated to mastering the Passive Voice, a stylistic and grammatical essential for the formal academic and scientific texts typically found in the ICFES Saber Pro. Students will learn how to shift the focus from who performed an action to the action itself or the object being affected, which is a hallmark of objective reporting. We will deconstruct the formula for passive constructions—using the appropriate form of the verb 'to be' combined with the past participle—and practice converting active sentences into passive ones across various tenses. By understanding why authors choose the passive voice (such as when the actor is unknown, obvious, or less important than the result), participants will improve their ability to follow complex processes and descriptions in technical passages. This training is particularly valuable for the reading and 'Use of English' sections, ensuring students can identify the recipient of an action and maintain clarity when navigating the sophisticated, impersonal tone of professional discourse.", examples: ["Was done."] }
+                { title: "Tenses", level: "B1", id: 11, desc: "Domina los tiempos verbales y sus marcadores temporales. Distingue acciones habituales, en progreso o completadas.", examples: ["Present Perfect.", "Past Simple.", "Future forms."] },
+                { title: "Prepositions", level: "B1", id: 12, desc: "Las preposiciones de tiempo, lugar y movimiento son esenciales. Memoriza frases preposicionales comunes.", examples: ["On Monday.", "In the room.", "At 5pm."] },
+                { title: "Conditionals", level: "B2", id: 13, desc: "Los condicionales expresan situaciones hipotéticas. Aprende los cuatro tipos principales.", examples: ["Zero conditional.", "First conditional.", "If clauses."] },
+                { title: "Modals", level: "B2", id: 14, desc: "Los verbos modales expresan actitud: posibilidad, obligación, permiso y habilidad.", examples: ["Must.", "Should.", "Might."] },
+                { title: "Passive", level: "B2", id: 15, desc: "La voz pasiva cambia el foco de quién realiza la acción a la acción misma. Es común en textos académicos.", examples: ["Was written.", "Is done.", "Has been made."] }
             ]},
             { main: "Connectors", icon: "fa-link", subtopics: [
-                { title: "Cause/Effect", level: "B2", id: 16, desc: "This session is designed to master the logic of Cause and Effect, a fundamental skill for deciphering the relationships between ideas in the ICFES Saber Pro. Students will learn to identify the 'trigger' (the cause) and the 'result' (the effect) within complex academic narratives, focusing on the specific transitions that link them. We will analyze a wide range of connectors, from explicit markers like because, since, and due to for causes, to consequently, therefore, and as a result for effects. By practicing with scientific and social studies passages, participants will develop the ability to map out the sequence of events, ensuring they can correctly answer questions that ask why something happened or what the immediate consequence was. This training is essential for maintaining logical cohesion while reading, helping students to navigate 'cloze' tests and comprehension questions where understanding the 'why' behind the 'what' is the key to a superior score.", examples: ["Therefore."] },
-                { title: "Contrast", level: "B2", id: 17, desc: "This session focuses on the art of identifying Contrast, a vital skill for navigating the argumentative and comparative texts frequently featured in the ICFES Saber Pro. Students will learn to recognize when an author presents opposing viewpoints, shifts a perspective, or highlights differences between two concepts. We will analyze 'pivot' words—such as however, nonetheless, whereas, on the contrary, and despite—which serve as red flags indicating a change in the direction of the argument. By mastering these signals, participants will be able to follow the internal debate of a passage and accurately identify the author's nuanced position. This module is particularly effective for answering complex multiple-choice questions where 'distractor' options represent the counter-argument rather than the main point, ensuring that students can maintain logical clarity even when the text presents conflicting information.", examples: ["However."] },
-                { title: "Addition", level: "B1", id: 18, desc: "Adding info.", examples: ["Also."] },
-                { title: "Sequence", level: "B1", id: 19, desc: "Order.", examples: ["Then."] },
-                { title: "Examples", level: "B1", id: 20, desc: "Illustrating.", examples: ["For example."] }
+                { title: "Cause/Effect", level: "B2", id: 16, desc: "Identifica relaciones de causa y efecto. Reconoce conectores como 'therefore', 'because', 'due to'.", examples: ["Therefore.", "Because of.", "Consequently."] },
+                { title: "Contrast", level: "B2", id: 17, desc: "Los conectores de contraste señalan cambios de dirección. 'However', 'nevertheless', 'whereas'.", examples: ["However.", "Although.", "On the other hand."] },
+                { title: "Addition", level: "B1", id: 18, desc: "Añadir información con conectores como 'also', 'moreover', 'furthermore'.", examples: ["Also.", "Moreover.", "In addition."] },
+                { title: "Sequence", level: "B1", id: 19, desc: "Ordenar ideas cronológicamente. 'First', 'then', 'next', 'finally'.", examples: ["Then.", "Next.", "Finally."] },
+                { title: "Examples", level: "B1", id: 20, desc: "Ilustrar puntos con ejemplos. 'For example', 'for instance', 'such as'.", examples: ["For example.", "Such as.", "For instance."] }
             ]}
         ]},
         { blockTitle: "Interaction", icon: "fa-comments", topics: [
             { main: "Functional", icon: "fa-comment", subtopics: [
-                { title: "Advice", level: "B1", id: 21, desc: "Suggestions.", examples: ["Should."] },
-                { title: "Apologies", level: "B1", id: 22, desc: "Sorry.", examples: ["Apologize."] },
-                { title: "Requests", level: "B1", id: 23, desc: "Asking.", examples: ["Could you?"] },
-                { title: "Opinions", level: "B2", id: 24, desc: "Stance.", examples: ["I think."] },
-                { title: "Suggestions", level: "B1", id: 25, desc: "Ideas.", examples: ["Let's."] }
+                { title: "Advice", level: "B1", id: 21, desc: "Dar y pedir consejos. 'You should...', 'I recommend...'", examples: ["Should.", "Recommend.", "Suggest."] },
+                { title: "Apologies", level: "B1", id: 22, desc: "Disculparse apropiadamente en diferentes contextos.", examples: ["I'm sorry.", "Apologize.", "Forgive me."] },
+                { title: "Requests", level: "B1", id: 23, desc: "Hacer peticiones de forma educada.", examples: ["Could you?", "Would you mind?", "Can I?"] },
+                { title: "Opinions", level: "B2", id: 24, desc: "Expresar y preguntar opiniones.", examples: ["I think.", "In my opinion.", "I believe."] },
+                { title: "Suggestions", level: "B1", id: 25, desc: "Hacer sugerencias.", examples: ["Let's.", "Why don't we?", "How about?"] }
             ]},
             { main: "Contextual", icon: "fa-map", subtopics: [
-                { title: "Airport", level: "B1", id: 26, desc: "Travel.", examples: ["Boarding."] },
-                { title: "Restaurant", level: "B1", id: 27, desc: "Food.", examples: ["Order."] },
-                { title: "Shopping", level: "A2", id: 28, desc: "Retail.", examples: ["Buy."] },
-                { title: "Doctor", level: "B1", id: 29, desc: "Health.", examples: ["Pain."] },
-                { title: "Directions", level: "A2", id: 30, desc: "Location.", examples: ["Turn left."] }
+                { title: "Airport", level: "B1", id: 26, desc: "Vocabulario y situaciones en el aeropuerto.", examples: ["Boarding.", "Departure.", "Gate."] },
+                { title: "Restaurant", level: "B1", id: 27, desc: "Ordenar comida y manejar situaciones en restaurantes.", examples: ["Order.", "Menu.", "Bill."] },
+                { title: "Shopping", level: "A2", id: 28, desc: "Compras y transacciones.", examples: ["Buy.", "Price.", "Receipt."] },
+                { title: "Doctor", level: "B1", id: 29, desc: "Consultas médicas y síntomas.", examples: ["Pain.", "Symptom.", "Prescription."] },
+                { title: "Directions", level: "A2", id: 30, desc: "Pedir y dar direcciones.", examples: ["Turn left.", "Go straight.", "Corner."] }
             ]}
         ]},
         { blockTitle: "Precision", icon: "fa-bug", topics: [
             { main: "Errors", icon: "fa-exclamation", subtopics: [
-                { title: "Grammar", level: "B2", id: 31, desc: "Mistakes.", examples: ["S-V agr."] },
-                { title: "Spelling", level: "B1", id: 32, desc: "Typos.", examples: ["Receive."] },
-                { title: "Word Choice", level: "B2", id: 33, desc: "Wrong word.", examples: ["Make/Do."] },
-                { title: "Word Order", level: "B1", id: 34, desc: "Syntax.", examples: ["Adverbs."] },
-                { title: "Punctuation", level: "B1", id: 35, desc: "Marks.", examples: ["Commas."] }
+                { title: "Grammar", level: "B2", id: 31, desc: "Identificar errores gramaticales comunes.", examples: ["Subject-verb agreement.", "Tense consistency."] },
+                { title: "Spelling", level: "B1", id: 32, desc: "Errores de ortografía frecuentes.", examples: ["Receive.", "Beginning.", "Separate."] },
+                { title: "Word Choice", level: "B2", id: 33, desc: "Errores en la selección de palabras.", examples: ["Make/Do.", "Say/Tell."] },
+                { title: "Word Order", level: "B1", id: 34, desc: "Problemas de orden de palabras.", examples: ["Adverbs position.", "Question formation."] },
+                { title: "Punctuation", level: "B1", id: 35, desc: "Uso incorrecto de signos de puntuación.", examples: ["Commas.", "Apostrophes."] }
             ]},
             { main: "Synonyms", icon: "fa-sync", subtopics: [
-                { title: "Paraphrasing", level: "B2", id: 36, desc: "Restate.", examples: ["Own words."] },
-                { title: "Rewriting", level: "B2", id: 37, desc: "Transform.", examples: ["Passive."] },
-                { title: "Structure", level: "B2", id: 38, desc: "Change.", examples: ["Clauses."] },
-                { title: "Meaning", level: "B2", id: 39, desc: "Accuracy.", examples: ["Keep sense."] }
+                { title: "Paraphrasing", level: "B2", id: 36, desc: "Reformular ideas con palabras propias.", examples: ["Own words.", "Restate."] },
+                { title: "Rewriting", level: "B2", id: 37, desc: "Transformar oraciones manteniendo el significado.", examples: ["Passive voice.", "Reported speech."] },
+                { title: "Structure", level: "B2", id: 38, desc: "Cambiar la estructura de oraciones.", examples: ["Clauses.", "Phrases."] },
+                { title: "Meaning", level: "B2", id: 39, desc: "Mantener el significado exacto al reformular.", examples: ["Keep sense.", "Accuracy."] }
             ]}
         ]},
         { blockTitle: "Advanced", icon: "fa-university", topics: [
             { main: "Text Types", icon: "fa-file", subtopics: [
-                { title: "Articles", level: "B2", id: 40, desc: "News.", examples: ["Headlines."] },
-                { title: "Emails", level: "B1", id: 41, desc: "Formal.", examples: ["Subject."] },
-                { title: "Ads", level: "B1", id: 42, desc: "Persuade.", examples: ["Buy now."] },
-                { title: "Instructions", level: "A2", id: 43, desc: "How to.", examples: ["Steps."] },
-                { title: "Reports", level: "B2", id: 44, desc: "Data.", examples: ["Charts."] }
+                { title: "Articles", level: "B2", id: 40, desc: "Analizar artículos de noticias.", examples: ["Headlines.", "Lead paragraph."] },
+                { title: "Emails", level: "B1", id: 41, desc: "Correos electrónicos formales e informales.", examples: ["Subject line.", "Salutation."] },
+                { title: "Ads", level: "B1", id: 42, desc: "Publicidad y lenguaje persuasivo.", examples: ["Buy now.", "Limited offer."] },
+                { title: "Instructions", level: "A2", id: 43, desc: "Textos instructivos y manuales.", examples: ["Steps.", "Procedures."] },
+                { title: "Reports", level: "B2", id: 44, desc: "Reportes y análisis de datos.", examples: ["Charts.", "Findings."] }
             ]},
             { main: "Academic", icon: "fa-graduation-cap", subtopics: [
-                { title: "Cause Verbs", level: "B2", id: 45, desc: "High level.", examples: ["Trigger."] },
-                { title: "Linking", level: "C1", id: 46, desc: "Complex.", examples: ["Hence."] },
-                { title: "Formal Conn.", level: "B2", id: 47, desc: "Style.", examples: ["Thus."] },
-                { title: "Reported Sp.", level: "B2", id: 48, desc: "Indirect.", examples: ["He said."] },
-                { title: "Transitions", level: "B2", id: 49, desc: "Flow.", examples: ["Furthermore."] }
+                { title: "Cause Verbs", level: "B2", id: 45, desc: "Verbos de alto nivel académico.", examples: ["Trigger.", "Generate.", "Provoke."] },
+                { title: "Linking", level: "C1", id: 46, desc: "Conectores complejos.", examples: ["Hence.", "Thus.", "Therefore."] },
+                { title: "Formal Conn.", level: "B2", id: 47, desc: "Conectores formales.", examples: ["Furthermore.", "Moreover."] },
+                { title: "Reported Sp.", level: "B2", id: 48, desc: "Estilo indirecto.", examples: ["He said.", "She asked."] },
+                { title: "Transitions", level: "B2", id: 49, desc: "Transiciones sofisticadas.", examples: ["Consequently.", "Nevertheless."] }
             ]}
         ]}
     ];
 
     let allTopicsMap = {};
-    let visitedTopics = JSON.parse(localStorage.getItem('visitedTopics')) || [];
+    let visitedTopics = JSON.parse(localStorage.getItem(VISITED_KEY)) || [];
 
     // Generate UI
     const mainArea = document.querySelector('.main-content-area');
@@ -868,12 +878,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function markAsVisited(id) {
         if (!visitedTopics.includes(id)) {
             visitedTopics.push(id);
-            localStorage.setItem('visitedTopics', JSON.stringify(visitedTopics));
+            localStorage.setItem(VISITED_KEY, JSON.stringify(visitedTopics));
+            
+            // Guardar en Firebase
+            if (currentUserId) {
+                saveVisitedTopicsToFirebase(currentUserId, visitedTopics);
+            }
+            
             updateProgress();
-            // Trigger mission completion example
-            if(visitedTopics.length === 1) SKOPIA.completeMission(3); // "Lee toda la teoría de una lección"
+            if(visitedTopics.length === 1) SKOPIA.completeMission(3);
         }
     }
+    
     function updateProgress() {
         const total = Object.keys(allTopicsMap).length;
         const done = visitedTopics.length;
@@ -915,9 +931,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('.error-actions').style.opacity = 0.5;
     };
 
-    updateProgress(); // Init
-
-}); // End DOMContentLoaded
+    updateProgress();
+}
 </script>
 </body>
 </html>
