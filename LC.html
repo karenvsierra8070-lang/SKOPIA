@@ -15,31 +15,34 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+        import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            authDomain: "skopia-aa786.firebaseapp.com",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
             projectId: "skopia-aa786",
             storageBucket: "skopia-aa786.firebasestorage.app",
             messagingSenderId: "719823055099",
             appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
         };
 
-        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-            firebaseConfig.authDomain = "localhost";
-        } else {
-            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
-        }
-
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        window.auth = auth; // Exponer globalmente
+        const db = getDatabase(app);
+        
+        window.auth = auth;
+        window.db = db;
+        window.ref = ref;
+        window.set = set;
+        window.get = get;
 
         onAuthStateChanged(auth, (user) => {
             if (!user) {
                 window.location.href = 'index.html';
                 return;
             }
-            console.log("Usuario autenticado:", user.email, " DisplayName:", user.displayName);
+            window.currentUser = user;
             window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
         });
     </script>
@@ -53,7 +56,6 @@
             --color-sombra: rgba(39, 43, 0, 0.1);
             --float-color: var(--color-oliva-oscuro);
             --float-color-hover: var(--color-oliva-medio);
-            /* Estética mejorada */
             --glass-bg: rgba(255, 255, 255, 0.85);
             --glass-border: rgba(255, 255, 255, 0.4);
         }
@@ -63,7 +65,6 @@
         body {
             font-family: 'Roboto', sans-serif;
             background: linear-gradient(135deg, var(--color-crema) 0%, #f5efe5 100%);
-            /* Textura sutil */
             background-image: 
                 radial-gradient(circle at 10% 20%, rgba(190, 192, 146, 0.15) 0%, transparent 20%),
                 radial-gradient(circle at 90% 80%, rgba(90, 97, 51, 0.1) 0%, transparent 20%);
@@ -73,7 +74,6 @@
             flex-direction: column;
         }
         
-        /* Navbar Mejorada */
         .navbar {
             display: flex; justify-content: flex-end; align-items: center;
             padding: 15px 40px;
@@ -93,7 +93,6 @@
         .user-dropdown a:hover { background-color: var(--color-crema); padding-left: 30px; }
         .user-dropdown hr { border: none; border-top: 1px solid #eee; margin: 0; }
 
-        /* Hero Section Mejorada */
         .hero-section { text-align: center; padding: 50px 20px 20px; position: relative; }
         .logo-centro { display: block; margin: 0 auto 20px auto; height: 150px; animation: float 4s ease-in-out infinite; }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
@@ -111,7 +110,6 @@
         .motivational-quote { font-family: 'Patrick Hand', cursive; font-size: 1.8rem; color: var(--color-oliva-medio); margin-top: 20px; max-width: 800px; margin-left: auto; margin-right: auto; min-height: 50px; opacity: 0; animation: fadeIn 1s forwards; }
         .bienvenida { font-family: 'Patrick Hand', cursive; font-size: 2.5rem; color: var(--color-oliva-oscuro); margin-top: 25px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
         
-        /* Module Info Card (NEW) */
         .module-intro {
             max-width: 800px;
             margin: 0 auto 40px;
@@ -137,7 +135,6 @@
 
         .main-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 40px 40px; position: relative; }
         
-        /* Close Button Styled */
         .close-btn {
             position: fixed; top: 90px; left: 30px;
             background: white; color: var(--color-oliva-oscuro);
@@ -149,7 +146,6 @@
         }
         .close-btn:hover { transform: rotate(90deg); background-color: var(--color-oliva-medio); color: white; }
 
-        /* Glassmorphism Containers */
         .video-container, .lesson-container {
             width: 100%; max-width: 900px;
             background: var(--glass-bg);
@@ -223,7 +219,6 @@
         }
         .speech-bubble p { font-family: 'Patrick Hand', cursive; font-size: 1.2rem; margin: 0; }
 
-        /* Floating Icons Enhanced */
         .floating-icons { position: fixed; right: 25px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 15px; z-index: 2000; }
         .floating-icons button {
             background: white; color: var(--color-oliva-oscuro);
@@ -286,7 +281,6 @@
             .floating-icons { right: 10px; bottom: 20px; top: auto; transform: none; flex-direction: row; }
         }
     </style>
-     <script type="module" src="./global-settings.js"></script>
 </head>
 
 <body>
@@ -302,12 +296,11 @@
     </nav>
 
     <section class="hero-section">
-        <img src="logo.jpeg" alt="Logo Skópia" class="logo-centro" style="display:none;"> <!-- Oculto visualmente pero presente en código -->
+        <img src="logo.jpeg" alt="Logo Skópia" class="logo-centro" style="display:none;">
         <div id="digital-clock" class="digital-clock">00:00:00</div>
         <p id="motivational-quote" class="motivational-quote"></p>
         <h2 class="bienvenida">Bienvenido a tu ruta de Lectura Crítica!</h2>
         
-        <!-- Module Info -->
         <div class="module-intro">
             <span class="module-badge">Módulo 1</span>
             <p>Desarrolla tu capacidad para analizar, interpretar y comprender textos. Hoy nos enfocaremos en la base: la comprensión literal.</p>
@@ -321,17 +314,7 @@
             <h2>VIDEO INTRODUCTORIO</h2>
             <div class="video-wrapper">
                 <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: white; font-size: 1.2rem;">
-           <iframe 
-    width="315" 
-    height="560" 
-    src="https://www.youtube.com/embed/EgRInrEHLT8?si=E5XW_5133QpRlEwH" 
-    title="YouTube video player" 
-    frameborder="0" 
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-    referrerpolicy="strict-origin-when-cross-origin" 
-    allowfullscreen>
-</iframe>
-
+                    <iframe width="315" height="560" src="https://www.youtube.com/embed/EgRInrEHLT8?si=E5XW_5133QpRlEwH" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
                 </div>
             </div>
             <button class="skip-video-btn" id="skip-video-btn">Saltar Video</button>
@@ -352,12 +335,11 @@
                         <p>"El proceso de fotosíntesis, esencial para la vida vegetal, requiere de tres elementos fundamentales: agua, dióxido de carbono y luz solar. Durante esta reacción química, las plantas absorben el dióxido de carbono del aire y el agua a través de sus raíces para transformarlos, utilizando la energía de la luz, en glucosa (su alimento) y oxígeno, el cual es liberado al ambiente."</p>
                         <p>Pregunta literal: Según el texto, ¿cuáles son los tres elementos fundamentales que requiere el proceso de fotosíntesis?</p>
                         <p>Respuesta: El agua, el dióxido de carbono y la luz solar.</p>
-                         <p>Análisis: Esta es una pregunta de comprensión literal pura porque la respuesta se encuentra exactamente en la primera frase del texto. No necesitas inferir, interpretar o analizar una metáfora; solo debes identificar y extraer la información tal como la presenta el autor.</p>
+                        <p>Análisis: Esta es una pregunta de comprensión literal pura porque la respuesta se encuentra exactamente en la primera frase del texto. No necesitas inferir, interpretar o analizar una metáfora; solo debes identificar y extraer la información tal como la presenta el autor.</p>
                     </div>
                 </div>
             </div>
             
-            <!-- Contenedor de botones -->
             <div class="button-container">
                 <button class="play-btn" id="play-btn">Jugar</button>
                 <button class="continue-btn" id="continue-btn" style="display: none;">Continuar Ruta</button>
@@ -404,15 +386,15 @@
             // --- CONSTANTES Y VARIABLES ---
             const MISSIONS_KEY = 'skopia_missions_v1';
             const USER_PROFILE_KEY = 'skopia_user_profile_v1';
-            const GAME_PROGRESS_KEY = 'skopia_game_progress_v1'; 
+            const GAME_PROGRESS_KEY = 'skopia_game_progress_v1';
+            const LESSON_PROGRESS_KEY = 'skopia_lesson_progress_v1';
             let toastTimer = null;
+            let currentUserId = null;
             
-            // Variables para el temporizador de la misión 3
             let missionTimerInterval = null;
             let totalActiveTime = 0;
-            const MISSION_3_DURATION = 120000; // 2 minutos en milisegundos
+            const MISSION_3_DURATION = 120000; // 2 minutos
 
-            // --- LISTA COMPLETA DE MISIONES (RESTAURADA) ---
             const missionsTemplate = [
                 { id: 1, title: "Completa tu primer examen", points: 50 },
                 { id: 2, title: "Logra al menos 180/300 en un examen", points: 80 },
@@ -426,93 +408,6 @@
                 { id: 10, title: "Completa 3 misiones seguidas", points: 50 },
                 { id: 11, title: "Logra 240/300 en un examen", points: 150 },
                 { id: 12, title: "Completa un examen sin errores (300/300)", points: 200 },
-                { id: 13, title: "Gana 3 juegos distintos", points: 60 },
-                { id: 14, title: "Termina una teoría con ejemplo práctico", points: 40 },
-                { id: 15, title: "Participa en una práctica de repaso", points: 30 },
-                { id: 16, title: "Completa 2 exámenes el mismo día", points: 80 },
-                { id: 17, title: "Obtén 500 estrellas acumuladas", points: 50 },
-                { id: 18, title: "Gana un examen con tiempo limitado", points: 80 },
-                { id: 19, title: "Repite un juego hasta mejorar tu resultado", points: 30 },
-                { id: 20, title: "Completa todos los subniveles de un tema (5/5)", points: 100 },
-                { id: 21, title: "Logra 270/300 en un examen", points: 180 },
-                { id: 22, title: "Supera tu propia mejor nota", points: 60 },
-                { id: 23, title: "Termina 5 juegos de práctica", points: 50 },
-                { id: 24, title: "Lee toda la teoría sin usar pistas", points: 40 },
-                { id: 25, title: "Completa todos los subniveles del nivel 6", points: 140 },
-                { id: 26, title: "Suma 1000 estrellas totales", points: 50 },
-                { id: 27, title: "Gana un examen con tiempo limitado", points: 80 },
-                { id: 28, title: "Juega y gana el modo “escape room”", points: 60 },
-                { id: 29, title: "Gana un juego de ahorcado correctamente", points: 50 },
-                { id: 30, title: "Haz un examen de repaso general", points: 70 },
-                { id: 31, title: "Logra 300/300 en dos exámenes seguidos", points: 200 },
-                { id: 32, title: "Completa todos los juegos de un módulo", points: 100 },
-                { id: 33, title: "Termina la teoría de un módulo completo", points: 80 },
-                { id: 34, title: "Gana un juego tipo tablero", points: 60 },
-                { id: 35, title: "Completa una misión cronometrada", points: 80 },
-                { id: 36, title: "Obtén 2000 estrellas acumuladas", points: 60 },
-                { id: 37, title: "Gana un juego sin usar pistas", points: 50 },
-                { id: 38, title: "Revisa tu historial de progreso", points: 30 },
-                { id: 39, title: "Completa 10 misiones seguidas sin fallar", points: 100 },
-                { id: 40, title: "Termina un examen con todos los tiempos perfectos", points: 150 },
-                { id: 41, title: "Completa 5 exámenes con más de 240/300", points: 150 },
-                { id: 42, title: "Termina todos los subniveles del nivel 6", points: 140 },
-                { id: 43, title: "Consigue 3000 estrellas", points: 120 },
-                { id: 44, title: "Estudia 10 días seguidos", points: 130 },
-                { id: 45, title: "Completa 10 misiones", points: 140 },
-                { id: 46, title: "Llega al nivel 6.5", points: 130 },
-                { id: 47, title: "Termina un examen sin errores", points: 150 },
-                { id: 48, title: "Supera tu propio puntaje anterior", points: 140 },
-                { id: 49, title: "Contesta 500 preguntas", points: 130 },
-                { id: 50, title: "Completa un examen en menos de 25 minutos", points: 140 },
-                { id: 51, title: "Alcanza el top 10 por primera vez (local)", points: 150 },
-                { id: 52, title: "Mantente en el top 10 por 3 días (local)", points: 140 },
-                { id: 53, title: "Gana 4000 estrellas", points: 130 },
-                { id: 54, title: "Termina la ruta RC con promedio ≥200", points: 140 },
-                { id: 55, title: "Termina la ruta LC con promedio ≥200", points: 140 },
-                { id: 56, title: "Termina la ruta CC con promedio ≥200", points: 140 },
-                { id: 57, title: "Obtén 250 puntos o más en tres rutas", points: 150 },
-                { id: 58, title: "Crea una racha de 20 aciertos seguidos", points: 140 },
-                { id: 59, title: "Completa 15 misiones", points: 130 },
-                { id: 60, title: "Alcanza el nivel 7", points: 150 },
-                { id: 61, title: "Consigue 6000 estrellas", points: 160 },
-                { id: 62, title: "Estudia 20 días seguidos", points: 170 },
-                { id: 63, title: "Termina todos los niveles de una ruta (10/10)", points: 180 },
-                { id: 64, title: "Contesta 1000 preguntas", points: 160 },
-                { id: 65, title: "Supera a 5 usuarios en el ranking (local)", points: 170 },
-                { id: 66, title: "Alcanza el nivel 8", points: 170 },
-                { id: 67, title: "Termina 20 misiones", points: 160 },
-                { id: 68, title: "Obtén promedio ≥250 puntos en una ruta", points: 180 },
-                { id: 69, title: "Logra 5 exámenes con 250 o más puntos", points: 170 },
-                { id: 70, title: "Termina las rutas RC y LC completas", points: 180 },
-                { id: 71, title: "Mantente en el top 5 (local)", points: 170 },
-                { id: 72, title: "Completa todos los subniveles (50 total)", points: 180 },
-                { id: 73, title: "Gana 8000 estrellas", points: 160 },
-                { id: 74, title: "Termina 25 misiones", points: 170 },
-                { id: 75, title: "Sube de nivel sin fallar un examen", points: 160 },
-                { id: 76, title: "Obtén 280 puntos en un examen", points: 180 },
-                { id: 77, title: "Completa 10 exámenes sin pistas", points: 170 },
-                { id: 78, title: "Obtén 270 o más en las tres rutas", points: 180 },
-                { id: 79, title: "Alcanza el nivel 9", points: 180 },
-                { id: 80, title: "Termina 30 misiones", points: 170 },
-                { id: 81, title: "Gana 10,000 estrellas", points: 190 },
-                { id: 82, title: "Mantente en el top 3 (local)", points: 190 },
-                { id: 83, title: "Termina las tres rutas con promedio ≥250", points: 190 },
-                { id: 84, title: "Completa los 50 subniveles con más de 200 puntos promedio", points: 200 },
-                { id: 85, title: "Llega al nivel 10", points: 200 },
-                { id: 86, title: "Gana 15,000 estrellas", points: 200 },
-                { id: 87, title: "Mantente en el top 3 por 7 días (local)", points: 190 },
-                { id: 88, title: "Consigue 300 puntos en un examen", points: 200 },
-                { id: 89, title: "Termina 40 misiones", points: 190 },
-                { id: 90, title: "Completa todos los exámenes de práctica", points: 190 },
-                { id: 91, title: "Llega a 20,000 estrellas", points: 200 },
-                { id: 92, title: "Termina 50 misiones", points: 190 },
-                { id: 93, title: "Mantente en el top 1 por 3 días (local)", points: 200 },
-                { id: 94, title: "Termina todas las rutas al 100%", points: 200 },
-                { id: 95, title: "Obtén todas las medallas", points: 190 },
-                { id: 96, title: "Consigue 25,000 estrellas", points: 200 },
-                { id: 97, title: "Cumple todas las misiones básicas e intermedias", points: 190 },
-                { id: 98, title: "Mantente activo 30 días seguidos", points: 200 },
-                { id: 99, title: "Llega a 30,000 estrellas", points: 200 },
                 { id: 100, title: "🏆 Maestro del Saber Pro: completa todo el sistema", points: 200 }
             ];
 
@@ -523,6 +418,57 @@
                 { idx: 7, name: "Maestro/a", min: 5000, max: 6499 }, { idx: 8, name: "Élite", min: 6500, max: 7999 },
                 { idx: 9, name: "Leyenda", min: 8000, max: 9499 }, { idx: 10, name: "Rey/Reina Skópia", min: 9500, max: Infinity }
             ];
+
+            // =====================================================
+            // FIREBASE SYNC FUNCTIONS
+            // =====================================================
+            async function loadProgressFromFirebase(userId) {
+                try {
+                    // Cargar misiones
+                    const missionsRef = window.ref(window.db, `users/${userId}/missions`);
+                    const missionsSnapshot = await window.get(missionsRef);
+                    if (missionsSnapshot.exists()) {
+                        localStorage.setItem(MISSIONS_KEY, JSON.stringify(missionsSnapshot.val()));
+                    }
+                    
+                    // Cargar progreso de lección
+                    const lessonRef = window.ref(window.db, `users/${userId}/lesson_progress`);
+                    const lessonSnapshot = await window.get(lessonRef);
+                    if (lessonSnapshot.exists()) {
+                        localStorage.setItem(LESSON_PROGRESS_KEY, JSON.stringify(lessonSnapshot.val()));
+                    }
+                    
+                    // Cargar progreso de juego
+                    const gameRef = window.ref(window.db, `users/${userId}/game_progress`);
+                    const gameSnapshot = await window.get(gameRef);
+                    if (gameSnapshot.exists()) {
+                        localStorage.setItem(GAME_PROGRESS_KEY, JSON.stringify(gameSnapshot.val()));
+                    }
+                    
+                    console.log("✅ Progreso cargado desde Firebase");
+                } catch (error) {
+                    console.error("❌ Error cargando progreso:", error);
+                }
+            }
+
+            async function saveMissionsToFirebase(userId, missionsData) {
+                try {
+                    const missionsRef = window.ref(window.db, `users/${userId}/missions`);
+                    await window.set(missionsRef, missionsData);
+                } catch (error) {
+                    console.error("Error guardando misiones:", error);
+                }
+            }
+
+            async function saveLessonProgressToFirebase(userId, lessonData) {
+                try {
+                    const lessonRef = window.ref(window.db, `users/${userId}/lesson_progress`);
+                    await window.set(lessonRef, lessonData);
+                    console.log("✅ Progreso de lección guardado en Firebase");
+                } catch (error) {
+                    console.error("Error guardando progreso de lección:", error);
+                }
+            }
 
             // --- FUNCIONES PRINCIPALES ---
 
@@ -540,7 +486,6 @@
                 }
             }
 
-            // Función para verificar si la misión fue completada
             function isMissionCompleted() {
                 const progress = JSON.parse(localStorage.getItem(GAME_PROGRESS_KEY) || "{}");
                 return progress.missionCompleted === true;
@@ -553,6 +498,12 @@
                 if (mission && !mission.completed) {
                     mission.completed = true;
                     localStorage.setItem(MISSIONS_KEY, JSON.stringify(data));
+                    
+                    // Guardar en Firebase
+                    if (currentUserId) {
+                        saveMissionsToFirebase(currentUserId, data);
+                    }
+                    
                     console.log(`!!! MISIÓN COMPLETADA: ID=${id}, Titulo="${mission.title}", Puntos=${mission.points} !!!`);
                     
                     document.getElementById('mission-sound').play().catch(e => console.log("Error al reproducir sonido:", e));
@@ -654,45 +605,49 @@
                 missionTimerInterval = setInterval(() => {
                     if (!document.hidden) {
                         totalActiveTime += 1000;
-                        console.log(`Tiempo activo en lección: ${totalActiveTime / 1000}s / ${MISSION_3_DURATION / 1000}s`);
                         if (totalActiveTime >= MISSION_3_DURATION) {
                             completeMission(3);
                             clearInterval(missionTimerInterval);
                             missionTimerInterval = null;
+                            
+                            // Guardar progreso de lección completada
+                            saveLessonProgressToFirebase(currentUserId, { completed: true, completedAt: new Date().toISOString() });
                         }
                     }
                 }, 1000);
             }
 
             // --- EVENT LISTENERS ---
-            window.addEventListener('userReady', (e) => {
+            window.addEventListener('userReady', async (e) => {
                 const user = e.detail.user;
+                currentUserId = user.uid;
                 console.log("Evento 'userReady' recibido para:", user.email);
+                
+                // Cargar progreso desde Firebase
+                await loadProgressFromFirebase(currentUserId);
+                
                 const userProfile = JSON.parse(localStorage.getItem(USER_PROFILE_KEY) || "{}");
 
-                // Inicializar perfil si es la primera vez que se loguea
                 if (!userProfile.originalEmail) {
                     userProfile.originalEmail = user.email;
                     userProfile.nameChangeMissionCompleted = false;
                     localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
-                    console.log("Perfil de usuario inicializado por primera vez. Email original guardado:", userProfile.originalEmail);
                 }
 
-                // Comprobar la misión de cambiar nombre SOLO si no se ha completado
                 if (!userProfile.nameChangeMissionCompleted) {
-                    console.log("Comprobando misión 8 (cambiar nombre)...");
                     const hasChangedName = user.displayName && user.displayName !== userProfile.originalEmail;
                     if (hasChangedName) {
-                        console.log(`¡Cambio de nombre detectado! Original: "${userProfile.originalEmail}", Nuevo: "${user.displayName}". Completando misión 8.`);
                         completeMission(8);
                         userProfile.nameChangeMissionCompleted = true;
                         localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
-                    } else {
-                        console.log("No se detectó cambio de nombre. DisplayName actual:", user.displayName);
                     }
-                } else {
-                    console.log("Misión 8 ya fue completada anteriormente.");
                 }
+                
+                // Actualizar displays
+                updateAllDisplays();
+                
+                // Verificar progreso de misión
+                checkMissionProgress();
             });
 
             document.getElementById('hamburger-menu').addEventListener('click', () => {
@@ -714,30 +669,22 @@
                 document.getElementById('video-container').style.display = 'none';
                 document.getElementById('lesson-container').classList.add('active');
                 startMissionTimer();
-                
-                // Verificar si la misión fue completada para mostrar el botón de continuar
                 checkMissionProgress();
             });
             
-            // El botón "Jugar" siempre redirige a LC.html para permitir volver a jugar
             document.getElementById('play-btn').addEventListener('click', () => {
                 window.location.href = 'juego1.html';
             });
             
-            // Event listener para el botón de continuar ruta
             document.getElementById('continue-btn').addEventListener('click', () => {
-                // Verificar si hay progreso guardado para decidir a dónde redirigir
                 if (isMissionCompleted()) {
                     window.location.href = 'LCDASHBOARD.html';
                 } else {
-                    showMissionToast("No se ha completado el juego. Redirigiendo al juego normal...", 3000);
-                    setTimeout(() => {
-                        window.location.href = 'LC.html';
-                    }, 1500);
+                    showMissionToast("No se ha completado el juego. Redirigiendo al juego...", 3000);
+                    setTimeout(() => { window.location.href = 'LC.html'; }, 1500);
                 }
             });
 
-            // **EVENT LISTENERS DE ICONOS (FUNCIONANDO)**
             document.getElementById('btn-misiones').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-misiones').classList.add('active'); renderMissions(); });
             document.getElementById('btn-nivel').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-nivel').classList.add('active'); renderLevel(); });
             document.getElementById('btn-progreso').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-progreso').classList.add('active'); renderProgress(); });
@@ -748,7 +695,7 @@
                 });
             });
 
-            // Lógica de reloj y frases
+            // Reloj y frases
             const clockElement = document.getElementById('digital-clock'); let lastHour = -1;
             function updateClock() { const now = new Date(); const h = String(now.getHours()).padStart(2, '0'); const m = String(now.getMinutes()).padStart(2, '0'); const s = String(now.getSeconds()).padStart(2, '0'); if (now.getHours() !== lastHour) { clockElement.classList.add('hour-change'); setTimeout(() => { clockElement.textContent = `${h}:${m}:${s}`; clockElement.classList.remove('hour-change'); }, 300); lastHour = now.getHours(); } else { clockElement.textContent = `${h}:${m}:${s}`; } }
             updateClock(); setInterval(updateClock, 1000);
@@ -758,9 +705,7 @@
             changeQuote(); setInterval(changeQuote, 120000);
 
             // --- INICIALIZACIÓN ---
-            initMissions(); initUserProfile(); updateAllDisplays();
-            initMissionNotifications();
-            console.log("Skópia inicializado.");
+            initMissions(); initUserProfile();
 
             function initMissionNotifications() {
                 const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
@@ -770,7 +715,6 @@
                 }
             }
             
-            // Función para verificar el progreso de la misión y mostrar el botón de continuar
             function checkMissionProgress() {
                 if (isMissionCompleted()) {
                     document.getElementById('continue-btn').style.display = 'block';
