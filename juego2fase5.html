@@ -15,31 +15,34 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+        import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            authDomain: "skopia-aa786.firebaseapp.com",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
             projectId: "skopia-aa786",
             storageBucket: "skopia-aa786.firebasestorage.app",
             messagingSenderId: "719823055099",
             appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
         };
 
-        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-            firebaseConfig.authDomain = "localhost";
-        } else {
-            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
-        }
-
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const db = getDatabase(app);
+        
         window.auth = auth;
+        window.db = db;
+        window.ref = ref;
+        window.set = set;
+        window.get = get;
 
         onAuthStateChanged(auth, (user) => {
             if (!user) {
                 window.location.href = 'index.html';
                 return;
             }
-            console.log("Usuario autenticado:", user.email);
+            window.currentUser = user;
             window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
         });
     </script>
@@ -56,11 +59,7 @@
             --color-sombra: rgba(45, 80, 22, 0.1);
         }
 
-        * { 
-            margin: 0; 
-            padding: 0; 
-            box-sizing: border-box; 
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             font-family: 'Roboto', sans-serif;
@@ -71,7 +70,6 @@
             position: relative;
         }
 
-        /* Marca de agua de Sello */
         body::before {
             content: '⬤';
             position: fixed;
@@ -87,7 +85,6 @@
             line-height: 1;
         }
 
-        /* Botón de volver */
         .back-btn {
             position: absolute;
             top: 30px;
@@ -112,7 +109,6 @@
             transform: scale(1.05);
         }
 
-        /* Contenedor principal del juego */
         .game-container {
             position: relative;
             z-index: 1;
@@ -127,7 +123,6 @@
             margin: 0 auto;
         }
 
-        /* --- Pantalla de Inicio --- */
         .start-screen {
             display: flex;
             width: 100%;
@@ -207,7 +202,6 @@
             box-shadow: 0 8px 25px rgba(45, 80, 22, 0.4);
         }
 
-        /* --- Pantalla de Juego --- */
         .game-screen {
             display: none;
             width: 100%;
@@ -385,10 +379,9 @@
             border-left: 4px solid var(--color-azul-pista);
             border-radius: 5px;
             font-size: 0.95rem;
-            display: none; /* Se muestra con JS */
+            display: none;
         }
 
-        /* --- Modal de Ayuda (Fórmulas) --- */
         .formula-helper {
             display: none;
             position: fixed;
@@ -436,7 +429,6 @@
             color: var(--color-gris);
         }
 
-        /* --- Pantallas de Resultados --- */
         .results-screen, .game-over-screen {
             display: none;
             text-align: center;
@@ -505,7 +497,6 @@
         }
         .dashboard-btn:hover { transform: translateY(-3px); }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .challenge-area {
                 flex-direction: column;
@@ -530,13 +521,11 @@
 </head>
 
 <body>
-    <!-- Botón de volver -->
     <button class="back-btn" onclick="goBack()">
         <i class="fas fa-arrow-left"></i> Volver
     </button>
 
     <div class="game-container">
-        <!-- Pantalla de inicio -->
         <div class="start-screen" id="startScreen">
             <div class="start-content">
                 <h1 class="game-title">La Bóveda de Variables</h1>
@@ -553,7 +542,6 @@
             </div>
         </div>
 
-        <!-- Pantalla de juego -->
         <div class="game-screen" id="gameScreen">
             <div class="game-header">
                 <div class="streak-display">
@@ -568,48 +556,32 @@
             <div class="challenge-area">
                 <div class="data-panel">
                     <h3 class="panel-title">Panel de Datos</h3>
-                    <div id="dataContent">
-                        <!-- El problema (texto, tabla, etc.) se cargará aquí -->
-                    </div>
+                    <div id="dataContent"></div>
                 </div>
 
                 <div class="interaction-panel">
                     <h3 class="panel-title">Análisis y Respuesta</h3>
-                    <div id="questionText" class="question-text">
-                        <!-- La pregunta específica se cargará aquí -->
-                    </div>
-                    <div class="options-container" id="optionsContainer">
-                        <!-- Los botones de opción se generarán aquí -->
-                    </div>
-                    <div id="feedbackPanel" class="feedback-panel">
-                        <!-- La explicación se mostrará aquí -->
-                    </div>
+                    <div id="questionText" class="question-text"></div>
+                    <div class="options-container" id="optionsContainer"></div>
+                    <div id="feedbackPanel" class="feedback-panel"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Pantalla de Éxito -->
         <div class="results-screen" id="resultsScreen">
             <div class="results-container">
-                <h2 class="results-title">Módulo de Aritmética Básica: Superado con Éxito</h2>
+                <h2 class="results-title">¡Desafío Completado!</h2>
                 <p class="results-subtitle">Has demostrado una excelente capacidad de análisis y razonamiento cuantitativo.</p>
-                <div class="results-stats">
-                    <div class="stat-item">
-                        <div class="stat-value" style="font-family: 'Orbitron', sans-serif; font-size: 2rem; color: var(--color-verde-oscuro);">Ciudadano del Mundo</div>
-                        <div class="stat-label">Nivel de Competencia Alcanzado</div>
-                    </div>
-                </div>
                 <div class="result-buttons">
                     <button class="dashboard-btn" onclick="goToDashboard()">
-                        <i class="fas fa-tachometer-alt"></i> Ir al Dashboard
+                        <i class="fas fa-tachometer-alt"></i> Continuar
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Pantalla de Game Over (por si se quiere implementar) -->
         <div class="game-over-screen" id="gameOverScreen">
-             <div class="results-container" style="border-color: var(--color-error-marron);">
+            <div class="results-container" style="border-color: var(--color-error-marron);">
                 <h2 class="results-title" style="color: var(--color-error-marron);">Reto Incompleto</h2>
                 <p style="font-size: 1.2rem; color: var(--color-gris); margin-bottom: 20px;">
                     No se logró mantener la racha de 3 aciertos consecutivos. ¡Sigue intentándolo!
@@ -623,7 +595,6 @@
         </div>
     </div>
 
-    <!-- Modal de Ayuda -->
     <div class="helper-overlay" id="helperOverlay" onclick="toggleFormulaHelper()"></div>
     <div class="formula-helper" id="formulaHelper">
         <button class="close-helper" onclick="toggleFormulaHelper()"><i class="fas fa-times"></i></button>
@@ -632,13 +603,17 @@
             <li><b>Porcentaje:</b> (Parte / Total) * 100</li>
             <li><b>Cambio Porcentual:</b> ((Nuevo - Viejo) / Viejo) * 100</li>
             <li><b>Promedio:</b> Suma de valores / Número de valores</li>
-            <li><b>Regla de Tres:</b> a/b = c/x  =>  x = (b*c)/a</li>
+            <li><b>Regla de Tres:</b> a/b = c/x => x = (b*c)/a</li>
         </ul>
     </div>
 
     <script>
+        // --- CONSTANTES Y CLAVES CORRECTAS ---
+        const GAME_PROGRESS_KEY = 'skopia_game_progress_v1';
+        const MISSIONS_KEY = 'skopia_missions_v1';
+        let currentUserId = null;
+
         // --- BANCO DE PREGUNTAS ---
-        // ¡IMPORTANTE! Debes expandir este array a 25 ejercicios.
         const questionBank = [
             {
                 id: 1,
@@ -649,47 +624,47 @@
                         <thead><tr><th>Proyecto</th><th>Costo Inicial ($)</th><th>Rendimiento Anual ($)</th></tr></thead>
                         <tbody>
                             <tr><td>A</td><td>50,000</td><td>8,000</td></tr>
-                            <tr><td>B</td><td>80,000</td><td>11,200</td></tr>
+                            <tr><td>B</td><td>80,000</td><td>12,800</td></tr>
                         </tbody>
                     </table>
                 `,
                 question: "¿Cuál de las siguientes afirmaciones es VERDADERA sobre la rentabilidad de los proyectos?",
                 options: [
-                    "El proyecto A tiene un porcentaje de rendimiento anual mayor que el B.",
-                    "Ambos proyectos tienen el mismo porcentaje de rendimiento anual.",
-                    "El proyecto B tiene un porcentaje de rendimiento anual mayor que el A.",
-                    "No se puede determinar la rentabilidad sin saber el tiempo total de la inversión."
+                    "El proyecto A tiene mayor porcentaje de rendimiento.",
+                    "Ambos proyectos tienen el mismo porcentaje de rendimiento anual (16%).",
+                    "El proyecto B tiene mayor porcentaje de rendimiento.",
+                    "No se puede determinar."
                 ],
                 correctAnswerIndex: 1,
-                explanation: "Rendimiento de A = (8,000 / 50,000) * 100 = 16%. Rendimiento de B = (11,200 / 80,000) * 100 = 14%. La opción correcta es que ambos tienen el mismo rendimiento, pero mi cálculo muestra que A es mayor. Revisando los datos... ¡Ah! El ejercicio estaba diseñado para que tuvieran el mismo rendimiento. Ajustemos los datos para que la lógica sea consistente. Supongamos que el rendimiento de B es $12,000. Entonces, Rendimiento de B = (12,000 / 80,000) * 100 = 15%. En ese caso, A sigue siendo mayor. La respuesta correcta basada en los datos originales es que A es mayor. Sin embargo, el enunciado busca una respuesta específica. Vamos a corregir el banco de datos para que la respuesta 1 sea la correcta. <b>Corrección para que funcione:</b> Si el rendimiento de B fuera $12,800, su porcentaje sería 16%, igual que A. Por lo tanto, la respuesta 'Ambos proyectos tienen el mismo porcentaje de rendimiento anual' sería la correcta. Para este ejemplo, asumiremos que los datos estaban pensados para ser así."
+                explanation: "Rendimiento de A = (8,000 / 50,000) * 100 = 16%. Rendimiento de B = (12,800 / 80,000) * 100 = 16%. Ambos tienen el mismo rendimiento."
             },
             {
                 id: 2,
-                problemText: "Una empresa mezcla dos tipos de café, Grano de Oro y Montaña Alta, para crear su blend 'Sabor Supremo'.",
+                problemText: "Una empresa mezcla dos tipos de café para crear un blend.",
                 dataType: "table",
                 data: `
                     <table class="data-table">
-                        <thead><tr><th>Tipo de Café</th><th>Costo por kg ($)</th><th>Cantidad usada (kg)</th></tr></thead>
+                        <thead><tr><th>Tipo</th><th>Costo/kg ($)</th><th>Cantidad (kg)</th></tr></thead>
                         <tbody>
                             <tr><td>Grano de Oro</td><td>25</td><td>40</td></tr>
                             <tr><td>Montaña Alta</td><td>15</td><td>60</td></tr>
                         </tbody>
                     </table>
                 `,
-                question: "¿Cuál es el costo promedio por kilogramo del blend 'Sabor Supremo'?",
+                question: "¿Cuál es el costo promedio por kilogramo del blend?",
                 options: [
                     "$20.00",
                     "$21.00",
                     "$19.00",
                     "$18.50"
                 ],
-                correctAnswerIndex: 0,
-                explanation: "Costo total = (40 kg * $25/kg) + (60 kg * $15/kg) = $1,000 + $900 = $1,900. Cantidad total = 40 kg + 60 kg = 100 kg. Costo promedio = Costo total / Cantidad total = $1,900 / 100 kg = $19.00 por kg. <b>Nota:</b> La respuesta correcta según el cálculo es $19.00, que corresponde a la opción 2. Ajustemos las opciones para que la respuesta correcta sea la 1 como estaba en el índice. Si el costo de Grano de Oro fuera $20, el costo total sería $800 + $900 = $1,700, y el promedio $17. Si fuera $30, sería $1200 + $900 = $2100, y el promedio $21. Vamos a ajustar el problema para que la respuesta sea $20. <b>Corrección para que funcione:</b> Si el costo de 'Grano de Oro' fuera $20/kg, el costo total sería (40*20) + (60*15) = 800 + 900 = 1700. El promedio sería 1700/100 = $17. Esto no da $20. Para que el promedio sea $20, el costo total debe ser $2000. El costo de Montaña Alta es fijo en $900. Entonces el costo de Grano de Oro debe ser $1100. $1100 / 40 kg = $27.5/kg. <b>Conclusión:</b> El cálculo original con los datos dados es $19.00 (Opción 2). Usaremos esa como la respuesta correcta."
+                correctAnswerIndex: 2,
+                explanation: "Costo total = (40*25) + (60*15) = 1000 + 900 = $1,900. Total kg = 100. Promedio = $1,900/100 = $19.00/kg."
             },
             {
                 id: 3,
-                problemText: "Una ciudad tenía una población de 200,000 habitantes a principios de 2022. Durante el año, la población creció un 5%, pero al final del año, 3,000 personas se mudaron a otra ciudad.",
-                question: "¿Cuál fue la población total de la ciudad al finalizar 2022?",
+                problemText: "Una ciudad tenía 200,000 habitantes. Creció 5% y 3,000 se mudaron.",
+                question: "¿Cuál fue la población final?",
                 options: [
                     "207,000 habitantes",
                     "203,000 habitantes",
@@ -697,25 +672,25 @@
                     "197,000 habitantes"
                 ],
                 correctAnswerIndex: 0,
-                explanation: "Población después del crecimiento: 200,000 * 1.05 = 210,000 habitantes. Población final después de la emigración: 210,000 - 3,000 = 207,000 habitantes."
+                explanation: "200,000 * 1.05 = 210,000. 210,000 - 3,000 = 207,000 habitantes."
             },
             {
                 id: 4,
-                problemText: "En una tienda, el precio de un producto se aumentó en un 20%. Posteriormente, al no tener buena venta, se le aplicó un descuento del 20% sobre el nuevo precio.",
-                question: "¿Cuál es el cambio porcentual total del precio original del producto?",
+                problemText: "Un producto subió 20% y luego bajó 20%.",
+                question: "¿Cuál es el cambio porcentual total?",
                 options: [
-                    "No hubo cambio, el precio volvió a ser el mismo.",
-                    "Disminuyó en un 4%.",
-                    "Aumentó en un 4%.",
-                    "Aumentó en un 44%."
+                    "No hubo cambio",
+                    "Disminuyó 4%",
+                    "Aumentó 4%",
+                    "Aumentó 44%"
                 ],
                 correctAnswerIndex: 1,
-                explanation: "Sea el precio original P. Precio tras el aumento: P * 1.20. Precio tras el descuento: (P * 1.20) * 0.80 = P * 0.96. El precio final es el 96% del original, lo que significa que ha disminuido en un 4% en total."
+                explanation: "Precio final = P * 1.20 * 0.80 = P * 0.96. Disminuyó 4%."
             },
             {
                 id: 5,
-                problemText: "Un estudiante obtuvo las siguientes calificaciones en sus 4 materias: 8.5, 9.0, 7.5 y una cuarta calificación desconocida. Si su promedio final fue de 8.5.",
-                question: "¿Cuál fue su calificación en la cuarta materia?",
+                problemText: "Un estudiante tiene notas 8.5, 9.0, 7.5 y su promedio es 8.5.",
+                question: "¿Cuál es la cuarta nota?",
                 options: [
                     "8.5",
                     "9.0",
@@ -723,11 +698,12 @@
                     "10.0"
                 ],
                 correctAnswerIndex: 2,
-                explanation: "Promedio = (Suma de calificaciones) / 4. 8.5 * 4 = 34.0 (Suma total necesaria). Suma de las 3 calificaciones conocidas: 8.5 + 9.0 + 7.5 = 25.0. Calificación faltante = 34.0 - 25.0 = 9.5."
+                explanation: "8.5 * 4 = 34. 34 - (8.5+9.0+7.5) = 34 - 25 = 9.5."
             },
             {
                 id: 6,
-                problemText: "Si 3 máquinas pueden producir 500 piezas en 5 horas, ¿cuántas horas tardarán 5 máquinas en producir 1000 piezas, asumiendo que todas trabajan al mismo ritmo?",
+                problemText: "3 máquinas hacen 500 piezas en 5 horas.",
+                question: "¿Cuántas horas tardan 5 máquinas en hacer 1000 piezas?",
                 options: [
                     "6 horas",
                     "5 horas",
@@ -735,9 +711,8 @@
                     "10 horas"
                 ],
                 correctAnswerIndex: 0,
-                explanation: "Primero, calculamos la tasa de producción por máquina por hora: 500 piezas / (3 máquinas * 5 horas) = 500 / 15 = 33.33 piezas/máquina/hora. Ahora, para 1000 piezas con 5 máquinas: Tiempo = 1000 piezas / (5 máquinas * 33.33 piezas/máquina/hora) = 1000 / 166.67 = 6 horas."
+                explanation: "Tasa = 500/(3*5) = 33.33 piezas/máquina/hora. Tiempo = 1000/(5*33.33) = 6 horas."
             }
-            // ... Añade aquí 19 ejercicios más siguiendo la misma estructura.
         ];
 
         // --- VARIABLES DEL JUEGO ---
@@ -746,6 +721,51 @@
         let consecutiveCorrect = 0;
         let currentQuestion = null;
         let usedQuestions = new Set();
+
+        // =====================================================
+        // FIREBASE FUNCTIONS
+        // =====================================================
+        async function saveGameProgressToFirebase(userId, completed) {
+            try {
+                const progressRef = window.ref(window.db, `users/${userId}/game_progress`);
+                const dataToSave = {
+                    missionCompleted: completed,
+                    completedAt: completed ? new Date().toISOString() : null
+                };
+                await window.set(progressRef, dataToSave);
+                
+                // También guardar en localStorage
+                localStorage.setItem(GAME_PROGRESS_KEY, JSON.stringify(dataToSave));
+                
+                console.log("✅ Progreso de juego guardado en Firebase:", dataToSave);
+            } catch (error) {
+                console.error("❌ Error guardando progreso de juego:", error);
+            }
+        }
+
+        async function completeMission(userId, missionId) {
+            try {
+                // Cargar misiones actuales
+                const missionsRef = window.ref(window.db, `users/${userId}/missions`);
+                const snapshot = await window.get(missionsRef);
+                let missions = [];
+                
+                if (snapshot.exists()) {
+                    missions = snapshot.val();
+                }
+                
+                // Marcar misión como completada
+                const missionIndex = missions.findIndex(m => m.id === missionId);
+                if (missionIndex !== -1 && !missions[missionIndex].completed) {
+                    missions[missionIndex].completed = true;
+                    await window.set(missionsRef, missions);
+                    localStorage.setItem(MISSIONS_KEY, JSON.stringify(missions));
+                    console.log(`✅ Misión ${missionId} completada`);
+                }
+            } catch (error) {
+                console.error("Error completando misión:", error);
+            }
+        }
 
         // --- FUNCIONES DEL JUEGO ---
         function startChallenge() {
@@ -761,25 +781,20 @@
         }
 
         function loadNextQuestion() {
-            // Filtrar preguntas no usadas
             const availableQuestions = questionBank.filter(q => !usedQuestions.has(q.id));
             
             if (availableQuestions.length === 0) {
-                // Si se acaban las preguntas, reiniciar el set (o mostrar un mensaje)
                 usedQuestions.clear();
-                console.log("Reiniciando banco de preguntas usadas.");
-                return loadNextQuestion(); // Llamada recursiva para cargar del nuevo set
+                return loadNextQuestion();
             }
 
-            // Elegir una pregunta aleatoria
             const randomIndex = Math.floor(Math.random() * availableQuestions.length);
             currentQuestion = availableQuestions[randomIndex];
             usedQuestions.add(currentQuestion.id);
 
-            // Cargar datos en la UI
             document.getElementById('dataContent').innerHTML = `
                 <p class="problem-text">${currentQuestion.problemText}</p>
-                ${currentQuestion.data}
+                ${currentQuestion.data || ''}
             `;
             document.getElementById('questionText').innerText = currentQuestion.question;
 
@@ -793,10 +808,7 @@
                 optionsContainer.appendChild(button);
             });
             
-            // Ocultar feedback de la pregunta anterior
             document.getElementById('feedbackPanel').style.display = 'none';
-
-            // Reiniciar y empezar el temporizador
             startTimer();
         }
 
@@ -810,7 +822,7 @@
                 updateTimerDisplay();
                 if (timeLeft <= 0) {
                     clearInterval(timer);
-                    handleAnswer(-1, null); // -1 indica tiempo agotado
+                    handleAnswer(-1, null);
                 }
             }, 1000);
         }
@@ -830,9 +842,9 @@
         }
 
         function handleAnswer(selectedIndex, selectedButton) {
-            clearInterval(timer); // Detener el timer inmediatamente
+            clearInterval(timer);
             const buttons = document.querySelectorAll('.option-btn');
-            buttons.forEach(btn => btn.disabled = true); // Deshabilitar todos los botones
+            buttons.forEach(btn => btn.disabled = true);
 
             const isCorrect = selectedIndex === currentQuestion.correctAnswerIndex;
             
@@ -844,31 +856,34 @@
                 if (selectedButton) {
                     selectedButton.classList.add('incorrect');
                 }
-                // Resaltar la respuesta correcta
                 buttons[currentQuestion.correctAnswerIndex].classList.add('correct');
             }
 
-            // Mostrar panel de feedback
             const feedbackPanel = document.getElementById('feedbackPanel');
             feedbackPanel.innerHTML = `<strong>Explicación:</strong> ${currentQuestion.explanation}`;
             feedbackPanel.style.display = 'block';
 
             updateStreakDisplay();
 
-            // Esperar unos segundos y luego continuar
             setTimeout(() => {
                 if (consecutiveCorrect >= 3) {
                     showSuccessScreen();
                 } else {
                     loadNextQuestion();
                 }
-            }, 4500); // 4.5 segundos para leer la explicación
+            }, 4500);
         }
 
-        function showSuccessScreen() {
+        async function showSuccessScreen() {
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('resultsScreen').style.display = 'block';
-            localStorage.setItem('skopia_level5_completed', 'true'); // Marcar como completado
+            
+            // 🔥 GUARDAR EN FIREBASE
+            if (currentUserId) {
+                await saveGameProgressToFirebase(currentUserId, true);
+                // Completar misión 5 (Gana tu primer juego)
+                await completeMission(currentUserId, 5);
+            }
         }
 
         function toggleFormulaHelper() {
@@ -883,14 +898,19 @@
             }
         }
 
-        // --- NAVEGACIÓN ---
         function goBack() {
-            window.location.href = 'juego2fase4.html'; // O la página anterior correspondiente
+            window.location.href = 'LC.html';
         }
 
         function goToDashboard() {
-            window.location.href = 'RCDASHBOARD.html';
+            window.location.href = 'LCDASHBOARD.html';
         }
+
+        // --- INICIALIZACIÓN ---
+        window.addEventListener('userReady', (e) => {
+            currentUserId = e.detail.user.uid;
+            console.log("Usuario listo:", currentUserId);
+        });
     </script>
 </body>
 </html>
