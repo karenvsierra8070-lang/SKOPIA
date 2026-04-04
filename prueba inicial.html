@@ -8,6 +8,42 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
 
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+        import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            authDomain: "skopia-aa786.firebaseapp.com",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        
+        window.auth = auth;
+        window.db = db;
+        window.ref = ref;
+        window.set = set;
+        window.get = get;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            window.currentUser = user;
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
     <style>
         :root {
             --color-crema: #fdfbf5;
@@ -330,7 +366,7 @@
             border-color: var(--color-rojo);
         }
     </style>
-     <script type="module" src="./global-settings.js"></script>
+    <script type="module" src="./global-settings.js"></script>
 </head>
 
 <body>
@@ -392,7 +428,17 @@
             let allDiagnosticQuestions = [];
             let currentQuestionIndex = 0;
             let userAnswers = [];
-            let currentModule = 'diagnostico'; // Módulo actual
+            let currentModule = 'diagnostico';
+            let currentUserId = null;
+
+            // Esperar a que el usuario esté autenticado
+            if (window.currentUser) {
+                currentUserId = window.currentUser.uid;
+            } else {
+                window.addEventListener('userReady', (e) => {
+                    currentUserId = e.detail.user.uid;
+                });
+            }
 
             welcomeOverlay.classList.remove('hidden');
 
@@ -529,7 +575,32 @@
                 tipText.textContent = question.truco;
             }
 
-            function finishQuiz() {
+            // =====================================================
+            // FUNCIÓN NUEVA: Guardar diagnóstico en Firebase
+            // =====================================================
+            async function saveDiagnosticToFirebase(userId, result) {
+                try {
+                    const diagnosticRef = window.ref(window.db, `users/${userId}/diagnostico`);
+                    const dataToSave = {
+                        score: result.score,
+                        correctAnswers: result.correctAnswers,
+                        total: result.total,
+                        modulos: result.modulos,
+                        completedAt: new Date().toISOString(),
+                        type: 'diagnostico'
+                    };
+                    
+                    await window.set(diagnosticRef, dataToSave);
+                    
+                    console.log("✅ Diagnóstico guardado en Firebase:", dataToSave);
+                    return true;
+                } catch (error) {
+                    console.error("❌ Error guardando diagnóstico en Firebase:", error);
+                    return false;
+                }
+            }
+
+            async function finishQuiz() {
                 const overallCorrect = userAnswers.filter((a, i) => a === questions[i].respuestaCorrecta).length;
                 const overallScore = Math.round((overallCorrect / questions.length) * 300);
 
@@ -565,7 +636,6 @@
                 const incorrectQuestions = [];
                 questions.forEach((question, index) => {
                     if (userAnswers[index] !== question.respuestaCorrecta) {
-                        // Añadir información del módulo a la pregunta
                         const questionWithModule = {
                             ...question,
                             modulo: currentModule,
@@ -591,7 +661,14 @@
                     total: questions.length,
                     modulos: modulosData
                 };
+                
+                // Guardar en localStorage
                 localStorage.setItem('resultadoDiagnostico', JSON.stringify(result));
+
+                // 🔥 GUARDAR EN FIREBASE
+                if (currentUserId) {
+                    await saveDiagnosticToFirebase(currentUserId, result);
+                }
 
                 window.location.href = "resultados.html";
             }
