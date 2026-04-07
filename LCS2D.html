@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domina las Ideas Secundarias - Skópia</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;500;700&family=Orbitron:wght@700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+        import { getDatabase, ref, get, set, onValue, push, update } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            authDomain: "skopia-aa786.firebaseapp.com",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        window.auth = auth;
+        window.db = db;
+        window.ref = ref;
+        window.get = get;
+        window.set = set;
+        window.onValue = onValue;
+        window.push = push;
+        window.update = update;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            window.currentUser = user;
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+            --color-dorado: #ffd700;
+            --color-plata: #c0c0c0;
+            --color-bronce: #cd7f32;
+            --color-correcto: #4caf50;
+            --color-incorrecto: #f44336;
+            --color-acento: #d4a373;
+            --color-acento-oscuro: #bc6c25;
+            --float-color: var(--color-oliva-oscuro);
+            --float-color-hover: var(--color-oliva-medio);
+            
+            /* Colores por tipo */
+            --color-ejemplificacion: #606c38;
+            --color-explicacion: #bc6c25;
+            --color-comparacion: #5a6133;
+            --color-justificacion: #272b00;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Roboto', sans-serif; 
+            background: linear-gradient(135deg, var(--color-crema) 0%, #f5efe5 50%, #e8e4d9 100%); 
+            color: var(--color-oliva-oscuro); 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(212, 163, 115, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(90, 97, 51, 0.06) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Navbar */
+        .navbar { 
+            display: flex; 
+            justify-content: flex-end; 
+            align-items: center; 
+            padding: 15px 40px; 
+            background-color: rgba(255,255,255,0.95); 
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px var(--color-sombra); 
+            position: relative; 
+            z-index: 1000; 
+        }
+        .hamburger { width: 30px; height: 25px; position: relative; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; }
+        .hamburger span { display: block; height: 4px; width: 100%; background-color: var(--color-oliva-oscuro); border-radius: 2px; transition: all 0.3s ease-in-out; }
+        .user-dropdown { position: absolute; top: 70px; right: 40px; background-color: white; border-radius: 8px; box-shadow: 0 4px 20px var(--color-sombra); overflow: hidden; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: opacity 0.3s, transform 0.3s, visibility 0.3s; z-index: 1000; }
+        .user-dropdown.active { opacity: 1; visibility: visible; transform: translateY(0); }
+        .user-dropdown a { display: block; padding: 15px 25px; text-decoration: none; color: var(--color-oliva-oscuro); font-weight: 500; transition: background-color 0.2s; }
+        .user-dropdown a:hover { background-color: var(--color-crema); }
+        .user-dropdown hr { border: none; border-top: 1px solid #eee; margin: 0; }
+
+        /* Hero Section */
+        .hero-section { 
+            text-align: center; 
+            padding: 40px 20px; 
+            background: linear-gradient(135deg, var(--color-oliva-medio) 0%, var(--color-oliva-oscuro) 100%); 
+            color: white; 
+            position: relative; 
+            overflow: hidden; 
+        }
+        .hero-section::before { 
+            content: ''; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1.5" fill="rgba(255,255,255,0.08)"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>'); 
+            opacity: 0.5; 
+        }
+        .hero-content { position: relative; z-index: 1; }
+        .hero-icon { 
+            font-size: 4rem; 
+            margin-bottom: 20px; 
+            display: inline-block;
+            animation: float 3s ease-in-out infinite; 
+        }
+        @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-10px) rotate(5deg); } }
+        .hero-title { font-family: 'Patrick Hand', cursive; font-size: 2.8rem; margin-bottom: 15px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .hero-subtitle { font-size: 1.2rem; opacity: 0.9; max-width: 650px; margin: 0 auto; line-height: 1.6; }
+
+        /* Progress Overview */
+        .progress-overview {
+            background: white;
+            padding: 25px 40px;
+            box-shadow: 0 4px 15px var(--color-sombra);
+            position: relative;
+            z-index: 10;
+        }
+        .progress-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .progress-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            color: var(--color-oliva-oscuro);
+        }
+        .progress-percentage {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: var(--color-acento);
+        }
+        .main-progress-bar {
+            height: 16px;
+            background: var(--color-crema);
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        .main-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--color-oliva-medio), var(--color-acento));
+            border-radius: 20px;
+            transition: width 0.8s ease;
+            position: relative;
+        }
+        .main-progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Stats Bar */
+        .stats-bar { 
+            display: flex; 
+            justify-content: center; 
+            gap: 50px; 
+            padding: 25px; 
+            background: rgba(255,255,255,0.8); 
+            backdrop-filter: blur(10px);
+            flex-wrap: wrap; 
+            border-bottom: 1px solid rgba(90, 97, 51, 0.1);
+        }
+        .stat-item { text-align: center; }
+        .stat-number { 
+            font-family: 'Orbitron', sans-serif; 
+            font-size: 2.2rem; 
+            font-weight: 700; 
+            color: var(--color-oliva-medio); 
+        }
+        .stat-label { 
+            font-size: 0.9rem; 
+            color: var(--color-oliva-oscuro); 
+            margin-top: 5px; 
+            font-weight: 500;
+        }
+
+        /* Main Content */
+        .main-content { 
+            flex-grow: 1; 
+            padding: 40px 20px; 
+            position: relative;
+            z-index: 1;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        .section-header { text-align: center; margin-bottom: 40px; }
+        .section-title { 
+            font-family: 'Patrick Hand', cursive; 
+            font-size: 2.2rem; 
+            color: var(--color-oliva-oscuro); 
+            margin-bottom: 10px; 
+        }
+        .section-description { 
+            font-size: 1.1rem; 
+            color: var(--color-oliva-medio); 
+            max-width: 700px; 
+            margin: 0 auto; 
+            line-height: 1.6;
+        }
+
+        /* Techniques Grid */
+        .techniques-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+            gap: 30px; 
+            margin-bottom: 50px; 
+        }
+
+        /* Technique Card */
+        .technique-card { 
+            background: white; 
+            border-radius: 20px; 
+            overflow: hidden; 
+            box-shadow: 0 8px 30px var(--color-sombra); 
+            transition: all 0.4s ease; 
+            cursor: pointer; 
+            position: relative; 
+        }
+        .technique-card:hover { 
+            transform: translateY(-10px) scale(1.02); 
+            box-shadow: 0 20px 50px rgba(39, 43, 0, 0.15); 
+        }
+        .technique-card.locked { 
+            opacity: 0.7; 
+            cursor: not-allowed; 
+        }
+        .technique-card.locked:hover { 
+            transform: translateY(-5px); 
+        }
+        .technique-card.completed {
+            border: 3px solid var(--color-correcto);
+        }
+
+        .card-header { 
+            height: 140px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            position: relative; 
+            overflow: hidden; 
+        }
+        .card-header::before { 
+            content: ''; 
+            position: absolute; 
+            top: -50%; 
+            left: -50%; 
+            width: 200%; 
+            height: 200%; 
+            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%); 
+            animation: pulse 3s ease-in-out infinite; 
+        }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.1); opacity: 0.3; } }
+
+        .card-header.ejemplificacion { background: linear-gradient(135deg, #606c38, #7a8c4a); }
+        .card-header.explicacion { background: linear-gradient(135deg, #bc6c25, #d4a373); }
+        .card-header.comparacion { background: linear-gradient(135deg, #5a6133, #8a9450); }
+        .card-header.justificacion { background: linear-gradient(135deg, #272b00, #5a6133); }
+
+        .card-icon { 
+            font-size: 3.5rem; 
+            color: white; 
+            z-index: 1; 
+            position: relative; 
+        }
+        
+        .card-badge { 
+            position: absolute; 
+            top: 15px; 
+            right: 15px; 
+            background: var(--color-dorado); 
+            color: var(--color-oliva-oscuro); 
+            padding: 6px 12px; 
+            border-radius: 20px; 
+            font-size: 0.75rem; 
+            font-weight: bold; 
+            z-index: 2; 
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .card-badge.completed-badge { 
+            background: var(--color-correcto); 
+            color: white; 
+        }
+        .card-badge.locked-badge { 
+            background: var(--color-incorrecto); 
+            color: white; 
+        }
+
+        .lock-overlay { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background: rgba(0,0,0,0.4); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 10; 
+        }
+        .lock-overlay i { font-size: 4rem; color: white; opacity: 0.9; }
+
+        .card-body { padding: 25px; }
+        .card-type { 
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.85rem; 
+            color: var(--color-acento); 
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .card-title { 
+            font-family: 'Patrick Hand', cursive; 
+            font-size: 1.6rem; 
+            color: var(--color-oliva-oscuro); 
+            margin-bottom: 10px; 
+        }
+        .card-description { 
+            font-size: 0.95rem; 
+            color: var(--color-oliva-medio); 
+            margin-bottom: 20px; 
+            line-height: 1.6; 
+        }
+
+        .card-stats { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            padding: 15px;
+            background: var(--color-crema);
+            border-radius: 12px;
+        }
+        .card-stat { 
+            text-align: center; 
+        }
+        .card-stat-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            color: var(--color-oliva-oscuro);
+        }
+        .card-stat-label {
+            font-size: 0.75rem;
+            color: var(--color-oliva-medio);
+        }
+
+        .progress-bar { 
+            height: 10px; 
+            background: var(--color-oliva-claro); 
+            border-radius: 10px; 
+            overflow: hidden; 
+            margin-bottom: 20px; 
+        }
+        .progress-fill { 
+            height: 100%; 
+            border-radius: 10px; 
+            transition: width 0.5s ease; 
+        }
+        .progress-fill.ejemplificacion { background: linear-gradient(90deg, #606c38, #7a8c4a); }
+        .progress-fill.explicacion { background: linear-gradient(90deg, #bc6c25, #d4a373); }
+        .progress-fill.comparacion { background: linear-gradient(90deg, #5a6133, #8a9450); }
+        .progress-fill.justificacion { background: linear-gradient(90deg, #272b00, #5a6133); }
+
+        .card-footer { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        
+        .start-btn { 
+            background: var(--color-oliva-oscuro); 
+            color: white; 
+            border: none; 
+            padding: 12px 25px; 
+            border-radius: 25px; 
+            font-size: 0.95rem; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .start-btn:hover { 
+            background: var(--color-oliva-medio); 
+            transform: scale(1.05); 
+        }
+        .start-btn.locked-btn { 
+            background: #999; 
+            cursor: not-allowed; 
+        }
+        .start-btn.locked-btn:hover { 
+            transform: none; 
+            background: #999; 
+        }
+        .start-btn.completed-btn {
+            background: linear-gradient(135deg, var(--color-correcto), #388e3c);
+        }
+
+        .difficulty { 
+            display: flex; 
+            gap: 4px; 
+        }
+        .difficulty-star { 
+            color: var(--color-oliva-claro); 
+            font-size: 1rem; 
+        }
+        .difficulty-star.filled { 
+            color: var(--color-dorado); 
+        }
+
+        /* Unlock Requirement */
+        .unlock-requirement { 
+            background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(244, 67, 54, 0.05)); 
+            border-left: 4px solid var(--color-incorrecto); 
+            padding: 12px 15px; 
+            border-radius: 8px; 
+            margin-bottom: 15px; 
+            font-size: 0.9rem; 
+            color: var(--color-oliva-oscuro); 
+        }
+        .unlock-requirement i { color: var(--color-incorrecto); margin-right: 8px; }
+        .unlock-requirement .required-score { font-weight: 700; color: var(--color-incorrecto); }
+
+        /* Floating Icons */
+        .floating-icons { position: fixed; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; z-index: 2000; }
+        .floating-icons button { 
+            background: var(--float-color); 
+            color: white; 
+            width: 54px; 
+            height: 54px; 
+            border-radius: 50%; 
+            border: none; 
+            font-size: 20px; 
+            display: grid; 
+            place-items: center; 
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12); 
+            cursor: pointer; 
+            transition: transform .15s ease, background .15s ease; 
+        }
+        .floating-icons button:hover { transform: scale(1.08); background: var(--float-color-hover); }
+
+        /* Toast */
+        .toast { 
+            position: fixed; 
+            right: 20px; 
+            bottom: 20px; 
+            background: #fff; 
+            border-left: 6px solid var(--color-oliva-medio); 
+            padding: 16px 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 6px 18px rgba(0,0,0,0.15); 
+            z-index: 3000; 
+            display: none; 
+            font-size: 1rem; 
+            max-width: 380px; 
+        }
+        .toast.show { display: block; animation: slideInRight 0.3s ease; }
+        .toast.error { border-left-color: var(--color-incorrecto); }
+        .toast.success { border-left-color: var(--color-correcto); }
+        .toast.warning { border-left-color: var(--color-acento); }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Close Button */
+        .close-btn { 
+            position: fixed; 
+            top: 20px; 
+            left: 20px; 
+            background: var(--color-oliva-oscuro); 
+            color: white; 
+            width: 44px; 
+            height: 44px; 
+            border-radius: 50%; 
+            border: none; 
+            font-size: 22px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            transition: transform 0.2s, background-color 0.2s; 
+            z-index: 1001; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .close-btn:hover { transform: scale(1.1); background-color: var(--color-oliva-medio); }
+
+        /* Achievement Banner */
+        .achievement-banner {
+            display: none;
+            background: linear-gradient(135deg, var(--color-dorado), #f39c12);
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 16px;
+            color: var(--color-oliva-oscuro);
+            animation: fadeIn 0.5s ease;
+        }
+        .achievement-banner.visible {
+            display: block;
+        }
+        .achievement-banner h3 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+        .achievement-banner p {
+            font-size: 1rem;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Panel Boxes */
+        .panel-box { 
+            position: fixed; 
+            right: 90px; 
+            top: 50%; 
+            transform: translateY(-50%); 
+            width: 400px; 
+            max-height: 75vh; 
+            background: white; 
+            border-radius: 16px; 
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15); 
+            overflow: auto; 
+            padding: 24px; 
+            z-index: 2100; 
+            display: none; 
+        }
+        .panel-box.active { display: block; animation: slideInPanel 0.3s ease; }
+        @keyframes slideInPanel {
+            from { opacity: 0; transform: translateY(-50%) translateX(30px); }
+            to { opacity: 1; transform: translateY(-50%) translateX(0); }
+        }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .panel-header h3 { margin: 0; font-family: 'Patrick Hand', cursive; font-size: 1.6rem; color: var(--color-oliva-oscuro); }
+        .close-panel { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--color-oliva-medio); }
+
+        .mission-row { 
+            padding: 12px; 
+            border-radius: 8px; 
+            margin-bottom: 10px; 
+            background: #fffaf0; 
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .mission-row.completed { 
+            opacity: 0.6; 
+            text-decoration: line-through; 
+            background: #f0fff4; 
+        }
+
+        .info { 
+            font-family: 'Roboto', sans-serif; 
+            color: var(--color-oliva-oscuro); 
+            font-size: 1rem; 
+            margin-bottom: 12px; 
+        }
+
+        /* Sync Indicator */
+        .sync-indicator {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--color-oliva-medio);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 1000;
+        }
+        .sync-indicator.visible {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .sync-indicator i {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-title { font-size: 2rem; }
+            .techniques-grid { grid-template-columns: 1fr; gap: 20px; }
+            .stats-bar { gap: 25px; }
+            .stat-number { font-size: 1.6rem; }
+            .panel-box { 
+                right: 10px; 
+                width: 92%; 
+                top: 55%; 
+                transform: translateY(-55%); 
+            }
+            .floating-icons { right: 10px; }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="hamburger" id="hamburger-menu"><span></span><span></span><span></span></div>
+        <div class="user-dropdown" id="user-dropdown">
+            <a href="cuenta.html">Mi Cuenta</a>
+            <a href="configuracion.html">Configuracion</a>
+            <a href="notificaciones.html">Notificaciones</a>
+            <hr>
+            <a href="index.html" id="logout-btn">Cerrar Sesion</a>
+        </div>
+    </nav>
+
+    <button class="close-btn" id="close-btn" title="Volver a leccion">&times;</button>
+
+    <section class="hero-section">
+        <div class="hero-content">
+            <div class="hero-icon">
+                <i class="fas fa-layer-group"></i>
+            </div>
+            <h1 class="hero-title">Domina las Ideas Secundarias</h1>
+            <p class="hero-subtitle">Aprende a identificar y clasificar los 4 tipos de ideas secundarias que el ICFES evalua en Saber Pro</p>
+        </div>
+    </section>
+
+    <div class="progress-overview">
+        <div class="progress-container">
+            <div class="progress-header">
+                <span class="progress-title">Progreso General del Modulo</span>
+                <span class="progress-percentage" id="overall-progress">0%</span>
+            </div>
+            <div class="main-progress-bar">
+                <div class="main-progress-fill" id="main-progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-number" id="completed-count">0/4</div>
+            <div class="stat-label">Tecnicas Dominadas</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" id="average-score">0</div>
+            <div class="stat-label">Puntaje Promedio</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" id="total-attempts">0</div>
+            <div class="stat-label">Intentos Totales</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" id="mastery-level">Novato</div>
+            <div class="stat-label">Nivel de Maestria</div>
+        </div>
+    </div>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="achievement-banner" id="achievement-banner">
+                <h3>Felicitaciones! Has dominado todas las tecnicas!</h3>
+                <p>Eres un experto en Ideas Secundarias. Sigue practicando para mantener tu nivel.</p>
+            </div>
+
+            <div class="section-header">
+                <h2 class="section-title">Las 4 Tecnicas Fundamentales</h2>
+                <p class="section-description">Completa cada cuestionario para dominar cada tipo de idea secundaria. Desbloquea el siguiente nivel alcanzando al menos 180 puntos.</p>
+            </div>
+
+            <div class="techniques-grid" id="techniques-grid">
+                <!-- Las tarjetas se generaran dinamicamente -->
+            </div>
+        </div>
+    </main>
+
+    <div class="floating-icons" aria-hidden="false">
+        <button id="btn-misiones" title="Misiones"><i class="fas fa-bullseye"></i></button>
+        <button id="btn-nivel" title="Nivel actual"><i class="fas fa-star"></i></button>
+        <button id="btn-progreso" title="Progreso"><i class="fas fa-chart-line"></i></button>
+    </div>
+
+    <div class="sync-indicator" id="sync-indicator">
+        <i class="fas fa-sync-alt"></i>
+        <span>Sincronizando...</span>
+    </div>
+
+    <!-- Panels -->
+    <div class="panel-box" id="panel-misiones" aria-hidden="true">
+        <div class="panel-header">
+            <h3>Misiones</h3>
+            <button class="close-panel" data-close="misiones">&times;</button>
+        </div>
+        <div id="misiones-content"></div>
+    </div>
+    
+    <div class="panel-box" id="panel-nivel" aria-hidden="true">
+        <div class="panel-header">
+            <h3>Tu Nivel</h3>
+            <button class="close-panel" data-close="nivel">&times;</button>
+        </div>
+        <div id="nivel-content"></div>
+    </div>
+    
+    <div class="panel-box" id="panel-progreso" aria-hidden="true">
+        <div class="panel-header">
+            <h3>Progreso</h3>
+            <button class="close-panel" data-close="progreso">&times;</button>
+        </div>
+        <div id="progreso-content"></div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("DOM Cargado. Inicializando Dashboard Ideas Secundarias...");
+
+        // ============================================
+        // CONFIGURACION DE TECNICAS
+        // ============================================
+        const MIN_SCORE_TO_UNLOCK = 180;
+        
+        const techniquesConfig = {
+            'LCS2D1.html': {
+                id: 1,
+                type: 'ejemplificacion',
+                title: 'Ejemplificacion',
+                subtitle: 'Ilustra con casos concretos',
+                description: 'Aprende a identificar cuando el autor usa ejemplos especificos para ilustrar la idea principal.',
+                icon: 'fas fa-lightbulb',
+                colorClass: 'ejemplificacion',
+                questions: 10,
+                time: '15 min',
+                difficulty: 1,
+                locked: false,
+                requires: null,
+                requiresScore: 0,
+                functionName: 'Ilustra la idea principal con casos concretos'
+            },
+            'LCS2D2.html': {
+                id: 2,
+                type: 'explicacion',
+                title: 'Explicacion',
+                subtitle: 'Desarrolla el como y el por que',
+                description: 'Identifica cuando el autor desarrolla o explica aspectos de la idea central.',
+                icon: 'fas fa-book-open',
+                colorClass: 'explicacion',
+                questions: 10,
+                time: '18 min',
+                difficulty: 2,
+                locked: true,
+                requires: 'LCS2D1.html',
+                requiresScore: MIN_SCORE_TO_UNLOCK,
+                functionName: 'Desarrolla el "por que" o el "como" de la idea central'
+            },
+            'LCS2D3.html': {
+                id: 3,
+                type: 'comparacion',
+                title: 'Comparacion',
+                subtitle: 'Resalta contrastando',
+                description: 'Detecta cuando el autor usa contrastes para hacer resaltar la idea principal.',
+                icon: 'fas fa-balance-scale',
+                colorClass: 'comparacion',
+                questions: 10,
+                time: '20 min',
+                difficulty: 2,
+                locked: true,
+                requires: 'LCS2D2.html',
+                requiresScore: MIN_SCORE_TO_UNLOCK,
+                functionName: 'Resalta la idea principal contrastandola con otra cosa'
+            },
+            'LCS2D4.html': {
+                id: 4,
+                type: 'justificacion',
+                title: 'Justificacion',
+                subtitle: 'Aporta datos y argumentos',
+                description: 'Reconoce cuando el autor presenta datos, estadisticas o argumentos que validan la idea principal.',
+                icon: 'fas fa-chart-bar',
+                colorClass: 'justificacion',
+                questions: 10,
+                time: '22 min',
+                difficulty: 3,
+                locked: true,
+                requires: 'LCS2D3.html',
+                requiresScore: MIN_SCORE_TO_UNLOCK,
+                functionName: 'Aporta datos, estadisticas o argumentos que dan validez'
+            }
+        };
+
+        // Elementos DOM
+        const hamburgerMenu = document.getElementById('hamburger-menu');
+        const userDropdown = document.getElementById('user-dropdown');
+        const logoutBtn = document.getElementById('logout-btn');
+        const closeBtn = document.getElementById('close-btn');
+        const toast = document.getElementById('toast');
+        const techniquesGrid = document.getElementById('techniques-grid');
+        const syncIndicator = document.getElementById('sync-indicator');
+
+        let currentUserId = null;
+
+        // ============================================
+        // FUNCIONES DE FIREBASE
+        // ============================================
+        
+        async function loadProgressFromFirebase(userId) {
+            showSyncIndicator(true);
+            try {
+                const dbRef = window.ref(window.db, `users/${userId}/lcs2_progress`);
+                const snapshot = await window.get(dbRef);
+                
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    console.log("Datos cargados desde Firebase:", data);
+                    
+                    // Guardar en localStorage para acceso rapido
+                    localStorage.setItem('skopia_lcs2_progress', JSON.stringify(data));
+                    
+                    return data;
+                }
+            } catch (error) {
+                console.error("Error cargando progreso:", error);
+            } finally {
+                showSyncIndicator(false);
+            }
+            return null;
+        }
+
+        async function saveProgressToFirebase(userId, data) {
+            showSyncIndicator(true);
+            try {
+                const dbRef = window.ref(window.db, `users/${userId}/lcs2_progress`);
+                await window.set(dbRef, data);
+                console.log("Progreso guardado en Firebase");
+                
+                // Tambien guardar en localStorage
+                localStorage.setItem('skopia_lcs2_progress', JSON.stringify(data));
+            } catch (error) {
+                console.error("Error guardando progreso:", error);
+            } finally {
+                showSyncIndicator(false);
+            }
+        }
+
+        function showSyncIndicator(show) {
+            if (show) {
+                syncIndicator.classList.add('visible');
+            } else {
+                syncIndicator.classList.remove('visible');
+            }
+        }
+
+        // ============================================
+        // FUNCIONES DE LOGICA DE ESTADO
+        // ============================================
+        
+        function getLocalProgress() {
+            const data = localStorage.getItem('skopia_lcs2_progress');
+            if (!data) return {
+                techniques: {},
+                stats: {
+                    completedCount: 0,
+                    totalScore: 0,
+                    attempts: 0
+                }
+            };
+            try {
+                return JSON.parse(data);
+            } catch (e) {
+                return {
+                    techniques: {},
+                    stats: {
+                        completedCount: 0,
+                        totalScore: 0,
+                        attempts: 0
+                    }
+                };
+            }
+        }
+
+        function getTechniqueProgress(techniqueUrl) {
+            const progress = getLocalProgress();
+            return progress.techniques[techniqueUrl] || null;
+        }
+
+        function isTechniqueUnlocked(techniqueUrl) {
+            const config = techniquesConfig[techniqueUrl];
+            if (!config) return true;
+            
+            if (!config.locked) return true;
+            
+            if (config.locked && config.requires) {
+                const progress = getLocalProgress();
+                const requiredProgress = progress.techniques[config.requires];
+                
+                if (requiredProgress && requiredProgress.completed && requiredProgress.score >= config.requiresScore) {
+                    return true;
+                }
+                
+                return false;
+            }
+            
+            return true;
+        }
+
+        // ============================================
+        // RENDERIZADO DE TARJETAS
+        // ============================================
+        
+        function renderTechniqueCards() {
+            techniquesGrid.innerHTML = '';
+            
+            const progress = getLocalProgress();
+            let completedCount = 0;
+            
+            Object.entries(techniquesConfig).forEach(([url, config]) => {
+                const isUnlocked = isTechniqueUnlocked(url);
+                const techProgress = progress.techniques[url];
+                const isCompleted = techProgress?.completed && techProgress?.score >= MIN_SCORE_TO_UNLOCK;
+                
+                if (isCompleted) completedCount++;
+                
+                const card = document.createElement('div');
+                card.className = 'technique-card';
+                if (!isUnlocked) card.classList.add('locked');
+                if (isCompleted) card.classList.add('completed');
+                
+                // Calcular progreso
+                let progressPercent = 0;
+                let scoreDisplay = '--';
+                if (techProgress) {
+                    if (techProgress.completed) {
+                        progressPercent = 100;
+                        scoreDisplay = techProgress.score || 0;
+                    } else if (techProgress.currentQuestion > 0) {
+                        progressPercent = (techProgress.currentQuestion / config.questions) * 100;
+                    }
+                }
+                
+                // Generar estrellas de dificultad
+                const stars = Array(3).fill(0).map((_, i) => 
+                    `<span class="difficulty-star ${i < config.difficulty ? 'filled' : ''}">&#9733;</span>`
+                ).join('');
+                
+                // Determinar estado del boton
+                let buttonText = 'Comenzar';
+                let buttonIcon = '<i class="fas fa-play"></i>';
+                let buttonClass = '';
+                
+                if (!isUnlocked) {
+                    buttonText = 'Bloqueado';
+                    buttonIcon = '<i class="fas fa-lock"></i>';
+                    buttonClass = 'locked-btn';
+                } else if (isCompleted) {
+                    buttonText = 'Reintentar';
+                    buttonIcon = '<i class="fas fa-redo"></i>';
+                    buttonClass = 'completed-btn';
+                } else if (progressPercent > 0) {
+                    buttonText = 'Continuar';
+                    buttonIcon = '<i class="fas fa-play"></i>';
+                }
+                
+                // Determinar badge
+                let badgeHtml = '';
+                if (!isUnlocked) {
+                    badgeHtml = `<div class="card-badge locked-badge"><i class="fas fa-lock"></i> Bloqueado</div>`;
+                } else if (isCompleted) {
+                    badgeHtml = `<div class="card-badge completed-badge"><i class="fas fa-check"></i> Dominado</div>`;
+                }
+                
+                // Lock overlay
+                let lockOverlay = '';
+                if (!isUnlocked) {
+                    lockOverlay = `<div class="lock-overlay"><i class="fas fa-lock"></i></div>`;
+                }
+                
+                // Requisito de desbloqueo
+                let requirementHtml = '';
+                if (!isUnlocked && config.requires) {
+                    const reqConfig = techniquesConfig[config.requires];
+                    requirementHtml = `
+                        <div class="unlock-requirement">
+                            <i class="fas fa-info-circle"></i>
+                            Completa <strong>${reqConfig.title}</strong> con al menos 
+                            <span class="required-score">${config.requiresScore} puntos</span>
+                        </div>
+                    `;
+                }
+                
+                card.innerHTML = `
+                    <div class="card-header ${config.colorClass}">
+                        <div class="card-icon"><i class="${config.icon}"></i></div>
+                        ${badgeHtml}
+                        ${lockOverlay}
+                    </div>
+                    <div class="card-body">
+                        <div class="card-type">${config.subtitle}</div>
+                        <h3 class="card-title">${config.title}</h3>
+                        <p class="card-description">${config.description}</p>
+                        ${requirementHtml}
+                        <div class="card-stats">
+                            <div class="card-stat">
+                                <div class="card-stat-value">${config.questions}</div>
+                                <div class="card-stat-label">Preguntas</div>
+                            </div>
+                            <div class="card-stat">
+                                <div class="card-stat-value">${config.time}</div>
+                                <div class="card-stat-label">Duracion</div>
+                            </div>
+                            <div class="card-stat">
+                                <div class="card-stat-value">${scoreDisplay}</div>
+                                <div class="card-stat-label">Puntaje</div>
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${config.colorClass}" style="width: ${progressPercent}%"></div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="difficulty">
+                                ${stars}
+                            </div>
+                            <button class="start-btn ${buttonClass}" data-url="${url}" ${!isUnlocked ? 'disabled' : ''}>
+                                ${buttonText} ${buttonIcon}
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                techniquesGrid.appendChild(card);
+            });
+            
+            // Event listeners para botones
+            document.querySelectorAll('.start-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const url = btn.dataset.url;
+                    if (url) handleTechniqueStart(url);
+                });
+            });
+            
+            // Click en tarjetas
+            document.querySelectorAll('.technique-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const btn = card.querySelector('.start-btn');
+                    if (btn && !btn.disabled) {
+                        const url = btn.dataset.url;
+                        if (url) handleTechniqueStart(url);
+                    }
+                });
+            });
+        }
+
+        // ============================================
+        // MANEJO DE INICIO DE CUESTIONARIO
+        // ============================================
+        
+        function handleTechniqueStart(url) {
+            const config = techniquesConfig[url];
+            if (!config) return;
+            
+            const isUnlocked = isTechniqueUnlocked(url);
+            
+            if (!isUnlocked) {
+                showToast(`Esta tecnica esta bloqueada. Completa la anterior con al menos ${MIN_SCORE_TO_UNLOCK} puntos.`, 'error');
+                return;
+            }
+            
+            // Guardar cuestionario actual
+            localStorage.setItem('currentLCS2Quiz', url);
+            
+            const progress = getTechniqueProgress(url);
+            
+            if (progress?.completed) {
+                showToast('Iniciando nuevo intento...', 'success');
+            } else if (progress?.currentQuestion > 0) {
+                showToast('Reanudando cuestionario...', 'success');
+            } else {
+                showToast(`Iniciando ${config.title}...`, 'success');
+            }
+            
+            setTimeout(() => {
+                window.location.href = url;
+            }, 800);
+        }
+
+        // ============================================
+        // ACTUALIZACION DE ESTADISTICAS
+        // ============================================
+        
+        function updateStats() {
+            const progress = getLocalProgress();
+            const techniques = progress.techniques || {};
+            
+            let completedCount = 0;
+            let totalScore = 0;
+            let scoreCount = 0;
+            let attempts = 0;
+            
+            Object.entries(techniques).forEach(([url, data]) => {
+                if (data.completed && data.score >= MIN_SCORE_TO_UNLOCK) {
+                    completedCount++;
+                }
+                if (data.score) {
+                    totalScore += data.score;
+                    scoreCount++;
+                }
+                attempts += data.attempts || 0;
+            });
+            
+            const averageScore = scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0;
+            
+            // Actualizar display
+            document.getElementById('completed-count').textContent = `${completedCount}/4`;
+            document.getElementById('average-score').textContent = averageScore;
+            document.getElementById('total-attempts').textContent = attempts;
+            
+            // Nivel de maestria
+            let masteryLevel = 'Novato';
+            if (completedCount === 4 && averageScore >= 250) {
+                masteryLevel = 'Maestro';
+            } else if (completedCount === 4) {
+                masteryLevel = 'Experto';
+            } else if (completedCount >= 3) {
+                masteryLevel = 'Avanzado';
+            } else if (completedCount >= 2) {
+                masteryLevel = 'Intermedio';
+            } else if (completedCount >= 1) {
+                masteryLevel = 'Aprendiz';
+            }
+            document.getElementById('mastery-level').textContent = masteryLevel;
+            
+            // Progreso general
+            const overallProgress = Math.round((completedCount / 4) * 100);
+            document.getElementById('overall-progress').textContent = `${overallProgress}%`;
+            document.getElementById('main-progress-fill').style.width = `${overallProgress}%`;
+            
+            // Banner de logro
+            if (completedCount === 4) {
+                document.getElementById('achievement-banner').classList.add('visible');
+            }
+        }
+
+        // ============================================
+        // FUNCIONES DE UI
+        // ============================================
+        
+        function showToast(message, type = '', duration = 4000) {
+            toast.textContent = message;
+            toast.className = 'toast show';
+            if (type) toast.classList.add(type);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+
+        function animateCards() {
+            const cards = document.querySelectorAll('.technique-card');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                setTimeout(() => {
+                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 150);
+            });
+        }
+
+        function closeAllPanels() {
+            document.querySelectorAll('.panel-box').forEach(p => p.classList.remove('active'));
+        }
+
+        // ============================================
+        // RENDER PANELS
+        // ============================================
+        
+        function renderMissions() {
+            const progress = getLocalProgress();
+            const container = document.getElementById('misiones-content');
+            
+            const missions = [
+                { id: 1, title: 'Completa Ejemplificacion con 180+ puntos', completed: false },
+                { id: 2, title: 'Completa Explicacion con 180+ puntos', completed: false },
+                { id: 3, title: 'Completa Comparacion con 180+ puntos', completed: false },
+                { id: 4, title: 'Completa Justificacion con 180+ puntos', completed: false }
+            ];
+            
+            // Verificar cada mision
+            Object.entries(techniquesConfig).forEach(([url, config]) => {
+                const techProgress = progress.techniques[url];
+                if (techProgress?.completed && techProgress?.score >= MIN_SCORE_TO_UNLOCK) {
+                    const mission = missions.find(m => m.title.includes(config.title));
+                    if (mission) mission.completed = true;
+                }
+            });
+            
+            container.innerHTML = '';
+            missions.forEach(m => {
+                const div = document.createElement('div');
+                div.className = `mission-row ${m.completed ? 'completed' : ''}`;
+                div.innerHTML = `
+                    <div>
+                        <strong>${m.id}. ${m.title}</strong>
+                    </div>
+                    <span>${m.completed ? '&#10003;' : '&#9711;'}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        function renderLevel() {
+            const progress = getLocalProgress();
+            const techniques = progress.techniques || {};
+            
+            let totalScore = 0;
+            Object.values(techniques).forEach(t => totalScore += t.score || 0);
+            
+            const level = Math.floor(totalScore / 200) + 1;
+            const exp = totalScore % 200;
+            
+            document.getElementById('nivel-content').innerHTML = `
+                <div class="info"><strong>Nivel:</strong> ${level}</div>
+                <div class="info"><strong>Experiencia:</strong> ${totalScore} puntos</div>
+                <div class="info"><strong>Para siguiente nivel:</strong> ${200 - exp} puntos</div>
+            `;
+        }
+        
+        function renderProgressPanel() {
+            const progress = getLocalProgress();
+            const techniques = progress.techniques || {};
+            
+            let html = '<div class="info"><strong>Progreso por Tecnica:</strong></div>';
+            
+            Object.entries(techniquesConfig).forEach(([url, config]) => {
+                const techProgress = techniques[url];
+                const status = techProgress?.completed ? 
+                    `Completado (${techProgress.score} pts)` : 
+                    (techProgress?.currentQuestion > 0 ? 'En progreso' : 'No iniciado');
+                
+                html += `<div class="info">${config.title}: ${status}</div>`;
+            });
+            
+            document.getElementById('progreso-content').innerHTML = html;
+        }
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+        
+        window.addEventListener('userReady', async (e) => {
+            const user = e.detail.user;
+            currentUserId = user.uid;
+            console.log("Usuario listo:", user.email);
+            
+            // Cargar datos de Firebase
+            await loadProgressFromFirebase(currentUserId);
+            
+            // Renderizar
+            renderTechniqueCards();
+            updateStats();
+            animateCards();
+            renderMissions();
+            renderLevel();
+            renderProgressPanel();
+        });
+
+        hamburgerMenu.addEventListener('click', () => {
+            userDropdown.classList.toggle('active');
+        });
+
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
+                signOut(window.auth).then(() => window.location.href = 'index.html');
+            });
+        });
+
+        closeBtn.addEventListener('click', () => {
+            window.location.href = 'LCS2.html';
+        });
+
+        window.addEventListener('click', (event) => {
+            if (!event.target.closest('.navbar')) {
+                userDropdown.classList.remove('active');
+            }
+            const isIcon = event.target.closest('.floating-icons');
+            const isPanel = event.target.closest('.panel-box');
+            if (!isIcon && !isPanel) closeAllPanels();
+        });
+
+        // Panel buttons
+        document.getElementById('btn-misiones').addEventListener('click', () => {
+            closeAllPanels();
+            document.getElementById('panel-misiones').classList.add('active');
+            renderMissions();
+        });
+        
+        document.getElementById('btn-nivel').addEventListener('click', () => {
+            closeAllPanels();
+            document.getElementById('panel-nivel').classList.add('active');
+            renderLevel();
+        });
+        
+        document.getElementById('btn-progreso').addEventListener('click', () => {
+            closeAllPanels();
+            document.getElementById('panel-progreso').classList.add('active');
+            renderProgressPanel();
+        });
+
+        document.querySelectorAll('.close-panel').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.getElementById('panel-' + e.target.getAttribute('data-close')).classList.remove('active');
+            });
+        });
+
+        // Escuchar cambios en localStorage
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'skopia_lcs2_progress') {
+                renderTechniqueCards();
+                updateStats();
+            }
+        });
+
+        console.log("Dashboard Ideas Secundarias inicializado.");
+    });
+    </script>
+</body>
+</html>
