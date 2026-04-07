@@ -165,6 +165,14 @@
         .quiz-option.incorrect { border-color: var(--color-incorrecto); background: #ffebee; }
         .option-letter { width: 35px; height: 35px; border-radius: 50%; background: var(--color-oliva-claro); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
         .quiz-option.selected .option-letter { background: var(--color-azul); }
+        
+        /* Estilos nuevos para feedback de cuestionario */
+        .quiz-feedback { margin-top: 25px; padding: 20px; border-radius: 15px; background: #f9f9f9; border-left: 5px solid #ddd; text-align: left; animation: fadeIn 0.5s; }
+        .quiz-feedback.success { background: #e8f5e9; border-color: var(--color-correcto); }
+        .quiz-feedback.error { background: #ffebee; border-color: var(--color-incorrecto); }
+        .quiz-feedback h4 { font-family: 'Fredoka'; margin-bottom: 10px; color: var(--color-oliva-oscuro); }
+        .quiz-feedback p { margin-bottom: 8px; font-size: 1rem; line-height: 1.5; }
+        .quiz-feedback .truco { background: #fff3cd; padding: 10px; border-radius: 8px; font-style: italic; margin-top: 10px; }
 
         .score-circle { width: 120px; height: 120px; border-radius: 50%; background: var(--color-oliva-medio); color: white; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: 700; margin: 0 auto 20px; font-family: 'Orbitron', sans-serif; }
 
@@ -553,9 +561,24 @@ async function startQuiz() {
     try {
         const res = await fetch('preguntas.json');
         const data = await res.json();
+        
+        // FILTRO ESTRICTO: DEBE TENER AMBOS TAGS
         state.qQuestions = shuffle(data.filter(q => 
-            q.tags && q.tags.includes('ideas secundarias')
+            q.tags && 
+            q.tags.includes('ideas secundarias') && 
+            q.tags.includes('L1')
         )).slice(0, 10);
+        
+        // VALIDACIÓN POR SI NO HAY COINCIDENCIAS
+        if (state.qQuestions.length === 0) {
+            document.getElementById('quiz-body').innerHTML = `
+                <div style="text-align:center; padding: 40px;">
+                    <h2 style="font-family: 'Patrick Hand'; color: var(--color-oliva-oscuro);">⚠️ No hay preguntas</h2>
+                    <p>No se encontraron preguntas con los tags <strong>'ideas secundarias'</strong> Y <strong>'L1'</strong>.</p>
+                </div>
+            `;
+            return;
+        }
         
         state.qIndex = 0; state.qScore = 0;
         loadQuiz();
@@ -579,7 +602,7 @@ function loadQuiz() {
 
     if(passage) html += `<div class="text-passage">${passage}</div>`;
     html += `<p class="question-text">${question}</p>`;
-    html += `<div class="quiz-options">`;
+    html += `<div class="quiz-options" id="q-opts">`;
     
     q.opciones.forEach((opt, i) => {
         html += `<div class="quiz-option" onclick="selectQuiz(this, ${i}, ${q.respuestaCorrecta})">
@@ -589,22 +612,55 @@ function loadQuiz() {
     });
     
     html += `</div>`;
+    // Contenedor para retroalimentación y botón siguiente
+    html += `<div id="quiz-feedback-container"></div>`;
+    
     body.innerHTML = html;
 }
 
 window.selectQuiz = function(el, idx, correct) {
     if (el.classList.contains('selected')) return;
 
-    document.querySelectorAll('.quiz-option').forEach(e => {
+    // Deshabilitar opciones
+    const opts = document.querySelectorAll('.quiz-option');
+    opts.forEach(e => {
         e.style.pointerEvents = 'none';
         e.classList.add('selected');
+        // Marcar correcta
         if (Array.from(el.parentElement.children).indexOf(e) === correct) e.classList.add('correct');
     });
 
-    if (idx === correct) { el.classList.add('correct'); state.qScore++; playSound('correct'); }
-    else { el.classList.add('incorrect'); playSound('wrong'); }
+    // Determinar si acertó
+    const isCorrect = idx === correct;
+    if (isCorrect) { 
+        el.classList.add('correct'); 
+        state.qScore++; 
+        playSound('correct'); 
+    } else { 
+        el.classList.add('incorrect'); 
+        playSound('wrong'); 
+    }
 
-    setTimeout(() => { state.qIndex++; loadQuiz(); }, 1200);
+    // Obtener datos de la pregunta actual
+    const q = state.qQuestions[state.qIndex];
+
+    // Generar HTML de feedback
+    let fbHTML = `<div class="quiz-feedback ${isCorrect ? 'success' : 'error'}">`;
+    fbHTML += `<h4>${isCorrect ? '✅ ¡Correcto!' : '❌ Incorrecto'}</h4>`;
+    fbHTML += `<p><strong>Explicación:</strong> ${q.explicacion || 'No disponible.'}</p>`;
+    if(q.truco) {
+        fbHTML += `<div class="truco">💡 <strong>Truco:</strong> ${q.truco}</div>`;
+    }
+    fbHTML += `</div>`;
+    fbHTML += `<div style="text-align:center; margin-top:20px;"><button class="btn btn-success" onclick="nextQuizQuestion()">Siguiente <i class="fas fa-arrow-right"></i></button></div>`;
+
+    // Insertar en el DOM
+    document.getElementById('quiz-feedback-container').innerHTML = fbHTML;
+};
+
+window.nextQuizQuestion = function() {
+    state.qIndex++;
+    loadQuiz();
 };
 
 function finishQuiz() {
@@ -615,7 +671,7 @@ function finishQuiz() {
     document.getElementById('final-score').textContent = finalScore;
     
     if (finalScore >= 180) document.getElementById('final-msg').textContent = "¡Aprobado! Has demostrado dominio en Ideas Secundarias.";
-    else document.getElementById('final-msg').textContent = "Necesitas 180 puntos. Repite los juegos.";
+    else document.getElementById('final-msg').textContent = "Necesitas 180 puntos. Repite los juegos para mejorar.";
 }
 
 async function saveAndLeave() {
