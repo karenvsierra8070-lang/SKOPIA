@@ -1,0 +1,1958 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estrategia: Resumen por Capas - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700&family=Orbitron:wght@700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            initializePage(user);
+        });
+
+        function initializePage(user) {
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    signOut(auth).then(() => window.location.href = 'index.html');
+                });
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+            --float-color: var(--color-oliva-oscuro);
+            --float-color-hover: var(--color-oliva-medio);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--color-crema) 0%, #f5efe5 100%);
+            color: var(--color-oliva-oscuro);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* --- BARRA DE NAVEGACIÓN PRINCIPAL --- */
+        .main-navigation {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            width: 100%;
+        }
+        .main-navigation ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .main-navigation > ul > li {
+            position: relative;
+        }
+        .main-navigation > ul > li > span, .main-navigation > ul > li > a {
+            display: flex;
+            align-items: center;
+            padding: 18px 24px;
+            color: var(--color-oliva-oscuro);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            cursor: default;
+        }
+        .main-navigation > ul > li > a {
+            cursor: pointer;
+        }
+        .main-navigation > ul > li > a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background-color: var(--color-oliva-medio);
+            transform: translateX(-50%);
+            transition: width 0.3s ease;
+        }
+        .main-navigation > ul > li:hover > a::after {
+            width: 80%;
+        }
+        .main-navigation > ul > li:hover > span, .main-navigation > ul > li:hover > a {
+            background-color: rgba(94, 97, 51, 0.1);
+            color: var(--color-oliva-medio);
+        }
+        .main-navigation .emoji {
+            margin-right: 8px;
+            font-size: 1.2em;
+        }
+
+        /* --- Dropdowns de primer nivel --- */
+        .main-navigation > ul > li > .dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            min-width: 280px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+            border-radius: 0 0 12px 12px;
+            overflow: visible;
+        }
+        .main-navigation > ul > li:hover > .dropdown {
+            display: block;
+        }
+        .main-navigation > ul > li > .dropdown > li {
+            width: 100%;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            position: relative;
+        }
+        .main-navigation > ul > li > .dropdown > li:last-child {
+            border-bottom: none;
+        }
+        .main-navigation > ul > li > .dropdown > li > a, .main-navigation > ul > li > .dropdown > li > span {
+            padding: 14px 24px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            color: var(--color-oliva-oscuro);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .main-navigation > ul > li > .dropdown > li > span {
+            cursor: default;
+            font-weight: 700;
+        }
+        .main-navigation > ul > li > .dropdown > li:hover > a, .main-navigation > ul > li > .dropdown > li:hover > span {
+            background-color: rgba(94, 97, 51, 0.15);
+            color: var(--color-oliva-oscuro);
+        }
+        
+        /* --- Sub-Dropdowns (anidados) --- */
+        .main-navigation > ul > li > .dropdown > li > .sub-dropdown {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            min-width: 250px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+            border-radius: 0 12px 12px 0;
+        }
+        .main-navigation > ul > li > .dropdown > li:hover > .sub-dropdown {
+            display: block;
+        }
+        .main-navigation > ul > li > .dropdown > li > .sub-dropdown li a {
+            padding: 12px 20px;
+            font-weight: 400;
+            font-size: 0.9rem;
+        }
+        .main-navigation > ul > li > .dropdown > li > .sub-dropdown li a .emoji {
+            font-size: 1em;
+        }
+
+        /* --- NAVBAR DE USUARIO --- */
+        .navbar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 15px 40px;
+            background-color: white;
+            box-shadow: 0 2px 10px var(--color-sombra);
+        }
+        .hamburger {
+            width: 30px;
+            height: 25px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .hamburger span {
+            display: block;
+            height: 4px;
+            width: 100%;
+            background-color: var(--color-oliva-oscuro);
+            border-radius: 2px;
+            transition: all 0.3s ease-in-out;
+        }
+        .user-dropdown {
+            position: absolute;
+            top: 70px;
+            right: 40px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px var(--color-sombra);
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+            z-index: 1000;
+        }
+        .user-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .user-dropdown a {
+            display: block;
+            padding: 15px 25px;
+            text-decoration: none;
+            color: var(--color-oliva-oscuro);
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .user-dropdown a:hover {
+            background-color: var(--color-crema);
+        }
+        .user-dropdown hr {
+            border: none;
+            border-top: 1px solid #eee;
+            margin: 0;
+        }
+
+        /* --- HERO ESTRATEGIA --- */
+        .hero-estrategia {
+            background: linear-gradient(135deg, var(--color-oliva-medio) 0%, var(--color-oliva-oscuro) 100%);
+            padding: 60px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero-estrategia::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.3;
+        }
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .hero-estrategia h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3.2rem;
+            color: white;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            animation: slideDown 0.8s ease-out;
+        }
+        .hero-estrategia .subtitle {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.6rem;
+            color: var(--color-oliva-claro);
+            margin-bottom: 25px;
+            animation: fadeIn 1s ease-out 0.3s both;
+        }
+        .breadcrumb {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            font-size: 0.95rem;
+            color: rgba(255,255,255,0.7);
+            animation: fadeIn 1s ease-out 0.5s both;
+        }
+        .breadcrumb a {
+            color: var(--color-oliva-claro);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        .breadcrumb a:hover {
+            color: white;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* --- CONTENIDO PRINCIPAL --- */
+        .main-content {
+            flex-grow: 1;
+            padding: 50px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* --- SECCIÓN TEORÍA --- */
+        .teoria-section {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 0 15px 40px var(--color-sombra);
+            margin-bottom: 50px;
+            position: relative;
+            overflow: hidden;
+            animation: slideUp 0.6s ease-out;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .teoria-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 6px;
+            height: 100%;
+            background: linear-gradient(180deg, var(--color-oliva-medio), var(--color-oliva-claro));
+        }
+        .section-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--color-oliva-medio), var(--color-oliva-oscuro));
+            color: white;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .teoria-section h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.2rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 25px;
+            line-height: 1.3;
+        }
+        .teoria-section p {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #444;
+            margin-bottom: 20px;
+        }
+        .teoria-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 35px;
+        }
+        .teoria-card {
+            background: linear-gradient(135deg, #f8f9f5 0%, #f0f2e8 100%);
+            border-radius: 15px;
+            padding: 30px;
+            border-left: 4px solid var(--color-oliva-medio);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .teoria-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        }
+        .teoria-card h3 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.5rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .teoria-card h3 i {
+            color: var(--color-oliva-medio);
+        }
+        .teoria-card p {
+            font-size: 1rem;
+            margin-bottom: 0;
+        }
+
+        /* --- SECCIÓN CAPAS --- */
+        .capas-container {
+            margin-top: 60px;
+        }
+        .capas-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        .capas-header h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 15px;
+        }
+        .capas-header p {
+            font-size: 1.15rem;
+            color: #666;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        .zoom-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        .zoom-level {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 25px;
+            background: white;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px var(--color-sombra);
+            font-weight: 600;
+            color: var(--color-oliva-oscuro);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .zoom-level.active {
+            background: var(--color-oliva-oscuro);
+            color: white;
+        }
+        .zoom-level:hover:not(.active) {
+            transform: scale(1.05);
+        }
+        .zoom-level i {
+            font-size: 1.2rem;
+        }
+
+        /* --- CAPA INDIVIDUAL --- */
+        .capa-section {
+            background: white;
+            border-radius: 24px;
+            margin-bottom: 40px;
+            overflow: hidden;
+            box-shadow: 0 15px 40px var(--color-sombra);
+            transition: all 0.4s ease;
+            opacity: 0;
+            transform: translateY(40px);
+        }
+        .capa-section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .capa-header {
+            padding: 35px 40px;
+            position: relative;
+        }
+        .capa-1 .capa-header { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); }
+        .capa-2 .capa-header { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); }
+        .capa-3 .capa-header { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); }
+        
+        .capa-number {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 4rem;
+            font-weight: 700;
+            opacity: 0.15;
+            color: var(--color-oliva-oscuro);
+        }
+        .capa-header h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+        .capa-header .capa-subtitle {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.3rem;
+            color: var(--color-oliva-medio);
+            position: relative;
+            z-index: 1;
+        }
+        .capa-body {
+            padding: 40px;
+        }
+        .capa-theory {
+            background: #f9faf5;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-left: 4px solid var(--color-oliva-medio);
+        }
+        .capa-theory h4 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.4rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 15px;
+        }
+        .capa-theory p {
+            line-height: 1.8;
+            color: #555;
+        }
+
+        /* --- PRÁCTICA INTERACTIVA --- */
+        .practica-container {
+            background: linear-gradient(135deg, #fafbf7 0%, #f5f7f0 100%);
+            border-radius: 20px;
+            padding: 35px;
+            border: 2px dashed var(--color-oliva-claro);
+        }
+        .practica-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .practica-header h4 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.5rem;
+            color: var(--color-oliva-oscuro);
+        }
+        .click-counter {
+            background: var(--color-oliva-oscuro);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+        .texto-ejemplo {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            font-size: 1.15rem;
+            line-height: 2;
+            color: #333;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }
+        .texto-ejemplo .palabra {
+            display: inline-block;
+            padding: 3px 8px;
+            margin: 2px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        .texto-ejemplo .palabra:hover {
+            background: rgba(94, 97, 51, 0.1);
+        }
+        .texto-ejemplo .palabra.selected {
+            background: var(--color-oliva-medio);
+            color: white;
+            transform: scale(1.05);
+        }
+        .texto-ejemplo .palabra.correct {
+            background: #4caf50;
+            color: white;
+        }
+        .texto-ejemplo .palabra.incorrect {
+            background: #f44336;
+            color: white;
+        }
+
+        /* --- OPCIONES CAPA 2 --- */
+        .opciones-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .opcion-btn {
+            background: white;
+            border: 2px solid var(--color-oliva-claro);
+            border-radius: 12px;
+            padding: 20px 25px;
+            text-align: left;
+            font-size: 1.05rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: var(--color-oliva-oscuro);
+            line-height: 1.6;
+        }
+        .opcion-btn:hover {
+            border-color: var(--color-oliva-medio);
+            background: #f8f9f5;
+            transform: translateX(5px);
+        }
+        .opcion-btn.selected {
+            border-color: var(--color-oliva-medio);
+            background: linear-gradient(135deg, #f0f2e8, #e8ebd8);
+        }
+        .opcion-btn.correct {
+            border-color: #4caf50;
+            background: #e8f5e9;
+        }
+        .opcion-btn.incorrect {
+            border-color: #f44336;
+            background: #ffebee;
+        }
+
+        /* --- CAPA 3 CONECTORES --- */
+        .conectores-pool {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+        }
+        .conector-chip {
+            background: var(--color-oliva-claro);
+            color: var(--color-oliva-oscuro);
+            padding: 10px 18px;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+        .conector-chip:hover {
+            background: var(--color-oliva-medio);
+            color: white;
+        }
+        .conector-chip.used {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .parrafo-final {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            min-height: 150px;
+            font-size: 1.1rem;
+            line-height: 1.9;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .frase-base {
+            display: block;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f5f7f0;
+            border-radius: 10px;
+            border-left: 3px solid var(--color-oliva-medio);
+        }
+        .resultado-texto {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 20px;
+            display: none;
+        }
+        .resultado-texto.show {
+            display: block;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        /* --- BOTONES ACCIÓN --- */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+        .btn-primary {
+            background: var(--color-oliva-oscuro);
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-primary:hover {
+            background: var(--color-oliva-medio);
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background: transparent;
+            color: var(--color-oliva-oscuro);
+            border: 2px solid var(--color-oliva-claro);
+            padding: 12px 28px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-secondary:hover {
+            border-color: var(--color-oliva-medio);
+            background: rgba(94, 97, 51, 0.05);
+        }
+
+        /* --- OBJETIVO TAG --- */
+        .objetivo-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, var(--color-oliva-medio), var(--color-oliva-oscuro));
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+
+        /* --- PALABRAS SELECCIONADAS --- */
+        .selected-words {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+            min-height: 50px;
+            padding: 15px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .selected-word {
+            background: var(--color-oliva-medio);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: popIn 0.3s ease-out;
+        }
+        @keyframes popIn {
+            from { transform: scale(0); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .selected-word .remove-word {
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .selected-word .remove-word:hover {
+            opacity: 1;
+        }
+
+        /* --- DINÁMICA ZOOM --- */
+        .zoom-animation {
+            transition: transform 0.5s ease, opacity 0.5s ease;
+        }
+        .zoom-in { transform: scale(1.05); }
+        .zoom-out { transform: scale(0.95); opacity: 0.5; }
+
+        /* --- PROGRESS BAR --- */
+        .capa-progress {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 40px;
+        }
+        .progress-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--color-oliva-claro);
+            transition: all 0.3s;
+        }
+        .progress-dot.active {
+            background: var(--color-oliva-medio);
+            transform: scale(1.3);
+        }
+        .progress-dot.completed {
+            background: var(--color-oliva-oscuro);
+        }
+
+        /* --- ICONO ICFES --- */
+        .icfes-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #fff3e0;
+            border: 2px solid #ff9800;
+            color: #e65100;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-left: 15px;
+        }
+
+        /* --- FOOTER --- */
+        .footer-info {
+            text-align: center;
+            padding: 40px 20px;
+            background: var(--color-oliva-oscuro);
+            color: white;
+            margin-top: auto;
+        }
+        .footer-info p {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        /* --- FLOATING ICONS & PANELS --- */
+        .floating-icons {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 2000;
+        }
+        .floating-icons button {
+            background: var(--float-color);
+            color: white;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            border: none;
+            font-size: 20px;
+            display: grid;
+            place-items: center;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            cursor: pointer;
+            transition: transform .15s ease, background .15s ease;
+        }
+        .floating-icons button:hover { transform: scale(1.08); background: var(--float-color-hover); }
+
+        .panel-box {
+            position: fixed;
+            right: 90px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 420px;
+            max-height: 75vh;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+            overflow: auto;
+            padding: 24px;
+            z-index: 2100;
+            display: none;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.2rem;
+        }
+        .panel-box.active { display: block; }
+
+        .panel-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+        .panel-header h3 { margin:0; font-size:1.6rem; color:var(--color-oliva-oscuro); }
+        .close-panel { background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--color-oliva-medio); }
+
+        .mission-row { padding:12px; border-radius:8px; margin-bottom:10px; background:#fffaf0; box-shadow: 0 2px 6px rgba(0,0,0,0.04); display:flex; justify-content:space-between; align-items:center; }
+        .mission-row.completed { opacity:0.6; text-decoration:line-through; background:#f0fff4; }
+
+        .toast {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            background: #fff7e6;
+            border-left: 6px solid var(--color-oliva-medio);
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            z-index: 3000;
+            display: none;
+            font-size: 1.1rem;
+            max-width: 400px;
+        }
+        .toast.show { display: block; }
+
+        .info { font-family: 'Roboto', sans-serif; color:var(--color-oliva-oscuro); font-size:1.1rem; margin-bottom:12px; }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 1024px) {
+            .main-navigation > ul > li > .dropdown {
+                position: static;
+                display: none;
+                width: 100%;
+                box-shadow: none;
+            }
+            .main-navigation > ul > li > .dropdown > li > .sub-dropdown {
+                position: static;
+                display: none;
+                width: 100%;
+                box-shadow: none;
+            }
+            .main-navigation > ul > li:hover > .dropdown {
+                display: none;
+            }
+            .main-navigation > ul > li.active > .dropdown {
+                display: block;
+            }
+            .main-navigation > ul > li > .dropdown > li.active > .sub-dropdown {
+                display: block;
+            }
+            .main-navigation > ul > li > a, .main-navigation > ul > li > span {
+                padding: 15px;
+            }
+            .hero-estrategia h1 { font-size: 2.2rem; }
+            .teoria-section { padding: 30px 20px; }
+            .capa-body { padding: 25px 20px; }
+            .main-content { padding: 30px 20px; }
+            .panel-box { right: 10px; width: 92%; top: 55%; transform: translateY(-55%); }
+            .floating-icons { right: 10px; }
+        }
+
+        @media (max-width: 768px) {
+            .hero-estrategia { padding: 40px 20px; }
+            .hero-estrategia h1 { font-size: 1.8rem; }
+            .teoria-grid { grid-template-columns: 1fr; }
+            .capa-header { padding: 25px 20px; }
+            .capa-number { font-size: 2.5rem; }
+            .zoom-indicator { flex-direction: column; align-items: center; }
+        }
+    </style>
+     <script type="module" src="./global-settings.js"></script>
+</head>
+
+<body>
+    <!-- BARRA DE NAVEGACIÓN PRINCIPAL -->
+    <nav class="main-navigation">
+        <ul>
+            <li>
+                <span><span class="emoji">🟦</span> MÓDULO 1 — Lectura Crítica</span>
+                <ul class="dropdown">
+                    <li><a href="biblioteca.html"><span class="emoji">📚</span> Biblioteca</a></li>
+                    <li>
+                        <span><span class="emoji">✍️</span> Talleres de escritura y análisis</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="reescritura.html"><span class="emoji">🔄</span> Reescritura</a></li>
+                            <li><a href="conectores.html"><span class="emoji">🔗</span> Conectores lógicos</a></li>
+                            <li><a href="parrafos.html"><span class="emoji">📝</span> Ordenar párrafos</a></li>
+                            <li><a href="cohesion.html"><span class="emoji">🧩</span> Reparación por cohesión</a></li>
+                            <li><a href="123.html"><span class="emoji">1️⃣2️⃣3️⃣</span> Técnica 1-2-3</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">📈</span> Laboratorio de análisis gráfico</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="lineal.html"><span class="emoji">📉</span> Gráfico de líneas</a></li>
+                            <li><a href="constucciongrafico.html"><span class="emoji">🛠️</span> Construcción de gráficos</a></li>
+                            <li><a href="correcciongrafico.html"><span class="emoji">✅</span> Corrección de gráfico</a></li>
+                            <li><a href="graficocomparar.html"><span class="emoji">⚖️</span> Comparación de gráficos</a></li>
+                            <li><a href="graficointerpretar.html"><span class="emoji">🤔</span> Interpretación de gráficos</a></li>
+                            <li><a href="selecciongrafico.html"><span class="emoji">👆</span> Seleccionar el gráfico correcto</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">⚡</span> Entrenador de velocidad de lectura</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="timelectura.html"><span class="emoji">⏱️</span> Lectura cronometrada</a></li>
+                            <li><a href="minutelectura.html"><span class="emoji">⏳</span> Examen tiempo por pregunta</a></li>
+                            <li><a href="palabrasdesaparecidas.html"><span class="emoji">👻</span> Desaparecer palabras</a></li>
+                            <li><a href="relojlectura.html"><span class="emoji">⏰</span> Texto a contra reloj</a></li>
+                            <li><a href="velocimetrolec.html"><span class="emoji">🚀</span> Velocímetro de lectura</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <span><span class="emoji">🟩</span> MÓDULO 2 — Razonamiento Cuantitativo</span>
+                <ul class="dropdown">
+                    <li>
+                        <span><span class="emoji">🧠</span> Laboratorio lógico-matemático</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="crepatron.html"><span class="emoji">📈</span> Patrones crecientes</a></li>
+                            <li><a href="decrepatron.html"><span class="emoji">📉</span> Patrones decrecientes</a></li>
+                            <li><a href="secuencia.html"><span class="emoji">🔢</span> Secuencias visuales</a></li>
+                            <li><a href="argumento.html"><span class="emoji">🗣️</span> Corregir argumento inválido</a></li>
+                            <li><a href="falacias.html"><span class="emoji">❌</span> Detectar falacias</a></li>
+                            <li><a href="tablas.html"><span class="emoji">📊</span> Completar tablas incompletas</a></li>
+                            <li><a href="causaefecto.html"><span class="emoji">🎯</span> Relación causa-efecto</a></li>
+                            <li><a href="datatabla.html"><span class="emoji">🔄</span> Cambiar datos</a></li>
+                            <li><a href="contradicciones.html"><span class="emoji">⚠️</span> Contradicciones</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">🔢</span> Razonamiento lógico-matemático</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="R1.html"><span class="emoji">🗺️</span> Mapa de laberintos matemáticos</a></li>
+                            <li><a href="R2.html"><span class="emoji">🔺</span> Triángulos mágicos para completar</a></li>
+                            <li><a href="R3.html"><span class="emoji">🤖</span> Algoritmo visualizado paso a paso</a></li>
+                            <li><a href="R4.html"><span class="emoji">🧩</span> Minijuegos de lógica simbólica</a></li>
+                            <li><a href="R5.html"><span class="emoji">🔢</span> Bloques de secuencias numéricas</a></li>
+                            <li><a href="R6.html"><span class="emoji">🕵️</span> Detective matemático</a></li>
+                            <li><a href="R7.html"><span class="emoji">📊</span> Reconstrucción de tablas incompletas</a></li>
+                            <li><a href="R8.html"><span class="emoji">🔍</span> Desafío de patrones ocultos</a></li>
+                            <li><a href="R9.html"><span class="emoji">🧩</span> Sala de rompecódigos</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <span><span class="emoji">🟧</span> MÓDULO 3 — Competencias Ciudadanas</span>
+                <ul class="dropdown">
+                    <li>
+                        <span><span class="emoji">⚖️</span> Dilemas + decisiones</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="d1.html"><span class="emoji">🤔</span> Simulador de dilemas morales</a></li>
+                            <li><a href="d2.html"><span class="emoji">📖</span> Historias interactivas</a></li>
+                            <li><a href="d3.html"><span class="emoji">🤝</span> Reconstrucción de conflictos</a></li>
+                            <li><a href="d4.html"><span class="emoji">❓</span> ¿Qué harías tú?</a></li>
+                            <li><a href="d5.html"><span class="emoji">🏆</span> Retos éticos por niveles</a></li>
+                            <li><a href="d6.html"><span class="emoji">📚</span> Estudio de casos reales</a></li>
+                            <li><a href="d7.html"><span class="emoji">👥</span> Simulaciones grupales</a></li>
+                            <li><a href="d8.html"><span class="emoji">⚖️</span> Juzgado ciudadano</a></li>
+                            <li><a href="d9.html"><span class="emoji">🎤</span> Panel de debate simulado</a></li>
+                            <li><a href="d10.html"><span class="emoji">🗳️</span> Simulador de votación</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">🌍</span> Contextos sociales</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="CS1.html"><span class="emoji">🗺️</span> Mapa de problemas sociales</a></li>
+                            <li><a href="CS2.html"><span class="emoji">📰</span> Análisis de noticias reales</a></li>
+                            <li><a href="CS3.html"><span class="emoji">📜</span> Sala de derechos y deberes</a></li>
+                            <li><a href="CS4.html"><span class="emoji">🏫</span> Minijuego de convivencia</a></li>
+                            <li><a href="CS5.html"><span class="emoji">❌</span> Historias de discriminación</a></li>
+                            <li><a href="CS6.html"><span class="emoji">❤️</span> Sala de empatía</a></li>
+                            <li><a href="CS7.html"><span class="emoji">🤝</span> Resolución de conflictos</a></li>
+                            <li><a href="CS8.html"><span class="emoji">🌳</span> Árboles de decisiones</a></li>
+                            <li><a href="CS9.html"><span class="emoji">👀</span> Observatorio de normas</a></li>
+                            <li><a href="C10.html"><span class="emoji">🎙️</span> Reconstrucción de discursos</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <a href="archivo.html"><span class="emoji">🗂️</span> Archivos de casos reales</a>
+                        <ul class="sub-dropdown">
+                            <li><a href="archivo1.html"><span class="emoji">📄</span> Casos tipo Saber Pro reales</a></li>
+                            <li><a href="archivo2.html"><span class="emoji">🏢</span> Casos de empresas</a></li>
+                            <li><a href="archivo3.html"><span class="emoji">🌐</span> Casos sociales</a></li>
+                            <li><a href="archivo4.html"><span class="emoji">📈</span> Casos de datos ficticios</a></li>
+                            <li><a href="archivo5.html"><span class="emoji">⚖️</span> Casos legales simplificados</a></li>
+                            <li><a href="archivo6.html"><span class="emoji">🔬</span> Casos científicos</a></li>
+                            <li><a href="archivo7.html"><span class="emoji">❓</span> Casos ambiguos</a></li>
+                            <li><a href="archivo8.html"><span class="emoji">🤔</span> Casos contradictorios</a></li>
+                            <li><a href="archivo9.html"><span class="emoji">🔍</span> Casos para identificar sesgos</a></li>
+                            <li><a href="archivo10.html"><span class="emoji">🧩</span> Casos donde decides qué dato falta</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">♟️</span> Laboratorio de estrategias</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="E1.html"><span class="emoji">✏️</span> Cómo subrayar bien</a></li>
+                            <li><a href="E2.html"><span class="emoji">📚</span> Estrategia de resumen por capas</a></li>
+                            <li><a href="E3.html"><span class="emoji">👀</span> Lectura por bloques visuales</a></li>
+                            <li><a href="E4.html"><span class="emoji">🚫</span> Cómo ignorar distractores</a></li>
+                            <li><a href="E5.html"><span class="emoji">🏃‍♂️</span> Leer rápido sin perder comprensión</a></li>
+                            <li><a href="E6.html"><span class="emoji">✔️</span> Checklist antes de responder</a></li>
+                            <li><a href="E7.html"><span class="emoji">🚫</span> Evitar conclusiones erróneas</a></li>
+                            <li><a href="E8.html"><span class="emoji">🕵️</span> Mini-guía de preguntas trampa</a></li>
+                            <li><a href="E9.html"><span class="emoji">🎯</span> Identificar propósito del autor</a></li>
+                            <li><a href="E10.html"><span class="emoji">💡</span> Transformar evidencia en conclusión</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <span><span class="emoji">🟪</span> MÓDULO 4 — Inglés</span>
+                <ul class="dropdown">
+                    <li>
+                        <span><span class="emoji">📖</span> Comprensión lectora en inglés</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="CLI1.html"><span class="emoji">📖</span> Galería de textos graduados</a></li>
+                            <li><a href="CLI2.html"><span class="emoji">💡</span> ¿Cuál es la idea principal?</a></li>
+                            <li><a href="CLI3.html"><span class="emoji">🎯</span> Identificar la intención del autor</a></li>
+                            <li><a href="CLI4.html"><span class="emoji">📝</span> Ordenar párrafos</a></li>
+                            <li><a href="CLI5.html"><span class="emoji">🔗</span> Relacionar párrafos con títulos</a></li>
+                            <li><a href="CLI6.html"><span class="emoji">🧩</span> Completa el sentido del texto</a></li>
+                            <li><a href="CLI7.html"><span class="emoji">🤔</span> Inferencias y deducciones</a></li>
+                            <li><a href="CLI8.html"><span class="emoji">😊</span> Preguntas de tono y emoción</a></li>
+                            <li><a href="CLI9.html"><span class="emoji">🎯</span> Reconocer propósito de oraciones</a></li>
+                            <li><a href="CLI10.html"><span class="emoji">🚫</span> Falsos amigos</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">📖</span> Vocabulario en contexto</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="vocab11.html"><span class="emoji">🔄</span> Sustituir palabras por sinónimos</a></li>
+                            <li><a href="vocab12.html"><span class="emoji">🧩</span> Completar frases</a></li>
+                            <li><a href="vocab13.html"><span class="emoji">🔗</span> Banco de conectores</a></li>
+                            <li><a href="vocab14.html"><span class="emoji">🤔</span> Rellenar huecos</a></li>
+                            <li><a href="vocab15.html"><span class="emoji">💬</span> Reemplazo de expresiones idiomáticas</a></li>
+                            <li><a href="vocab16.html"><span class="emoji">🔍</span> Identificar definiciones implícitas</a></li>
+                            <li><a href="vocab17.html"><span class="emoji">🎯</span> Selección de vocabulario preciso</a></li>
+                            <li><a href="vocab18.html"><span class="emoji">📂</span> Clasificador de palabras</a></li>
+                            <li><a href="vocab19.html"><span class="emoji">🚫</span> Detección de redundancias</a></li>
+                            <li><a href="vocab20.html"><span class="emoji">🤔</span> Diferencias entre palabras confusas</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">🔗</span> Cohesión en inglés</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="coh1.html"><span class="emoji">👉</span> Identificar referentes</a></li>
+                            <li><a href="coh2.html"><span class="emoji">🔄</span> Reemplazo de pronombres</a></li>
+                            <li><a href="coh3.html"><span class="emoji">❌</span> Conectores mal usados</a></li>
+                            <li><a href="coh4.html"><span class="emoji">🔍</span> Encuentra el error de cohesión</a></li>
+                            <li><a href="coh5.html"><span class="emoji">📝</span> Reordenar oraciones</a></li>
+                            <li><a href="coh6.html"><span class="emoji">🔗</span> Relacionar frases con su función</a></li>
+                            <li><a href="coh7.html"><span class="emoji">✍️</span> Parafraseo guiado</a></li>
+                            <li><a href="coh8.html"><span class="emoji">✔️</span> Detectar afirmaciones V/F</a></li>
+                            <li><a href="coh9.html"><span class="emoji">🔗</span> Conexión entre partes del texto</a></li>
+                            <li><a href="coh10.html"><span class="emoji">📄</span> Seleccionar el resumen adecuado</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </nav>
+    
+    <nav class="navbar">
+        <div class="hamburger" id="hamburger-menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        <div class="user-dropdown" id="user-dropdown">
+            <a href="cuenta.html">Mi Cuenta</a>
+            <a href="configuracion.html">Configuración</a>
+            <a href="notificaciones.html">Notificaciones</a>
+            <hr>
+            <a href="index.html" id="logout-btn">Cerrar Sesión</a>
+        </div>
+    </nav>
+
+    <!-- HERO ESTRATEGIA -->
+    <section class="hero-estrategia">
+        <div class="hero-content">
+            <h1>Estrategia de Resumen por Capas</h1>
+            <p class="subtitle">Domina la técnica que transforma textos complejos en comprensión clara</p>
+            <div class="breadcrumb">
+                <a href="mapa.html">Inicio</a>
+                <span>/</span>
+                <a href="E2.html">Estrategias</a>
+                <span>/</span>
+                <span>Resumen por Capas</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="main-content">
+        
+        <!-- SECCIÓN TEORÍA -->
+        <section class="teoria-section">
+            <span class="section-badge"><i class="fas fa-brain"></i> Teoría Fundamental</span>
+            <h2>¿Qué es la Estrategia de Resumen por Capas?</h2>
+            <p>
+                La <strong>Estrategia de Resumen por Capas</strong> es una metodología cognitiva diseñada para descomponer textos académicos y técnicos en sus componentes esenciales. Funciona como un proceso de destilación: elimina progresivamente la información superficial hasta revelar el núcleo conceptual del texto.
+            </p>
+            <p>
+                Esta técnica es particularmente poderosa para el examen ICFES Saber Pro, donde la comprensión profunda y la capacidad de sintetizar información son competencias evaluadas constantemente. A diferencia de la lectura lineal tradicional, el resumen por capas te obliga a <em>reconstruir</em> el significado activamente.
+            </p>
+            
+            <div class="teoria-grid">
+                <div class="teoria-card">
+                    <h3><i class="fas fa-lightbulb"></i> ¿Qué significa?</h3>
+                    <p>"Por capas" alude a los niveles de profundidad en la comprensión lectora. Como una cebolla, todo texto tiene capas: desde los adornos lingüísticos más superficiales hasta el concepto central que lo sostiene. Esta estrategia te enseña a pelar esas capas sistemáticamente.</p>
+                </div>
+                <div class="teoria-card">
+                    <h3><i class="fas fa-bullseye"></i> ¿Para qué sirve?</h3>
+                    <p>Sirve para identificar rápidamente la información crucial, distinguir entre contenido esencial y accesorio, construir síntesis precisas en tiempo limitado, y evitar la sobrecarga cognitiva durante lecturas extensas o técnicas del examen.</p>
+                </div>
+                <div class="teoria-card">
+                    <h3><i class="fas fa-graduation-cap"></i> Cómo usarla en el ICFES</h3>
+                    <p>Aplica las tres capas durante tu lectura: primero identifica palabras clave, luego construye frases sintéticas, y finalmente integra todo en un resumen coherente. Este proceso mental te permite responder preguntas de idea principal, propósito del autor y síntesis con mayor precisión.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN CAPAS -->
+        <section class="capas-container">
+            <div class="capas-header">
+                <h2>Las Tres Capas de Comprensión</h2>
+                <p>Cada capa representa un nivel de profundidad en el procesamiento del texto. Domina cada una para alcanzar la comprensión total.</p>
+                
+                <div class="zoom-indicator">
+                    <div class="zoom-level active" data-capa="1">
+                        <i class="fas fa-search-plus"></i>
+                        Zoom In (Palabras)
+                    </div>
+                    <div class="zoom-level" data-capa="2">
+                        <i class="fas fa-arrows-alt-h"></i>
+                        Medio (Frases)
+                    </div>
+                    <div class="zoom-level" data-capa="3">
+                        <i class="fas fa-search-minus"></i>
+                        Zoom Out (Párrafo)
+                    </div>
+                </div>
+            </div>
+
+            <div class="capa-progress">
+                <div class="progress-dot active" data-step="1"></div>
+                <div class="progress-dot" data-step="2"></div>
+                <div class="progress-dot" data-step="3"></div>
+            </div>
+
+            <!-- CAPA 1 -->
+            <section class="capa-section capa-1 visible" id="capa-1">
+                <div class="capa-header">
+                    <span class="capa-number">01</span>
+                    <h3><i class="fas fa-filter"></i> Capa 1: El Filtro de Sustantivos</h3>
+                    <p class="capa-subtitle">Identificación de Palabras Clave</p>
+                </div>
+                <div class="capa-body">
+                    <div class="capa-theory">
+                        <h4><i class="fas fa-book"></i> La Teoría</h4>
+                        <p>Un texto se sostiene sobre sus conceptos fundamentales. Si eliminas los adornos (adjetivos calificativos, ejemplos ilustrativos, anécdotas, metáfortas), ¿qué queda? Los <strong>sustantivos técnicos</strong> que definen el tema. Esta capa entrena tu capacidad de distinguir el grano de la paja informativa.</p>
+                    </div>
+                    
+                    <div class="practica-container">
+                        <div class="practica-header">
+                            <h4><i class="fas fa-hand-pointer"></i> Práctica Interactiva</h4>
+                            <span class="click-counter">Clics restantes: <span id="clicks-left">5</span></span>
+                        </div>
+                        <p style="color: #666; margin-bottom: 15px;">Haz clic en las <strong>5 palabras clave</strong> que contienen la esencia del siguiente texto técnico:</p>
+                        
+                        <div class="texto-ejemplo" id="texto-capa1">
+                            <span class="palabra" data-palabra="La">La</span>
+                            <span class="palabra" data-palabra="microeconomía">microeconomía</span>
+                            <span class="palabra" data-palabra="estudia">estudia</span>
+                            <span class="palabra" data-palabra="el">el</span>
+                            <span class="palabra" data-palabra="comportamiento">comportamiento</span>
+                            <span class="palabra" data-palabra="económico">económico</span>
+                            <span class="palabra" data-palabra="de">de</span>
+                            <span class="palabra" data-palabra="agentes">agentes</span>
+                            <span class="palabra" data-palabra="individuales">individuales</span>
+                            <span class="palabra" data-palabra="como">como</span>
+                            <span class="palabra" data-palabra="consumidores">consumidores</span>
+                            <span class="palabra" data-palabra="y">y</span>
+                            <span class="palabra" data-palabra="empresas">empresas</span>.
+                            <span class="palabra" data-palabra="La">La</span>
+                            <span class="palabra" data-palabra="oferta">oferta</span>
+                            <span class="palabra" data-palabra="representa">representa</span>
+                            <span class="palabra" data-palabra="la">la</span>
+                            <span class="palabra" data-palabra="cantidad">cantidad</span>
+                            <span class="palabra" data-palabra="de">de</span>
+                            <span class="palabra" data-palabra="bienes">bienes</span>
+                            <span class="palabra" data-palabra="que">que</span>
+                            <span class="palabra" data-palabra="los">los</span>
+                            <span class="palabra" data-palabra="productores">productores</span>
+                            <span class="palabra" data-palabra="desean">desean</span>
+                            <span class="palabra" data-palabra="vender">vender</span>
+                            <span class="palabra" data-palabra="a">a</span>
+                            <span class="palabra" data-palabra="diferentes">diferentes</span>
+                            <span class="palabra" data-palabra="precios">precios</span>.
+                            <span class="palabra" data-palabra="La">La</span>
+                            <span class="palabra" data-palabra="demanda">demanda</span>
+                            <span class="palabra" data-palabra="muestra">muestra</span>
+                            <span class="palabra" data-palabra="las">las</span>
+                            <span class="palabra" data-palabra="cantidades">cantidades</span>
+                            <span class="palabra" data-palabra="que">que</span>
+                            <span class="palabra" data-palabra="los">los</span>
+                            <span class="palabra" data-palabra="compradores">compradores</span>
+                            <span class="palabra" data-palabra="adquirirían">adquirirían</span>.
+                            <span class="palabra" data-palabra="El">El</span>
+                            <span class="palabra" data-palabra="equilibrio">equilibrio</span>
+                            <span class="palabra" data-palabra="de">de</span>
+                            <span class="palabra" data-palabra="mercado">mercado</span>
+                            <span class="palabra" data-palabra="se">se</span>
+                            <span class="palabra" data-palabra="alcanza">alcanza</span>
+                            <span class="palabra" data-palabra="cuando">cuando</span>
+                            <span class="palabra" data-palabra="oferta">oferta</span>
+                            <span class="palabra" data-palabra="y">y</span>
+                            <span class="palabra" data-palabra="demanda">demanda</span>
+                            <span class="palabra" data-palabra="se">se</span>
+                            <span class="palabra" data-palabra="intersecan">intersecan</span>.
+                        </div>
+                        
+                        <div class="selected-words" id="selected-words">
+                            <span style="color: #999; font-style: italic;">Tus palabras seleccionadas aparecerán aquí...</span>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            <button class="btn-primary" id="verificar-capa1" disabled>
+                                <i class="fas fa-check-circle"></i> Verificar Selección
+                            </button>
+                            <button class="btn-secondary" id="reiniciar-capa1">
+                                <i class="fas fa-redo"></i> Reiniciar
+                            </button>
+                        </div>
+                        
+                        <div class="objetivo-tag" id="objetivo-capa1" style="display: none;">
+                            <i class="fas fa-trophy"></i>
+                            Objetivo: Oferta, demanda, equilibrio, mercado, precio
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CAPA 2 -->
+            <section class="capa-section capa-2" id="capa-2">
+                <div class="capa-header">
+                    <span class="capa-number">02</span>
+                    <h3><i class="fas fa-link"></i> Capa 2: La Columna Vertebral</h3>
+                    <p class="capa-subtitle">Construcción de Frases de Síntesis</p>
+                </div>
+                <div class="capa-body">
+                    <div class="capa-theory">
+                        <h4><i class="fas fa-book"></i> La Teoría</h4>
+                        <p>Con las palabras clave de la Capa 1, ahora debemos construir una <strong>oración sintética</strong> que explique la relación entre ellas. No se trata de copiar fragmentos del texto, sino de <em>conectar</em> los conceptos con tus propias palabras. Esta es la columna vertebral del significado: una frase que soporta todo el peso de la comprensión.</p>
+                    </div>
+                    
+                    <div class="practica-container">
+                        <div class="practica-header">
+                            <h4><i class="fas fa-tasks"></i> Práctica Interactiva</h4>
+                            <span class="icfes-badge"><i class="fas fa-award"></i> Tipo ICFES</span>
+                        </div>
+                        <p style="color: #666; margin-bottom: 15px;">Con las palabras clave identificadas: <strong>Oferta, Demanda, Equilibrio, Mercado, Precio</strong>, selecciona la frase que mejor sintetiza su relación:</p>
+                        
+                        <div class="opciones-container" id="opciones-capa2">
+                            <button class="opcion-btn" data-correcta="false">
+                                A) La oferta y la demanda son conceptos importantes de la microeconomía que estudian el comportamiento de los agentes económicos en diferentes situaciones del mercado.
+                            </button>
+                            <button class="opcion-btn" data-correcta="true">
+                                B) El precio de equilibrio en el mercado se determina por la interacción entre la oferta de los productores y la demanda de los consumidores.
+                            </button>
+                            <button class="opcion-btn" data-correcta="false">
+                                C) Los compradores y vendedores participan en el mercado donde existen diferentes precios según la cantidad de bienes disponibles.
+                            </button>
+                        </div>
+                        
+                        <div class="resultado-texto" id="resultado-capa2">
+                            <h4 style="color: var(--color-oliva-medio); margin-bottom: 10px;"><i class="fas fa-check-circle"></i> Correcto</h4>
+                            <p>La opción B integra todos los conceptos clave (precio, equilibrio, mercado, oferta, demanda) en una relación causal clara y precisa. Esta es una frase de síntesis efectiva.</p>
+                        </div>
+                        
+                        <div class="action-buttons" style="margin-top: 20px;">
+                            <button class="btn-secondary" id="reiniciar-capa2" style="display: none;">
+                                <i class="fas fa-redo"></i> Intentar de nuevo
+                            </button>
+                        </div>
+                        
+                        <div class="objetivo-tag" style="margin-top: 20px;">
+                            <i class="fas fa-bullseye"></i>
+                            Objetivo: Pasar del concepto suelto a la unidad de sentido
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CAPA 3 -->
+            <section class="capa-section capa-3" id="capa-3">
+                <div class="capa-header">
+                    <span class="capa-number">03</span>
+                    <h3><i class="fas fa-paragraph"></i> Capa 3: El Párrafo de Autor</h3>
+                    <p class="capa-subtitle">Consolidación y Resumen Ejecutivo</p>
+                </div>
+                <div class="capa-body">
+                    <div class="capa-theory">
+                        <h4><i class="fas fa-book"></i> La Teoría</h4>
+                        <p>Es el nivel más alto de comprensión. Aquí el estudiante debe unir las frases de síntesis de varios párrafos para crear un <strong>resumen ejecutivo</strong>. El desafío no es solo conectar ideas, sino usar <em>conectores lógicos apropiados</em> que reflejen las relaciones entre los conceptos: causa-efecto, contraste, secuencia, ampliación.</p>
+                    </div>
+                    
+                    <div class="practica-container">
+                        <div class="practica-header">
+                            <h4><i class="fas fa-layer-group"></i> Práctica Interactiva</h4>
+                        </div>
+                        <p style="color: #666; margin-bottom: 15px;">Ordene las siguientes frases de síntesis y añada conectores lógicos para crear un párrafo coherente:</p>
+                        
+                        <div class="parrafo-final" id="parrafo-construccion">
+                            <div class="frase-base" id="frase1" draggable="true">
+                                <i class="fas fa-grip-vertical" style="color: var(--color-oliva-claro); margin-right: 10px;"></i>
+                                La microeconomía estudia el comportamiento de agentes individuales como consumidores y empresas.
+                            </div>
+                            <div class="frase-base" id="frase2" draggable="true">
+                                <i class="fas fa-grip-vertical" style="color: var(--color-oliva-claro); margin-right: 10px;"></i>
+                                El precio de equilibrio se determina por la interacción entre oferta y demanda.
+                            </div>
+                            <div class="frase-base" id="frase3" draggable="true">
+                                <i class="fas fa-grip-vertical" style="color: var(--color-oliva-claro); margin-right: 10px;"></i>
+                                Los mercados eficientes asignan recursos de manera óptima para la sociedad.
+                            </div>
+                        </div>
+                        
+                        <p style="color: #666; margin: 20px 0 10px;"><strong>Conectores disponibles:</strong></p>
+                        <div class="conectores-pool" id="conectores-pool">
+                            <span class="conector-chip" data-conector="Por su parte,">Por su parte,</span>
+                            <span class="conector-chip" data-conector="Además,">Además,</span>
+                            <span class="conector-chip" data-conector="En este contexto,">En este contexto,</span>
+                            <span class="conector-chip" data-conector="Por lo tanto,">Por lo tanto,</span>
+                            <span class="conector-chip" data-conector="En consecuencia,">En consecuencia,</span>
+                            <span class="conector-chip" data-conector="Asimismo,">Asimismo,</span>
+                        </div>
+                        
+                        <div class="resultado-texto" id="resultado-capa3">
+                            <h4 style="color: var(--color-oliva-medio); margin-bottom: 15px;"><i class="fas fa-star"></i> Resumen Ejecutivo Consolidado</h4>
+                            <p style="line-height: 1.9; font-size: 1.1rem;">
+                                <strong>La microeconomía estudia el comportamiento de agentes individuales como consumidores y empresas.</strong> 
+                                <em style="color: var(--color-oliva-medio);">Por su parte,</em> 
+                                <strong>el precio de equilibrio se determina por la interacción entre oferta y demanda.</strong> 
+                                <em style="color: var(--color-oliva-medio);">En este contexto,</em> 
+                                <strong>los mercados eficientes asignan recursos de manera óptima para la sociedad.</strong>
+                            </p>
+                            <p style="margin-top: 15px; color: #666; font-style: italic;">
+                                Este párrafo consolidado representa la comprensión global del texto: sus conceptos, sus relaciones y su conclusión principal.
+                            </p>
+                        </div>
+                        
+                        <div class="action-buttons">
+                            <button class="btn-primary" id="ver-capa3">
+                                <i class="fas fa-eye"></i> Ver Resumen Final
+                            </button>
+                            <button class="btn-secondary" id="reiniciar-capa3" style="display: none;">
+                                <i class="fas fa-redo"></i> Reiniciar
+                            </button>
+                        </div>
+                        
+                        <div class="objetivo-tag" style="margin-top: 20px;">
+                            <i class="fas fa-trophy"></i>
+                            Objetivo: Demostrar comprensión de la estructura global de la lectura
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer-info">
+        <p>SKOPIA - Preparación ICFES Saber Pro | Estrategia de Resumen por Capas</p>
+    </footer>
+
+    <!-- FLOATING ICONS -->
+    <div class="floating-icons" aria-hidden="false">
+        <button id="btn-misiones" title="Misiones">🎯</button>
+        <button id="btn-nivel" title="Nivel actual">⭐</button>
+        <button id="btn-progreso" title="Progreso">📊</button>
+        <button id="btn-analisis" title="Análisis">📈</button>
+    </div>
+
+    <!-- PANEL MISIONES -->
+    <div class="panel-box" id="panel-misiones" aria-hidden="true">
+        <div class="panel-header">
+            <h3>Misiones</h3>
+            <button class="close-panel" data-close="misiones">&times;</button>
+        </div>
+        <div id="misiones-content"></div>
+    </div>
+
+    <!-- PANEL NIVEL -->
+    <div class="panel-box" id="panel-nivel" aria-hidden="true">
+        <div class="panel-header">
+            <h3>Tu nivel</h3>
+            <button class="close-panel" data-close="nivel">&times;</button>
+        </div>
+        <div id="nivel-content"></div>
+    </div>
+
+    <!-- PANEL PROGRESO -->
+    <div class="panel-box" id="panel-progreso" aria-hidden="true">
+        <div class="panel-header">
+            <h3>Progreso</h3>
+            <button class="close-panel" data-close="progreso">&times;</button>
+        </div>
+        <div id="progreso-content"></div>
+    </div>
+
+    <!-- PANEL ANALISIS -->
+    <div class="panel-box" id="panel-analisis" aria-hidden="true">
+        <div class="panel-header">
+            <h3>Análisis (promedio 0–300)</h3>
+            <button class="close-panel" data-close="analisis">&times;</button>
+        </div>
+        <div id="analisis-content">
+            <div id="analisis-stats" style="margin-top:12px;"></div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="mission-toast" role="status" aria-live="polite"></div>
+
+    <script>
+        /*************************************************************************
+         *  LOCAL DATA & FUNCTIONS
+         *************************************************************************/
+        const MISSIONS_KEY = 'skopia_missions_v1';
+        const EXAMS_KEY = 'skopia_exam_scores_by_tag_v1';
+
+        const missionsTemplate = [
+            { id: 1, title: "Completa tu primer examen", points: 50 },
+            { id: 2, title: "Logra al menos 180/300 en un examen", points: 80 },
+            { id: 3, title: "Lee toda la teoría de una lección", points: 40 },
+            { id: 4, title: "Termina una sesión de estudio sin salir", points: 50 },
+            { id: 5, title: "Gana tu primer juego", points: 50 },
+            { id: 6, title: "Usa una pista o ayuda en un juego", points: 30 },
+            { id: 7, title: "Repite un examen para mejorar tu nota", points: 50 },
+            { id: 8, title: "Cambia tu nombre de usuario", points: 40 },
+            { id: 9, title: "Acumula tus primeras 200 estrellas", points: 30 },
+            { id: 10, title: "Completa 3 misiones seguidas", points: 50 }
+        ];
+
+        const LEVELS = [
+            { idx: 1, name: "Novato/a", min: 0, max: 299 },
+            { idx: 2, name: "Aprendiz/a", min: 300, max: 799 },
+            { idx: 3, name: "Explorador/a", min: 800, max: 1499 },
+            { idx: 4, name: "Analista", min: 1500, max: 2499 },
+            { idx: 5, name: "Estratega", min: 2500, max: 3699 },
+            { idx: 6, name: "Sabio/a", min: 3700, max: 4999 },
+            { idx: 7, name: "Maestro/a", min: 5000, max: 6499 },
+            { idx: 8, name: "Élite", min: 6500, max: 7999 },
+            { idx: 9, name: "Leyenda", min: 8000, max: 9499 },
+            { idx: 10, name: "Rey/Reina Skópia", min: 9500, max: Infinity }
+        ];
+
+        function initMissions() {
+            const stored = localStorage.getItem(MISSIONS_KEY);
+            if (!stored) {
+                const initial = missionsTemplate.map(m => ({ ...m, completed: false }));
+                localStorage.setItem(MISSIONS_KEY, JSON.stringify(initial));
+            }
+        }
+
+        function renderMissions() {
+            const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
+            const container = document.getElementById('misiones-content');
+            container.innerHTML = '';
+            const incompleteMissions = data.filter(m => !m.completed).slice(0, 3);
+            if (incompleteMissions.length === 0) {
+                container.innerHTML = '<div class="info">¡Felicidades! Has completado todas las misiones disponibles.</div>';
+                return;
+            }
+            incompleteMissions.forEach(m => {
+                const div = document.createElement('div');
+                div.className = 'mission-row';
+                div.innerHTML = `
+                    <div style="flex:1">
+                        <div style="font-weight:700; color:var(--color-oliva-oscuro)">${m.id}. ${m.title}</div>
+                        <div style="font-size:1rem; color:#556b2f">${m.points} ⭐</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        let toastTimer = null;
+        function showMissionToast(text, ms = 60000) {
+            const toast = document.getElementById('mission-toast');
+            toast.innerHTML = `<strong>${text}</strong>`;
+            toast.classList.add('show');
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { toast.classList.remove('show'); }, ms);
+        }
+
+        function getTotalPoints() {
+            const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
+            return data.reduce((sum, m) => sum + (m.completed ? m.points : 0), 0);
+        }
+
+        function getLevelFromPoints(total) {
+            for (let i = LEVELS.length -1; i >=0; i--) {
+                if (total >= LEVELS[i].min) return LEVELS[i];
+            }
+            return LEVELS[0];
+        }
+
+        function renderLevel() {
+            const total = getTotalPoints();
+            const level = getLevelFromPoints(total);
+            let progressPct = 0;
+            if (level.max === Infinity) progressPct = 100;
+            else progressPct = Math.min(100, Math.round(((total - level.min) / (level.max - level.min)) * 100));
+            document.getElementById('nivel-content').innerHTML = `
+                <div class="info"><strong>Nivel:</strong> ${level.name} (${level.idx})</div>
+                <div class="info"><strong>Puntos acumulados:</strong> ${total} ⭐</div>
+                <div class="info"><strong>Progreso hacia siguiente nivel:</strong> ${progressPct}%</div>
+                <div style="background:#f1f1f1;border-radius:10px;padding:8px;margin-top:10px">
+                    <div style="height:12px;background:linear-gradient(90deg,var(--color-oliva-medio),#bdbd74);width:${progressPct}%;border-radius:8px"></div>
+                </div>
+            `;
+        }
+
+        function renderProgress() {
+            const total = getTotalPoints();
+            const topTarget = 9500;
+            const pct = Math.min(100, Math.round((total / topTarget) * 100));
+            document.getElementById('progreso-content').innerHTML = `
+                <div class="info"><strong>Puntos acumulados:</strong> ${total} ⭐</div>
+                <div class="info"><strong>Progreso global hacia Rey/Reina:</strong> ${pct}%</div>
+                <div style="background:#f1f1f1;border-radius:10px;padding:8px;margin-top:10px">
+                    <div style="height:12px;background:linear-gradient(90deg,var(--color-oliva-medio),#bdbd74);width:${pct}%;border-radius:8px"></div>
+                </div>
+            `;
+        }
+
+        function getExamStats() {
+            const examScores = JSON.parse(localStorage.getItem(EXAMS_KEY) || '{}');
+            const { diagnostico, ...otherExams } = examScores;
+            const scores = Object.values(otherExams);
+            if (scores.length === 0) return { count: 0, sum: 0, avg: 0, details: otherExams, diagnosticScore: diagnostico || 'N/A' };
+            const sum = scores.reduce((a, b) => a + b, 0);
+            const avg = Math.round(sum / scores.length);
+            return { count: scores.length, sum: sum, avg: avg, details: otherExams, diagnosticScore: diagnostico || 'N/A' };
+        }
+
+        function renderAnalysis() {
+            const stats = getExamStats();
+            let detailsHtml = '';
+            for (const tag in stats.details) {
+                detailsHtml += `<div class="info" style="font-size:1rem; color:#555;">- ${tag}: ${stats.details[tag]} / 300</div>`;
+            }
+            document.getElementById('analisis-stats').innerHTML = `
+                <div class="info"><strong>Puntaje Inicial (Diagnóstico):</strong> ${stats.diagnosticScore} / 300</div>
+                <hr style="margin: 12px 0; border: none; border-top: 1px solid #eee;">
+                <div class="info"><strong>Exámenes de práctica realizados:</strong> ${stats.count}</div>
+                <div class="info"><strong>Promedio general (práctica):</strong> ${stats.avg} / 300</div>
+                <hr style="margin: 12px 0; border: none; border-top: 1px solid #eee;">
+                <div style="font-weight: bold; margin-bottom: 8px;">Últimos Puntajes:</div>
+                ${detailsHtml || '<div class="info" style="color:#888;">Aún no hay exámenes de práctica registrados.</div>'}
+            `;
+        }
+
+        function closeAllPanels() { document.querySelectorAll('.panel-box').forEach(p => p.classList.remove('active')); }
+
+        document.getElementById('btn-misiones').addEventListener('click', ()=> { togglePanelBox('panel-misiones'); });
+        document.getElementById('btn-nivel').addEventListener('click', ()=> { togglePanelBox('panel-nivel'); });
+        document.getElementById('btn-progreso').addEventListener('click', ()=> { togglePanelBox('panel-progreso'); });
+        document.getElementById('btn-analisis').addEventListener('click', ()=> { togglePanelBox('panel-analisis'); renderAnalysis(); });
+
+        document.querySelectorAll('.close-panel').forEach(btn=>{ btn.addEventListener('click', (e)=>{ const parent = e.currentTarget.closest('.panel-box'); if (parent) parent.classList.remove('active'); }); });
+
+        function togglePanelBox(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const isActive = el.classList.contains('active');
+            closeAllPanels();
+            if (!isActive) {
+                el.classList.add('active');
+                if (id === 'panel-misiones') renderMissions();
+                if (id === 'panel-nivel') renderLevel();
+                if (id === 'panel-progreso') renderProgress();
+                if (id === 'panel-analisis') renderAnalysis();
+            }
+        }
+
+        (function init() {
+            initMissions();
+            document.addEventListener('click', (e)=>{ const panels = document.querySelectorAll('.panel-box'); const isIcon = e.target.closest('.floating-icons'); const isPanel = e.target.closest('.panel-box'); if (!isIcon && !isPanel) { panels.forEach(p => p.classList.remove('active')); } });
+            renderMissions(); renderLevel(); renderProgress(); renderAnalysis();
+        })();
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Navegación móvil
+            const navItems = document.querySelectorAll('.main-navigation > ul > li');
+            navItems.forEach(item => {
+                const link = item.querySelector('span');
+                if (link && item.querySelector('.dropdown')) {
+                    link.addEventListener('click', (e) => {
+                        if (window.innerWidth <= 1024) {
+                            e.preventDefault();
+                            item.classList.toggle('active');
+                        }
+                    });
+                }
+                const subItems = item.querySelectorAll('.dropdown > li');
+                subItems.forEach(subItem => {
+                    const subLink = subItem.querySelector('span');
+                    if(subLink && subItem.querySelector('.sub-dropdown')) {
+                        subLink.addEventListener('click', (e) => {
+                            if (window.innerWidth <= 1024) {
+                                e.preventDefault();
+                                subItem.classList.toggle('active');
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Hamburger menu
+            const hamburgerMenu = document.getElementById('hamburger-menu');
+            const userDropdown = document.getElementById('user-dropdown');
+            hamburgerMenu.addEventListener('click', () => { userDropdown.classList.toggle('active'); });
+            window.addEventListener('click', (event) => { if (!event.target.closest('.navbar')) { userDropdown.classList.remove('active'); } });
+
+            /*************************************************************************
+             *  LÓGICA DE CAPAS INTERACTIVAS
+             *************************************************************************/
+            
+            // CAPA 1: Selección de palabras clave
+            const palabras = document.querySelectorAll('#texto-capa1 .palabra');
+            const clicksLeftEl = document.getElementById('clicks-left');
+            const selectedWordsEl = document.getElementById('selected-words');
+            const verificarBtn = document.getElementById('verificar-capa1');
+            const reiniciarBtn = document.getElementById('reiniciar-capa1');
+            const objetivoEl = document.getElementById('objetivo-capa1');
+            
+            const palabrasCorrectas = ['microeconomía', 'oferta', 'demanda', 'equilibrio', 'mercado'];
+            let selectedWords = [];
+            let clicksLeft = 5;
+
+            palabras.forEach(palabra => {
+                palabra.addEventListener('click', () => {
+                    if (clicksLeft <= 0) return;
+                    
+                    const texto = palabra.dataset.palabra.toLowerCase().replace(/[.,]/g, '');
+                    
+                    if (palabra.classList.contains('selected')) {
+                        palabra.classList.remove('selected');
+                        selectedWords = selectedWords.filter(w => w !== texto);
+                        clicksLeft++;
+                    } else {
+                        palabra.classList.add('selected');
+                        selectedWords.push(texto);
+                        clicksLeft--;
+                    }
+                    
+                    clicksLeftEl.textContent = clicksLeft;
+                    updateSelectedWordsDisplay();
+                    verificarBtn.disabled = selectedWords.length !== 5;
+                });
+            });
+
+            function updateSelectedWordsDisplay() {
+                if (selectedWords.length === 0) {
+                    selectedWordsEl.innerHTML = '<span style="color: #999; font-style: italic;">Tus palabras seleccionadas aparecerán aquí...</span>';
+                } else {
+                    selectedWordsEl.innerHTML = selectedWords.map(w => 
+                        `<span class="selected-word">${w}<span class="remove-word" data-word="${w}">&times;</span></span>`
+                    ).join('');
+                    
+                    selectedWordsEl.querySelectorAll('.remove-word').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const wordToRemove = e.target.dataset.word;
+                            selectedWords = selectedWords.filter(w => w !== wordToRemove);
+                            clicksLeft++;
+                            clicksLeftEl.textContent = clicksLeft;
+                            
+                            palabras.forEach(p => {
+                                const pText = p.dataset.palabra.toLowerCase().replace(/[.,]/g, '');
+                                if (pText === wordToRemove) p.classList.remove('selected');
+                            });
+                            
+                            updateSelectedWordsDisplay();
+                            verificarBtn.disabled = selectedWords.length !== 5;
+                        });
+                    });
+                }
+            }
+
+            verificarBtn.addEventListener('click', () => {
+                let correctCount = 0;
+                palabras.forEach(p => {
+                    const pText = p.dataset.palabra.toLowerCase().replace(/[.,]/g, '');
+                    p.classList.remove('selected');
+                    
+                    if (palabrasCorrectas.includes(pText)) {
+                        p.classList.add('correct');
+                        if (selectedWords.includes(pText)) correctCount++;
+                    } else if (selectedWords.includes(pText)) {
+                        p.classList.add('incorrect');
+                    }
+                });
+
+                if (correctCount === 5) {
+                    showMissionToast('¡Excelente! Has identificado correctamente las 5 palabras clave. +40 estrellas', 5000);
+                    objetivoEl.style.display = 'inline-flex';
+                    objetivoEl.innerHTML = '<i class="fas fa-check-circle" style="color: #4caf50;"></i> ¡Completado! Palabras correctas identificadas.';
+                    
+                    // Avanzar a siguiente capa
+                    setTimeout(() => {
+                        document.querySelector('[data-capa="2"]').click();
+                    }, 2000);
+                } else {
+                    showMissionToast(`Identificaste ${correctCount} de 5 palabras correctas. Intenta de nuevo.`, 4000);
+                    objetivoEl.style.display = 'inline-flex';
+                }
+            });
+
+            reiniciarBtn.addEventListener('click', () => {
+                palabras.forEach(p => {
+                    p.classList.remove('selected', 'correct', 'incorrect');
+                });
+                selectedWords = [];
+                clicksLeft = 5;
+                clicksLeftEl.textContent = clicksLeft;
+                updateSelectedWordsDisplay();
+                verificarBtn.disabled = true;
+                objetivoEl.style.display = 'none';
+            });
+
+            // CAPA 2: Selección de frase
+            const opcionesCapa2 = document.querySelectorAll('#opciones-capa2 .opcion-btn');
+            const resultadoCapa2 = document.getElementById('resultado-capa2');
+            const reiniciarCapa2 = document.getElementById('reiniciar-capa2');
+
+            opcionesCapa2.forEach(opcion => {
+                opcion.addEventListener('click', () => {
+                    opcionesCapa2.forEach(o => o.classList.remove('selected'));
+                    opcion.classList.add('selected');
+                    
+                    const esCorrecta = opcion.dataset.correcta === 'true';
+                    
+                    setTimeout(() => {
+                        opcion.classList.add(esCorrecta ? 'correct' : 'incorrect');
+                        
+                        if (esCorrecta) {
+                            resultadoCapa2.classList.add('show');
+                            reiniciarCapa2.style.display = 'inline-block';
+                            showMissionToast('¡Correcto! Has construido una frase de síntesis efectiva. +50 estrellas', 5000);
+                            
+                            setTimeout(() => {
+                                document.querySelector('[data-capa="3"]').click();
+                            }, 2500);
+                        } else {
+                            showMissionToast('Esta opción no integra todos los conceptos clave. Intenta de nuevo.', 4000);
+                            setTimeout(() => {
+                                opcion.classList.remove('selected', 'incorrect');
+                            }, 1500);
+                        }
+                    }, 300);
+                });
+            });
+
+            reiniciarCapa2.addEventListener('click', () => {
+                opcionesCapa2.forEach(o => o.classList.remove('selected', 'correct', 'incorrect'));
+                resultadoCapa2.classList.remove('show');
+                reiniciarCapa2.style.display = 'none';
+            });
+
+            // CAPA 3: Construcción de párrafo
+            const verCapa3Btn = document.getElementById('ver-capa3');
+            const resultadoCapa3 = document.getElementById('resultado-capa3');
+            const reiniciarCapa3 = document.getElementById('reiniciar-capa3');
+
+            verCapa3Btn.addEventListener('click', () => {
+                resultadoCapa3.classList.add('show');
+                reiniciarCapa3.style.display = 'inline-block';
+                verCapa3Btn.style.display = 'none';
+                showMissionToast('¡Felicidades! Has completado las 3 capas del Resumen por Capas. +80 estrellas', 6000);
+            });
+
+            reiniciarCapa3.addEventListener('click', () => {
+                resultadoCapa3.classList.remove('show');
+                reiniciarCapa3.style.display = 'none';
+                verCapa3Btn.style.display = 'inline-flex';
+            });
+
+            // Navegación por capas (Zoom indicator)
+            const zoomLevels = document.querySelectorAll('.zoom-level');
+            const capaSections = document.querySelectorAll('.capa-section');
+            const progressDots = document.querySelectorAll('.progress-dot');
+
+            zoomLevels.forEach(level => {
+                level.addEventListener('click', () => {
+                    const capaNum = level.dataset.capa;
+                    
+                    zoomLevels.forEach(l => l.classList.remove('active'));
+                    level.classList.add('active');
+                    
+                    capaSections.forEach(s => s.classList.remove('visible'));
+                    document.getElementById(`capa-${capaNum}`).classList.add('visible');
+                    
+                    progressDots.forEach(d => {
+                        d.classList.remove('active');
+                        if (parseInt(d.dataset.step) <= parseInt(capaNum)) {
+                            d.classList.add('completed');
+                        }
+                        if (d.dataset.step === capaNum) {
+                            d.classList.add('active');
+                        }
+                    });
+                    
+                    // Scroll suave a la capa
+                    document.getElementById(`capa-${capaNum}`).scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            });
+
+            // Animación de entrada con Intersection Observer
+            const observerOptions = {
+                threshold: 0.2,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, observerOptions);
+
+            capaSections.forEach(section => observer.observe(section));
+
+            // Scroll reveal para elementos adicionales
+            const revealElements = document.querySelectorAll('.teoria-card, .capa-theory, .practica-container');
+            const revealObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            revealElements.forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                revealObserver.observe(el);
+            });
+        });
+    </script>
+</body>
+</html>
