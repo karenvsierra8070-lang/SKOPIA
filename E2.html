@@ -457,12 +457,22 @@
             color: var(--color-oliva-oscuro);
             transition: all 0.3s;
             cursor: pointer;
+            position: relative;
         }
         .zoom-level.active {
             background: var(--color-oliva-oscuro);
             color: white;
         }
-        .zoom-level:hover:not(.active) {
+        .zoom-level.locked {
+            opacity: 0.6; 
+            cursor: not-allowed; 
+            background: #e0e0e0; 
+            color: #999;
+        }
+        .zoom-level.locked::after {
+            content: '\f023'; font-family: 'Font Awesome 6 Free'; font-weight: 900; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.9rem;
+        }
+        .zoom-level:hover:not(.active):not(.locked) {
             transform: scale(1.05);
         }
         .zoom-level i {
@@ -479,11 +489,27 @@
             transition: all 0.4s ease;
             opacity: 0;
             transform: translateY(40px);
+            position: relative;
         }
         .capa-section.visible {
             opacity: 1;
             transform: translateY(0);
         }
+        
+        /* --- ESTADO BLOQUEADO --- */
+        .capa-section.locked { pointer-events: none; user-select: none; }
+        .capa-section.locked .capa-body { filter: blur(6px); opacity: 0.5; transition: filter 0.3s ease; }
+        .locked-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(2px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;
+            opacity: 1; transition: opacity 0.4s ease;
+        }
+        .locked-overlay.hidden { opacity: 0; pointer-events: none; display: none; }
+        .locked-overlay i { font-size: 4rem; color: var(--color-oliva-medio); margin-bottom: 20px; animation: pulse 2s infinite; }
+        .locked-overlay p { font-family: 'Patrick Hand', cursive; font-size: 1.5rem; color: var(--color-oliva-oscuro); text-align: center; padding: 0 20px; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
         .capa-header {
             padding: 35px 40px;
             position: relative;
@@ -780,6 +806,9 @@
         }
         .objetivo-tag.success {
             background: linear-gradient(135deg, #4caf50, #2e7d32);
+        }
+        .objetivo-tag.error {
+            background: linear-gradient(135deg, #f44336, #c62828);
         }
 
         /* --- SELECTED WORDS --- */
@@ -1262,11 +1291,11 @@
                         <i class="fas fa-search-plus"></i>
                         Zoom In (Palabras)
                     </div>
-                    <div class="zoom-level" data-capa="2">
+                    <div class="zoom-level locked" data-capa="2">
                         <i class="fas fa-arrows-alt-h"></i>
                         Medio (Frases)
                     </div>
-                    <div class="zoom-level" data-capa="3">
+                    <div class="zoom-level locked" data-capa="3">
                         <i class="fas fa-search-minus"></i>
                         Zoom Out (Párrafo)
                     </div>
@@ -1332,8 +1361,12 @@
                 </div>
             </section>
 
-            <!-- CAPA 2 -->
-            <section class="capa-section capa-2" id="capa-2">
+            <!-- CAPA 2 (BLOQUEADA INICIALMENTE) -->
+            <section class="capa-section capa-2 locked" id="capa-2">
+                <div class="locked-overlay" id="lock-capa-2">
+                    <i class="fas fa-lock"></i>
+                    <p>Completa la Capa 1 correctamente<br>(mínimo 4 palabras)<br>para desbloquear</p>
+                </div>
                 <div class="capa-header">
                     <span class="capa-number">02</span>
                     <h3><i class="fas fa-link"></i> Capa 2: La Columna Vertebral</h3>
@@ -1380,8 +1413,12 @@
                 </div>
             </section>
 
-            <!-- CAPA 3 -->
-            <section class="capa-section capa-3" id="capa-3">
+            <!-- CAPA 3 (BLOQUEADA INICIALMENTE) -->
+            <section class="capa-section capa-3 locked" id="capa-3">
+                <div class="locked-overlay" id="lock-capa-3">
+                    <i class="fas fa-lock"></i>
+                    <p>Responde correctamente la Capa 2<br>para desbloquear</p>
+                </div>
                 <div class="capa-header">
                     <span class="capa-number">03</span>
                     <h3><i class="fas fa-paragraph"></i> Capa 3: El Párrafo de Autor</h3>
@@ -1878,6 +1915,10 @@
             resetearCapa2();
             resetearCapa3();
             
+            // BLOQUEAR CAPAS NUEVAMENTE
+            bloquearCapa(2);
+            bloquearCapa(3);
+            
             // Cargar texto con animación
             setTimeout(() => {
                 renderizarTextoCapa1();
@@ -2025,16 +2066,21 @@
             const objetivoEl = document.getElementById('objetivo-capa1');
             objetivoEl.style.display = 'inline-flex';
             
-            if (correctCount === 5) {
-                showMissionToast('¡Excelente! Has identificado correctamente las 5 palabras clave. +40 estrellas', 5000);
+            // MODIFICACIÓN: Se aprueba con mínimo 4 palabras
+            if (correctCount >= 4) {
+                showMissionToast('¡Capa 1 completada! Desbloqueando Capa 2...', 3000);
                 objetivoEl.className = 'objetivo-tag success';
-                objetivoEl.innerHTML = `<i class="fas fa-check-circle"></i> ¡Completado! Palabras: ${palabrasCorrectas.join(', ')}`;
+                objetivoEl.innerHTML = `<i class="fas fa-check-circle"></i> ¡Aprobado! ${correctCount}/5 correctas.`;
+                
+                // DESBLOQUEAR CAPA 2
+                desbloquearCapa(2);
                 
                 setTimeout(() => {
                     document.querySelector('[data-capa="2"]').click();
                 }, 2000);
             } else {
-                showMissionToast(`Identificaste ${correctCount} de 5 palabras correctas. Intenta de nuevo.`, 4000);
+                showMissionToast(`Identificaste ${correctCount}/5. Necesitas mínimo 4 para aprobar.`, 4000);
+                objetivoEl.className = 'objetivo-tag error';
                 objetivoEl.innerHTML = `<i class="fas fa-info-circle"></i> Palabras correctas: ${palabrasCorrectas.join(', ')}`;
             }
         }
@@ -2068,7 +2114,10 @@
                 if (esCorrecta) {
                     document.getElementById('resultado-capa2').classList.add('show');
                     document.getElementById('reiniciar-capa2').style.display = 'inline-block';
-                    showMissionToast('¡Correcto! Has construido una frase de síntesis efectiva. +50 estrellas', 5000);
+                    showMissionToast('¡Correcto! Desbloqueando Capa 3...', 3000);
+                    
+                    // DESBLOQUEAR CAPA 3
+                    desbloquearCapa(3);
                     
                     setTimeout(() => {
                         document.querySelector('[data-capa="3"]').click();
@@ -2097,13 +2146,36 @@
             document.getElementById('resultado-capa3').classList.add('show');
             document.getElementById('reiniciar-capa3').style.display = 'inline-block';
             document.getElementById('ver-capa3').style.display = 'none';
-            showMissionToast('¡Felicidades! Has completado las 3 capas del Resumen por Capas. +80 estrellas', 6000);
+            showMissionToast('¡Felicidades! Has completado las 3 capas. +80 estrellas', 6000);
         }
 
         function resetearCapa3() {
             document.getElementById('resultado-capa3').classList.remove('show');
             document.getElementById('reiniciar-capa3').style.display = 'none';
             document.getElementById('ver-capa3').style.display = 'inline-flex';
+        }
+
+        /*************************************************************************
+         *  SISTEMA DE BLOQUEO Y NAVEGACIÓN
+         *************************************************************************/
+        function bloquearCapa(num) {
+            const sec = document.getElementById(`capa-${num}`);
+            const overlay = document.getElementById(`lock-capa-${num}`);
+            sec.classList.add('locked');
+            overlay.classList.remove('hidden');
+            
+            const nav = document.querySelector(`.zoom-level[data-capa="${num}"]`);
+            if(nav) nav.classList.add('locked');
+        }
+
+        function desbloquearCapa(num) {
+            const sec = document.getElementById(`capa-${num}`);
+            const overlay = document.getElementById(`lock-capa-${num}`);
+            sec.classList.remove('locked');
+            overlay.classList.add('hidden');
+            
+            const nav = document.querySelector(`.zoom-level[data-capa="${num}"]`);
+            if(nav) nav.classList.remove('locked');
         }
 
         /*************************************************************************
@@ -2163,6 +2235,8 @@
 
             zoomLevels.forEach(level => {
                 level.addEventListener('click', () => {
+                    if(level.classList.contains('locked')) return; // No hacer nada si está bloqueado
+                    
                     const capaNum = level.dataset.capa;
                     
                     zoomLevels.forEach(l => l.classList.remove('active'));
