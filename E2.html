@@ -2296,26 +2296,42 @@
             document.getElementById('conclusion-capa3').textContent = textoActual.capa3.conclusion;
         }
 
-        /*************************************************************************
-         *  FUNCIONES CAPA 1
+               /*************************************************************************
+         *  FUNCIONES CAPA 1 (CORREGIDAS Y COMPLETAS)
          *************************************************************************/
+        
         function seleccionarPalabra(palabraEl) {
-            if (clicksLeft <= 0) return;
-            
             const palabra = palabraEl.dataset.palabra;
+            const estabaSeleccionada = selectedWords.includes(palabra);
             
-            if (palabraEl.classList.contains('selected')) {
-                palabraEl.classList.remove('selected');
+            // 1. Lógica de selección única (manejo de clics)
+            if (estabaSeleccionada) {
+                // Si ya estaba, la deseleccionamos (recuperamos el clic)
                 selectedWords = selectedWords.filter(w => w !== palabra);
                 clicksLeft++;
             } else {
-                palabraEl.classList.add('selected');
+                // Si no está, verificamos si hay clics disponibles
+                if (clicksLeft <= 0) {
+                    showMissionToast('No te quedan selecciones disponibles.', 2000);
+                    return;
+                }
+                // Seleccionamos el concepto nuevo (gastamos 1 clic)
                 selectedWords.push(palabra);
                 clicksLeft--;
             }
             
+            // 2. Actualizar visualmente TODAS las instancias de esa palabra en el texto
+            // Si elijo "la", se marcan todas las "la" para coherencia visual
+            const todasInstancias = document.querySelectorAll(`#texto-capa1 .palabra[data-palabra="${palabra}"]`);
+            todasInstancias.forEach(instancia => {
+                instancia.classList.toggle('selected', !estabaSeleccionada);
+            });
+            
+            // 3. Actualizar contadores y display
             document.getElementById('clicks-left').textContent = clicksLeft;
             updateSelectedWordsDisplay();
+            
+            // El botón se habilita solo si hay 5 conceptos únicos seleccionados
             document.getElementById('verificar-capa1').disabled = selectedWords.length !== 5;
         }
 
@@ -2332,14 +2348,20 @@
                 container.querySelectorAll('.remove-word').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const wordToRemove = e.target.dataset.word;
+                        
+                        // 1. Lógica: quitar de la lista y recuperar clic
                         selectedWords = selectedWords.filter(w => w !== wordToRemove);
                         clicksLeft++;
                         document.getElementById('clicks-left').textContent = clicksLeft;
                         
+                        // 2. Visual: desmarcar TODAS las instancias de esa palabra en el texto
                         document.querySelectorAll('#texto-capa1 .palabra').forEach(p => {
-                            if (p.dataset.palabra === wordToRemove) p.classList.remove('selected');
+                            if (p.dataset.palabra === wordToRemove) {
+                                p.classList.remove('selected');
+                            }
                         });
                         
+                        // 3. Actualizar vista y botón
                         updateSelectedWordsDisplay();
                         document.getElementById('verificar-capa1').disabled = selectedWords.length !== 5;
                     });
@@ -2347,45 +2369,51 @@
             }
         }
 
-                    function seleccionarPalabra(palabraEl) {
-            if (clicksLeft <= 0 && !palabraEl.classList.contains('selected')) {
-                showMissionToast('No te quedan selecciones disponibles.', 2000);
-                return;
-            }
+        function verificarCapa1() {
+            // 1. Calcular puntaje basado en palabras ÚNICAS
+            let correctCount = 0;
+            const palabrasCorrectas = textoActual.palabrasClave;
             
-            const palabra = palabraEl.dataset.palabra;
-            const estabaSeleccionada = selectedWords.includes(palabra);
-            
-            // 1. Actualizar la lista de palabras seleccionadas (ÚNICAS)
-            if (estabaSeleccionada) {
-                // Deseleccionar el concepto
-                selectedWords = selectedWords.filter(w => w !== palabra);
-                clicksLeft++;
-            } else {
-                // Seleccionar el concepto nuevo
-                selectedWords.push(palabra);
-                clicksLeft--;
-            }
-            
-            // 2. Actualizar visualmente TODAS las instancias de esa palabra en el texto
-            // Esto evita confusión: si selecciono "la", se marcan todas las "la"
-            const todasInstancias = document.querySelectorAll(`#texto-capa1 .palabra[data-palabra="${palabra}"]`);
-            todasInstancias.forEach(instancia => {
-                if (estabaSeleccionada) {
-                    instancia.classList.remove('selected');
-                } else {
-                    instancia.classList.add('selected');
+            // Contamos cuántas de las seleccionadas (únicas) están en la lista de correctas
+            selectedWords.forEach(selWord => {
+                if (palabrasCorrectas.includes(selWord)) {
+                    correctCount++;
                 }
             });
+
+            // 2. Pintar el texto para feedback visual
+            document.querySelectorAll('#texto-capa1 .palabra').forEach(p => {
+                const pText = p.dataset.palabra;
+                p.classList.remove('selected'); // Quitamos el resaltado de selección
+                
+                if (palabrasCorrectas.includes(pText)) {
+                    p.classList.add('correct'); // Pintar verde las correctas
+                } else if (selectedWords.includes(pText)) {
+                    p.classList.add('incorrect'); // Pintar rojo las incorrectas
+                }
+            });
+
+            // 3. Mostrar resultado
+            const objetivoEl = document.getElementById('objetivo-capa1');
+            objetivoEl.style.display = 'inline-flex';
             
-            // 3. Actualizar contadores y display
-            document.getElementById('clicks-left').textContent = clicksLeft;
-            updateSelectedWordsDisplay();
-            
-            // El botón se habilita solo si hay 5 conceptos únicos seleccionados
-            document.getElementById('verificar-capa1').disabled = selectedWords.length !== 5;
+            if (correctCount >= 4) {
+                showMissionToast('¡Capa 1 completada! Desbloqueando Capa 2...', 3000);
+                objetivoEl.className = 'objetivo-tag success';
+                objetivoEl.innerHTML = `<i class="fas fa-check-circle"></i> ¡Aprobado! ${correctCount}/5 correctas.`;
+                
+                desbloquearCapa(2);
+                
+                setTimeout(() => {
+                    document.querySelector('[data-capa="2"]').click();
+                }, 2000);
+            } else {
+                showMissionToast(`Identificaste ${correctCount}/5. Necesitas mínimo 4 para aprobar.`, 4000);
+                objetivoEl.className = 'objetivo-tag error';
+                objetivoEl.innerHTML = `<i class="fas fa-info-circle"></i> Correctas: ${palabrasCorrectas.join(', ')}`;
+            }
         }
-        
+
         function resetearCapa1() {
             selectedWords = [];
             clicksLeft = 5;
@@ -2398,7 +2426,6 @@
                 p.classList.remove('selected', 'correct', 'incorrect');
             });
         }
-
         /*************************************************************************
          *  FUNCIONES CAPA 2
          *************************************************************************/
