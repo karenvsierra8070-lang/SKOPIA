@@ -2347,55 +2347,45 @@
             }
         }
 
-               function verificarCapa1() {
-            // CORRECCIÓN: Calculamos el puntaje basándonos en palabras clave ÚNICAS encontradas
-            let correctCount = 0;
-            const palabrasCorrectas = textoActual.palabrasClave;
-            
-            // 1. Iteramos sobre la lista de respuestas correctas (únicas), no sobre el texto completo
-            palabrasCorrectas.forEach(palabraCorrecta => {
-                // Si el usuario seleccionó esta palabra clave (aunque esté repetida en el texto, cuenta solo 1 vez)
-                if (selectedWords.includes(palabraCorrecta)) {
-                    correctCount++;
-                }
-            });
-
-            // 2. Bucle visual: pintar de verde/rojo las palabras en el texto
-            document.querySelectorAll('#texto-capa1 .palabra').forEach(p => {
-                const pText = p.dataset.palabra;
-                p.classList.remove('selected');
-                
-                // Si es una palabra clave, pintarla verde
-                if (palabrasCorrectas.includes(pText)) {
-                    p.classList.add('correct');
-                } 
-                // Si el usuario la seleccionó pero NO es clave, pintarla roja
-                else if (selectedWords.includes(pText)) {
-                    p.classList.add('incorrect');
-                }
-            });
-
-            const objetivoEl = document.getElementById('objetivo-capa1');
-            objetivoEl.style.display = 'inline-flex';
-            
-            // Lógica de aprobación
-            if (correctCount >= 4) {
-                showMissionToast('¡Capa 1 completada! Desbloqueando Capa 2...', 3000);
-                objetivoEl.className = 'objetivo-tag success';
-                objetivoEl.innerHTML = `<i class="fas fa-check-circle"></i> ¡Aprobado! ${correctCount}/5 correctas.`;
-                
-                desbloquearCapa(2);
-                
-                setTimeout(() => {
-                    document.querySelector('[data-capa="2"]').click();
-                }, 2000);
-            } else {
-                showMissionToast(`Identificaste ${correctCount}/5. Necesitas mínimo 4 para aprobar.`, 4000);
-                objetivoEl.className = 'objetivo-tag error';
-                objetivoEl.innerHTML = `<i class="fas fa-info-circle"></i> Palabras correctas: ${palabrasCorrectas.join(', ')}`;
+                    function seleccionarPalabra(palabraEl) {
+            if (clicksLeft <= 0 && !palabraEl.classList.contains('selected')) {
+                showMissionToast('No te quedan selecciones disponibles.', 2000);
+                return;
             }
+            
+            const palabra = palabraEl.dataset.palabra;
+            const estabaSeleccionada = selectedWords.includes(palabra);
+            
+            // 1. Actualizar la lista de palabras seleccionadas (ÚNICAS)
+            if (estabaSeleccionada) {
+                // Deseleccionar el concepto
+                selectedWords = selectedWords.filter(w => w !== palabra);
+                clicksLeft++;
+            } else {
+                // Seleccionar el concepto nuevo
+                selectedWords.push(palabra);
+                clicksLeft--;
+            }
+            
+            // 2. Actualizar visualmente TODAS las instancias de esa palabra en el texto
+            // Esto evita confusión: si selecciono "la", se marcan todas las "la"
+            const todasInstancias = document.querySelectorAll(`#texto-capa1 .palabra[data-palabra="${palabra}"]`);
+            todasInstancias.forEach(instancia => {
+                if (estabaSeleccionada) {
+                    instancia.classList.remove('selected');
+                } else {
+                    instancia.classList.add('selected');
+                }
+            });
+            
+            // 3. Actualizar contadores y display
+            document.getElementById('clicks-left').textContent = clicksLeft;
+            updateSelectedWordsDisplay();
+            
+            // El botón se habilita solo si hay 5 conceptos únicos seleccionados
+            document.getElementById('verificar-capa1').disabled = selectedWords.length !== 5;
         }
-
+        
         function resetearCapa1() {
             selectedWords = [];
             clicksLeft = 5;
