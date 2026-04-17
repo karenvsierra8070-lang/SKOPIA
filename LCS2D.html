@@ -779,9 +779,6 @@
     document.addEventListener('DOMContentLoaded', () => {
         console.log("DOM Cargado. Inicializando Dashboard Ideas Secundarias...");
 
-        // ============================================
-        // CONFIGURACION DE TECNICAS (Claves sin .html para coincidir con Firebase)
-        // ============================================
         const MIN_SCORE_TO_UNLOCK = 180;
         
         const techniquesConfig = {
@@ -799,7 +796,7 @@
                 locked: false,
                 requires: null,
                 requiresScore: 0,
-                file: 'LCS2D1.html', // Archivo al que redirigir
+                file: 'LCS2D1.html',
                 functionName: 'Ilustra la idea principal con casos concretos'
             },
             'LCS2D2': {
@@ -878,11 +875,7 @@
                 
                 if (snapshot.exists()) {
                     const data = snapshot.val();
-                    console.log("Datos cargados desde Firebase:", data);
-                    
-                    // Guardar en localStorage para acceso rapido
                     localStorage.setItem('skopia_lcs2_progress', JSON.stringify(data));
-                    
                     return data;
                 }
             } catch (error) {
@@ -893,110 +886,73 @@
             return null;
         }
 
-        async function saveProgressToFirebase(userId, data) {
-            showSyncIndicator(true);
-            try {
-                const dbRef = window.ref(window.db, `users/${userId}/lcs2_progress`);
-                await window.set(dbRef, data);
-                console.log("Progreso guardado en Firebase");
-                
-                // Tambien guardar en localStorage
-                localStorage.setItem('skopia_lcs2_progress', JSON.stringify(data));
-            } catch (error) {
-                console.error("Error guardando progreso:", error);
-            } finally {
-                showSyncIndicator(false);
-            }
-        }
-
         function showSyncIndicator(show) {
-            if (show) {
-                syncIndicator.classList.add('visible');
-            } else {
-                syncIndicator.classList.remove('visible');
-            }
+            syncIndicator.classList.toggle('visible', show);
         }
 
         // ============================================
-        // FUNCIONES DE LOGICA DE ESTADO
+        // LÓGICA DE DATOS (CORREGIDA PARA LEER CUALQUIER FORMATO)
         // ============================================
         
         function getLocalProgress() {
             const data = localStorage.getItem('skopia_lcs2_progress');
-            if (!data) return {
-                techniques: {},
-                stats: {
-                    completedCount: 0,
-                    totalScore: 0,
-                    attempts: 0
-                }
-            };
+            if (!data) return { techniques: {}, stats: { completedCount: 0, totalScore: 0, attempts: 0 } };
             try {
                 return JSON.parse(data);
             } catch (e) {
-                return {
-                    techniques: {},
-                    stats: {
-                        completedCount: 0,
-                        totalScore: 0,
-                        attempts: 0
-                    }
-                };
+                return { techniques: {}, stats: { completedCount: 0, totalScore: 0, attempts: 0 } };
             }
         }
 
-        function getTechniqueProgress(techniqueId) {
-            const progress = getLocalProgress();
-            return progress.techniques[techniqueId] || null;
+        // ✅ FUNCIÓN CLAVE: Busca el progreso con o sin .html
+        function findTechData(progress, techId) {
+            if (!progress.techniques) return null;
+            // Intenta con 'LCS2D1'
+            if (progress.techniques[techId]) return progress.techniques[techId];
+            // Intenta con 'LCS2D1.html' (por si quedó guardado así)
+            if (progress.techniques[techId + '.html']) return progress.techniques[techId + '.html'];
+            return null;
         }
 
-        function isTechniqueUnlocked(techniqueId) {
-            const config = techniquesConfig[techniqueId];
-            if (!config) return true;
+        function isTechniqueUnlocked(techId) {
+            const config = techniquesConfig[techId];
+            if (!config || !config.locked) return true;
             
-            if (!config.locked) return true;
-            
-            if (config.locked && config.requires) {
+            if (config.requires) {
                 const progress = getLocalProgress();
-                const requiredProgress = progress.techniques[config.requires];
+                // Usamos la función inteligente para buscar el requisito
+                const requiredProgress = findTechData(progress, config.requires);
                 
                 if (requiredProgress && requiredProgress.completed && requiredProgress.score >= config.requiresScore) {
                     return true;
                 }
-                
                 return false;
             }
-            
             return true;
         }
 
         // ============================================
-        // RENDERIZADO DE TARJETAS
+        // RENDERIZADO
         // ============================================
         
         function renderTechniqueCards() {
             techniquesGrid.innerHTML = '';
-            
             const progress = getLocalProgress();
             let completedCount = 0;
             
             Object.entries(techniquesConfig).forEach(([techId, config]) => {
                 const isUnlocked = isTechniqueUnlocked(techId);
-                const techProgress = progress.techniques[techId];
-                const isCompleted = techProgress?.completed && techProgress?.score >= MIN_SCORE_TO_UNLOCK;
+                // ✅ Usamos la función inteligente para encontrar el puntaje
+                const techProgress = findTechData(progress, techId);
                 
+                const isCompleted = techProgress?.completed && techProgress?.score >= MIN_SCORE_TO_UNLOCK;
                 if (isCompleted) completedCount++;
                 
-                const card = document.createElement('div');
-                card.className = 'technique-card';
-                if (!isUnlocked) card.classList.add('locked');
-                if (isCompleted) card.classList.add('completed');
-                
-                // Calcular progreso
                 let progressPercent = 0;
                 let scoreDisplay = '--';
+                
                 if (techProgress) {
-                    if (techProgress.completed) {
+                    if (techProgress.completed || techProgress.score) {
                         progressPercent = 100;
                         scoreDisplay = techProgress.score || 0;
                     } else if (techProgress.currentQuestion > 0) {
@@ -1004,12 +960,10 @@
                     }
                 }
                 
-                // Generar estrellas de dificultad
                 const stars = Array(3).fill(0).map((_, i) => 
                     `<span class="difficulty-star ${i < config.difficulty ? 'filled' : ''}">&#9733;</span>`
                 ).join('');
                 
-                // Determinar estado del boton
                 let buttonText = 'Comenzar';
                 let buttonIcon = '<i class="fas fa-play"></i>';
                 let buttonClass = '';
@@ -1024,24 +978,14 @@
                     buttonClass = 'completed-btn';
                 } else if (progressPercent > 0) {
                     buttonText = 'Continuar';
-                    buttonIcon = '<i class="fas fa-play"></i>';
                 }
                 
-                // Determinar badge
                 let badgeHtml = '';
-                if (!isUnlocked) {
-                    badgeHtml = `<div class="card-badge locked-badge"><i class="fas fa-lock"></i> Bloqueado</div>`;
-                } else if (isCompleted) {
-                    badgeHtml = `<div class="card-badge completed-badge"><i class="fas fa-check"></i> Dominado</div>`;
-                }
+                if (!isUnlocked) badgeHtml = `<div class="card-badge locked-badge"><i class="fas fa-lock"></i> Bloqueado</div>`;
+                else if (isCompleted) badgeHtml = `<div class="card-badge completed-badge"><i class="fas fa-check"></i> Dominado</div>`;
                 
-                // Lock overlay
-                let lockOverlay = '';
-                if (!isUnlocked) {
-                    lockOverlay = `<div class="lock-overlay"><i class="fas fa-lock"></i></div>`;
-                }
+                let lockOverlay = !isUnlocked ? `<div class="lock-overlay"><i class="fas fa-lock"></i></div>` : '';
                 
-                // Requisito de desbloqueo
                 let requirementHtml = '';
                 if (!isUnlocked && config.requires) {
                     const reqConfig = techniquesConfig[config.requires];
@@ -1050,10 +994,11 @@
                             <i class="fas fa-info-circle"></i>
                             Completa <strong>${reqConfig.title}</strong> con al menos 
                             <span class="required-score">${config.requiresScore} puntos</span>
-                        </div>
-                    `;
+                        </div>`;
                 }
                 
+                const card = document.createElement('div');
+                card.className = `technique-card ${!isUnlocked ? 'locked' : ''} ${isCompleted ? 'completed' : ''}`;
                 card.innerHTML = `
                     <div class="card-header ${config.colorClass}">
                         <div class="card-icon"><i class="${config.icon}"></i></div>
@@ -1083,20 +1028,17 @@
                             <div class="progress-fill ${config.colorClass}" style="width: ${progressPercent}%"></div>
                         </div>
                         <div class="card-footer">
-                            <div class="difficulty">
-                                ${stars}
-                            </div>
+                            <div class="difficulty">${stars}</div>
                             <button class="start-btn ${buttonClass}" data-id="${techId}" ${!isUnlocked ? 'disabled' : ''}>
                                 ${buttonText} ${buttonIcon}
                             </button>
                         </div>
-                    </div>
-                `;
+                    </div>`;
                 
                 techniquesGrid.appendChild(card);
             });
             
-            // Event listeners para botones
+            // Event listeners
             document.querySelectorAll('.start-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -1104,56 +1046,25 @@
                     if (techId) handleTechniqueStart(techId);
                 });
             });
-            
-            // Click en tarjetas
-            document.querySelectorAll('.technique-card').forEach(card => {
-                card.addEventListener('click', () => {
-                    const btn = card.querySelector('.start-btn');
-                    if (btn && !btn.disabled) {
-                        const techId = btn.dataset.id;
-                        if (techId) handleTechniqueStart(techId);
-                    }
-                });
-            });
         }
 
-        // ============================================
-        // MANEJO DE INICIO DE CUESTIONARIO
-        // ============================================
-        
         function handleTechniqueStart(techId) {
             const config = techniquesConfig[techId];
             if (!config) return;
             
-            const isUnlocked = isTechniqueUnlocked(techId);
-            
-            if (!isUnlocked) {
+            if (!isTechniqueUnlocked(techId)) {
                 showToast(`Esta tecnica esta bloqueada. Completa la anterior con al menos ${MIN_SCORE_TO_UNLOCK} puntos.`, 'error');
                 return;
             }
             
-            // Guardar cuestionario actual
             localStorage.setItem('currentLCS2Quiz', techId);
-            
-            const progress = getTechniqueProgress(techId);
-            
-            if (progress?.completed) {
-                showToast('Iniciando nuevo intento...', 'success');
-            } else if (progress?.currentQuestion > 0) {
-                showToast('Reanudando cuestionario...', 'success');
-            } else {
-                showToast(`Iniciando ${config.title}...`, 'success');
-            }
+            showToast(`Iniciando ${config.title}...`, 'success');
             
             setTimeout(() => {
-                window.location.href = config.file; // Redirige al archivo HTML correcto
+                window.location.href = config.file;
             }, 800);
         }
 
-        // ============================================
-        // ACTUALIZACION DE ESTADISTICAS
-        // ============================================
-        
         function updateStats() {
             const progress = getLocalProgress();
             const techniques = progress.techniques || {};
@@ -1163,68 +1074,41 @@
             let scoreCount = 0;
             let attempts = 0;
             
-            Object.entries(techniques).forEach(([id, data]) => {
-                if (data.completed && data.score >= MIN_SCORE_TO_UNLOCK) {
-                    completedCount++;
-                }
-                if (data.score) {
-                    totalScore += data.score;
-                    scoreCount++;
-                }
+            // Iteramos sobre todo lo que encuentre
+            Object.values(techniques).forEach(data => {
+                if (data.completed && data.score >= MIN_SCORE_TO_UNLOCK) completedCount++;
+                if (data.score) { totalScore += data.score; scoreCount++; }
                 attempts += data.attempts || 0;
             });
             
-            // Calcular promedio solo entre las tarjetas realizadas
             const averageScore = scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0;
             
-            // Actualizar display
             document.getElementById('completed-count').textContent = `${completedCount}/4`;
             document.getElementById('average-score').textContent = averageScore;
             document.getElementById('total-attempts').textContent = attempts;
             
-            // Nivel de maestria
             let masteryLevel = 'Novato';
-            if (completedCount === 4 && averageScore >= 250) {
-                masteryLevel = 'Maestro';
-            } else if (completedCount === 4) {
-                masteryLevel = 'Experto';
-            } else if (completedCount >= 3) {
-                masteryLevel = 'Avanzado';
-            } else if (completedCount >= 2) {
-                masteryLevel = 'Intermedio';
-            } else if (completedCount >= 1) {
-                masteryLevel = 'Aprendiz';
-            }
+            if (completedCount === 4 && averageScore >= 250) masteryLevel = 'Maestro';
+            else if (completedCount === 4) masteryLevel = 'Experto';
+            else if (completedCount >= 3) masteryLevel = 'Avanzado';
+            else if (completedCount >= 2) masteryLevel = 'Intermedio';
+            else if (completedCount >= 1) masteryLevel = 'Aprendiz';
+            
             document.getElementById('mastery-level').textContent = masteryLevel;
+            document.getElementById('overall-progress').textContent = `${Math.round((completedCount / 4) * 100)}%`;
+            document.getElementById('main-progress-fill').style.width = `${(completedCount / 4) * 100}%`;
             
-            // Progreso general
-            const overallProgress = Math.round((completedCount / 4) * 100);
-            document.getElementById('overall-progress').textContent = `${overallProgress}%`;
-            document.getElementById('main-progress-fill').style.width = `${overallProgress}%`;
-            
-            // Banner de logro
-            if (completedCount === 4) {
-                document.getElementById('achievement-banner').classList.add('visible');
-            }
+            if (completedCount === 4) document.getElementById('achievement-banner').classList.add('visible');
         }
 
-        // ============================================
-        // FUNCIONES DE UI
-        // ============================================
-        
         function showToast(message, type = '', duration = 4000) {
             toast.textContent = message;
-            toast.className = 'toast show';
-            if (type) toast.classList.add(type);
-            
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, duration);
+            toast.className = 'toast show ' + type;
+            setTimeout(() => toast.classList.remove('show'), duration);
         }
 
         function animateCards() {
-            const cards = document.querySelectorAll('.technique-card');
-            cards.forEach((card, index) => {
+            document.querySelectorAll('.technique-card').forEach((card, index) => {
                 card.style.opacity = '0';
                 card.style.transform = 'translateY(30px)';
                 setTimeout(() => {
@@ -1239,50 +1123,31 @@
             document.querySelectorAll('.panel-box').forEach(p => p.classList.remove('active'));
         }
 
-        // ============================================
-        // RENDER PANELS
-        // ============================================
-        
         function renderMissions() {
             const progress = getLocalProgress();
             const container = document.getElementById('misiones-content');
-            
             const missions = [
-                { id: 1, title: 'Completa Ejemplificacion con 180+ puntos', completed: false },
-                { id: 2, title: 'Completa Explicacion con 180+ puntos', completed: false },
-                { id: 3, title: 'Completa Comparacion con 180+ puntos', completed: false },
-                { id: 4, title: 'Completa Justificacion con 180+ puntos', completed: false }
+                { id: 1, title: 'Completa Ejemplificacion con 180+ puntos', key: 'LCS2D1' },
+                { id: 2, title: 'Completa Explicacion con 180+ puntos', key: 'LCS2D2' },
+                { id: 3, title: 'Completa Comparacion con 180+ puntos', key: 'LCS2D3' },
+                { id: 4, title: 'Completa Justificacion con 180+ puntos', key: 'LCS2D4' }
             ];
             
-            // Verificar cada mision
-            Object.entries(techniquesConfig).forEach(([techId, config]) => {
-                const techProgress = progress.techniques[techId];
-                if (techProgress?.completed && techProgress?.score >= MIN_SCORE_TO_UNLOCK) {
-                    const mission = missions.find(m => m.title.includes(config.title));
-                    if (mission) mission.completed = true;
-                }
-            });
-            
-            container.innerHTML = '';
-            missions.forEach(m => {
-                const div = document.createElement('div');
-                div.className = `mission-row ${m.completed ? 'completed' : ''}`;
-                div.innerHTML = `
-                    <div>
-                        <strong>${m.id}. ${m.title}</strong>
-                    </div>
-                    <span>${m.completed ? '&#10003;' : '&#9711;'}</span>
-                `;
-                container.appendChild(div);
-            });
+            container.innerHTML = missions.map(m => {
+                // Usamos findTechData para verificar misiones también
+                const data = findTechData(progress, m.key);
+                const isDone = data?.completed && data?.score >= MIN_SCORE_TO_UNLOCK;
+                return `<div class="mission-row ${isDone ? 'completed' : ''}">
+                    <div><strong>${m.id}. ${m.title}</strong></div>
+                    <span>${isDone ? '&#10003;' : '&#9711;'}</span>
+                </div>`;
+            }).join('');
         }
         
         function renderLevel() {
             const progress = getLocalProgress();
-            const techniques = progress.techniques || {};
-            
             let totalScore = 0;
-            Object.values(techniques).forEach(t => totalScore += t.score || 0);
+            Object.values(progress.techniques || {}).forEach(t => totalScore += t.score || 0);
             
             const level = Math.floor(totalScore / 200) + 1;
             const exp = totalScore % 200;
@@ -1290,22 +1155,18 @@
             document.getElementById('nivel-content').innerHTML = `
                 <div class="info"><strong>Nivel:</strong> ${level}</div>
                 <div class="info"><strong>Experiencia:</strong> ${totalScore} puntos</div>
-                <div class="info"><strong>Para siguiente nivel:</strong> ${200 - exp} puntos</div>
-            `;
+                <div class="info"><strong>Para siguiente nivel:</strong> ${200 - exp} puntos</div>`;
         }
         
         function renderProgressPanel() {
             const progress = getLocalProgress();
-            const techniques = progress.techniques || {};
-            
             let html = '<div class="info"><strong>Progreso por Tecnica:</strong></div>';
             
             Object.entries(techniquesConfig).forEach(([techId, config]) => {
-                const techProgress = techniques[techId];
+                const techProgress = findTechData(progress, techId); // Usamos función inteligente
                 const status = techProgress?.completed ? 
                     `Completado (${techProgress.score} pts)` : 
                     (techProgress?.currentQuestion > 0 ? 'En progreso' : 'No iniciado');
-                
                 html += `<div class="info">${config.title}: ${status}</div>`;
             });
             
@@ -1319,12 +1180,7 @@
         window.addEventListener('userReady', async (e) => {
             const user = e.detail.user;
             currentUserId = user.uid;
-            console.log("Usuario listo:", user.email);
-            
-            // Cargar datos de Firebase
             await loadProgressFromFirebase(currentUserId);
-            
-            // Renderizar
             renderTechniqueCards();
             updateStats();
             animateCards();
@@ -1333,64 +1189,33 @@
             renderProgressPanel();
         });
 
-        hamburgerMenu.addEventListener('click', () => {
-            userDropdown.classList.toggle('active');
-        });
-
+        hamburgerMenu.addEventListener('click', () => userDropdown.classList.toggle('active'));
         logoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
             import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
                 signOut(window.auth).then(() => window.location.href = 'index.html');
             });
         });
-
-        closeBtn.addEventListener('click', () => {
-            window.location.href = 'LCS2.html';
-        });
-
+        closeBtn.addEventListener('click', () => window.location.href = 'LCS2.html');
         window.addEventListener('click', (event) => {
-            if (!event.target.closest('.navbar')) {
-                userDropdown.classList.remove('active');
-            }
-            const isIcon = event.target.closest('.floating-icons');
-            const isPanel = event.target.closest('.panel-box');
-            if (!isIcon && !isPanel) closeAllPanels();
+            if (!event.target.closest('.navbar')) userDropdown.classList.remove('active');
+            if (!event.target.closest('.floating-icons') && !event.target.closest('.panel-box')) closeAllPanels();
         });
 
-        // Panel buttons
-        document.getElementById('btn-misiones').addEventListener('click', () => {
-            closeAllPanels();
-            document.getElementById('panel-misiones').classList.add('active');
-            renderMissions();
-        });
-        
-        document.getElementById('btn-nivel').addEventListener('click', () => {
-            closeAllPanels();
-            document.getElementById('panel-nivel').classList.add('active');
-            renderLevel();
-        });
-        
-        document.getElementById('btn-progreso').addEventListener('click', () => {
-            closeAllPanels();
-            document.getElementById('panel-progreso').classList.add('active');
-            renderProgressPanel();
-        });
+        document.getElementById('btn-misiones').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-misiones').classList.add('active'); renderMissions(); });
+        document.getElementById('btn-nivel').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-nivel').classList.add('active'); renderLevel(); });
+        document.getElementById('btn-progreso').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-progreso').classList.add('active'); renderProgressPanel(); });
 
         document.querySelectorAll('.close-panel').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                document.getElementById('panel-' + e.target.getAttribute('data-close')).classList.remove('active');
-            });
+            btn.addEventListener('click', (e) => document.getElementById('panel-' + e.target.dataset.close).classList.remove('active'));
         });
 
-        // Escuchar cambios en localStorage
         window.addEventListener('storage', (e) => {
             if (e.key === 'skopia_lcs2_progress') {
                 renderTechniqueCards();
                 updateStats();
             }
         });
-
-        console.log("Dashboard Ideas Secundarias inicializado.");
     });
     </script>
 </body>
