@@ -212,10 +212,15 @@
             width: 10px; height: 10px;
             border-radius: 50%;
             background: rgba(255,255,255,0.2);
+            transition: all 0.3s;
         }
         .hud-progress-dot.completed {
             background: var(--color-equilibrio);
             box-shadow: 0 0 10px var(--color-equilibrio);
+        }
+        .hud-progress-dot.failed {
+            background: var(--color-peligro);
+            opacity: 0.5;
         }
 
         .hud-center {
@@ -436,9 +441,10 @@
             color: rgba(255,255,255,0.3);
         }
 
+        /* GRID 2x2 para 4 opciones */
         .cards-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 20px;
             width: 100%;
         }
@@ -754,6 +760,7 @@
             .intro-title { font-size: 3rem; }
             .case-text { font-size: 1.2rem; }
             .hud-center { display: none; }
+            .cards-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -871,6 +878,44 @@
 
     <script>
         // ==========================================
+        // MOTOR de Audio (Sin archivos externos)
+        // ==========================================
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            if (type === 'correct') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+                osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); // E5
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.4);
+            } else if (type === 'click') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.05);
+            }
+        }
+
+        // ==========================================
         // MOTOR DEL JUEGO
         // ==========================================
 
@@ -880,10 +925,10 @@
             stats: { derechos: 70, estado: 70, pueblo: 70 },
             badges: [],
             gameActive: false,
-            activeCases: [] // Aquí se guardarán los 5 casos aleatorios
+            activeCases: [] 
         };
 
-        // BANCO DE CASOS (CONSTITUCIÓN POLÍTICA DE COLOMBIA)
+        // BANCO DE CASOS (10 CASOS, 4 OPCIONES CADA UNO)
         const MASTER_CASES = [
             {
                 id: 1,
@@ -891,11 +936,13 @@
                 description: "Un grupo de campesinos bloquea la vía principal. Exigen subsidios. El comercio está paralizado.",
                 options: [
                     { id: "protesta", text: "Derecho a la Protesta", article: "Art. 56", correct: true, desc: "Derecho a manifestar pública y pacíficamente." },
-                    { id: "transito", text: "Libertad de Tránsito", article: "Art. 24", correct: false, desc: "Derecho a circular libremente." }
+                    { id: "transito", text: "Libertad de Tránsito", article: "Art. 24", correct: false, desc: "Derecho a circular libremente." },
+                    { id: "trabajo", text: "Derecho al Trabajo", article: "Art. 25", correct: false, desc: "Derecho a una ocupación lícita." },
+                    { id: "expresion", text: "Libertad de Expresión", article: "Art. 20", correct: false, desc: "Derecho a difundir pensamiento." }
                 ],
                 decision: {
-                    labelA: "Desalojo con fuerza pública",
-                    labelB: "Diálogo indefinido",
+                    labelA: "Desalojo Inmediato",
+                    labelB: "Diálogo Indefinido",
                     optimum: 60,
                     consequences: {
                         good: { msg: "Se abre un corredor humanitario y se firman acuerdos.", stats: { d: 5, e: 10, p: 5 } },
@@ -910,11 +957,13 @@
                 description: "Una empresa vierte químicos al río. Emplea a 5000 personas. La comunidad de abajo enferma.",
                 options: [
                     { id: "salud", text: "Derecho a la Salud", article: "Art. 49", correct: true, desc: "Derecho al bienestar físico y mental." },
-                    { id: "empresa", text: "Libertad de Empresa", article: "Art. 333", correct: false, desc: "Derecho a la iniciativa económica." }
+                    { id: "ambiente", text: "Medio Ambiente Sano", article: "Art. 79", correct: false, desc: "Derecho a gozar de un ambiente sano." },
+                    { id: "empresa", text: "Libertad de Empresa", article: "Art. 333", correct: false, desc: "Derecho a la iniciativa económica." },
+                    { id: "agua", text: "Derecho al Agua", article: "Art. 365", correct: false, desc: "El agua es un derecho fundamental." }
                 ],
                 decision: {
-                    labelA: "Cierre inmediato",
-                    labelB: "Ignorar denuncias",
+                    labelA: "Cierre Inmediato",
+                    labelB: "Ignorar Denuncias",
                     optimum: 40,
                     consequences: {
                         good: { msg: "Multa millonaria y obligación de instalar filtros.", stats: { d: 10, e: -5, p: 10 } },
@@ -926,57 +975,63 @@
             {
                 id: 3,
                 title: "Caso 3: El Periodista Investigado",
-                description: "Un periodista reveló corrupción. El gobierno exige su fuente por 'seguridad nacional'.",
+                description: "Un periodista reveló actos de corrupción. El gobierno pide que revele sus fuentes por 'Seguridad Nacional'.",
                 options: [
-                    { id: "prensa", text: "Libertad de Prensa", article: "Art. 20", correct: true, desc: "Derecho a informar y opinar." },
-                    { id: "seguridad", text: "Seguridad Nacional", article: "Art. 213", correct: false, desc: "Protección del Estado ante amenazas." }
+                    { id: "prensa", text: "Libertad de Prensa", article: "Art. 20", correct: true, desc: "Libertad de expresar y difundir pensamiento." },
+                    { id: "habeas", text: "Habeas Data", article: "Art. 15", correct: false, desc: "Derecho a conocer, actualizar y rectificar datos." },
+                    { id: "seguridad", text: "Seguridad Nacional", article: "Art. 213", correct: false, desc: "Facultad del Estado ante crisis." },
+                    { id: "honra", text: "Derecho al Buen Nombre", article: "Art. 21", correct: false, desc: "Derecho a la honra y dignidad." }
                 ],
                 decision: {
-                    labelA: "Censurar y demandar",
-                    labelB: "Protección total al periodista",
+                    labelA: "Censura y Demanda",
+                    labelB: "Protección Total",
                     optimum: 70,
                     consequences: {
-                        good: { msg: "El periodista es protegido y la corrupción juzgada.", stats: { d: 15, e: -15, p: 15 } },
-                        neutral: { msg: "Caso empata en la corte. Libertad en entredicho.", stats: { d: -10, e: 0, p: 5 } },
+                        good: { msg: "El periodista es protegido y la investigación avanza.", stats: { d: 15, e: -15, p: 15 } },
+                        neutral: { msg: "El caso se empata en la corte. Libertad en entredicho.", stats: { d: -10, e: 0, p: 5 } },
                         bad: { msg: "Detención del periodista. Sanciones internacionales.", stats: { d: -25, e: 10, p: -20 } }
                     }
                 }
             },
             {
                 id: 4,
-                title: "Caso 4: La Tierra Ancestral",
-                description: "Comunidad indígena se opone a una mina en territorio sagrado. La mina traería desarrollo.",
+                title: "Caso 4: La Mina en Territorio Ancestral",
+                description: "Una multinacional planea una mina a cielo abierto en territorio indígena. El proyecto traería desarrollo pero destruiría sitios sagrados.",
                 options: [
-                    { id: "autonomia", text: "Autonomía Indígena", article: "Art. 330", correct: true, desc: "Derecho al territorio y cultura propia." },
-                    { id: "desarrollo", text: "Desarrollo Económico", article: "Art. 334", correct: false, desc: "Intervención del Estado en la economía." }
+                    { id: "autonomia", text: "Autonomía Indígena", article: "Art. 330", correct: true, desc: "Derecho al gobierno propio y territorio." },
+                    { id: "propiedad", text: "Propiedad Privada", article: "Art. 58", correct: false, desc: "Derecho a la propiedad privada." },
+                    { id: "desarrollo", text: "Desarrollo Económico", article: "Art. 334", correct: false, desc: "Dirección general de la economía." },
+                    { id: "cultura", text: "Derecho a la Cultura", article: "Art. 70", correct: false, desc: "Fomento de la cultura nacional." }
                 ],
                 decision: {
-                    labelA: "Desalojar comunidad",
-                    labelB: "Cancelar proyecto minero",
+                    labelA: "Desalojar Comunidad",
+                    labelB: "Cancelar Proyecto",
                     optimum: 50,
                     consequences: {
                         good: { msg: "Consulta previa exitosa y participación en ganancias.", stats: { d: 5, e: 5, p: 10 } },
-                        neutral: { msg: "Proyecto atrasado años por demandas.", stats: { d: 0, e: -5, p: -5 } },
+                        neutral: { msg: "Proyecto atrasado por demandas.", stats: { d: 0, e: -5, p: -5 } },
                         bad: { msg: "Represión violenta. Condena de la ONU.", stats: { d: -25, e: 5, p: -15 } }
                     }
                 }
             },
             {
                 id: 5,
-                title: "Caso 5: El Toque de Queda",
-                description: "Pandemia severa. El gobierno impone toque de queda militarizado. La oposición denuncia represión.",
+                title: "Caso 5: Pandemia y Toque de Queda",
+                description: "El sistema de salud colapsa. La oposición acusa que el toque de queda se usa para reprimir protestas políticas.",
                 options: [
-                    { id: "libertad", text: "Libertad de Reunión", article: "Art. 37", correct: true, desc: "Derecho a congregarse pacíficamente." },
-                    { id: "salud_pub", text: "Salud Pública", article: "Art. 49", correct: false, desc: "Aunque es el contexto, la restricción es de Reunión." }
+                    { id: "salud_pub", text: "Salud Pública", article: "Art. 49", correct: true, desc: "La atención de la salud es un servicio público." },
+                    { id: "reunion", text: "Derecho de Reunión", article: "Art. 37", correct: false, desc: "Derecho a reunirse pacíficamente." },
+                    { id: "libertad", text: "Libertad Personal", article: "Art. 28", correct: false, desc: "Nadie puede ser molestado en su persona." },
+                    { id: "peticion", text: "Derecho de Petición", article: "Art. 23", correct: false, desc: "Derecho a presentar quejas." }
                 ],
                 decision: {
-                    labelA: "Militarización total",
-                    labelB: "Dejar que el virus circule",
+                    labelA: "Militarización Total",
+                    labelB: "Libertad Absoluta",
                     optimum: 35,
                     consequences: {
-                        good: { msg: "Medidas sanitarias estrictas respetando derechos políticos.", stats: { d: 5, e: 10, p: 5 } },
-                        neutral: { msg: "Medidas contradictorias. Descontento.", stats: { d: -5, e: 5, p: -10 } },
-                        bad: { msg: "Represión sanitaria genera revuelta civil.", stats: { d: -30, e: 20, p: -25 } }
+                        good: { msg: "Medidas sanitarias estrictas pero respetando derechos.", stats: { d: 5, e: 10, p: 5 } },
+                        neutral: { msg: "Medidas contradictorias. Confusión.", stats: { d: -5, e: 5, p: -10 } },
+                        bad: { msg: "Represión desmedida. Golpe de estado o revuelta.", stats: { d: -30, e: 20, p: -25 } }
                     }
                 }
             },
@@ -986,11 +1041,13 @@
                 description: "El Estado exige certificado de vacunación para acceder a servicios públicos. Ciudadanos demandan privacidad.",
                 options: [
                     { id: "privacidad", text: "Habeas Data / Intimidad", article: "Art. 15", correct: true, desc: "Derecho al control de datos personales." },
-                    { id: "salud_p", text: "Salud Colectiva", article: "Art. 49", correct: false, desc: "Interés general vs privacidad individual." }
+                    { id: "salud_p", text: "Salud Colectiva", article: "Art. 49", correct: false, desc: "Interés general vs privacidad individual." },
+                    { id: "servicios", text: "Servicios Públicos", article: "Art. 365", correct: false, desc: "Los servicios públicos son inherentes a la finalidad social." },
+                    { id: "contrato", text: "Libertad Contractual", article: "Art. 333", correct: false, desc: "Libre competencia económica." }
                 ],
                 decision: {
-                    labelA: "Certificado obligatorio estricto",
-                    labelB: "Eliminación de requisitos",
+                    labelA: "Certificado Obligatorio",
+                    labelB: "Eliminación de Requisitos",
                     optimum: 55,
                     consequences: {
                         good: { msg: "Sistema de pasaporte sanitario voluntario con incentivos.", stats: { d: 10, e: 5, p: 5 } },
@@ -1001,39 +1058,85 @@
             },
             {
                 id: 7,
-                title: "Caso 7: Educación en Zonas Rurales",
-                description: "Escuelas rurales sin internet ni profesores. La constitución garantiza educación. El Estado alega falta de presupuesto.",
+                title: "Caso 7: Educación en Zona Rural",
+                description: "Una escuela rural está a punto de cerrar por falta de profesores. La comunidad exige que el Estado garantice el servicio.",
                 options: [
-                    { id: "educacion", text: "Derecho a la Educación", article: "Art. 67", correct: true, desc: "Derecho fundamental y servicio público." },
-                    { id: "hacienda", text: "Autonomía de Hacienda", article: "Art. 345", correct: false, desc: "Disponibilidad presupuestal." }
+                    { id: "educacion", text: "Derecho a la Educación", article: "Art. 67", correct: true, desc: "La educación es un derecho de la persona." },
+                    { id: "cultura_edu", text: "Derecho a la Cultura", article: "Art. 70", correct: false, desc: "Integración cultural." },
+                    { id: "participacion", text: "Participación Ciudadana", article: "Art. 40", correct: false, desc: "Deberes y derechos cívicos." },
+                    { id: "igualdad", text: "Igualdad ante la Ley", article: "Art. 13", correct: false, desc: "Todas las personas son iguales." }
                 ],
                 decision: {
-                    labelA: "Cierre de escuelas inviables",
-                    labelB: "Mantener escuelas vacías",
-                    optimum: 50,
+                    labelA: "Cerrar la Escuela",
+                    labelB: "Incentivos Docentes",
+                    optimum: 70,
                     consequences: {
-                        good: { msg: "Plan de ruralidad educativa con conectividad móvil.", stats: { d: 15, e: -10, p: 15 } },
-                        neutral: { msg: "Inversión insuficiente, calidad baja.", stats: { d: -5, e: 0, p: -5 } },
-                        bad: { msg: "Cierre masivo. Analfabetismo aumenta.", stats: { d: -20, e: 10, p: -20 } }
+                        good: { msg: "Incentivos salariales para maestros rurales. Escuela salvada.", stats: { d: 10, e: -5, p: 15 } },
+                        neutral: { msg: "Escuela abierta pero sin recursos.", stats: { d: 0, e: 0, p: -5 } },
+                        bad: { msg: "Cierre de la escuela. Niños sin educación.", stats: { d: -15, e: 5, p: -20 } }
                     }
                 }
             },
             {
                 id: 8,
                 title: "Caso 8: Desplazamiento Forzado",
-                description: "Grupo armado desplaza a campesinos. El Estado no puede garantizar seguridad en la zona.",
+                description: "Un grupo paramilitar amenaza a campesinos para que desalojen sus tierras. El Estado alega falta de presupuesto para escoltas.",
                 options: [
-                    { id: "dignidad", text: "Derecho a la Dignidad/Vivienda", article: "Art. 51", correct: true, desc: "Derecho a la vivienda digna y protección." },
-                    { id: "defensa", text: "Defensa Nacional", article: "Art. 216", correct: false, desc: "Aunque existe conflicto, el DDHH es la base." }
+                    { id: "vida", text: "Derecho a la Vida", article: "Art. 11", correct: true, desc: "El derecho a la vida es inviolable." },
+                    { id: "dignidad", text: "Derecho a la Dignidad", article: "Art. 1", correct: false, desc: "Colombia es un Estado Social de Derecho." },
+                    { id: "habeas_corp", text: "Habeas Corpus", article: "Art. 30", correct: false, desc: "Derecho a no ser desaparecido." },
+                    { id: "defensa", text: "Debido Proceso", article: "Art. 29", correct: false, desc: "Garantías procesales." }
                 ],
                 decision: {
-                    labelA: "Retorno militarizado inmediato",
-                    labelB: "Ayuda humanitaria mínima",
-                    optimum: 40,
+                    labelA: "Ignorar Petición",
+                    labelB: "Protección Inmediata",
+                    optimum: 80,
                     consequences: {
-                        good: { msg: "Atención integral, restitución de tierras y escoltas.", stats: { d: 15, e: -5, p: 10 } },
-                        neutral: { msg: "Campos de desplazamiento permanentes.", stats: { d: -10, e: 5, p: 0 } },
-                        bad: { msg: "Retorno sin garantías. Masacre.", stats: { d: -30, e: 5, p: -25 } }
+                        good: { msg: "Escoltas asignados y atención humanitaria.", stats: { d: 15, e: -5, p: 10 } },
+                        neutral: { msg: "Campos de refugiados temporales.", stats: { d: -10, e: 5, p: 0 } },
+                        bad: { msg: "Masacre en la zona. Crisis de derechos humanos.", stats: { d: -30, e: 5, p: -25 } }
+                    }
+                }
+            },
+            {
+                id: 9,
+                title: "Caso 9: Violencia de Género",
+                description: "Una mujer denuncia amenazas de su ex pareja. El fiscal dice que son 'problemas de pareja' y archiva el caso.",
+                options: [
+                    { id: "igualdad_gen", text: "Igualdad de la Mujer", article: "Art. 43", correct: true, desc: "La mujer no será sometida a discriminación." },
+                    { id: "intimidad", text: "Derecho a la Intimidad", article: "Art. 15", correct: false, desc: "Protección de datos y privacidad." },
+                    { id: "familia", text: "Protección a la Familia", article: "Art. 42", correct: false, desc: "La familia es el núcleo de la sociedad." },
+                    { id: "juez", text: "Juez Natural", article: "Art. 29", correct: false, desc: "Nadie será juzgado sino conforme a leyes preexistentes." }
+                ],
+                decision: {
+                    labelA: "Archivar Caso",
+                    labelB: "Medidas Cautelares",
+                    optimum: 80,
+                    consequences: {
+                        good: { msg: "Medidas de protección otorgadas. Fiscal sancionado.", stats: { d: 15, e: -5, p: 10 } },
+                        neutral: { msg: "Investigación lenta. La mujer sigue en riesgo.", stats: { d: -10, e: 0, p: -5 } },
+                        bad: { msg: "Feminicidio. Conmoción nacional.", stats: { d: -30, e: 5, p: -25 } }
+                    }
+                }
+            },
+            {
+                id: 10,
+                title: "Caso 10: Cultivos Ilícitos",
+                description: "Campesinos cultivan coca para supervivencia. El gobierno planea fumigar con glifosato, lo que afectaría sus cultivos legales y salud.",
+                options: [
+                    { id: "salud_fum", text: "Derecho a la Salud", article: "Art. 49", correct: true, desc: "Protección contra sustancias nocivas." },
+                    { id: "trabajo_il", text: "Libre Empresa", article: "Art. 333", correct: false, desc: "Actividad económica lícita." },
+                    { id: "ambiente_fum", text: "Medio Ambiente", article: "Art. 79", correct: false, desc: "Protección del entorno." },
+                    { id: "seguridad_fum", text: "Seguridad Ciudadana", article: "Art. 2", correct: false, desc: "Defensa del orden constitucional." }
+                ],
+                decision: {
+                    labelA: "Fumigación Aérea Masiva",
+                    labelB: "Sustitución Voluntaria",
+                    optimum: 75,
+                    consequences: {
+                        good: { msg: "Acuerdo de sustitución con proyectos productivos.", stats: { d: 10, e: 5, p: 10 } },
+                        neutral: { msg: "Erradicación manual forzada. Conflictos.", stats: { d: -5, e: 5, p: -10 } },
+                        bad: { msg: "Fumigación daña ecosistemas y salud. Querella internacional.", stats: { d: -20, e: 10, p: -20 } }
                     }
                 }
             }
@@ -1058,28 +1161,20 @@
         }
 
         function startGameSimulation() {
-            // 1. Reiniciar Estado
             state.stats = { derechos: 70, estado: 70, pueblo: 70 };
             state.badges = [];
             state.currentLevel = 0;
-
-            // 2. Seleccionar 5 casos aleatorios únicos
             const shuffled = shuffleArray([...MASTER_CASES]);
-            state.activeCases = shuffled.slice(0, 5);
+            state.activeCases = shuffled.slice(0, 5); // Tomar 5 casos aleatorios
 
-            // 3. Mostrar pantalla
             screens.intro.classList.remove('active');
             screens.game.classList.add('active');
             state.gameActive = true;
             
-            // 4. Cargar primer nivel
             loadLevel(0);
             renderHUDProgress();
         }
 
-        // ==========================================
-        // CARGA DE NIVELES
-        // ==========================================
         function loadLevel(index) {
             if (index >= state.activeCases.length) {
                 endGameSequence();
@@ -1089,16 +1184,16 @@
             state.currentLevel = index;
             const caseData = state.activeCases[index];
 
-            // UI Update
             document.getElementById('hud-level-title').textContent = caseData.title;
             document.getElementById('case-description').innerHTML = caseData.description;
-            document.getElementById('phase-title').textContent = "FASE 1: IDENTIFICACIÓN DEL CONFLICTO";
+            document.getElementById('phase-title').textContent = "FASE 1: IDENTIFICACIÓN DEL DERECHO";
             
-            // Reset Mechanics
             document.getElementById('drag-zone').style.display = 'flex';
             document.getElementById('slider-zone').style.display = 'none';
 
-            renderCards(caseData.options);
+            // Mezclar opciones para que la correcta no siempre esté primero
+            const shuffledOptions = shuffleArray([...caseData.options]);
+            renderCards(shuffledOptions);
             resetDropZone();
             setupSlider(caseData.decision);
         }
@@ -1111,6 +1206,13 @@
                 dot.className = 'hud-progress-dot';
                 if (i < state.currentLevel) dot.classList.add('completed');
                 container.appendChild(dot);
+            }
+        }
+
+        function markDotAsFailed() {
+            const dots = document.querySelectorAll('.hud-progress-dot');
+            if(dots[state.currentLevel]) {
+                dots[state.currentLevel].classList.add('failed');
             }
         }
 
@@ -1151,10 +1253,10 @@
             dropArea.addEventListener('drop', handleDrop);
         }
 
-        // Handlers
         function handleDragStart(e) {
             e.dataTransfer.setData('text/plain', e.target.id);
             setTimeout(() => e.target.classList.add('dragging'), 0);
+            playSound('click');
         }
         function handleDragEnd(e) { e.target.classList.remove('dragging'); }
         function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
@@ -1186,24 +1288,31 @@
             const selectedOption = caseData.options.find(o => `card-${o.id}` === cardId);
 
             if (wasCorrect) {
+                playSound('correct');
                 const refHTML = `<strong>${wasCorrect.article} C.P.</strong>: ${wasCorrect.desc}`;
-                showModal('success', '¡Correcto!', `Identificaste el conflicto basado en el ${wasCorrect.article}.`, refHTML);
+                showModal('success', '¡Correcto!', `Identificaste el conflicto correctamente.`, refHTML);
                 updateStats({ d: 2, e: 2, p: 2 });
                 
                 setTimeout(() => {
                     closeModal();
                     transitionToSlider();
-                }, 2500);
+                }, 2000);
             } else {
+                playSound('wrong');
                 const correctOne = caseData.options.find(o => o.correct);
                 const refHTML = `Incorrecto. El conflicto se fundamenta en el <strong>${correctOne.article}</strong> (${correctOne.text}).`;
-                showModal('fail', 'Identificación Errónea', `Analiza mejor los hechos frente a la Constitución.`, refHTML);
-                updateStats({ e: -10 });
+                showModal('fail', 'Fallo en la Identificación', `No identificaste el derecho principal vulnerado. Pierdes la oportunidad de mediar este caso.`, refHTML);
+                
+                // Penalización fuerte y paso al siguiente caso (No repetición)
+                updateStats({ d: -10, e: -5, p: -5 });
+                markDotAsFailed();
                 
                 setTimeout(() => {
                     closeModal();
-                    loadLevel(state.currentLevel); // Reintentar
-                }, 3500);
+                    state.currentLevel++;
+                    renderHUDProgress();
+                    loadLevel(state.currentLevel);
+                }, 3000);
             }
         }
 
@@ -1239,6 +1348,7 @@
                 document.addEventListener('touchmove', drag);
                 document.addEventListener('mouseup', stopDrag);
                 document.addEventListener('touchend', stopDrag);
+                playSound('click');
             }
 
             function drag(e) {
@@ -1259,6 +1369,7 @@
         }
 
         function executeDecision() {
+            playSound('click');
             const thumb = document.getElementById('decision-thumb');
             const value = parseFloat(thumb.style.left);
             const caseData = state.activeCases[state.currentLevel];
@@ -1272,13 +1383,16 @@
             if (diff <= 15) {
                 outcome = caseData.decision.consequences.good;
                 type = 'success';
-                state.badges.push(`Nivel ${state.currentLevel + 1}: Arbitro Perfecto`);
+                playSound('correct');
+                state.badges.push(`Caso ${state.currentLevel + 1}: Equilibrio Perfecto`);
             } else if (diff <= 40) {
                 outcome = caseData.decision.consequences.neutral;
                 type = 'neutral';
+                playSound('wrong');
             } else {
                 outcome = caseData.decision.consequences.bad;
                 type = 'fail';
+                playSound('wrong');
             }
 
             showModal(type, outcome.msg.split('.')[0], outcome.msg, "");
@@ -1286,12 +1400,14 @@
 
             setTimeout(() => {
                 closeModal();
-                checkGameOver();
-            }, 3500);
+                state.currentLevel++;
+                renderHUDProgress();
+                loadLevel(state.currentLevel);
+            }, 3000);
         }
 
         // ==========================================
-        // ACTUALIZACIÓN DE ESTADO
+        // ESTADO Y UI
         // ==========================================
         function updateStats(change) {
             state.stats.derechos = Math.max(0, Math.min(100, state.stats.derechos + (change.d || 0)));
@@ -1306,10 +1422,8 @@
         }
 
         function animateStatBar(id, val) {
-            const bar = document.getElementById(`bar-${id}`);
-            const valEl = document.getElementById(`val-${id}`);
-            bar.style.width = val + '%';
-            valEl.textContent = Math.round(val);
+            document.getElementById(`bar-${id}`).style.width = val + '%';
+            document.getElementById(`val-${id}`).textContent = Math.round(val);
         }
 
         function checkDangerStates() {
@@ -1320,19 +1434,6 @@
             });
         }
 
-        function checkGameOver() {
-            if (state.stats.derechos <= 0 || state.stats.estado <= 0 || state.stats.pueblo <= 0) {
-                endGameSequence(true);
-            } else {
-                state.currentLevel++;
-                renderHUDProgress();
-                loadLevel(state.currentLevel);
-            }
-        }
-
-        // ==========================================
-        // FIN Y UTILIDADES
-        // ==========================================
         function endGameSequence(isGameOver = false) {
             screens.game.classList.remove('active');
             screens.results.classList.add('active');
@@ -1347,16 +1448,16 @@
                 titleEl.textContent = "¡CIUDAD EN COLAPSO!";
                 titleEl.className = "result-title defeat";
                 subEl.textContent = "El equilibrio se ha roto. Has sido destituido de tu cargo.";
-            } else if (state.badges.length === state.activeCases.length && state.stats.derechos > 80) {
+            } else if (state.badges.length >= 4 && state.stats.derechos > 80) {
                 iconEl.textContent = "🏆";
-                titleEl.textContent = "¡LEYENDA CIUDADANA!";
+                titleEl.textContent = "¡DEFENSOR EJEMPLAR!";
                 titleEl.className = "result-title victory";
-                subEl.textContent = "Has completado todos los niveles manteniendo los derechos y la paz.";
+                subEl.textContent = "Has dominado la Constitución y la política. ¡Felicidades!";
             } else {
                 iconEl.textContent = "⚖️";
                 titleEl.textContent = "MANDATO CUMPLIDO";
                 titleEl.className = "result-title";
-                subEl.textContent = "Has terminado tu período. La ciudad sobrevive.";
+                subEl.textContent = "Has terminado tu período. La ciudad sobrevive, pero con heridas.";
             }
 
             badgesEl.innerHTML = '';
