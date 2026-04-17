@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El Peso del Poder: Dilemas de Ciudad - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@300;400;700;900&family=Orbitron:wght@400;700;900&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+        import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            authDomain: "skopia-aa786.firebaseapp.com",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        window.db = db;
+        window.auth = auth;
+        window.ref = ref;
+        window.set = set;
+        window.get = get;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) window.location.href = 'index.html';
+            window.currentUser = user;
+        });
+    </script>
+
+    <style>
+        /* ===============================================
+           VARIABLES Y RESET - ESTILO HEAVY METAL/CIUDAD
+           =============================================== */
+        :root {
+            /* Colores Skopia Base (Inalterados) */
+            --skopia-oliva-oscuro: #272b00;
+            --skopia-oliva-medio: #5a6133;
+            --skopia-crema: #fdfbf5;
+
+            /* Paleta del Juego - Semiología Política */
+            --color-bg-dark: #0a0a0c;
+            --color-bg-panel: #141418;
+            --color-bg-card: #1e1e24;
+            
+            /* Indicadores */
+            --color-derechos: #2ecc71; /* Verde Esperanza */
+            --color-derechos-glow: rgba(46, 204, 113, 0.4);
+            
+            --color-estado: #3498db; /* Azul Frío Institucional */
+            --color-estado-glow: rgba(52, 152, 219, 0.4);
+            
+            --color-pueblo: #e67e22; /* Naranja Calidez/Protesta */
+            --color-pueblo-glow: rgba(230, 126, 34, 0.4);
+
+            /* Alertas */
+            --color-peligro: #e74c3c;
+            --color-equilibrio: #f1c40f; /* Dorado */
+
+            /* Texto */
+            --text-main: #ecf0f1;
+            --text-muted: #95a5a6;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--color-bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.5;
+        }
+
+        /* ===============================================
+           PANTALLAS Y TRANSICIONES
+           =============================================== */
+        .game-screen {
+            display: none;
+            width: 100%;
+            min-height: 100vh;
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+        .game-screen.active {
+            display: flex;
+            flex-direction: column;
+            opacity: 1;
+        }
+
+        /* ===============================================
+           INTRO CINEMÁTICO
+           =============================================== */
+        #intro-screen {
+            background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.95)), url('https://images.unsplash.com/photo-1518010026016-3d1a7f4e9d1b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+            background-size: cover;
+            background-position: center;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .intro-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at center, transparent 0%, #000 120%);
+            z-index: 1;
+        }
+
+        .intro-content {
+            z-index: 2;
+            padding: 20px;
+            animation: fadeInUp 2s ease;
+        }
+
+        .intro-logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            color: var(--skopia-oliva-medio);
+            letter-spacing: 5px;
+            margin-bottom: 50px;
+            text-transform: uppercase;
+        }
+
+        .intro-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 5rem;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #fff 0%, #aaa 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .intro-subtitle {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.8rem;
+            color: var(--skopia-crema);
+            margin-bottom: 60px;
+            font-weight: 300;
+            max-width: 800px;
+        }
+
+        .intro-start-btn {
+            background: transparent;
+            color: var(--color-equilibrio);
+            border: 2px solid var(--color-equilibrio);
+            padding: 25px 80px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .intro-start-btn:hover {
+            background: var(--color-equilibrio);
+            color: #000;
+            box-shadow: 0 0 40px var(--color-equilibrio);
+            transform: scale(1.05);
+        }
+
+        .intro-start-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
+        }
+        .intro-start-btn:hover::before {
+            left: 100%;
+        }
+
+        /* ===============================================
+           HUD (HEADS-UP DISPLAY) - TABLERO
+           =============================================== */
+        #game-hud {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            background: rgba(10, 10, 12, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        }
+
+        .hud-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .hud-level-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.2rem;
+            color: var(--color-equilibrio);
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .hud-progress-container {
+            display: flex;
+            gap: 5px;
+        }
+        .hud-progress-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+        }
+        .hud-progress-dot.completed {
+            background: var(--color-equilibrio);
+            box-shadow: 0 0 10px var(--color-equilibrio);
+        }
+
+        .hud-center {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+        }
+
+        .hud-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn-exit {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #aaa;
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 500;
+        }
+        .btn-exit:hover {
+            background: var(--color-peligro);
+            border-color: var(--color-peligro);
+            color: white;
+        }
+
+        /* BARRAS DE ESTADO ANIMADAS */
+        .stats-dashboard {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .stat-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 10px 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .stat-bar-bg {
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .stat-bar-fill {
+            height: 100%;
+            position: relative;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 4px;
+        }
+
+        /* Efectos de brillo */
+        .stat-bar-fill::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transform: translateX(-100%);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            100% { transform: translateX(100%); }
+        }
+
+        .stat-derechos .stat-bar-fill { background: linear-gradient(90deg, var(--color-derechos), #27ae60); }
+        .stat-estado .stat-bar-fill { background: linear-gradient(90deg, var(--color-estado), #2980b9); }
+        .stat-pueblo .stat-bar-fill { background: linear-gradient(90deg, var(--color-pueblo), #d35400); }
+
+        /* Indicadores de peligro */
+        .stat-box.danger {
+            animation: pulse-danger 1s infinite;
+        }
+        @keyframes pulse-danger {
+            0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+        }
+
+        /* ===============================================
+           ESCENARIO DE JUEGO
+           =============================================== */
+        #game-stage {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 100px; /* Espacio para HUD */
+            width: 100%;
+            background: radial-gradient(circle at top, #1a1a1d 0%, #0a0a0c 100%);
+        }
+
+        .stage-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        /* CONTEXTO DEL CASO */
+        .case-context {
+            background: var(--color-bg-panel);
+            border-radius: 16px;
+            padding: 40px;
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .case-context::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 5px; height: 100%;
+            background: var(--color-equilibrio);
+        }
+
+        .case-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+
+        .case-phase-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            color: var(--color-equilibrio);
+            letter-spacing: 2px;
+        }
+
+        .case-text {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            line-height: 1.6;
+            color: var(--text-main);
+            font-weight: 300;
+        }
+
+        .case-highlight {
+            color: var(--color-equilibrio);
+            font-weight: 700;
+        }
+
+        /* FASE 1: DRAG & DROP */
+        .mechanic-drag-zone {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .instruction-text {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .drop-target-area {
+            width: 100%;
+            height: 200px;
+            border: 2px dashed rgba(255,255,255,0.2);
+            border-radius: 20px;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .drop-target-area.drag-over {
+            border-color: var(--color-equilibrio);
+            background: rgba(241, 196, 15, 0.1);
+            transform: scale(1.02);
+            box-shadow: 0 0 30px rgba(241, 196, 15, 0.2);
+        }
+
+        .drop-icon {
+            font-size: 4rem;
+            color: rgba(255,255,255,0.1);
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+        .drop-target-area.drag-over .drop-icon {
+            transform: scale(1.2);
+            color: var(--color-equilibrio);
+        }
+
+        .drop-text {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.5rem;
+            color: rgba(255,255,255,0.3);
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            width: 100%;
+        }
+
+        .law-card {
+            background: linear-gradient(145deg, #2c2c34, #22222a);
+            border-radius: 12px;
+            padding: 25px;
+            cursor: grab;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.2s ease;
+            position: relative;
+            user-select: none;
+        }
+
+        .law-card:active {
+            cursor: grabbing;
+        }
+
+        .law-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+            border-color: rgba(255,255,255,0.2);
+        }
+
+        .law-card.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            color: var(--color-estado);
+        }
+
+        .card-title {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+
+        .card-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* FASE 2: SLIDER */
+        .mechanic-slider-zone {
+            display: none; /* Se muestra por JS */
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        .slider-header {
+            text-align: center;
+        }
+        
+        .slider-container-custom {
+            width: 100%;
+            padding: 20px 0;
+            position: relative;
+        }
+
+        .slider-track {
+            width: 100%;
+            height: 12px;
+            background: linear-gradient(90deg, var(--color-peligro), var(--color-bg-card), var(--color-estado));
+            border-radius: 6px;
+            position: relative;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .slider-thumb {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            cursor: pointer;
+            z-index: 10;
+            transition: transform 0.1s;
+        }
+        .slider-thumb:active {
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            padding: 0 10px;
+        }
+
+        .extreme-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            color: var(--text-muted);
+            max-width: 150px;
+            text-align: center;
+        }
+        .extreme-label.left { color: var(--color-peligro); }
+        .extreme-label.right { color: var(--color-estado); }
+
+        .equilibrium-zone {
+            position: absolute;
+            top: 0; bottom: 0;
+            width: 30px; /* Zona de equilibrio */
+            background: rgba(241, 196, 15, 0.2);
+            border-left: 1px solid var(--color-equilibrio);
+            border-right: 1px solid var(--color-equilibrio);
+            pointer-events: none;
+        }
+
+        .action-decision-btn {
+            align-self: center;
+            background: linear-gradient(90deg, var(--skopia-oliva-medio), var(--skopia-oliva-oscuro));
+            color: white;
+            border: none;
+            padding: 20px 60px;
+            font-size: 1.4rem;
+            font-weight: 700;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: 'Space Grotesk', sans-serif;
+            box-shadow: 0 10px 30px rgba(39, 43, 0, 0.4);
+        }
+
+        .action-decision-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(39, 43, 0, 0.6);
+        }
+
+        /* ===============================================
+           MODALES Y FLASH FORWARD
+           =============================================== */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 500;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-box {
+            background: var(--color-bg-panel);
+            width: 90%;
+            max-width: 700px;
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            animation: modalIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        @keyframes modalIn {
+            from { transform: scale(0.8) translateY(50px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        .modal-icon {
+            font-size: 5rem;
+            margin-bottom: 25px;
+            line-height: 1;
+        }
+        .modal-icon.success { color: var(--color-derechos); text-shadow: 0 0 30px var(--color-derechos-glow); }
+        .modal-icon.fail { color: var(--color-peligro); text-shadow: 0 0 30px rgba(231, 76, 60, 0.4); }
+        .modal-icon.neutral { color: var(--color-estado); text-shadow: 0 0 30px var(--color-estado-glow); }
+
+        .modal-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .modal-text {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+            margin-bottom: 40px;
+        }
+
+        .modal-btn {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .modal-btn:hover {
+            background: white;
+            color: black;
+        }
+
+        /* ===============================================
+           PANTALLA DE RESULTADOS
+           =============================================== */
+        #results-screen {
+            background: #000;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 50px;
+        }
+
+        .result-hero {
+            margin-bottom: 50px;
+        }
+
+        .result-icon {
+            font-size: 10rem;
+            margin-bottom: 20px;
+            animation: floatIcon 3s ease-in-out infinite;
+        }
+        @keyframes floatIcon {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .result-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 4rem;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+        .result-title.victory { color: var(--color-equilibrio); text-shadow: 0 0 50px rgba(241, 196, 15, 0.3); }
+        .result-title.defeat { color: var(--color-peligro); }
+
+        .result-subtitle {
+            font-size: 1.8rem;
+            color: var(--text-muted);
+            margin-bottom: 60px;
+            max-width: 800px;
+        }
+
+        .badge-collection {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 60px;
+        }
+
+        .badge-item {
+            background: linear-gradient(145deg, #222, #111);
+            border: 1px solid var(--color-equilibrio);
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            color: var(--text-main);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .btn-restart {
+            background: white;
+            color: black;
+            border: none;
+            padding: 20px 60px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .btn-restart:hover {
+            transform: scale(1.05);
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .stats-dashboard { grid-template-columns: 1fr; width: 100%; }
+            .intro-title { font-size: 3rem; }
+            .case-text { font-size: 1.2rem; }
+            .hud-center { display: none; } /* Ocultar stats en móvil arriba, mostrar en otro lado si es necesario */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- PANTALLA DE INTRO -->
+    <div id="intro-screen" class="game-screen active">
+        <div class="intro-overlay"></div>
+        <div class="intro-content">
+            <div class="intro-logo">Skopia City Simulation</div>
+            <h1 class="intro-title">El Peso del Poder</h1>
+            <h2 class="intro-subtitle">Dilemas de Ciudad. Tú decides el destino de la ciudadanía. Equilibra derechos, estado y opinión pública.</h2>
+            <button class="intro-start-btn" onclick="startGameSimulation()">
+                Asumir el Cargo
+            </button>
+        </div>
+    </div>
+
+    <!-- PANTALLA DE JUEGO -->
+    <div id="game-screen" class="game-screen">
+        <!-- HUD Superior -->
+        <div id="game-hud">
+            <div class="hud-left">
+                <div class="hud-level-title" id="hud-level-title">Nivel 1</div>
+                <div class="hud-progress-container" id="hud-dots">
+                    <!-- Puntos de progreso generados por JS -->
+                </div>
+            </div>
+            
+            <div class="hud-center">
+                <!-- Mini Dashboard de Stats -->
+                <div class="stats-dashboard">
+                    <div class="stat-box stat-derechos" id="box-derechos">
+                        <div class="stat-label"><span>Derechos</span> <span id="val-derechos">70</span></div>
+                        <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-derechos" style="width: 70%"></div></div>
+                    </div>
+                    <div class="stat-box stat-estado" id="box-estado">
+                        <div class="stat-label"><span>Estado</span> <span id="val-estado">70</span></div>
+                        <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-estado" style="width: 70%"></div></div>
+                    </div>
+                    <div class="stat-box stat-pueblo" id="box-pueblo">
+                        <div class="stat-label"><span>Pueblo</span> <span id="val-pueblo">70</span></div>
+                        <div class="stat-bar-bg"><div class="stat-bar-fill" id="bar-pueblo" style="width: 70%"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hud-right">
+                <button class="btn-exit" onclick="window.location.href='CC.html'">
+                    <i class="fas fa-times"></i> Abandonar
+                </button>
+            </div>
+        </div>
+
+        <!-- Escenario Principal -->
+        <div id="game-stage">
+            <div class="stage-wrapper">
+                
+                <!-- CONTEXTO DEL CASO -->
+                <div class="case-context">
+                    <div class="case-header">
+                        <span class="case-phase-title" id="phase-title">FASE 1: IDENTIFICACIÓN</span>
+                    </div>
+                    <p class="case-text" id="case-description">
+                        Cargando caso...
+                    </p>
+                </div>
+
+                <!-- ZONA DE MECÁNICAS -->
+                <div id="mechanics-container">
+                    
+                    <!-- FASE 1: DRAG & DROP -->
+                    <div class="mechanic-drag-zone" id="drag-zone">
+                        <div class="instruction-text">Arrastra el Derecho Fundamental en conflicto aquí</div>
+                        <div class="drop-target-area" id="drop-area">
+                            <div class="drop-icon"><i class="fas fa-gavel"></i></div>
+                            <div class="drop-text">Suelta aquí</div>
+                        </div>
+                        
+                        <div class="cards-grid" id="cards-container">
+                            <!-- Cartas generadas por JS -->
+                        </div>
+                    </div>
+
+                    <!-- FASE 2: SLIDER -->
+                    <div class="mechanic-slider-zone" id="slider-zone">
+                        <div class="slider-header">
+                            <h3 style="color:white; margin-bottom:10px;">Toma tu Decisión Ejecutiva</h3>
+                            <p style="color:var(--text-muted);">Desliza para elegir la intensidad de la intervención</p>
+                        </div>
+
+                        <div class="slider-container-custom">
+                            <div class="slider-track">
+                                <div class="slider-thumb" id="decision-thumb" style="left: 50%"></div>
+                                <!-- Zona dorada de equilibrio (ejemplo 60% de width) -->
+                                <div class="equilibrium-zone" style="left:55%; width:10%;"></div>
+                            </div>
+                            <div class="slider-labels">
+                                <div class="extreme-label left">
+                                    <strong>Extremo A</strong><br><span id="label-a">Acción Desproporcionada</span>
+                                </div>
+                                <div class="extreme-label right">
+                                    <strong>Extremo B</strong><br><span id="label-b">Inacción Total</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="action-decision-btn" onclick="executeDecision()">
+                            Ejecutar Decisión
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA DE RESULTADOS -->
+    <div id="results-screen" class="game-screen">
+        <div class="result-hero">
+            <div class="result-icon" id="result-icon">⚖️</div>
+            <h1 class="result-title" id="result-title">Fin del Mandato</h1>
+            <p class="result-subtitle" id="result-subtitle">Tu gestión ha concluido.</p>
+        </div>
+
+        <div class="badge-collection" id="badge-collection">
+            <!-- Badges generados por JS -->
+        </div>
+
+        <button class="btn-restart" onclick="window.location.href='CCDASHBOARD.html'">
+            Volver al Dashboard
+        </button>
+    </div>
+
+    <!-- MODAL FLASH FORWARD -->
+    <div class="modal-overlay" id="flash-modal">
+        <div class="modal-box">
+            <div class="modal-icon" id="modal-icon"><i class="fas fa-hourglass-half"></i></div>
+            <h2 class="modal-title" id="modal-title">Flash Forward</h2>
+            <p class="modal-text" id="modal-text">En 5 años...</p>
+            <button class="modal-btn" onclick="closeModal()">Entendido</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // MOTOR DEL JUEGO - EL PESO DEL PODER
+        // ==========================================
+
+        // Estado Global
+        let state = {
+            currentLevel: 0,
+            stats: { derechos: 70, estado: 70, pueblo: 70 },
+            badges: [],
+            gameActive: false
+        };
+
+        // Banco de Preguntas Detallado (5 Niveles)
+        const CASES = [
+            {
+                id: 1,
+                title: "Caso 1: La Protesta en el Puente",
+                description: "Un grupo de campesinos bloquea la vía principal impidiendo el comercio. Exigen subsidios. El 70% de la ciudad apoya su causa, pero la economía colapsa.",
+                conflictText: "Bloqueo de Vías Públicas vs. Derecho a la Protesta",
+                options: [
+                    { id: "protesta", text: "Derecho a la Protesta", correct: true, desc: "El derecho fundamental a manifestar pacíficamente." },
+                    { id: "transito", text: "Libertad de Tránsito", correct: false, desc: "El derecho a circular libremente." },
+                    { id: "trabajo", text: "Derecho al Trabajo", correct: false, desc: "El derecho a una ocupación." }
+                ],
+                decision: {
+                    labelA: "Desalojo con fuerza pública",
+                    labelB: "Diálogo indefinido",
+                    optimum: 60, // Porcentaje ideal en el slider (ej. 60% hacia la izquierda es moderado)
+                    consequences: {
+                        good: {
+                            msg: "Lograste un acuerdo: Se despeja un carril humanitario mientras se negocian los subsidios. La tensión baja.",
+                            stats: { d: 5, e: 10, p: 5 }
+                        },
+                        neutral: {
+                            msg: "La decisión fue tardía. Hubo enfrentamientos menores, pero se restableció el orden.",
+                            stats: { d: -5, e: 5, p: -5 }
+                        },
+                        bad: {
+                            msg: "La fuerza excesiva causó heridos. La opinión pública te condena y hay demandas internacionales.",
+                            stats: { d: -15, e: 15, p: -25 }
+                        }
+                    }
+                }
+            },
+            {
+                id: 2,
+                title: "Caso 2: La Fábrica Contaminante",
+                description: "Una empresa emplea a 5000 personas pero vierte químicos al río. Los habitantes de abajo enferman. La empresa amenaza con irse si se le multa.",
+                conflictText: "Salud Pública vs. Derecho al Trabajo/Industria",
+                options: [
+                    { id: "salud", text: "Derecho a la Salud", correct: true, desc: "Derecho al bienestar físico." },
+                    { id: "empresa", text: "Libertad de Empresa", correct: false, desc: "Derecho a la libre iniciativa económica." },
+                    { id: "propiedad", text: "Derecho a la Propiedad Privada", correct: false, desc: "Derecho sobre los bienes." }
+                ],
+                decision: {
+                    labelA: "Cierre inmediato de la planta",
+                    labelB: "Ignorar denuncias por empleo",
+                    optimum: 40, // Equilibrio: multa fuerte y planes de mejora
+                    consequences: {
+                        good: {
+                            msg: "Se impone una multa millonaria para limpiar el río y se obliga a instalar filtros. Los empleos se mantienen.",
+                            stats: { d: 10, e: -5, p: 10 }
+                        },
+                        neutral: {
+                            msg: "Negociaste plazos largos. El río sigue contaminado y la gente está molesta.",
+                            stats: { d: -5, e: 5, p: -10 }
+                        },
+                        bad: {
+                            msg: "Cerraste la empresa. 5000 personas perdieron su empleo y la economía local colapsó.",
+                            stats: { d: 5, e: -25, p: -20 }
+                        }
+                    }
+                }
+            },
+            {
+                id: 3,
+                title: "Caso 3: El Periodista Investigado",
+                description: "Un periodista publicó documentos sobre corrupción estatal. El gobierno exige que revele su fuente por 'seguridad nacional'. Los medios piden protección.",
+                conflictText: "Libertad de Prensa vs. Seguridad Nacional",
+                options: [
+                    { id: "prensa", text: "Libertad de Prensa", correct: true, desc: "Derecho a informar y opinar." },
+                    { id: "privacidad", text: "Derecho a la Intimidad", correct: false, desc: "Derecho a la vida privada." },
+                    { id: "seguridad", text: "Seguridad Nacional", correct: false, desc: "Protección del estado." }
+                ],
+                decision: {
+                    labelA: "Censurar la publicación y demandar",
+                    labelB: "Protección total al periodista",
+                    optimum: 70, // Proteger al periodista pero pedir prudencia editorial
+                    consequences: {
+                        good: {
+                            msg: "El periodista es protegido y la investigación avanza. La corrupción es juzgada.",
+                            stats: { d: 15, e: -15, p: 15 }
+                        },
+                        neutral: {
+                            msg: "El caso se empata en la corte. La libertad de prensa queda en entredicho.",
+                            stats: { d: -10, e: 0, p: 5 }
+                        },
+                        bad: {
+                            msg: "Detuviste al periodista. La comunidad internacional sanciona al país y hay protestas masivas.",
+                            stats: { d: -25, e: 10, p: -20 }
+                        }
+                    }
+                }
+            },
+            {
+                id: 4,
+                title: "Caso 4: La Tierra Ancestral",
+                description: "Una comunidad indígena se opone a una mina en su territorio sagrado. La mina traería desarrollo al país, pero destruiría su cultura.",
+                conflictText: "Autonomía Indígena vs. Interés General/Nación",
+                options: [
+                    { id: "autonomia", text: "Autonomía de Pueblos", correct: true, desc: "Derecho al territorio y cultura." },
+                    { id: "desarrollo", text: "Derecho al Desarrollo", correct: false, desc: "Progreso económico." },
+                    { id: "ambiente", text: "Medio Ambiente Sano", correct: false, desc: "Derecho ecológico." }
+                ],
+                decision: {
+                    labelA: "Desalojar a la comunidad para la mina",
+                    labelB: "Cancelar el proyecto minero",
+                    optimum: 50, // Consulta previa vinculante y compensación
+                    consequences: {
+                        good: {
+                            msg: "Se realiza una consulta previa. La comunidad acepta a cambio de participación en ganancias y preservación de zonas sagradas.",
+                            stats: { d: 5, e: 5, p: 10 }
+                        },
+                        neutral: {
+                            msg: "El proyecto se atrasa años por demandas. Nadie está satisfecho.",
+                            stats: { d: 0, e: -5, p: -5 }
+                        },
+                        bad: {
+                            msg: "Usaste fuerza pública contra la comunidad. La ONU condena la violación de derechos humanos.",
+                            stats: { d: -25, e: 5, p: -15 }
+                        }
+                    }
+                }
+            },
+            {
+                id: 5,
+                title: "Caso 5: El Estado de Excepción",
+                description: "El sistema de salud colapsa por una pandemia. La oposición acusa al gobierno de usar el estado de excepción para reprimir protestas políticas.",
+                conflictText: "Salud Pública vs. Derechos Políticos y Civiles",
+                options: [
+                    { id: "salud_pub", text: "Salud Pública", correct: true, desc: "Derecho a la sanidad." },
+                    { id: "reunion", text: "Derecho de Reunión", correct: false, desc: "Derecho a congregarse." },
+                    { id: "habeas", text: "Habeas Corpus", correct: false, desc: "Derecho a la libertad personal." }
+                ],
+                decision: {
+                    labelA: "Militarizar ciudades y toque de queda estricto",
+                    labelB: "Dejar que el virus circule libremente",
+                    optimum: 35, // Medidas sanitarias estrictas pero sin represión política
+                    consequences: {
+                        good: {
+                            msg: "El toque de queda se respeta pero se garantiza freedoms políticos. La curva de contagios baja.",
+                            stats: { d: 5, e: 10, p: 5 }
+                        },
+                        neutral: {
+                            msg: "Las medidas son contradictorias. La salud mejora levemente pero hay descontento.",
+                            stats: { d: -5, e: 5, p: -10 }
+                        },
+                        bad: {
+                            msg: "La represión bajo la excusa sanitaria genera un golpe de estado o revuelta civil.",
+                            stats: { d: -30, e: 20, p: -25 }
+                        }
+                    }
+                }
+            }
+        ];
+
+        // Elementos DOM
+        const screens = {
+            intro: document.getElementById('intro-screen'),
+            game: document.getElementById('game-screen'),
+            results: document.getElementById('results-screen')
+        };
+
+        // ==========================================
+        // LÓGICA DE INICIO
+        // ==========================================
+        function startGameSimulation() {
+            screens.intro.classList.remove('active');
+            screens.game.classList.add('active');
+            state.gameActive = true;
+            loadLevel(0);
+            renderHUDProgress();
+        }
+
+        // ==========================================
+        // CARGA DE NIVELES
+        // ==========================================
+        function loadLevel(index) {
+            if (index >= CASES.length) {
+                endGameSequence();
+                return;
+            }
+
+            state.currentLevel = index;
+            const caseData = CASES[index];
+
+            // UI Update
+            document.getElementById('hud-level-title').textContent = caseData.title;
+            document.getElementById('case-description').innerHTML = caseData.description.replace(/\n/g, '<br>');
+            document.getElementById('phase-title').textContent = "FASE 1: IDENTIFICACIÓN DEL CONFLICTO";
+            
+            // Reset Mechanics
+            document.getElementById('drag-zone').style.display = 'flex';
+            document.getElementById('slider-zone').style.display = 'none';
+
+            // Cargar Cartas
+            renderCards(caseData.options);
+            resetDropZone();
+
+            // Configurar Slider para la Fase 2 (preparación)
+            setupSlider(caseData.decision);
+        }
+
+        function renderHUDProgress() {
+            const container = document.getElementById('hud-dots');
+            container.innerHTML = '';
+            for (let i = 0; i < CASES.length; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'hud-progress-dot';
+                if (i < state.currentLevel) dot.classList.add('completed');
+                container.appendChild(dot);
+            }
+        }
+
+        // ==========================================
+        // FASE 1: DRAG AND DROP ENGINE
+        // ==========================================
+        function renderCards(options) {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+            
+            options.forEach(opt => {
+                const card = document.createElement('div');
+                card.className = 'law-card';
+                card.draggable = true;
+                card.id = `card-${opt.id}`;
+                card.innerHTML = `
+                    <div class="card-icon"><i class="fas fa-balance-scale"></i></div>
+                    <div class="card-title">${opt.text}</div>
+                    <div class="card-desc">${opt.desc}</div>
+                `;
+                
+                // Events
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragend', handleDragEnd);
+                container.appendChild(card);
+            });
+        }
+
+        function resetDropZone() {
+            const dropArea = document.getElementById('drop-area');
+            dropArea.innerHTML = `
+                <div class="drop-icon"><i class="fas fa-gavel"></i></div>
+                <div class="drop-text">Suelta aquí</div>
+            `;
+            dropArea.classList.remove('drag-over');
+            
+            // Add Drop Listeners
+            dropArea.addEventListener('dragover', handleDragOver);
+            dropArea.addEventListener('dragleave', handleDragLeave);
+            dropArea.addEventListener('drop', handleDrop);
+        }
+
+        // Drag Handlers
+        function handleDragStart(e) {
+            e.dataTransfer.setData('text/plain', e.target.id);
+            setTimeout(() => e.target.classList.add('dragging'), 0);
+        }
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+        }
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+        function handleDrop(e) {
+            e.preventDefault();
+            const dropArea = e.currentTarget;
+            dropArea.classList.remove('drag-over');
+            
+            const id = e.dataTransfer.getData('text');
+            const draggedEl = document.getElementById(id);
+            
+            if (draggedEl) {
+                // Mover carta a la zona
+                dropArea.innerHTML = '';
+                const clone = draggedEl.cloneNode(true);
+                clone.classList.add('dropped');
+                clone.draggable = false;
+                dropArea.appendChild(clone);
+                
+                // Ocultar original
+                draggedEl.style.visibility = 'hidden';
+                
+                // Validar
+                setTimeout(() => validateCardSelection(id), 800);
+            }
+        }
+
+        function validateCardSelection(cardId) {
+            const caseData = CASES[state.currentLevel];
+            const wasCorrect = caseData.options.find(o => `card-${o.id}` === cardId && o.correct);
+
+            if (wasCorrect) {
+                showModal('success', '¡Correcto!', `Identificaste el conflicto: ${wasCorrect.text}. Ahora decide cómo actuar.`);
+                // Bonus Stats
+                updateStats({ d: 2, e: 2, p: 2 });
+                
+                setTimeout(() => {
+                    closeModal();
+                    transitionToSlider();
+                }, 2500);
+            } else {
+                showModal('fail', 'Identificación Errónea', 'Ese no es el derecho principal en conflicto. Analiza mejor el caso. Pierdes apoyo político.');
+                updateStats({ e: -10 });
+                // Reinciar fase 1 visualmente
+                setTimeout(() => {
+                    closeModal();
+                    loadLevel(state.currentLevel); // Recargar nivel
+                }, 2500);
+            }
+        }
+
+        // ==========================================
+        // FASE 2: SLIDER ENGINE
+        // ==========================================
+        function transitionToSlider() {
+            document.getElementById('phase-title').textContent = "FASE 2: TOMA DE DECISIÓN";
+            document.getElementById('drag-zone').style.display = 'none';
+            document.getElementById('slider-zone').style.display = 'flex';
+            
+            const caseData = CASES[state.currentLevel];
+            document.getElementById('label-a').textContent = caseData.decision.labelA;
+            document.getElementById('label-b').textContent = caseData.decision.labelB;
+            
+            // Reset Thumb Position
+            document.getElementById('decision-thumb').style.left = '50%';
+            initSliderDrag();
+        }
+
+        function setupSlider(decisionData) {
+            // Placeholder si se necesita configurar algo antes
+        }
+
+        function initSliderDrag() {
+            const thumb = document.getElementById('decision-thumb');
+            const track = thumb.parentElement;
+            let isDragging = false;
+
+            thumb.addEventListener('mousedown', startDrag);
+            thumb.addEventListener('touchstart', startDrag);
+
+            function startDrag(e) {
+                isDragging = true;
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('touchmove', drag);
+                document.addEventListener('mouseup', stopDrag);
+                document.addEventListener('touchend', stopDrag);
+            }
+
+            function drag(e) {
+                if (!isDragging) return;
+                e.preventDefault(); // Prevent scrolling on mobile
+                
+                const rect = track.getBoundingClientRect();
+                let x = (e.clientX || e.touches[0].clientX) - rect.left;
+                let percent = (x / rect.width) * 100;
+                
+                if (percent < 0) percent = 0;
+                if (percent > 100) percent = 100;
+                
+                thumb.style.left = percent + '%';
+            }
+
+            function stopDrag() {
+                isDragging = false;
+                document.removeEventListener('mousemove', drag);
+                document.removeEventListener('touchmove', drag);
+            }
+        }
+
+        function executeDecision() {
+            const thumb = document.getElementById('decision-thumb');
+            const value = parseFloat(thumb.style.left);
+            const caseData = CASES[state.currentLevel];
+            
+            const opt = caseData.decision.optimum;
+            const diff = Math.abs(value - opt);
+            
+            let outcome;
+            
+            // Determinar resultado basado en la distancia al punto óptimo
+            if (diff <= 15) {
+                outcome = caseData.decision.consequences.good;
+                state.badges.push(`Nivel ${state.currentLevel + 1}: Arbitro Perfecto`);
+            } else if (diff <= 40) {
+                outcome = caseData.decision.consequences.neutral;
+                state.badges.push(`Nivel ${state.currentLevel + 1}: Decisión Gris`);
+            } else {
+                outcome = caseData.decision.consequences.bad;
+            }
+
+            // Mostrar resultado y actualizar stats
+            const type = (diff <= 15) ? 'success' : (diff <= 40 ? 'neutral' : 'fail');
+            showModal(type, outcome.msg.split('.')[0], outcome.msg);
+            updateStats(outcome.stats);
+
+            // Verificar Game Over por stats en 0
+            setTimeout(() => {
+                closeModal();
+                checkGameOver();
+            }, 3500);
+        }
+
+        // ==========================================
+        // ACTUALIZACIÓN DE ESTADO (STATS)
+        // ==========================================
+        function updateStats(change) {
+            state.stats.derechos = Math.max(0, Math.min(100, state.stats.derechos + (change.d || 0)));
+            state.stats.estado = Math.max(0, Math.min(100, state.stats.estado + (change.e || 0)));
+            state.stats.pueblo = Math.max(0, Math.min(100, state.stats.pueblo + (change.p || 0)));
+
+            // Update UI Bars
+            animateStatBar('derechos', state.stats.derechos);
+            animateStatBar('estado', state.stats.estado);
+            animateStatBar('pueblo', state.stats.pueblo);
+
+            // Check Danger Visuals
+            checkDangerStates();
+        }
+
+        function animateStatBar(id, val) {
+            const bar = document.getElementById(`bar-${id}`);
+            const valEl = document.getElementById(`val-${id}`);
+            bar.style.width = val + '%';
+            valEl.textContent = Math.round(val);
+        }
+
+        function checkDangerStates() {
+            ['derechos', 'estado', 'pueblo'].forEach(id => {
+                const box = document.getElementById(`box-${id}`);
+                if (state.stats[id] <= 20) {
+                    box.classList.add('danger');
+                } else {
+                    box.classList.remove('danger');
+                }
+            });
+        }
+
+        function checkGameOver() {
+            if (state.stats.derechos <= 0 || state.stats.estado <= 0 || state.stats.pueblo <= 0) {
+                endGameSequence(true);
+            } else {
+                nextLevel();
+            }
+        }
+
+        function nextLevel() {
+            state.currentLevel++;
+            renderHUDProgress();
+            loadLevel(state.currentLevel);
+        }
+
+        // ==========================================
+        // FIN DE JUEGO
+        // ==========================================
+        function endGameSequence(isGameOver = false) {
+            screens.game.classList.remove('active');
+            screens.results.classList.add('active');
+
+            const titleEl = document.getElementById('result-title');
+            const subEl = document.getElementById('result-subtitle');
+            const iconEl = document.getElementById('result-icon');
+            const badgesEl = document.getElementById('badge-collection');
+
+            if (isGameOver) {
+                iconEl.textContent = "🔥";
+                titleEl.textContent = "¡CIUDAD EN COLAPSO!";
+                titleEl.className = "result-title defeat";
+                subEl.textContent = "El equilibrio se ha roto. Has sido destituido de tu cargo.";
+            } else if (state.badges.length === CASES.length && state.stats.derechos > 80) {
+                iconEl.textContent = "🏆";
+                titleEl.textContent = "¡LEYENDA CIUDADANA!";
+                titleEl.className = "result-title victory";
+                subEl.textContent = "Has completado todos los niveles manteniendo los derechos y la paz. ¡Felicidades!";
+            } else {
+                iconEl.textContent = "⚖️";
+                titleEl.textContent = "MANDATO CUMPLIDO";
+                titleEl.className = "result-title";
+                subEl.textContent = "Has terminado tu período. La ciudad sobrevive, pero con heridas.";
+            }
+
+            // Render Badges
+            badgesEl.innerHTML = '';
+            if(state.badges.length > 0) {
+                state.badges.forEach(b => {
+                    const div = document.createElement('div');
+                    div.className = 'badge-item';
+                    div.textContent = b;
+                    badgesEl.appendChild(div);
+                });
+            } else {
+                badgesEl.innerHTML = '<div class="badge-item">Sin logros destacados</div>';
+            }
+
+            saveFinalProgress();
+        }
+
+        // ==========================================
+        // UTILIDADES
+        // ==========================================
+        function showModal(type, title, text) {
+            const modal = document.getElementById('flash-modal');
+            const icon = document.getElementById('modal-icon');
+            const t = document.getElementById('modal-title');
+            const txt = document.getElementById('modal-text');
+
+            // Reset classes
+            icon.className = 'modal-icon';
+            
+            if (type === 'success') {
+                icon.innerHTML = '<i class="fas fa-check-circle"></i>';
+                icon.classList.add('success');
+            } else if (type === 'fail') {
+                icon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                icon.classList.add('fail');
+            } else {
+                icon.innerHTML = '<i class="fas fa-info-circle"></i>';
+                icon.classList.add('neutral');
+            }
+
+            t.textContent = title;
+            txt.textContent = text;
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('flash-modal').style.display = 'none';
+        }
+
+        async function saveFinalProgress() {
+            const progress = {
+                missionCompleted: true,
+                finalStats: state.stats,
+                badges: state.badges,
+                timestamp: Date.now()
+            };
+            
+            localStorage.setItem('skopia_cc_game_progress_v1', JSON.stringify(progress));
+            
+            if (window.currentUser && window.db) {
+                try {
+                    await window.set(window.ref(window.db, `users/${window.currentUser.uid}/cc_game_progress`), progress);
+                    console.log("Progreso guardado en Firebase");
+                } catch(e) { console.error(e); }
+            }
+        }
+
+    </script>
+</body>
+</html>
