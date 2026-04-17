@@ -1621,25 +1621,92 @@ function finishQuiz() {
     if (finalScore >= 180) document.getElementById('final-msg').textContent = "¡Aprobado! Has demostrado dominio en Ideas Secundarias.";
     else document.getElementById('final-msg').textContent = "Necesitas 180 puntos. Repite los juegos para mejorar.";
 }
-
 async function saveAndLeave() {
     const score = parseInt(document.getElementById('final-score').textContent);
     const passed = score >= 180;
+    const techniqueKey = 'LCS2D1.html';
     
-    localStorage.setItem('skopia_quiz_progress_LCS2D1', JSON.stringify({ score, completed: passed }));
+    // =====================================
+    // 1. GUARDAR EN LOCALSTORAGE (formato que LCS2D espera)
+    // =====================================
+    let progressData = JSON.parse(localStorage.getItem('skopia_lcs2_progress') || '{}');
     
+    if (!progressData.techniques) progressData.techniques = {};
+    if (!progressData.stats) progressData.stats = { completedCount: 0, totalScore: 0, attempts: 0 };
+    
+    // Obtener datos previos
+    const prevData = progressData.techniques[techniqueKey] || {};
+    const prevAttempts = prevData.attempts || 0;
+    
+    // Actualizar técnica específica
+    progressData.techniques[techniqueKey] = {
+        score: score,
+        completed: passed,
+        attempts: prevAttempts + 1,
+        lastAttempt: Date.now(),
+        currentQuestion: 0 // Reset para próximo intento
+    };
+    
+    // Recalcular estadísticas globales
+    let completedCount = 0;
+    let totalScore = 0;
+    let scoreCount = 0;
+    let totalAttempts = 0;
+    
+    Object.values(progressData.techniques).forEach(t => {
+        if (t.completed) completedCount++;
+        if (t.score) { totalScore += t.score; scoreCount++; }
+        totalAttempts += t.attempts || 0;
+    });
+    
+    progressData.stats = {
+        completedCount,
+        totalScore,
+        attempts: totalAttempts,
+        averageScore: scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0
+    };
+    
+    localStorage.setItem('skopia_lcs2_progress', JSON.stringify(progressData));
+    
+    // =====================================
+    // 2. GUARDAR EN FIREBASE (formato que LCS2D espera)
+    // =====================================
+    if (window.currentUser) {
+        try {
+            const userId = window.currentUser.uid;
+            
+            // Ruta corregida: lcs2_progress/techniques/LCS2D1
+            const techniqueRef = window.ref(
+                window.db, 
+                `users/${userId}/lcs2_progress/techniques/${techniqueKey.replace('.html', '')}`
+            );
+            
+            await window.set(techniqueRef, {
+                score: score,
+                completed: passed,
+                attempts: prevAttempts + 1,
+                lastAttempt: Date.now()
+            });
+            
+            // Actualizar stats globales en Firebase
+            const statsRef = window.ref(window.db, `users/${userId}/lcs2_progress/stats`);
+            await window.set(statsRef, progressData.stats);
+            
+            console.log("✅ Progreso guardado correctamente en Firebase");
+            
+        } catch(e) { 
+            console.error("❌ Error guardando en Firebase:", e); 
+        }
+    }
+
+    // =====================================
+    // 3. GUARDAR HISTORIAL (mantener compatibilidad)
+    // =====================================
     let history = JSON.parse(localStorage.getItem('skopia_quiz_history') || '[]');
     history.push({ quizId: 'LCS2D1', score, date: new Date().toISOString() });
     localStorage.setItem('skopia_quiz_history', JSON.stringify(history));
 
-    if (window.currentUser) {
-        try {
-            await window.set(window.ref(window.db, `users/${window.currentUser.uid}/library_data/progress/LCS2D1`), {
-                score, completed: passed, timestamp: Date.now()
-            });
-        } catch(e) { console.error(e); }
-    }
-
+    // Redirigir
     window.location.href = 'LCS2D.html';
 }
 
