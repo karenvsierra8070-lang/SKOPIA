@@ -780,12 +780,12 @@
         console.log("DOM Cargado. Inicializando Dashboard Ideas Secundarias...");
 
         // ============================================
-        // CONFIGURACION DE TECNICAS
+        // CONFIGURACION DE TECNICAS (Claves sin .html para coincidir con Firebase)
         // ============================================
         const MIN_SCORE_TO_UNLOCK = 180;
         
         const techniquesConfig = {
-            'LCS2D1.html': {
+            'LCS2D1': {
                 id: 1,
                 type: 'ejemplificacion',
                 title: 'Ejemplificacion',
@@ -799,9 +799,10 @@
                 locked: false,
                 requires: null,
                 requiresScore: 0,
+                file: 'LCS2D1.html', // Archivo al que redirigir
                 functionName: 'Ilustra la idea principal con casos concretos'
             },
-            'LCS2D2.html': {
+            'LCS2D2': {
                 id: 2,
                 type: 'explicacion',
                 title: 'Explicacion',
@@ -813,11 +814,12 @@
                 time: '18 min',
                 difficulty: 2,
                 locked: true,
-                requires: 'LCS2D1.html',
+                requires: 'LCS2D1',
                 requiresScore: MIN_SCORE_TO_UNLOCK,
+                file: 'LCS2D2.html',
                 functionName: 'Desarrolla el "por que" o el "como" de la idea central'
             },
-            'LCS2D3.html': {
+            'LCS2D3': {
                 id: 3,
                 type: 'comparacion',
                 title: 'Comparacion',
@@ -829,11 +831,12 @@
                 time: '20 min',
                 difficulty: 2,
                 locked: true,
-                requires: 'LCS2D2.html',
+                requires: 'LCS2D2',
                 requiresScore: MIN_SCORE_TO_UNLOCK,
+                file: 'LCS2D3.html',
                 functionName: 'Resalta la idea principal contrastandola con otra cosa'
             },
-            'LCS2D4.html': {
+            'LCS2D4': {
                 id: 4,
                 type: 'justificacion',
                 title: 'Justificacion',
@@ -845,8 +848,9 @@
                 time: '22 min',
                 difficulty: 3,
                 locked: true,
-                requires: 'LCS2D3.html',
+                requires: 'LCS2D3',
                 requiresScore: MIN_SCORE_TO_UNLOCK,
+                file: 'LCS2D4.html',
                 functionName: 'Aporta datos, estadisticas o argumentos que dan validez'
             }
         };
@@ -941,13 +945,13 @@
             }
         }
 
-        function getTechniqueProgress(techniqueUrl) {
+        function getTechniqueProgress(techniqueId) {
             const progress = getLocalProgress();
-            return progress.techniques[techniqueUrl] || null;
+            return progress.techniques[techniqueId] || null;
         }
 
-        function isTechniqueUnlocked(techniqueUrl) {
-            const config = techniquesConfig[techniqueUrl];
+        function isTechniqueUnlocked(techniqueId) {
+            const config = techniquesConfig[techniqueId];
             if (!config) return true;
             
             if (!config.locked) return true;
@@ -976,9 +980,9 @@
             const progress = getLocalProgress();
             let completedCount = 0;
             
-            Object.entries(techniquesConfig).forEach(([url, config]) => {
-                const isUnlocked = isTechniqueUnlocked(url);
-                const techProgress = progress.techniques[url];
+            Object.entries(techniquesConfig).forEach(([techId, config]) => {
+                const isUnlocked = isTechniqueUnlocked(techId);
+                const techProgress = progress.techniques[techId];
                 const isCompleted = techProgress?.completed && techProgress?.score >= MIN_SCORE_TO_UNLOCK;
                 
                 if (isCompleted) completedCount++;
@@ -1082,7 +1086,7 @@
                             <div class="difficulty">
                                 ${stars}
                             </div>
-                            <button class="start-btn ${buttonClass}" data-url="${url}" ${!isUnlocked ? 'disabled' : ''}>
+                            <button class="start-btn ${buttonClass}" data-id="${techId}" ${!isUnlocked ? 'disabled' : ''}>
                                 ${buttonText} ${buttonIcon}
                             </button>
                         </div>
@@ -1096,8 +1100,8 @@
             document.querySelectorAll('.start-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const url = btn.dataset.url;
-                    if (url) handleTechniqueStart(url);
+                    const techId = btn.dataset.id;
+                    if (techId) handleTechniqueStart(techId);
                 });
             });
             
@@ -1106,8 +1110,8 @@
                 card.addEventListener('click', () => {
                     const btn = card.querySelector('.start-btn');
                     if (btn && !btn.disabled) {
-                        const url = btn.dataset.url;
-                        if (url) handleTechniqueStart(url);
+                        const techId = btn.dataset.id;
+                        if (techId) handleTechniqueStart(techId);
                     }
                 });
             });
@@ -1117,11 +1121,11 @@
         // MANEJO DE INICIO DE CUESTIONARIO
         // ============================================
         
-        function handleTechniqueStart(url) {
-            const config = techniquesConfig[url];
+        function handleTechniqueStart(techId) {
+            const config = techniquesConfig[techId];
             if (!config) return;
             
-            const isUnlocked = isTechniqueUnlocked(url);
+            const isUnlocked = isTechniqueUnlocked(techId);
             
             if (!isUnlocked) {
                 showToast(`Esta tecnica esta bloqueada. Completa la anterior con al menos ${MIN_SCORE_TO_UNLOCK} puntos.`, 'error');
@@ -1129,9 +1133,9 @@
             }
             
             // Guardar cuestionario actual
-            localStorage.setItem('currentLCS2Quiz', url);
+            localStorage.setItem('currentLCS2Quiz', techId);
             
-            const progress = getTechniqueProgress(url);
+            const progress = getTechniqueProgress(techId);
             
             if (progress?.completed) {
                 showToast('Iniciando nuevo intento...', 'success');
@@ -1142,7 +1146,7 @@
             }
             
             setTimeout(() => {
-                window.location.href = url;
+                window.location.href = config.file; // Redirige al archivo HTML correcto
             }, 800);
         }
 
@@ -1159,7 +1163,7 @@
             let scoreCount = 0;
             let attempts = 0;
             
-            Object.entries(techniques).forEach(([url, data]) => {
+            Object.entries(techniques).forEach(([id, data]) => {
                 if (data.completed && data.score >= MIN_SCORE_TO_UNLOCK) {
                     completedCount++;
                 }
@@ -1170,6 +1174,7 @@
                 attempts += data.attempts || 0;
             });
             
+            // Calcular promedio solo entre las tarjetas realizadas
             const averageScore = scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0;
             
             // Actualizar display
@@ -1250,8 +1255,8 @@
             ];
             
             // Verificar cada mision
-            Object.entries(techniquesConfig).forEach(([url, config]) => {
-                const techProgress = progress.techniques[url];
+            Object.entries(techniquesConfig).forEach(([techId, config]) => {
+                const techProgress = progress.techniques[techId];
                 if (techProgress?.completed && techProgress?.score >= MIN_SCORE_TO_UNLOCK) {
                     const mission = missions.find(m => m.title.includes(config.title));
                     if (mission) mission.completed = true;
@@ -1295,8 +1300,8 @@
             
             let html = '<div class="info"><strong>Progreso por Tecnica:</strong></div>';
             
-            Object.entries(techniquesConfig).forEach(([url, config]) => {
-                const techProgress = techniques[url];
+            Object.entries(techniquesConfig).forEach(([techId, config]) => {
+                const techProgress = techniques[techId];
                 const status = techProgress?.completed ? 
                     `Completado (${techProgress.score} pts)` : 
                     (techProgress?.currentQuestion > 0 ? 'En progreso' : 'No iniciado');
