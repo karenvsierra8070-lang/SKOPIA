@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ruta Competencias Ciudadanas - Skópia</title>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;500;700&family=Orbitron:wght@700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+import { getDatabase, ref, get, set, onValue } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+    authDomain: "skopia-aa786.firebaseapp.com",
+    databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
+    projectId: "skopia-aa786",
+    storageBucket: "skopia-aa786.firebasestorage.app",
+    messagingSenderId: "719823055099",
+    appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+window.auth = auth;
+window.db = db;
+window.ref = ref;
+window.get = get;
+window.set = set;
+
+onAuthStateChanged(auth, (user) => {
+    if (!user) {
+        window.location.href = 'index.html';
+        return;
+    }
+    window.currentUser = user;
+    window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+});
+</script>
+
+<style>
+:root {
+    --color-crema: #fdfbf5;
+    --color-oliva-claro: #bec092;
+    --color-oliva-medio: #5a6133;
+    --color-oliva-oscuro: #272b00;
+    --color-sombra: rgba(39, 43, 0, 0.1);
+    --color-dorado: #ffd700;
+    --color-correcto: #4caf50;
+    --color-incorrecto: #f44336;
+    --color-azul: #2196f3;
+    
+    /* Colores para las puertas */
+    --door-1: linear-gradient(135deg, #558b2f, #33691e);
+    --door-2: linear-gradient(135deg, #1565c0, #0d47a1);
+    --door-3: linear-gradient(135deg, #c62828, #b71c1c);
+    --door-4: linear-gradient(135deg, #f9a825, #f57f17);
+    --door-5: linear-gradient(135deg, #6a1b9a, #4a148c);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Roboto', sans-serif; background: linear-gradient(135deg, var(--color-crema) 0%, #f5efe5 100%); color: var(--color-oliva-oscuro); min-height: 100vh; display: flex; flex-direction: column; }
+
+.navbar { display: flex; justify-content: flex-end; align-items: center; padding: 15px 40px; background-color: rgba(255,255,255,0.95); backdrop-filter: blur(10px); box-shadow: 0 2px 10px var(--color-sombra); position: relative; z-index: 1000; }
+.hamburger { width: 30px; height: 25px; position: relative; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; }
+.hamburger span { display: block; height: 4px; width: 100%; background-color: var(--color-oliva-oscuro); border-radius: 2px; transition: all 0.3s ease-in-out; }
+.user-dropdown { position: absolute; top: 70px; right: 40px; background-color: white; border-radius: 8px; box-shadow: 0 4px 20px var(--color-sombra); overflow: hidden; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: opacity 0.3s, transform 0.3s, visibility 0.3s; z-index: 1000; min-width: 200px; }
+.user-dropdown.active { opacity: 1; visibility: visible; transform: translateY(0); }
+.user-dropdown a { display: block; padding: 15px 25px; text-decoration: none; color: var(--color-oliva-oscuro); font-weight: 500; transition: background-color 0.2s; }
+.user-dropdown a:hover { background-color: var(--color-crema); }
+
+.hero-section { text-align: center; padding: 40px 20px; background: linear-gradient(135deg, var(--color-oliva-oscuro) 0%, var(--color-oliva-medio) 100%); color: white; position: relative; overflow: hidden; }
+.hero-content { position: relative; z-index: 1; }
+.hero-icon { font-size: 3.5rem; margin-bottom: 15px; animation: float 3s ease-in-out infinite; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.hero-title { font-family: 'Patrick Hand', cursive; font-size: 2.8rem; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+.hero-subtitle { font-size: 1.2rem; opacity: 0.9; max-width: 600px; margin: 0 auto; }
+
+.stats-bar { display: flex; justify-content: center; gap: 40px; padding: 20px; background: white; box-shadow: 0 2px 10px var(--color-sombra); flex-wrap: wrap; }
+.stat-item { text-align: center; }
+.stat-number { font-family: 'Orbitron', sans-serif; font-size: 2rem; font-weight: 700; color: var(--color-oliva-medio); }
+.stat-label { font-size: 0.9rem; color: var(--color-oliva-oscuro); margin-top: 5px; }
+
+.main-content { flex-grow: 1; padding: 40px 20px; }
+.container { max-width: 1200px; margin: 0 auto; }
+
+.section-header { text-align: center; margin-bottom: 40px; }
+.section-title { font-family: 'Patrick Hand', cursive; font-size: 2rem; color: var(--color-oliva-oscuro); margin-bottom: 10px; }
+.section-description { font-size: 1.1rem; color: var(--color-oliva-medio); max-width: 600px; margin: 0 auto; }
+
+.doors-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; margin-bottom: 40px; }
+
+.topic-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 25px var(--color-sombra); transition: all 0.3s ease; cursor: pointer; position: relative; }
+.topic-card:hover { transform: translateY(-8px); box-shadow: 0 15px 40px rgba(39, 43, 0, 0.2); }
+.topic-card.locked { opacity: 0.85; cursor: not-allowed; }
+.topic-card.locked:hover { transform: translateY(-4px); }
+
+.card-header { height: 140px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.card-header::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); animation: pulse 3s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.1); opacity: 0.3; } }
+
+.card-icon { font-size: 3.5rem; color: white; z-index: 1; position: relative; }
+.card-badge { position: absolute; top: 15px; right: 15px; background: var(--color-dorado); color: var(--color-oliva-oscuro); padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; z-index: 2; font-family: 'Space Grotesk', sans-serif; }
+.card-badge.completed-badge { background: var(--color-correcto); color: white; }
+.card-badge.locked-badge { background: var(--color-incorrecto); color: white; }
+
+.lock-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 10; }
+.lock-overlay i { font-size: 4rem; color: white; opacity: 0.9; }
+
+.card-body { padding: 25px; }
+.card-title { font-family: 'Patrick Hand', cursive; font-size: 1.6rem; color: var(--color-oliva-oscuro); margin-bottom: 10px; }
+.card-description { font-size: 0.95rem; color: var(--color-oliva-medio); margin-bottom: 15px; line-height: 1.5; }
+
+.unlock-requirement { 
+    background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(244, 67, 54, 0.05)); 
+    border-left: 4px solid var(--color-incorrecto); 
+    padding: 12px 15px; 
+    border-radius: 8px; 
+    margin-bottom: 15px; 
+    font-size: 0.9rem; 
+    color: var(--color-oliva-oscuro); 
+}
+.unlock-requirement i { color: var(--color-incorrecto); margin-right: 8px; }
+.unlock-requirement .required-score { font-weight: 700; color: var(--color-incorrecto); }
+
+.card-stats { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.card-stat { text-align: center; }
+.card-stat-value { font-family: 'Orbitron', sans-serif; font-size: 1.2rem; color: var(--color-oliva-oscuro); }
+.card-stat-label { font-size: 0.75rem; color: var(--color-oliva-medio); }
+
+.progress-bar { height: 10px; background: var(--color-crema); border-radius: 10px; overflow: hidden; margin-bottom: 15px; }
+.progress-fill { height: 100%; border-radius: 10px; transition: width 0.5s ease; }
+
+.card-footer { display: flex; justify-content: space-between; align-items: center; }
+.start-btn { background: var(--color-oliva-oscuro); color: white; border: none; padding: 10px 20px; border-radius: 25px; font-size: 0.9rem; font-weight: bold; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; font-family: 'Space Grotesk', sans-serif; }
+.start-btn:hover { background: var(--color-oliva-medio); transform: scale(1.05); }
+.start-btn.locked-btn { background: #999; cursor: not-allowed; }
+.start-btn.locked-btn:hover { transform: none; background: #999; }
+.start-btn.completed-btn { background: var(--color-correcto); }
+
+.floating-icons { position: fixed; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; z-index: 2000; }
+.floating-icons button { background: var(--color-oliva-oscuro); color: white; width: 50px; height: 50px; border-radius: 50%; border: none; font-size: 18px; display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0,0,0,0.12); cursor: pointer; transition: transform .15s ease, background .15s ease; }
+.floating-icons button:hover { transform: scale(1.08); background: var(--color-oliva-medio); }
+
+.toast { position: fixed; right: 20px; bottom: 20px; background: #fff; border-left: 6px solid var(--color-oliva-medio); padding: 16px 20px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.15); z-index: 3000; display: none; font-size: 1rem; max-width: 380px; }
+.toast.show { display: block; animation: slideInRight 0.3s ease; }
+.toast.error { border-left-color: var(--color-incorrecto); }
+@keyframes slideInRight { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }
+
+.close-btn { position: fixed; top: 20px; left: 20px; background: var(--color-oliva-oscuro); color: white; width: 40px; height: 40px; border-radius: 50%; border: none; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, background-color 0.2s; z-index: 1001; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+.close-btn:hover { transform: scale(1.1); background-color: var(--color-oliva-medio); }
+
+@media (max-width: 768px) {
+    .hero-title { font-size: 2rem; }
+    .doors-grid { grid-template-columns: 1fr; gap: 20px; }
+    .stats-bar { gap: 20px; }
+    .stat-number { font-size: 1.5rem; }
+}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="hamburger" id="hamburger-menu"><span></span><span></span><span></span></div>
+    <div class="user-dropdown" id="user-dropdown">
+        <a href="cuenta.html">Mi Cuenta</a>
+        <a href="configuracion.html">Configuración</a>
+        <hr>
+        <a href="index.html" id="logout-btn">Cerrar Sesión</a>
+    </div>
+</nav>
+
+<button class="close-btn" id="close-btn" title="Volver a módulos">&times;</button>
+
+<section class="hero-section">
+    <div class="hero-content">
+        <div class="hero-icon"><i class="fas fa-passport"></i></div>
+        <h1 class="hero-title">Ruta de Competencias Ciudadanas</h1>
+        <p class="hero-subtitle">Domina los 5 pilares de los Derechos Humanos. Desbloquea cada puerta superando el nivel anterior.</p>
+    </div>
+</section>
+
+<div class="stats-bar">
+    <div class="stat-item">
+        <div class="stat-number" id="completed-count">0/5</div>
+        <div class="stat-label">Puertas Abiertas</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number" id="average-score">0</div>
+        <div class="stat-label">Puntaje Promedio</div>
+    </div>
+</div>
+
+<main class="main-content">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">Las 5 Puertas del Conocimiento</h2>
+            <p class="section-description">Cada puerta contiene un desafío sobre la Constitución. Obtén +180 puntos para abrir la siguiente.</p>
+        </div>
+
+        <div class="doors-grid" id="doors-grid">
+            <!-- Las tarjetas se generarán dinámicamente -->
+        </div>
+    </div>
+</main>
+
+<div class="floating-icons" aria-hidden="false">
+    <button id="btn-misiones" title="Misiones">🎯</button>
+    <button id="btn-nivel" title="Nivel">⭐</button>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // ============================================
+    // CONFIGURACIÓN DE TEMAS (PUERTAS)
+    // ============================================
+    const MIN_SCORE_TO_UNLOCK = 180;
+    
+    const topicsConfig = {
+        'CCS1D1.html': {
+            id: 1,
+            title: 'Conceptos Básicos',
+            subtitle: 'La base de la ciudadanía',
+            description: 'Fundamentos de democracia, estado y sociedad. La puerta de entrada a tus derechos.',
+            icon: 'fas fa-door-open',
+            colorClass: 'door-1',
+            questions: 10,
+            time: '15 min',
+            difficulty: 1,
+            locked: false,
+            requires: null,
+            requiresScore: 0
+        },
+        'CCS1D2.html': {
+            id: 2,
+            title: 'Declaración Universal',
+            subtitle: 'Derechos globales',
+            description: 'Análisis de la DUDH y su aplicación en el derecho internacional.',
+            icon: 'fas fa-globe-americas',
+            colorClass: 'door-2',
+            questions: 10,
+            time: '18 min',
+            difficulty: 2,
+            locked: true,
+            requires: 'CCS1D1.html',
+            requiresScore: MIN_SCORE_TO_UNLOCK
+        },
+        'CCS1D3.html': {
+            id: 3,
+            title: 'Derechos Fundamentales',
+            subtitle: 'El núcleo de la persona',
+            description: 'Derechos a la vida, libertad, igualdad y dignidad humana en la Constitución.',
+            icon: 'fas fa-heart',
+            colorClass: 'door-3',
+            questions: 10,
+            time: '20 min',
+            difficulty: 2,
+            locked: true,
+            requires: 'CCS1D2.html',
+            requiresScore: MIN_SCORE_TO_UNLOCK
+        },
+        'CCS1D4.html': {
+            id: 4,
+            title: 'Deberes Ciudadanos',
+            subtitle: 'Responsabilidad mutua',
+            description: 'Obligaciones constitucionales y el equilibrio entre derechos y deberes.',
+            icon: 'fas fa-hands-helping',
+            colorClass: 'door-4',
+            questions: 10,
+            time: '18 min',
+            difficulty: 2,
+            locked: true,
+            requires: 'CCS1D3.html',
+            requiresScore: MIN_SCORE_TO_UNLOCK
+        },
+        'CCS1D5.html': {
+            id: 5,
+            title: 'Mecanismos de Protección',
+            subtitle: 'Defensa de derechos',
+            description: 'Tutela, acciones populares y el sistema judicial colombiano.',
+            icon: 'fas fa-shield-alt',
+            colorClass: 'door-5',
+            questions: 10,
+            time: '22 min',
+            difficulty: 3,
+            locked: true,
+            requires: 'CCS1D4.html',
+            requiresScore: MIN_SCORE_TO_UNLOCK
+        }
+    };
+
+    // Elementos DOM
+    const hamburgerMenu = document.getElementById('hamburger-menu');
+    const userDropdown = document.getElementById('user-dropdown');
+    const logoutBtn = document.getElementById('logout-btn');
+    const closeBtn = document.getElementById('close-btn');
+    const toast = document.getElementById('toast');
+    const doorsGrid = document.getElementById('doors-grid');
+
+    let currentUserId = null;
+
+    // ============================================
+    // FIREBASE SYNC
+    // ============================================
+    async function loadProgressFromFirebase(userId) {
+        try {
+            const dbRef = window.ref(window.db, `users/${userId}/ccs1_progress`);
+            const snapshot = await window.get(dbRef);
+            
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                localStorage.setItem('skopia_ccs1_progress', JSON.stringify(data));
+                console.log("✅ Progreso CCS1 sincronizado");
+            }
+        } catch (error) {
+            console.error("Error cargando progreso:", error);
+        }
+    }
+
+    // ============================================
+    // LÓGICA DE ESTADO
+    // ============================================
+    
+    function getLocalProgress() {
+        const data = localStorage.getItem('skopia_ccs1_progress');
+        if (!data) return { techniques: {} };
+        try {
+            return JSON.parse(data);
+        } catch (e) {
+            return { techniques: {} };
+        }
+    }
+
+    function getTechniqueProgress(techniqueUrl) {
+        const progress = getLocalProgress();
+        return progress.techniques[techniqueUrl] || null;
+    }
+
+    function isTechniqueUnlocked(techniqueUrl) {
+        const config = topicsConfig[techniqueUrl];
+        if (!config || !config.locked) return true;
+        
+        if (config.requires) {
+            const requiredProgress = getTechniqueProgress(config.requires);
+            if (requiredProgress && requiredProgress.completed && requiredProgress.score >= config.requiresScore) {
+                return true;
+            }
+            return false;
+        }
+        return true;
+    }
+
+    // ============================================
+    // RENDERIZADO
+    // ============================================
+    
+    function renderCards() {
+        doorsGrid.innerHTML = '';
+        const progress = getLocalProgress();
+        let completedCount = 0;
+        
+        Object.entries(topicsConfig).forEach(([url, config]) => {
+            const isUnlocked = isTechniqueUnlocked(url);
+            const techProgress = progress.techniques[url];
+            const isCompleted = techProgress?.completed && techProgress?.score >= MIN_SCORE_TO_UNLOCK;
+            
+            if (isCompleted) completedCount++;
+            
+            const card = document.createElement('div');
+            card.className = 'topic-card';
+            if (!isUnlocked) card.classList.add('locked');
+            
+            // Estadísticas
+            let scoreDisplay = '--';
+            if (techProgress && techProgress.score) {
+                scoreDisplay = techProgress.score;
+            }
+            
+            // Botón
+            let buttonText = 'Comenzar';
+            let buttonIcon = '<i class="fas fa-play"></i>';
+            let buttonClass = '';
+            
+            if (!isUnlocked) {
+                buttonText = 'Bloqueado';
+                buttonIcon = '<i class="fas fa-lock"></i>';
+                buttonClass = 'locked-btn';
+            } else if (isCompleted) {
+                buttonText = 'Reintentar';
+                buttonIcon = '<i class="fas fa-redo"></i>';
+                buttonClass = 'completed-btn';
+            }
+            
+            // Badge
+            let badgeHtml = '';
+            if (!isUnlocked) {
+                badgeHtml = `<div class="card-badge locked-badge"><i class="fas fa-lock"></i> Bloqueado</div>`;
+            } else if (isCompleted) {
+                badgeHtml = `<div class="card-badge completed-badge"><i class="fas fa-check"></i> Dominado</div>`;
+            }
+            
+            // Lock Overlay
+            let lockOverlay = !isUnlocked ? `<div class="lock-overlay"><i class="fas fa-lock"></i></div>` : '';
+            
+            // Requisito
+            let requirementHtml = '';
+            if (!isUnlocked && config.requires) {
+                const reqConfig = topicsConfig[config.requires];
+                requirementHtml = `
+                    <div class="unlock-requirement">
+                        <i class="fas fa-info-circle"></i>
+                        Completa <strong>${reqConfig.title}</strong> con al menos 
+                        <span class="required-score">${config.requiresScore} puntos</span>
+                    </div>`;
+            }
+            
+            card.innerHTML = `
+                <div class="card-header" style="background: var(${config.colorClass});">
+                    <div class="card-icon"><i class="${config.icon}"></i></div>
+                    ${badgeHtml}
+                    ${lockOverlay}
+                </div>
+                <div class="card-body">
+                    <h3 class="card-title">${config.title}</h3>
+                    <p class="card-description">${config.description}</p>
+                    ${requirementHtml}
+                    <div class="card-stats">
+                        <div class="card-stat">
+                            <div class="card-stat-value">${config.questions}</div>
+                            <div class="card-stat-label">Preguntas</div>
+                        </div>
+                        <div class="card-stat">
+                            <div class="card-stat-value">${config.time}</div>
+                            <div class="card-stat-label">Tiempo</div>
+                        </div>
+                        <div class="card-stat">
+                            <div class="card-stat-value">${scoreDisplay}</div>
+                            <div class="card-stat-label">Puntaje</div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div style="width: 60px;"></div> <!-- Spacer -->
+                        <button class="start-btn ${buttonClass}" data-url="${url}" ${!isUnlocked ? 'disabled' : ''}>
+                            ${buttonText} ${buttonIcon}
+                        </button>
+                    </div>
+                </div>`;
+            
+            doorsGrid.appendChild(card);
+        });
+        
+        // Listeners
+        document.querySelectorAll('.start-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const url = btn.dataset.url;
+                if (url) handleStart(url);
+            });
+        });
+    }
+
+    function updateStats() {
+        const progress = getLocalProgress();
+        let completedCount = 0;
+        let totalScore = 0;
+        let count = 0;
+        
+        Object.values(progress.techniques).forEach(t => {
+            if (t.completed && t.score >= MIN_SCORE_TO_UNLOCK) completedCount++;
+            if (t.score) { totalScore += t.score; count++; }
+        });
+        
+        const avg = count > 0 ? Math.round(totalScore / count) : 0;
+        
+        document.getElementById('completed-count').textContent = `${completedCount}/5`;
+        document.getElementById('average-score').textContent = avg;
+    }
+
+    function handleStart(url) {
+        const config = topicsConfig[url];
+        if (!isTechniqueUnlocked(url)) {
+            showToast(`Esta puerta está bloqueada. Completa la anterior con +${MIN_SCORE_TO_UNLOCK} puntos.`, 'error');
+            return;
+        }
+        
+        showToast(`Abriendo ${config.title}...`, 'success');
+        setTimeout(() => {
+            window.location.href = url;
+        }, 800);
+    }
+
+    // ============================================
+    // UI EVENTS
+    // ============================================
+    
+    window.addEventListener('userReady', async (e) => {
+        const user = e.detail.user;
+        currentUserId = user.uid;
+        
+        await loadProgressFromFirebase(currentUserId);
+        
+        renderCards();
+        updateStats();
+    });
+
+    hamburgerMenu.addEventListener('click', () => userDropdown.classList.toggle('active'));
+    logoutBtn.addEventListener('click', () => {
+        import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
+            signOut(window.auth).then(() => window.location.href = 'index.html');
+        });
+    });
+    closeBtn.addEventListener('click', () => window.location.href = 'CC.html');
+    window.addEventListener('click', (e) => {
+        if (!e.target.closest('.navbar')) userDropdown.classList.remove('active');
+    });
+
+    function showToast(msg, type = '') {
+        toast.textContent = msg;
+        toast.className = 'toast show ' + type;
+        setTimeout(() => toast.classList.remove('show'), 4000);
+    }
+});
+</script>
+</body>
+</html>
