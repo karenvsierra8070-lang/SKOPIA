@@ -456,6 +456,8 @@
             opacity: 0;
             transform: translateY(30px) scale(0.9);
             transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer; /* Táctil */
+            -webkit-tap-highlight-color: transparent;
         }
 
         .justification-card.revealed {
@@ -471,6 +473,8 @@
         .justification-card.disconnected {
             border-color: var(--color-incorrecto);
             background: rgba(244, 67, 54, 0.1);
+            transform: translateY(15px) scale(0.98);
+            box-shadow: none;
         }
 
         .justification-card::before {
@@ -481,6 +485,30 @@
             width: 3px;
             height: 25px;
             background: linear-gradient(180deg, var(--color-dorado), transparent);
+        }
+
+        .disconnect-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 40px;
+            height: 40px;
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid var(--color-correcto);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            font-size: 1rem;
+        }
+        
+        .justification-card.revealed .disconnect-indicator { opacity: 1; }
+        .justification-card.disconnected .disconnect-indicator {
+            background: var(--color-incorrecto);
+            border-color: var(--color-incorrecto);
+            transform: rotate(45deg); /* Cruz visual */
         }
 
         .justification-label {
@@ -602,35 +630,6 @@
         @keyframes fallDown {
             0% { transform: translateY(0); }
             100% { transform: translateY(50px); opacity: 0.3; }
-        }
-
-        .disconnect-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(244, 67, 54, 0.2);
-            border: 2px solid var(--color-incorrecto);
-            color: white;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-            opacity: 0;
-            transform: scale(0.8);
-        }
-
-        .justification-card.revealed .disconnect-btn {
-            opacity: 1;
-            transform: scale(1);
-        }
-
-        .disconnect-btn:hover {
-            background: var(--color-incorrecto);
-            transform: scale(1.1);
         }
 
         .status-indicator {
@@ -818,30 +817,6 @@
             font-size: 1rem;
             color: var(--color-oliva-oscuro);
             line-height: 1.5;
-        }
-
-        .option-feedback {
-            margin-top: 12px;
-            padding: 12px;
-            border-radius: 10px;
-            font-size: 0.9rem;
-            display: none;
-        }
-
-        .option-card.selected .option-feedback {
-            display: block;
-        }
-
-        .option-feedback.warning {
-            background: #fff3cd;
-            border: 1px solid var(--color-dorado);
-            color: #856404;
-        }
-
-        .option-feedback.success {
-            background: #d4edda;
-            border: 1px solid var(--color-correcto);
-            color: #155724;
         }
 
         /* ===== CUESTIONARIO ===== */
@@ -1644,10 +1619,10 @@ function loadGame1() {
                 <div class="justification-zone" id="justification-zone">
                     <div class="justifications-grid" id="justifications-grid">
                         ${q.justifications.map((j, i) => `
-                            <div class="justification-card" id="just-${i}" data-index="${i}">
-                                <button class="disconnect-btn" onclick="disconnectCable(${i}, event)" title="Desconectar justificacion">
-                                    <i class="fas fa-unlink"></i>
-                                </button>
+                            <div class="justification-card" id="just-${i}" data-index="${i}" onclick="toggleDisconnect(${i})">
+                                <div class="disconnect-indicator">
+                                    <i class="fas fa-link"></i>
+                                </div>
                                 <div class="justification-label">
                                     <i class="fas fa-tag"></i> ${j.type}
                                 </div>
@@ -1675,7 +1650,7 @@ function loadGame1() {
         <div style="text-align: center; margin-top: 20px; padding: 20px; background: #f5f5f5; border-radius: 12px;">
             <p style="font-family: 'Patrick Hand', cursive; font-size: 1.1rem; color: var(--color-oliva-oscuro);">
                 <i class="fas fa-info-circle" style="color: var(--color-azul);"></i>
-                <strong>Instrucciones:</strong> Activa los Rayos X, luego desconecta la justificacion que ILUSTRA pero NO JUSTIFICA tecnicamente.
+                <strong>Instrucciones:</strong> Activa los Rayos X, luego toca la tarjeta que ILUSTRA pero NO JUSTIFICA. Toca de nuevo para reconectar.
             </p>
         </div>
     `;
@@ -1713,7 +1688,7 @@ function activateXray() {
         // Update status
         setTimeout(() => {
             document.getElementById('status-dot').classList.add('active');
-            document.getElementById('status-text').textContent = 'Estado: Estructura revelada - Desconecta la justificacion incorrecta';
+            document.getElementById('status-text').textContent = 'Estado: Estructura revelada - Toca para desconectar el humo';
             
             btn.innerHTML = '<i class="fas fa-check"></i> Rayos X Activados';
             
@@ -1722,14 +1697,11 @@ function activateXray() {
     }, 500);
 }
 
-function disconnectCable(index, event) {
-    event.stopPropagation();
+function toggleDisconnect(index) {
     if (!state.g1Revealed) return;
     
     const card = document.getElementById(`just-${index}`);
-    const mainIdeaBox = document.getElementById('main-idea-box');
     
-    // Toggle disconnect
     if (state.g1Disconnected.includes(index)) {
         // Reconnect
         state.g1Disconnected = state.g1Disconnected.filter(i => i !== index);
@@ -1740,19 +1712,6 @@ function disconnectCable(index, event) {
         state.g1Disconnected.push(index);
         card.classList.remove('connected');
         card.classList.add('disconnected');
-        card.style.transform = 'translateY(20px)';
-        
-        // Check if main idea should "fall"
-        const q = state.g1Questions[state.g1Index];
-        const validConnections = q.justifications.filter((_, i) => !state.g1Disconnected.includes(i)).length;
-        
-        if (validConnections === 0) {
-            mainIdeaBox.classList.add('fall-animation');
-        }
-        
-        setTimeout(() => {
-            card.style.transform = '';
-        }, 500);
     }
 }
 
@@ -1762,30 +1721,44 @@ function verifyGame1() {
     
     if (state.g1Disconnected.length === 0) {
         fb.className = 'feedback-box fb-warning';
-        fb.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Debes desconectar al menos una justificacion que consideres incorrecta.`;
+        fb.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Debes desconectar al menos una justificacion.`;
         fb.style.display = 'block';
         return;
     }
     
-    // Check if the correct one is disconnected
-    const isCorrect = state.g1Disconnected.includes(q.correctDisconnect);
-    
-    if (isCorrect) {
+    // Lógica Corregida: Debe desconectar SOLO la incorrecta
+    const correctIdx = q.correctDisconnect;
+    const disconnectedCorrectOne = state.g1Disconnected.includes(correctIdx);
+    const validIndices = [0, 1, 2].filter(i => i !== correctIdx); // Asumiendo 3 opciones
+    const disconnectedValidOnes = state.g1Disconnected.filter(i => validIndices.includes(i)).length;
+
+    if (disconnectedCorrectOne && disconnectedValidOnes === 0) {
+        // Éxito: Desconectó solo el humo
         playSound('correct');
         state.g1Score++;
         fb.className = 'feedback-box fb-success';
         fb.innerHTML = `
-            <i class="fas fa-check-circle"></i> Correcto!<br><br>
-            <strong>Explicacion:</strong> ${q.explanation}<br><br>
-            <strong>Principio clave:</strong> Las ideas secundarias de JUSTIFICACION deben aportar razones tecnicas (datos, normas, estadisticas), no solo ejemplos o anecdotas.
+            <i class="fas fa-check-circle"></i> ¡Correcto! Identificaste el "humo".<br><br>
+            <strong>Explicación:</strong> ${q.explanation}<br><br>
+            <strong>Principio clave:</strong> Las ideas secundarias de JUSTIFICACIÓN deben aportar razones técnicas (datos, normas), no solo ejemplos o anécdotas.
+        `;
+    } else if (disconnectedValidOnes > 0) {
+        // Error: Desconectó una válida (dejó la idea sin soporte)
+        playSound('wrong');
+        fb.className = 'feedback-box fb-error';
+        fb.innerHTML = `
+            <i class="fas fa-times-circle"></i> ¡Cuidado! Desconectaste una justificación válida.<br>
+            La idea principal se quedó sin soporte técnico.<br><br>
+            Solo debes desconectar la tarjeta que ILUSTRA pero NO JUSTIFICA (el humo).
         `;
     } else {
+        // Error: No desconectó la incorrecta
         playSound('wrong');
         fb.className = 'feedback-box fb-error';
         fb.innerHTML = `
             <i class="fas fa-times-circle"></i> Incorrecto.<br><br>
-            <strong>La justificacion que debias desconectar era:</strong> "${q.justifications[q.correctDisconnect].type}"<br><br>
-            <strong>Explicacion:</strong> ${q.explanation}
+            <strong>La tarjeta que debías desconectar era:</strong> "${q.justifications[q.correctDisconnect].type}"<br><br>
+            <strong>Explicación:</strong> ${q.explanation}
         `;
     }
     
@@ -1837,6 +1810,7 @@ function loadGame2() {
     document.getElementById('next2').style.display = 'none';
 
     const container = document.getElementById('corrector-container');
+    // NOTA: Eliminé los divs de feedback ocultos (.option-feedback) para evitar spoilers.
     container.innerHTML = `
         <div class="smoke-text" id="smoke-text">
             <div class="smoke-text-content">${q.smokeText}</div>
@@ -1857,10 +1831,6 @@ function loadGame2() {
                             <span class="badge">${opt.type}</span>
                         </div>
                         <div class="option-text">${opt.text}</div>
-                        <div class="option-feedback ${opt.isCorrect ? 'success' : 'warning'}">
-                            <i class="fas fa-${opt.isCorrect ? 'check' : 'exclamation'}-circle"></i>
-                            ${opt.feedback}
-                        </div>
                     </div>
                 `).join('')}
             </div>
