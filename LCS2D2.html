@@ -1582,57 +1582,43 @@ let state = {
     qIndex: 0, qScore: 0, qQuestions: []
 };
 
-
 // ====== FUNCIONES FALTANTES PARA EL MODAL Y DEMOLICIÓN ======
 
 function openConcept(idx) {
-    // 1. Obtener los datos del concepto actual
     const q = state.shuffledData[state.g1Index];
     const concept = q.concepts[idx];
     
-    // 2. Rellenar el modal con la información
     document.getElementById('overlay-term').textContent = concept.term;
     document.getElementById('overlay-definition').textContent = concept.def;
-    
-    // 3. Mostrar el modal
     document.getElementById('concept-overlay').style.display = 'flex';
     
-    // 4. Guardar qué concepto estamos viendo (para saber cuál demoler luego)
     state.currentConcept = idx;
 }
 
 function closeOverlay(e) {
-    // Solo cerrar si se hace clic en el fondo oscuro, no en la tarjeta blanca
     if (e.target.id === 'concept-overlay') {
         document.getElementById('concept-overlay').style.display = 'none';
     }
 }
 
 function demolishConcept() {
-    // 1. Ocultar el modal
     document.getElementById('concept-overlay').style.display = 'none';
     
-    // 2. Buscar el "ladrillo" (span) que corresponde al concepto actual y marcarlo
     const bricks = document.querySelectorAll('.brick');
     bricks.forEach(b => {
-        // Convertir el atributo data-idx a número para comparar
         if (parseInt(b.dataset.idx) === state.currentConcept) {
             b.classList.add('demolished');
-            b.onclick = null; // Desactivar el clic para que no se pueda volver a abrir
+            b.onclick = null;
         }
     });
     
-    // 3. Actualizar la barra de progreso
     state.g1Progress++;
     const percent = (state.g1Progress / state.g1Total) * 100;
     document.getElementById('g1-progress').style.width = percent + '%';
     
-    // 4. Reproducir sonido de éxito
     playSound('correct');
     
-    // 5. Verificar si ya se demolieron todos los términos
     if (state.g1Progress === state.g1Total) {
-        // Esperar un poco para que se vea la barra llena y luego mostrar el desafío
         setTimeout(showChallengeG1, 500);
     }
 }
@@ -1644,11 +1630,14 @@ function startGame1() {
     document.getElementById('intro-section').style.display = 'none';
     document.getElementById('game1-section').style.display = 'block';
     state.g1Index = 0;
+    
+    // Mezclamos y tomamos 3 textos para la actividad
+    state.shuffledData = shuffle([...G1_DATA]).slice(0, 3); 
+    
     loadGame1();
 }
 
 function loadGame1() {
-    // Usamos el array mezclado (shuffledData) en lugar del original directo
     const q = state.shuffledData[state.g1Index];
     const container = document.getElementById('text-container');
     
@@ -1663,13 +1652,9 @@ function loadGame1() {
 
     let html = q.text;
     
-    // CORRECCIÓN: Buscamos el término directamente en el texto (sin corchetes)
-    // Usamos una expresión regular con 'g' (global) por si aparece más veces, 
-    // pero tomamos la primera coincidencia relevante.
     q.concepts.forEach((c, idx) => {
-        // Escapar caracteres especiales para la regex
         const escapedTerm = c.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(escapedTerm, ""); // Busca la primera coincidencia exacta
+        const regex = new RegExp(escapedTerm, "");
         
         html = html.replace(regex, 
             `<span class="brick" onclick="openConcept(${idx})" data-idx="${idx}">${c.term}</span>`
@@ -1680,7 +1665,8 @@ function loadGame1() {
 }
 
 function showChallengeG1() {
-    const q = G1_DATA[state.g1Index];
+    // Importante: usar state.shuffledData para que coincida con el texto
+    const q = state.shuffledData[state.g1Index];
     const container = document.getElementById('options-g1');
     container.innerHTML = '';
     
@@ -1720,15 +1706,17 @@ function checkParaphrase(correct, why, btn) {
     document.getElementById('next1').style.display = 'inline-flex';
 }
 
-function startGame1() {
-    document.getElementById('intro-section').style.display = 'none';
-    document.getElementById('game1-section').style.display = 'block';
-    state.g1Index = 0;
+// FUNCIÓN FALTANTE: Aquí está la solución para el botón "Siguiente"
+function nextGame1() {
+    state.g1Index++;
     
-    // CORRECCIÓN: Mezclamos una copia de los datos al inicio
-    state.shuffledData = shuffle([...G1_DATA]); 
-    
-    loadGame1();
+    if(state.g1Index < state.shuffledData.length) {
+        loadGame1();
+    } else {
+        // Si ya no hay más textos, pasamos al Juego 2
+        document.getElementById('game1-section').style.display = 'none';
+        startGame2();
+    }
 }
 
 // ====== LÓGICA JUEGO 2 (ARRASTRE CORREGIDO) ======
@@ -1737,7 +1725,6 @@ function startGame2() {
     state.g2Index = 0; 
     state.g2Score = 0;
     
-    // CORRECCIÓN: Mezclamos y tomamos 5
     state.shuffledData2 = shuffle([...G2_DATA]).slice(0, 5);
     
     loadGame2();
@@ -1756,16 +1743,13 @@ function loadGame2() {
     const container = document.getElementById('lab-options');
     container.innerHTML = '';
     
-    // Crear opciones
     shuffle([q.correct, ...q.distractors]).forEach(opt => {
         const div = document.createElement('div');
         div.className = 'drag-capsule';
         div.textContent = opt;
         div.dataset.correct = (opt === q.correct);
         
-        // Añadir eventos Mouse
         div.addEventListener('mousedown', startDrag);
-        // Añadir eventos Touch
         div.addEventListener('touchstart', startDrag, {passive: false});
         
         container.appendChild(div);
@@ -1776,15 +1760,11 @@ function loadGame2() {
     drop.className = 'drop-zone-lab';
 }
 
-// --- Sistema de Arrastre Personalizado ---
-
 function startDrag(e) {
-    e.preventDefault(); // Prevenir selección de texto y scroll en móvil
+    e.preventDefault();
     
-    // Identificar elemento
     state.draggedElement = e.target;
     
-    // Crear clon visual
     const rect = state.draggedElement.getBoundingClientRect();
     const clone = state.draggedElement.cloneNode(true);
     clone.classList.add('dragging-clone');
@@ -1794,10 +1774,8 @@ function startDrag(e) {
     document.body.appendChild(clone);
     state.draggingClone = clone;
     
-    // Ocultar original (visualmente)
     state.draggedElement.classList.add('dragging-original');
     
-    // Asignar eventos de movimiento y fin
     if(e.type === 'mousedown') {
         document.addEventListener('mousemove', moveDrag);
         document.addEventListener('mouseup', endDrag);
@@ -1806,7 +1784,6 @@ function startDrag(e) {
         document.addEventListener('touchend', endDrag);
     }
     
-    // Posicionar clon inmediatamente si es touch
     moveDrag(e);
 }
 
@@ -1814,15 +1791,12 @@ function moveDrag(e) {
     e.preventDefault();
     if(!state.draggingClone) return;
     
-    // Obtener coordenadas (touch o mouse)
     let clientX = e.clientX || (e.touches && e.touches[0].clientX);
     let clientY = e.clientY || (e.touches && e.touches[0].clientY);
     
-    // Mover clon centrado en el dedo/ratón
     state.draggingClone.style.left = (clientX - state.draggingClone.offsetWidth / 2) + 'px';
-    state.draggingClone.style.top = (clientY - 20) + 'px'; // Un poco arriba del dedo
+    state.draggingClone.style.top = (clientY - 20) + 'px';
     
-    // Verificar si está sobre la zona de soltar (para feedback visual)
     const dropZone = document.getElementById('drop-zone-lab');
     const rect = dropZone.getBoundingClientRect();
     
@@ -1836,35 +1810,27 @@ function moveDrag(e) {
 function endDrag(e) {
     if(!state.draggingClone || !state.draggedElement) return;
     
-    // Obtener coordenadas finales
     let clientX = e.clientX || (e.changedTouches && e.changedTouches[0].clientX);
     let clientY = e.clientY || (e.changedTouches && e.changedTouches[0].clientY);
     
     const dropZone = document.getElementById('drop-zone-lab');
     const rect = dropZone.getBoundingClientRect();
     
-    // Verificar colisión
     if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
-        // SUCCESS DROP
         dropZone.classList.remove('drag-over');
         dropZone.textContent = state.draggedElement.textContent;
         dropZone.dataset.correct = state.draggedElement.dataset.correct;
         
-        // Eliminar el original del DOM
         state.draggedElement.remove();
-        
         verifyGame2();
     } else {
-        // FAIL DROP - Regresar al origen
         state.draggedElement.classList.remove('dragging-original');
     }
     
-    // Limpiar clon
     state.draggingClone.remove();
     state.draggingClone = null;
     state.draggedElement = null;
     
-    // Quitar listeners
     document.removeEventListener('mousemove', moveDrag);
     document.removeEventListener('mouseup', endDrag);
     document.removeEventListener('touchmove', moveDrag);
