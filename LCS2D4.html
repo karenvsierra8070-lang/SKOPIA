@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LCS2D4 - Ideas Secundarias: Justificación</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+        import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            authDomain: "skopia-aa786.firebaseapp.com",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        window.auth = auth;
+        window.db = db;
+        window.ref = ref;
+        window.set = set;
+        window.get = get;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) window.location.href = 'index.html';
+            window.currentUser = user;
+        });
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.15);
+            --color-correcto: #4caf50;
+            --color-incorrecto: #f44336;
+            --color-azul: #1976d2;
+            --color-dorado: #d4a853;
+            --color-cian: #00e5ff; /* Cian neón para el tema tecnológico */
+            --color-matrix: #0d0d0d;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Quicksand', sans-serif; background: #f4f1ea; color: var(--color-oliva-oscuro); min-height: 100vh; overflow-x: hidden; }
+
+        /* Navegación */
+        .top-nav {
+            background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(10px); padding: 15px 30px;
+            display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px var(--color-sombra);
+            position: sticky; top: 0; z-index: 1000; border-bottom: 3px solid var(--color-oliva-claro);
+        }
+        .nav-left, .nav-right { display: flex; align-items: center; gap: 20px; }
+        .logo { font-family: 'Patrick Hand', cursive; font-size: 1.8rem; font-weight: 700; color: var(--color-oliva-oscuro); display: flex; align-items: center; gap: 10px; }
+        .back-btn {
+            background: var(--color-oliva-oscuro); color: white; border: none; padding: 10px 20px; border-radius: 50px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s;
+            display: flex; align-items: center; gap: 8px; text-decoration: none;
+        }
+        .back-btn:hover { background: var(--color-oliva-medio); transform: translateY(-2px); }
+
+        .user-menu { position: relative; }
+        .user-avatar {
+            width: 45px; height: 45px; border-radius: 50%; background: var(--color-oliva-medio); color: white;
+            display: flex; align-items: center; justify-content: center; font-weight: 700; cursor: pointer;
+            border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .user-dropdown {
+            position: absolute; top: 55px; right: 0; background: white; border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; opacity: 0; visibility: hidden;
+            transform: translateY(-10px); transition: all 0.3s; z-index: 1001; min-width: 200px; border: 1px solid #eee;
+        }
+        .user-dropdown.active { opacity: 1; visibility: visible; transform: translateY(0); }
+        .user-dropdown a { display: block; padding: 14px 20px; color: var(--color-oliva-oscuro); text-decoration: none; font-weight: 500; border-bottom: 1px solid #f0f0f0; }
+        .user-dropdown a:hover { background: var(--color-crema); padding-left: 25px; }
+
+        /* Contenedor Principal */
+        .main-container { max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
+        
+        .card {
+            background: white; border-radius: 24px; box-shadow: 0 20px 50px var(--color-sombra);
+            overflow: hidden; animation: slideUp 0.6s ease; margin-bottom: 50px; position: relative; border: 1px solid rgba(190, 192, 146, 0.3);
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .header-section {
+            background: linear-gradient(135deg, var(--color-oliva-medio), var(--color-oliva-oscuro));
+            color: white; padding: 50px; text-align: center; position: relative;
+            overflow: hidden;
+        }
+        /* Patrón de fondo hexagonal sutil */
+        .header-section::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60 4.02 45V15z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+            animation: moveBackground 20s linear infinite;
+        }
+        @keyframes moveBackground { 0% { background-position: 0 0; } 100% { background-position: 60px 60px; } }
+        
+        .title { font-family: 'Patrick Hand', cursive; font-size: 3.2rem; margin-bottom: 10px; position: relative; z-index: 1; text-shadow: 2px 2px 0px rgba(0,0,0,0.2); }
+        .subtitle { font-size: 1.4rem; opacity: 0.9; position: relative; z-index: 1; }
+        .body-content { padding: 50px; }
+
+        /* === JUEGO 1: SIMULADOR DE DESMONTAJE (RAYOS X) === */
+        
+        /* Contenedor estilo terminal/hacking */
+        .xray-room {
+            background: var(--color-matrix);
+            border: 2px solid #333;
+            border-radius: 20px;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5), inset 0 0 50px rgba(0,229,255,0.05);
+        }
+
+        /* Efecto Matrix (lienzo Canvas detrás) */
+        #matrix-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        .xray-text-container {
+            position: relative;
+            z-index: 2;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--color-cian);
+            padding: 25px;
+            border-radius: 10px;
+            font-family: 'Share Tech Mono', monospace;
+            color: #ccc;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.1);
+            min-height: 200px;
+        }
+
+        /* Texto cifrado (efecto glitch) */
+        .xray-text.scrambled {
+            color: transparent;
+            text-shadow: 0 0 8px rgba(255,255,255,0.3);
+            animation: glitchText 0.2s infinite;
+            user-select: none;
+        }
+        @keyframes glitchText {
+            0% { text-shadow: 2px 0 red, -2px 0 blue; }
+            25% { text-shadow: -2px 0 red, 2px 0 blue; }
+            50% { text-shadow: 2px 2px red, -2px -2px blue; }
+            75% { text-shadow: -2px -2px red, 2px 2px blue; }
+            100% { text-shadow: 0 0 8px rgba(255,255,255,0.3); }
+        }
+
+        /* Línea de escaneo */
+        .scan-beam {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 4px;
+            background: var(--color-cian);
+            box-shadow: 0 0 20px var(--color-cian);
+            z-index: 10;
+            display: none;
+        }
+        .scanning .scan-beam {
+            display: block;
+            animation: scanAnim 2s linear forwards;
+        }
+        @keyframes scanAnim {
+            0% { top: 0; opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        /* Estructura Revelada */
+        .revealed-structure {
+            display: none;
+            margin-top: 40px;
+            position: relative;
+            z-index: 2;
+        }
+        .revealed-structure.active { display: block; animation: fadeIn 0.5s ease; }
+
+        .main-core {
+            background: rgba(0, 229, 255, 0.1);
+            border: 2px solid var(--color-cian);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.4rem;
+            color: white;
+            position: relative;
+            margin-bottom: 60px; /* Espacio para conectores */
+        }
+        .main-core::before {
+            content: 'IDEA PRINCIPAL';
+            position: absolute;
+            top: -10px; left: 50%; transform: translateX(-50%);
+            background: var(--color-oliva-medio);
+            color: white;
+            padding: 2px 15px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-family: 'Quicksand', sans-serif;
+            border: 1px solid var(--color-cian);
+        }
+
+        .connections-container {
+            display: flex;
+            justify-content: space-around;
+            position: relative;
+        }
+        
+        /* Conectores visuales (SVG) */
+        .connector-svg {
+            position: absolute;
+            top: -60px; /* Ajustar según altura del core */
+            left: 0; width: 100%;
+            height: 80px;
+            z-index: -1;
+            stroke: var(--color-dorado);
+            stroke-width: 2;
+            fill: none;
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+        }
+        .revealed-structure.active .connector-svg {
+            animation: drawLine 1s ease forwards;
+        }
+        @keyframes drawLine { to { stroke-dashoffset: 0; } }
+
+        .justification-block {
+            background: rgba(212, 168, 83, 0.1);
+            border: 1px solid var(--color-dorado);
+            padding: 15px;
+            border-radius: 8px;
+            color: var(--color-dorado);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.95rem;
+            flex: 1;
+            margin: 0 10px;
+            text-align: center;
+            position: relative;
+        }
+        .justification-block::after {
+            content: '';
+            position: absolute;
+            top: -20px; left: 50%;
+            width: 2px; height: 20px;
+            background: var(--color-dorado);
+        }
+
+        /* Opciones de reto */
+        .challenge-box {
+            margin-top: 30px;
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid #444;
+        }
+        .challenge-title {
+            color: var(--color-cian);
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.8rem;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .option-btn {
+            display: block;
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid #555;
+            color: #eee;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            font-family: 'Quicksand', sans-serif;
+        }
+        .option-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--color-cian); }
+        .option-btn.correct { background: rgba(76, 175, 80, 0.2); border-color: var(--color-correcto); color: var(--color-correcto); }
+        .option-btn.incorrect { background: rgba(244, 67, 54, 0.2); border-color: var(--color-incorrecto); opacity: 0.6; }
+
+        /* Botones Generales */
+        .btn {
+            background: var(--color-oliva-oscuro); color: white; border: none; padding: 15px 35px; border-radius: 50px;
+            font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.3s; font-family: 'Quicksand', sans-serif;
+            display: inline-flex; align-items: center; gap: 10px; text-decoration: none; position: relative; overflow: hidden;
+        }
+        .btn::after {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        .btn:hover::after { left: 100%; }
+        .btn:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .btn-success { background: var(--color-correcto); }
+        .btn-xray { background: linear-gradient(45deg, #000, #333); color: var(--color-cian); border: 2px solid var(--color-cian); box-shadow: 0 0 15px rgba(0, 229, 255, 0.3); }
+        .btn-xray i { color: var(--color-cian); }
+
+        /* === JUEGO 2: MODO CORRECTOR === */
+        .blueprint-bg {
+            background-color: #f0f4e8;
+            background-image: linear-gradient(rgba(90, 97, 51, 0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(90, 97, 51, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            border: 4px solid var(--color-oliva-medio);
+            border-radius: 20px;
+            padding: 30px;
+            position: relative;
+        }
+        
+        .machine-interface {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+            position: relative;
+        }
+        
+        .argument-display {
+            font-size: 1.2rem;
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 25px;
+        }
+        
+        .gap-slot {
+            display: inline-block;
+            min-width: 200px;
+            border-bottom: 3px dashed var(--color-incorrecto);
+            color: #999;
+            text-align: center;
+            font-weight: bold;
+            margin: 0 5px;
+            padding: 0 10px;
+            transition: all 0.3s;
+        }
+        .gap-slot.filled {
+            border-bottom: 3px solid var(--color-correcto);
+            color: var(--color-correcto);
+            background: rgba(76, 175, 80, 0.1);
+            border-radius: 5px;
+        }
+        
+        .parts-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        @media (max-width: 768px) { .parts-container { grid-template-columns: 1fr; } }
+        
+        .part-card {
+            background: #fff;
+            border: 2px solid #eee;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .part-card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); border-color: var(--color-azul); }
+        .part-card.selected { border-color: var(--color-azul); background: #e3f2fd; }
+        .part-card.correct { border-color: var(--color-correcto); background: #e8f5e9; color: var(--color-correcto); }
+        .part-card.wrong { border-color: var(--color-incorrecto); opacity: 0.5; pointer-events: none; }
+
+        /* Feedback y Quiz similar a códigos anteriores pero manteniendo estilo */
+        .feedback-box { margin-top: 25px; padding: 20px; border-radius: 15px; font-family: 'Patrick Hand', cursive; font-size: 1.3rem; text-align: center; }
+        .fb-success { background: #e8f5e9; color: var(--color-correcto); border: 2px solid var(--color-correcto); }
+        .fb-error { background: #ffebee; color: var(--color-incorrecto); border: 2px solid var(--color-incorrecto); }
+        
+        .quiz-options { display: grid; gap: 15px; }
+        .quiz-option {
+            background: white; border: 3px solid #eee; padding: 18px; border-radius: 15px; cursor: pointer; transition: all 0.3s;
+            display: flex; align-items: center; gap: 15px;
+        }
+        .quiz-option:hover { border-color: var(--color-oliva-claro); transform: translateX(5px); }
+        .quiz-option.selected { border-color: var(--color-azul); background: #e3f2fd; }
+        .quiz-option.correct { border-color: var(--color-correcto); background: #e8f5e9; }
+        .quiz-option.incorrect { border-color: var(--color-incorrecto); background: #ffebee; }
+        .option-letter { width: 40px; height: 40px; border-radius: 50%; background: var(--color-oliva-claro); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; font-size: 1.1rem; }
+        
+        .score-circle { width: 140px; height: 140px; border-radius: 50%; background: linear-gradient(135deg, var(--color-oliva-medio), var(--color-oliva-oscuro)); color: white; display: flex; align-items: center; justify-content: center; font-size: 2.8rem; font-weight: 700; margin: 0 auto 25px; box-shadow: 0 10px 30px rgba(90, 97, 51, 0.3); }
+        .progress-bar { width: 100%; height: 8px; background: var(--color-oliva-claro); border-radius: 10px; overflow: hidden; margin: 10px 0; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--color-oliva-medio), var(--color-correcto)); border-radius: 10px; transition: width 0.5s; }
+    </style>
+</head>
+<body>
+
+<nav class="top-nav">
+    <div class="nav-left">
+        <div class="logo"><i class="fas fa-microscope"></i> Skópia</div>
+        <a href="LCS2D.html" class="back-btn"><i class="fas fa-arrow-left"></i> Volver</a>
+    </div>
+    <div class="nav-right">
+        <div class="user-menu">
+            <div class="user-avatar" id="user-avatar">U</div>
+            <div class="user-dropdown" id="user-dropdown">
+                <a href="cuenta.html"><i class="fas fa-user"></i> Mi Cuenta</a>
+                <a href="configuracion.html"><i class="fas fa-cog"></i> Configuración</a>
+                <hr>
+                <a href="index.html" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="main-container">
+    
+    <!-- INTRODUCCIÓN -->
+    <div class="card" id="intro-section">
+        <div class="header-section">
+            <h1 class="title">🔬 Justificación: Ingeniería Inversa</h1>
+            <p class="subtitle">Desmonta el texto para encontrar el soporte real</p>
+        </div>
+        <div class="body-content">
+            <div style="display: flex; gap: 25px; margin-bottom: 35px; background: #f0f4e8; padding: 30px; border-radius: 20px; border-left: 8px solid var(--color-oliva-medio); align-items: center;">
+                <div style="font-size: 4rem;">🦉</div>
+                <div style="font-size: 1.1rem; line-height: 1.6;">
+                    <strong>¡Bienvenido al laboratorio!</strong><br><br>
+                    En el ICFES, una Idea Secundaria de <strong>Justificación</strong> es el pilar que sostiene una afirmación. No es un ejemplo, ni una opinión. Es el <em>porqué</em> técnico, legal o estadístico que hace verdadera la idea principal.
+                    <br><br>
+                    <strong>Tu misión:</strong><br>
+                    1. Usar el "Rayos X" para separar la evidencia del humo.<br>
+                    2. Reconstruir argumentos débiles con datos reales.
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 40px;">
+                <button class="btn btn-xray" onclick="startJourney()"><i class="fas fa-power-off"></i> Iniciar Escáner</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JUEGO 1: SIMULADOR DE DESMONTAJE -->
+    <div class="card" id="game1-section" style="display:none;">
+        <div class="header-section">
+            <h1 class="title">Fase 1: El Filtro de Rayos X</h1>
+            <p class="subtitle">Visualiza la estructura oculta del texto</p>
+        </div>
+        <div class="body-content">
+            <div style="text-align:center; margin-bottom:20px;">
+                Progreso: <span id="score-g1">0</span>/3 (Mínimo para aprobar)
+                <div class="progress-bar"><div class="progress-fill" id="progress-g1" style="width: 0%;"></div></div>
+            </div>
+
+            <div class="xray-room" id="xray-room">
+                <!-- Canvas para efecto Matrix -->
+                <canvas id="matrix-canvas"></canvas>
+                
+                <!-- Línea de escaneo -->
+                <div class="scan-beam"></div>
+
+                <div class="xray-text-container">
+                    <div class="xray-text scrambled" id="xray-text">
+                        <!-- Texto insertado aquí -->
+                    </div>
+                </div>
+
+                <!-- Estructura Revelada -->
+                <div class="revealed-structure" id="revealed-structure">
+                    <div class="main-core" id="main-core"></div>
+                    <div class="connections-container" id="connections-container">
+                        <!-- SVGs y bloques se generan aquí -->
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align:center; margin-top:20px;">
+                <button class="btn btn-xray" id="xray-btn" onclick="activateXRay()"><i class="fas fa-x-ray"></i> Activar Rayos X</button>
+            </div>
+
+            <div class="challenge-box" id="challenge-g1" style="display:none;">
+                <div class="challenge-title">❓ ¿Cuál es el soporte técnico?</div>
+                <div id="options-g1"></div>
+            </div>
+            
+            <div class="feedback-box" id="feedback1" style="display:none;"></div>
+            
+            <div style="margin-top:30px; text-align:center;">
+                <button class="btn btn-success" id="next1" style="display:none;" onclick="nextGame1()">Siguiente Texto <i class="fas fa-arrow-right"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JUEGO 2: CORRECTOR DE PRUEBAS -->
+    <div class="card" id="game2-section" style="display:none;">
+        <div class="header-section">
+            <h1 class="title">Fase 2: Corrector de Pruebas</h1>
+            <p class="subtitle">El argumento es humo. Dale soporte real.</p>
+        </div>
+        <div class="body-content">
+            <div style="text-align:center; margin-bottom:20px;">
+                Progreso: <span id="score-g2">0</span>/4 (Mínimo para aprobar)
+                <div class="progress-bar"><div class="progress-fill" id="progress-g2" style="width: 0%;"></div></div>
+            </div>
+
+            <div class="blueprint-bg">
+                <div class="machine-interface">
+                    <div style="text-align:center; font-family:'Patrick Hand'; font-size:1.4rem; margin-bottom:20px; color:var(--color-oliva-medio);">
+                        <i class="fas fa-tools"></i> DOCUMENTO EN REVISIÓN
+                    </div>
+                    <div class="argument-display" id="argument-display"></div>
+                </div>
+                
+                <div class="parts-container" id="options-g2"></div>
+            </div>
+
+            <div class="feedback-box" id="feedback2" style="display:none;"></div>
+
+            <div style="margin-top:30px; text-align:center;">
+                <button class="btn btn-success" id="next2" onclick="nextGame2()" style="display:none;">Siguiente <i class="fas fa-arrow-right"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CUESTIONARIO -->
+    <div class="card" id="quiz-section" style="display:none;">
+        <div class="header-section">
+            <h1 class="title">📝 Cuestionario Real ICFES</h1>
+        </div>
+        <div class="body-content" id="quiz-body"></div>
+    </div>
+
+    <!-- RESULTADOS -->
+    <div class="card" id="results-section" style="display:none;">
+        <div class="header-section" style="background: linear-gradient(135deg, var(--color-correcto), #388e3c);">
+            <h1 class="title">🏆 Informe Final</h1>
+        </div>
+        <div class="body-content" style="text-align:center;">
+            <div class="score-circle" id="final-score">0</div>
+            <p id="final-msg" style="font-size:1.4rem; margin-bottom:25px; font-family: 'Patrick Hand', cursive;"></p>
+            <button class="btn btn-success" onclick="saveAndLeave()"><i class="fas fa-save"></i> Guardar y Salir</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ====== SONIDOS ======
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioContext();
+function playSound(type) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+    osc.type = 'sine'; gainNode.gain.value = 0.1;
+    if (type === 'correct') { osc.frequency.value = 800; osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1); }
+    else if (type === 'scan') { osc.frequency.value = 100; osc.frequency.exponentialRampToValueAtTime(1000, audioCtx.currentTime + 2); }
+    else { osc.frequency.value = 200; }
+    osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+}
+
+// ====== BANCOS DE DATOS AMPLIADOS ======
+const G1_DATA = [
+    {
+        text: "La Ley 1801 de 2016 (Código Nacional de Seguridad Ciudadana) ha transformado la convivencia urbana al tipificar conductas que antes eran toleradas, como el consumo de alcohol en espacio público. Esta norma establece multas elevadas y medidas correctivas para garantizar el orden. Por ejemplo, un ciudadano que comparte una botella de vino en un parque con amigos puede ser sancionado, no por ser criminal, sino por violar el espacio público; esto ejemplifica cómo la ley prioriza la seguridad colectiva sobre la libertad individual en espacios compartidos.",
+        mainIdea: "La Ley 1801 transforma la convivencia priorizando la seguridad colectiva.",
+        justifications: ["Ley 1801 de 2016 (Marco Legal)", "Sanciones a conductas antes toleradas (Cambio Normativo)"],
+        question: "¿Qué elemento del texto actúa como JUSTIFICACIÓN legal?",
+        options: [
+            { text: "La seguridad colectiva es importante.", type: "opinion", fb: "Esa es una opinión, no la norma." },
+            { text: "La Ley 1801 tipifica conductas y establece multas.", type: "correct", fb: "¡Correcto! Citas la herramienta legal específica." },
+            { text: "Juan fue multado por beber vino en el parque.", type: "example", fb: "Eso es un ejemplo anecdótico." }
+        ]
+    },
+    {
+        text: "El calentamiento global representa una amenaza existencial para los ecosistemas de alta montaña en los Andes. El IDEAM ha confirmado mediante estudios satelitales que los glaciares colombianos han perdido más del 35% de su masa en los últimos 30 años debido al incremento de temperatura. Este retroceso glaciar demuestra la vulnerabilidad hídrica del país, ya que estas masas de hielo actúan como reguladores naturales del caudal de los ríos durante las sequías.",
+        mainIdea: "Los glaciares colombianos están en peligro crítico por el calentamiento.",
+        justifications: ["Pérdida del 35% de masa (Dato Estadístico)", "Estudios del IDEAM (Fuente Técnica)"],
+        question: "¿Cuál es el SOPORTE técnico que valida la idea principal?",
+        options: [
+            { text: "El IDEAM es la autoridad ambiental.", type: "fact", fb: "Es un hecho, pero no el soporte cuantitativo." },
+            { text: "Se ha perdido el 35% de la masa glaciar en 30 años.", type: "correct", fb: "¡Exacto! El dato estadístico confirma la magnitud." },
+            { text: "Los ríos se secan cuando no llueve.", type: "example", fb: "Es una observación general." }
+        ]
+    },
+    {
+        text: "La teoría de la relatividad de Einstein predice que la gravedad curva el espacio-tiempo, un concepto que parecía abstracto hasta hace poco. Los sistemas GPS actuales corrigen sus relojes atómicos en 38 microsegundos diarios; sin este ajuste basado en la teoría de Einstein, la navegación satelital fallaría en cuestión de horas. Esta aplicación práctica demuestra que la física teórica tiene implicaciones directas en la tecnología cotidiana.",
+        mainIdea: "La teoría de la relatividad es esencial para la tecnología moderna.",
+        justifications: ["Corrección de 38 microsegundos (Dato Científico)", "Fallo inminente sin ajuste (Consecuencia Técnica)"],
+        question: "¿Qué JUSTIFICA la dependencia tecnológica de esta teoría?",
+        options: [
+            { text: "Einstein era un genio.", type: "opinion", fb: "Eso valora al autor, no justifica la teoría." },
+            { text: "El GPS necesita corregir el tiempo 38 microsegundos diarios.", type: "correct", fb: "¡Perfecto! El dato técnico explica la necesidad." },
+            { text: "Usamos GPS para ir a todos lados.", type: "example", fb: "Es un ejemplo de uso." }
+        ]
+    },
+    {
+        text: "El trabajo infantil ha disminuido drásticamente en la región gracias a los programas de transferencias condicionadas implementados por el gobierno. El DANE reporta que entre 2019 y 2022, la tasa de trabajo infantil en zonas rurales cayó del 12% al 6%, atribuyéndose este éxito a los subsidios económicos que incentivan la permanencia escolar. Este dato demuestra que la pobreza, y no la cultura, es el motor principal del fenómeno.",
+        mainIdea: "Los subsidios económicos reducen el trabajo infantil.",
+        justifications: ["Caída del 12% al 6% (Estadística)", "Reporte del DANE (Fuente Oficial)"],
+        question: "¿Cuál es la evidencia que SOPORTA la eficacia de los programas?",
+        options: [
+            { text: "Los niños deben estudiar.", type: "opinion", fb: "Es una opinión ética." },
+            { text: "El DANE muestra una reducción del 50% en las tasas rurales.", type: "correct", fb: "¡Correcto! El dato cuantitativo valida la medida." },
+            { text: "Vi menos niños trabajando en el campo.", type: "example", fb: "Es una observación personal." }
+        ]
+    },
+    {
+        text: "El consumo de azúcar refinada está generando una crisis de salud pública silenciosa. La OMS ha alertado que el consumo promedio en Latinoamérica supera el triple de la dosis recomendada, lo que ha provocado un aumento del 40% en casos de diabetes tipo 2 en la última década. Esta correlación estadística obliga a los gobiernos a implementar impuestos específicos a las bebidas azucaradas como medida sanitaria urgente.",
+        mainIdea: "El exceso de azúcar causa una crisis sanitaria regional.",
+        justifications: ["Consumo triple de lo recomendado (Dato Comparativo)", "Aumento del 40% en diabetes (Evidencia Clínica)"],
+        question: "¿Qué elemento JUSTIFICA la alarma sanitaria?",
+        options: [
+            { text: "El azúcar sabe muy dulce.", type: "opinion", fb: "Es una apreciación sensorial." },
+            { text: "La OMS confirma el aumento del 40% en diabetes.", type: "correct", fb: "¡Exacto! La evidencia médica demuestra el daño." },
+            { text: "Mi abuelo tiene diabetes.", type: "example", fb: "Es un caso particular." }
+        ]
+    },
+    {
+        text: "La nueva legislación de tráfico ha sido objeto de debate por su severidad. Sin embargo, las estadísticas de la Secretaría de Tránsito revelan que, tras la implementación de las multas de alto costo, la tasa de accidentalidad disminuyó un 25% en las vías principales. Esta correlación directa entre castigo económico y comportamiento vial valida la teoría del disuasivo económico.",
+        mainIdea: "Las multas caras reducen los accidentes de tránsito.",
+        justifications: ["Reducción del 25% (Dato Estadístico)", "Informe de Tránsito (Fuente Oficial)"],
+        question: "¿Qué dato SOPORTA la validez de la legislación?",
+        options: [
+            { text: "La gente conduce más rápido ahora.", type: "fact", fb: "Es un hecho negativo, no un soporte." },
+            { text: "La accidentalidad bajó un 25% en vías principales.", type: "correct", fb: "¡Correcto! El dato confirma la eficacia." },
+            { text: "Un amigo me dijo que lo multaron.", type: "example", fb: "Es un testimonio anecdótico." }
+        ]
+    },
+    {
+        text: "El ruido urbano excesivo afecta la salud cardiovascular de los ciudadanos. Un estudio de la Universidad Nacional halló que las personas que viven cerca de aeropuertos tienen un 20% más de probabilidades de sufrir hipertensión arterial debido a los niveles constantes de ruido superiores a 75 decibeles. Este hallazgo científico evidencia que la contaminación sonora no es solo una molestia, sino un riesgo biológico.",
+        mainIdea: "El ruido urbano es un riesgo para la salud física.",
+        justifications: ["Riesgo un 20% mayor (Probabilidad Estadística)", "Niveles de 75 decibeles (Medición Técnica)"],
+        question: "¿Cuál es la JUSTIFICACIÓN científica del problema?",
+        options: [
+            { text: "El ruido es muy molesto.", type: "opinion", fb: "Es una percepción subjetiva." },
+            { text: "El estudio demuestra un aumento del 20% en hipertensión.", type: "correct", fb: "¡Perfecto! El dato médico lo confirma." },
+            { text: "Vivo cerca de un aeropuerto.", type: "example", fb: "Es una situación personal." }
+        ]
+    },
+    {
+        text: "La reforma tributaria ha sido criticada por su impacto en el bolsillo ciudadano, pero su diseño busca la equidad. Según el Ministerio de Hacienda, el 80% de la recaudación nueva provendrá del 10% más rico de la población, gracias a la eliminación de exenciones en fondos de inversión. Este principio de progresividad garantiza que quienes más tienen contribuyan proporcionalmente más.",
+        mainIdea: "La reforma tributaria busca la equidad fiscal.",
+        justifications: ["80% recaudado por el 10% rico (Distribución)", "Eliminación de exenciones (Mecanismo Legal)"],
+        question: "¿Qué elemento JUSTIFICA la equidad de la reforma?",
+        options: [
+            { text: "Los ricos deben pagar más.", type: "opinion", fb: "Es una postura moral, no un dato de la reforma." },
+            { text: "El Ministerio confirma que el 80% del impuesto lo paga el 10% más rico.", type: "correct", fb: "¡Exacto! La distribución de la carga demuestra la equidad." },
+            { text: "Me cobraron más impuestos.", type: "example", fb: "Es una experiencia personal negativa." }
+        ]
+    }
+];
+
+const G2_DATA = [
+    {
+        argument: "La vacunación obligatoria es necesaria para la salud pública. La Corte Constitucional, mediante la Sentencia T-292 de 2017, estableció que el interés general y la salud pública prevalecen sobre la autonomía individual en contextos de crisis sanitaria.",
+        gapText: "estableció que el interés general y la salud pública prevalecen sobre la autonomía individual",
+        options: [
+            { text: "es una decisión muy importante para el país.", type: "opinion", fb: "❌ Opinión válida, pero no es la justificación jurídica." },
+            { text: "estableció que el interés general prevalece sobre la autonomía individual.", type: "correct", fb: "✅ ¡Correcto! Usas el principio jurídico exacto." },
+            { text: "es lo que la gente quiere.", type: "example", fb: "❌ Es una generalización social." }
+        ]
+    },
+    {
+        argument: "El cambio climático es una realidad innegable. El Panel Intergubernamental de Cambio Climático (IPCC) confirmó en su último informe que la temperatura global aumentó 1.1°C desde la era preindustrial debido a las emisiones humanas de gases de efecto invernadero.",
+        gapText: "confirmó en su último informe que la temperatura global aumentó 1.1°C",
+        options: [
+            { text: "y eso es mucho calor.", type: "example", fb: "❌ Es una apreciación vaga." },
+            { text: "debido a las emisiones humanas de gases de efecto invernadero.", type: "correct", fb: "✅ ¡Perfecto! Aportas la causa técnica." },
+            { text: "según vi en las noticias.", type: "fact", fb: "❌ Es una referencia débil." }
+        ]
+    },
+    {
+        argument: "La minería ilegal causa daños irreversibles. Investigadores de la Universidad Nacional han determinado que el mercurio usado en la extracción de oro contamina el suelo por más de un siglo, impidiendo el crecimiento de vegetación.",
+        gapText: "han determinado que el mercurio usado en la extracción de oro contamina el suelo",
+        options: [
+            { text: "y eso es muy malo.", type: "opinion", fb: "❌ Juicio de valor sin sustento." },
+            text: "por más de un siglo, impidiendo el crecimiento de vegetación.", type: "correct", fb: "✅ Correcto. Especificas la duración y consecuencia técnica." },
+            { text: "como vimos en el río.", type: "example", fb: "❌ Anécdota visual." }
+        ]
+    },
+    {
+        argument: "El voto electrónico no es seguro aún. Expertos en ciberseguridad aseguran que los sistemas actuales son vulnerables a ataques de denegación de servicio (DDoS), los cuales podrían alterar millones de votos en segundos.",
+        gapText: "aseguran que los sistemas actuales son vulnerables a ataques de denegación de servicio",
+        options: [
+            { text: "lo cual es peligroso.", type: "opinion", fb: "❌ Obvio pero no técnico." },
+            { text: "los cuales podrían alterar millones de votos en segundos.", type: "correct", fb: "✅ ¡Exacto! Detallas el riesgo técnico específico." },
+            { text: "porque la tecnología falla.", type: "fact", fb: "❌ Generalización imprecisa." }
+        ]
+    },
+    {
+        argument: "La educación virtual desarrolla autonomía. Un meta-análisis de la UNESCO reveló que los estudiantes en línea mejoran sus habilidades de autogestión en un 15% comparado con la educación presencial.",
+        gapText: "reveló que los estudiantes en línea mejoran sus habilidades de autogestión",
+        options: [
+            { text: "significativamente.", type: "example", fb: "❌ Adverbio vago." },
+            { text: "en un 15% comparado con la educación presencial.", type: "correct", fb: "✅ Correcto. El dato cuantitativo soporta la afirmación." },
+            { text: "porque así lo sentí.", type: "opinion", fb: "❌ Percepción subjetiva." }
+        ]
+    },
+    {
+        argument: "El nuevo tratamiento es prometedor. Los ensayos clínicos de Fase 3 mostraron una eficacia del 95% en la reducción de síntomas graves, superando el umbral mínimo del 50% requerido por la FDA para su aprobación de emergencia.",
+        gapText: "mostraron una eficacia del 95% en la reducción de síntomas graves",
+        options: [
+            { text: "lo cual es excelente.", type: "opinion", fb: "❌ Valoración positiva, no justificación." },
+            { text: "superando el umbral mínimo del 50% requerido por la FDA.", type: "correct", fb: "✅ Perfecto. Comparas el dato con la norma reguladora." },
+            { text: "según el doctor.", type: "example", fb: "❌ Autoridad vaga." }
+        ]
+    },
+    {
+        argument: "La inflación afecta el poder adquisitivo. El Banco de la República informó que la canasta familiar subió un 12% en el último año, reduciendo la capacidad de compra de los salarios mínimos que solo aumentaron un 5%.",
+        gapText: "informó que la canasta familiar subió un 12% en el último año",
+        options: [
+            { text: "haciendo todo caro.", type: "opinion", fb: "❌ Coloquialismo." },
+            { text: "reduciendo la capacidad de compra de los salarios mínimos.", type: "correct", fb: "✅ Correcto. Explicas la consecuencia económica lógica." },
+            { text: "como pasa siempre.", type: "fact", fb: "❌ Cliché sin datos." }
+        ]
+    },
+    {
+        argument: "El sector agrícola necesita subsidios. El Ministerio de Agricultura reportó que los costos de fertilizantes se triplicaron desde 2020, amenazando la quiebra a más del 60% de los pequeños cafeteros del país.",
+        gapText: "reportó que los costos de fertilizantes se triplicaron desde 2020",
+        options: [
+            { text: "y eso duele.", type: "opinion", fb: "❌ Sentimiento personal." },
+            { text: "amenazando la quiebra a más del 60% de los pequeños cafeteros.", type: "correct", fb: "✅ Exacto. El dato demográfico justifica la urgencia." },
+            { text: "por la guerra.", type: "example", fb: "❌ Causa externa no mencionada en el texto." }
+        ]
+    }
+];
+
+// ====== ESTADO GLOBAL ======
+let state = {
+    g1Index: 0, g1Score: 0, g1Data: [],
+    g2Index: 0, g2Score: 0, g2Data: [],
+    qIndex: 0, qScore: 0, qQuestions: [],
+    xrayActive: false
+};
+
+// ====== UTILIDADES ======
+function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
+function updateProgress(id, current, total) {
+    document.getElementById(id).style.width = `${(current/total)*100}%`;
+}
+
+// ====== JUEGO 1: SIMULADOR RAYOS X (LÓGICA Y VISUALES) ======
+function startJourney() {
+    document.getElementById('intro-section').style.display = 'none';
+    document.getElementById('game1-section').style.display = 'block';
+    state.g1Index = 0; state.g1Score = 0;
+    state.g1Data = shuffle([...G1_DATA]).slice(0, 5);
+    initMatrixEffect(); // Iniciar efecto de fondo
+    loadGame1();
+}
+
+// Efecto Matrix en Canvas
+function initMatrixEffect() {
+    const canvas = document.getElementById('matrix-canvas');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // Ajustar tamaño
+    canvas.width = canvas.parentElement.offsetWidth;
+    canvas.height = canvas.parentElement.offsetHeight;
+
+    const letters = "JUSTIFICACIÓN01DATOSLEYLEYARTÍCULOICFES";
+    const fontSize = 14;
+    const columns = canvas.width / fontSize;
+    const drops = [];
+
+    for(let x = 0; x < columns; x++) drops[x] = 1;
+
+    function draw() {
+        ctx.fillStyle = "rgba(13, 13, 13, 0.05)"; // Trail
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = "#00e5ff"; // Text color
+        ctx.font = fontSize + "px share tech mono";
+
+        for(let i = 0; i < drops.length; i++) {
+            const text = letters.charAt(Math.floor(Math.random() * letters.length));
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+            if(drops[i] * fontSize > canvas.height && Math.random() > 0.975)
+                drops[i] = 0;
+            drops[i]++;
+        }
+    }
+    setInterval(draw, 50);
+}
+
+function loadGame1() {
+    if (state.g1Index >= state.g1Data.length) { finishGame1(); return; }
+
+    const q = state.g1Data[state.g1Index];
+    document.getElementById('score-g1').textContent = state.g1Score;
+    updateProgress('progress-g1', state.g1Index, 5);
+
+    // Reset UI
+    document.getElementById('feedback1').style.display = 'none';
+    document.getElementById('next1').style.display = 'none';
+    document.getElementById('challenge-g1').style.display = 'none';
+    document.getElementById('xray-btn').style.display = 'inline-flex';
+    document.getElementById('xray-btn').disabled = false;
+    document.getElementById('xray-btn').innerHTML = '<i class="fas fa-x-ray"></i> Activar Rayos X';
+    document.getElementById('xray-btn').style.background = 'linear-gradient(45deg, #000, #333)';
+    document.getElementById('xray-room').classList.remove('scanning');
+    
+    // Reset Visuals
+    const textBlock = document.getElementById('xray-text');
+    textBlock.className = 'xray-text scrambled';
+    textBlock.innerHTML = q.text;
+    document.getElementById('revealed-structure').classList.remove('active');
+    state.xrayActive = false;
+}
+
+function activateXRay() {
+    if(state.xrayActive) return;
+    state.xrayActive = true;
+    
+    const q = state.g1Data[state.g1Index];
+    const room = document.getElementById('xray-room');
+    const btn = document.getElementById('xray-btn');
+    
+    playSound('scan');
+    
+    // Iniciar animación de escaneo
+    room.classList.add('scanning');
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analizando Estructura...';
+    btn.disabled = true;
+
+    setTimeout(() => {
+        // Ocultar texto original
+        document.getElementById('xray-text').style.opacity = '0';
+        
+        // Mostrar estructura
+        const core = document.getElementById('main-core');
+        core.textContent = q.mainIdea;
+        
+        const connContainer = document.getElementById('connections-container');
+        connContainer.innerHTML = '';
+        
+        // Generar SVG dinámico para líneas
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute('class', 'connector-svg');
+        svg.setAttribute('viewBox', '0 0 600 100');
+        
+        // Generar bloques y líneas
+        q.justifications.forEach((j, i) => {
+            // SVG Path simple (vertical)
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            const startX = 150 + (i * 300);
+            path.setAttribute('d', `M300,0 L${startX},80`); // Línea diagonal desde el centro
+            svg.appendChild(path);
+            
+            // Bloque HTML
+            const block = document.createElement('div');
+            block.className = 'justification-block';
+            block.innerHTML = j;
+            connContainer.appendChild(block);
+        });
+        
+        connContainer.insertBefore(svg, connContainer.firstChild);
+        
+        document.getElementById('revealed-structure').classList.add('active');
+        
+        btn.innerHTML = '<i class="fas fa-check"></i> Estructura Revelada';
+        btn.style.background = 'var(--color-correcto)';
+        
+        // Mostrar challenge
+        setTimeout(() => {
+            document.getElementById('challenge-g1').style.display = 'block';
+            renderOptionsG1();
+        }, 1000);
+        
+    }, 2500); // Tiempo de la animación de scan
+}
+
+function renderOptionsG1() {
+    const q = state.g1Data[state.g1Index];
+    const container = document.getElementById('options-g1');
+    container.innerHTML = '';
+    
+    shuffle(q.options).forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerHTML = opt.text;
+        btn.onclick = () => checkG1(opt, btn);
+        container.appendChild(btn);
+    });
+}
+
+function checkG1(opt, btn) {
+    const btns = document.querySelectorAll('.option-btn');
+    btns.forEach(b => b.disabled = true);
+    
+    const fb = document.getElementById('feedback1');
+    fb.style.display = 'block';
+    
+    if(opt.type === 'correct') {
+        playSound('correct');
+        state.g1Score++;
+        fb.className = 'feedback-box fb-success';
+        fb.innerHTML = `✅ ${opt.fb}`;
+        btn.classList.add('correct');
+    } else {
+        playSound('wrong');
+        fb.className = 'feedback-box fb-error';
+        fb.innerHTML = `❌ ${opt.fb}`;
+        btn.classList.add('incorrect');
+    }
+    
+    document.getElementById('next1').style.display = 'inline-flex';
+    document.getElementById('xray-btn').style.display = 'none';
+}
+
+function nextGame1() {
+    state.g1Index++;
+    loadGame1();
+}
+
+function finishGame1() {
+    if(state.g1Score >= 3) {
+        document.getElementById('game1-section').style.display = 'none';
+        startGame2();
+    } else {
+        alert(`Obtuviste ${state.g1Score}/5. Necesitas al menos 3. Reiniciando.`);
+        state.g1Score = 0; state.g1Index = 0;
+        loadGame1();
+    }
+}
+
+// ====== JUEGO 2: CORRECTOR DE PRUEBAS ======
+function startGame2() {
+    document.getElementById('game2-section').style.display = 'block';
+    state.g2Index = 0; state.g2Score = 0;
+    state.g2Data = shuffle([...G2_DATA]).slice(0, 6);
+    loadGame2();
+}
+
+function loadGame2() {
+    if (state.g2Index >= state.g2Data.length) { finishGame2(); return; }
+
+    const q = state.g2Data[state.g2Index];
+    document.getElementById('score-g2').textContent = state.g2Score;
+    updateProgress('progress-g2', state.g2Index, 6);
+
+    // Reset
+    document.getElementById('feedback2').style.display = 'none';
+    document.getElementById('next2').style.display = 'none';
+
+    // Render Text with Gap
+    const parts = q.argument.split(q.gapText);
+    document.getElementById('argument-display').innerHTML = `
+        ${parts[0]} <span class="gap-slot" id="gap-slot">[ SOPORTE FALTANTE ]</span> ${parts[1]}
+    `;
+
+    // Render Options
+    const optContainer = document.getElementById('options-g2');
+    optContainer.innerHTML = '';
+    shuffle(q.options).forEach(opt => {
+        const div = document.createElement('div');
+        div.className = 'part-card';
+        div.innerHTML = opt.text;
+        div.onclick = () => checkG2(opt, div);
+        optContainer.appendChild(div);
+    });
+}
+
+function checkG2(opt, el) {
+    const btns = document.querySelectorAll('.part-card');
+    btns.forEach(b => b.style.pointerEvents = 'none');
+
+    const fb = document.getElementById('feedback2');
+    const gap = document.getElementById('gap-slot');
+    
+    gap.textContent = opt.text;
+    fb.style.display = 'block';
+
+    if(opt.type === 'correct') {
+        playSound('correct');
+        state.g2Score++;
+        el.classList.add('correct');
+        gap.classList.add('filled');
+        fb.className = 'feedback-box fb-success';
+        fb.innerHTML = `✅ ${opt.fb}`;
+    } else {
+        playSound('wrong');
+        el.classList.add('wrong');
+        fb.className = 'feedback-box fb-error';
+        fb.innerHTML = `❌ ${opt.fb}`;
+    }
+
+    document.getElementById('next2').style.display = 'inline-flex';
+}
+
+function nextGame2() {
+    state.g2Index++;
+    loadGame2();
+}
+
+function finishGame2() {
+    if(state.g2Score >= 4) {
+        document.getElementById('game2-section').style.display = 'none';
+        startQuiz();
+    } else {
+        alert(`Obtuviste ${state.g2Score}/6. Necesitas al menos 4. Reiniciando.`);
+        state.g2Score = 0; state.g2Index = 0;
+        loadGame2();
+    }
+}
+
+// ====== CUESTIONARIO FINAL ======
+async function startQuiz() {
+    document.getElementById('quiz-section').style.display = 'block';
+    
+    try {
+        const res = await fetch('preguntas1.json');
+        const data = await res.json();
+        
+        // Filtro robusto L4 e ideas secundarias (case insensitive)
+        state.qQuestions = shuffle(data.filter(q => {
+            if (!q.tags || !Array.isArray(q.tags)) return false;
+            const hasSecondary = q.tags.some(t => t.toLowerCase() === 'ideas secundarias');
+            const hasL4 = q.tags.some(t => t.toLowerCase() === 'l4');
+            return hasSecondary && hasL4;
+        })).slice(0, 10);
+        
+        // Fallback si no encuentra L4
+        if (state.qQuestions.length === 0) {
+             state.qQuestions = shuffle(data.filter(q => 
+                q.tags && q.tags.some(t => t.toLowerCase() === 'ideas secundarias')
+             )).slice(0, 10);
+        }
+
+        // Validación de vacío
+        if (state.qQuestions.length === 0) {
+            document.getElementById('quiz-body').innerHTML = `
+                <div style="text-align:center; padding: 40px;">
+                    <h3 style="font-family: 'Patrick Hand';">⚠️ No se encontraron preguntas</h3>
+                    <p>Asegúrate de que el JSON tenga el tag "L4" o "ideas secundarias".</p>
+                </div>
+            `;
+            return;
+        }
+
+        state.qIndex = 0; state.qScore = 0;
+        loadQuiz();
+    } catch(e) {
+        console.error(e);
+        document.getElementById('quiz-body').innerHTML = "<p style='color:red; text-align:center;'>Error cargando JSON.</p>";
+    }
+}
+
+function loadQuiz() {
+    if (state.qIndex >= state.qQuestions.length) { finishQuiz(); return; }
+
+    const q = state.qQuestions[state.qIndex];
+    const body = document.getElementById('quiz-body');
+    
+    let html = `<div style="text-align:center; margin-bottom:25px;">Pregunta ${state.qIndex + 1}/10</div>`;
+    
+    const parts = q.pregunta.split('\n\n');
+    const passage = parts.length > 1 ? parts[0] : null;
+    const question = parts.length > 1 ? parts.slice(1).join('\n\n') : q.pregunta;
+
+    if(passage) html += `<div class="text-passage">${passage}</div>`;
+    html += `<p style="font-size:1.2rem; line-height:1.6; margin-bottom:25px;">${question}</p>`;
+    html += `<div class="quiz-options" id="q-opts">`;
+    
+    q.opciones.forEach((opt, i) => {
+        html += `<div class="quiz-option" onclick="selectQuiz(this, ${i}, ${q.respuestaCorrecta})">
+            <div class="option-letter">${String.fromCharCode(65+i)}</div>
+            <div>${opt}</div>
+        </div>`;
+    });
+    
+    html += `</div><div id="quiz-fb-container"></div>`;
+    
+    body.innerHTML = html;
+}
+
+window.selectQuiz = function(el, idx, correct) {
+    if (el.classList.contains('selected')) return;
+
+    const opts = document.querySelectorAll('.quiz-option');
+    opts.forEach(e => {
+        e.style.pointerEvents = 'none';
+        e.classList.add('selected');
+        if (Array.from(el.parentElement.children).indexOf(e) === correct) e.classList.add('correct');
+    });
+
+    const isCorrect = idx === correct;
+    if (isCorrect) { el.classList.add('correct'); state.qScore++; playSound('correct'); }
+    else { el.classList.add('incorrect'); playSound('wrong'); }
+
+    const q = state.qQuestions[state.qIndex];
+    let fbHTML = `<div class="feedback-box ${isCorrect ? 'fb-success' : 'fb-error'}">
+        ${isCorrect ? '✅ Correcto' : '❌ Incorrecto'}<br>
+        <small>${q.explicacion || ''}</small>
+    </div>
+    <div style="text-align:center; margin-top:25px;">
+        <button class="btn btn-success" onclick="nextQuizQuestion()">Siguiente <i class="fas fa-arrow-right"></i></button>
+    </div>`;
+
+    document.getElementById('quiz-fb-container').innerHTML = fbHTML;
+};
+
+window.nextQuizQuestion = function() {
+    state.qIndex++;
+    loadQuiz();
+};
+
+function finishQuiz() {
+    document.getElementById('quiz-section').style.display = 'none';
+    document.getElementById('results-section').style.display = 'block';
+    
+    const finalScore = Math.round((state.qScore / 10) * 300);
+    document.getElementById('final-score').textContent = finalScore;
+    
+    if (finalScore >= 180) document.getElementById('final-msg').textContent = "¡Aprobado! Has demostrado dominio en Justificación.";
+    else document.getElementById('final-msg').textContent = "Necesitas 180 puntos. Repasa los conceptos.";
+}
+
+async function saveAndLeave() {
+    const score = parseInt(document.getElementById('final-score').textContent);
+    const passed = score >= 180;
+    const key = 'LCS2D4'; // CLAVE PARA LA LECCIÓN 4
+    
+    let progressData = JSON.parse(localStorage.getItem('skopia_lcs2_progress') || '{}');
+    if (!progressData.techniques) progressData.techniques = {};
+    if (!progressData.stats) progressData.stats = { completedCount: 0, totalScore: 0, attempts: 0 };
+    
+    const prevData = progressData.techniques[key] || {};
+    
+    progressData.techniques[key] = {
+        score: score,
+        completed: passed,
+        attempts: (prevData.attempts || 0) + 1,
+        lastAttempt: Date.now()
+    };
+    
+    let totalScore = 0, scoreCount = 0;
+    Object.values(progressData.techniques).forEach(t => {
+        if (t.score > 0) { totalScore += t.score; scoreCount++; }
+    });
+    progressData.stats.averageScore = scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0;
+    
+    localStorage.setItem('skopia_lcs2_progress', JSON.stringify(progressData));
+    
+    if (window.currentUser) {
+        try {
+            const userId = window.currentUser.uid;
+            await window.set(window.ref(window.db, `users/${userId}/lcs2_progress/techniques/${key}`), {
+                score: score, completed: passed, attempts: (prevData.attempts || 0) + 1, lastAttempt: Date.now()
+            });
+            await window.set(window.ref(window.db, `users/${userId}/lcs2_progress/stats`), progressData.stats);
+        } catch(e) { console.error(e); }
+    }
+
+    window.location.href = 'LCS2D.html';
+}
+
+// Menú Logic
+document.getElementById('user-avatar').addEventListener('click', () => {
+    document.getElementById('user-dropdown').classList.toggle('active');
+});
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.user-menu')) document.getElementById('user-dropdown').classList.remove('active');
+});
+document.getElementById('logout-btn').addEventListener('click', (e) => {
+    e.preventDefault();
+    import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
+        signOut(window.auth).then(() => window.location.href = 'index.html');
+    });
+});
+</script>
+</body>
+</html>
