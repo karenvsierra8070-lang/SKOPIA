@@ -1582,6 +1582,61 @@ let state = {
     qIndex: 0, qScore: 0, qQuestions: []
 };
 
+
+// ====== FUNCIONES FALTANTES PARA EL MODAL Y DEMOLICIÓN ======
+
+function openConcept(idx) {
+    // 1. Obtener los datos del concepto actual
+    const q = state.shuffledData[state.g1Index];
+    const concept = q.concepts[idx];
+    
+    // 2. Rellenar el modal con la información
+    document.getElementById('overlay-term').textContent = concept.term;
+    document.getElementById('overlay-definition').textContent = concept.def;
+    
+    // 3. Mostrar el modal
+    document.getElementById('concept-overlay').style.display = 'flex';
+    
+    // 4. Guardar qué concepto estamos viendo (para saber cuál demoler luego)
+    state.currentConcept = idx;
+}
+
+function closeOverlay(e) {
+    // Solo cerrar si se hace clic en el fondo oscuro, no en la tarjeta blanca
+    if (e.target.id === 'concept-overlay') {
+        document.getElementById('concept-overlay').style.display = 'none';
+    }
+}
+
+function demolishConcept() {
+    // 1. Ocultar el modal
+    document.getElementById('concept-overlay').style.display = 'none';
+    
+    // 2. Buscar el "ladrillo" (span) que corresponde al concepto actual y marcarlo
+    const bricks = document.querySelectorAll('.brick');
+    bricks.forEach(b => {
+        // Convertir el atributo data-idx a número para comparar
+        if (parseInt(b.dataset.idx) === state.currentConcept) {
+            b.classList.add('demolished');
+            b.onclick = null; // Desactivar el clic para que no se pueda volver a abrir
+        }
+    });
+    
+    // 3. Actualizar la barra de progreso
+    state.g1Progress++;
+    const percent = (state.g1Progress / state.g1Total) * 100;
+    document.getElementById('g1-progress').style.width = percent + '%';
+    
+    // 4. Reproducir sonido de éxito
+    playSound('correct');
+    
+    // 5. Verificar si ya se demolieron todos los términos
+    if (state.g1Progress === state.g1Total) {
+        // Esperar un poco para que se vea la barra llena y luego mostrar el desafío
+        setTimeout(showChallengeG1, 500);
+    }
+}
+    
 function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
 
 // ====== LÓGICA JUEGO 1 ======
