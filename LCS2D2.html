@@ -1879,25 +1879,49 @@ function finishGame2() {
 // ====== CUESTIONARIO ======
 async function startQuiz() {
     document.getElementById('quiz-section').style.display = 'block';
+    
     try {
         const res = await fetch('preguntas1.json');
         const data = await res.json();
         
-        state.qQuestions = shuffle(data.filter(q => 
-            q.tags && 
-            q.tags.includes('Ideas secundarias') && 
-            q.tags.includes('L2')
-        )).slice(0, 10);
+        // CORRECCIÓN: Usamos .some() y .toLowerCase() para que coincida
+        // sin importar si en el JSON está "L2" o "l2", "Ideas" o "ideas".
+        state.qQuestions = shuffle(data.filter(q => {
+            if (!q.tags || !Array.isArray(q.tags)) return false;
+            
+            const hasSecondary = q.tags.some(t => t.toLowerCase() === 'ideas secundarias');
+            const hasL2 = q.tags.some(t => t.toLowerCase() === 'l2');
+            
+            return hasSecondary && hasL2;
+        })).slice(0, 10);
         
+        // Si no encuentra con ambos tags, busca solo por "ideas secundarias"
         if (state.qQuestions.length === 0) {
-             state.qQuestions = shuffle(data.filter(q => q.tags && q.tags.includes('Ideas secundarias'))).slice(0, 10);
+             state.qQuestions = shuffle(data.filter(q => 
+                q.tags && q.tags.some(t => t.toLowerCase() === 'ideas secundarias')
+             )).slice(0, 10);
+        }
+
+        // VALIDACIÓN: Si aún así no hay preguntas, muestra error y NO pasa al informe
+        if (state.qQuestions.length === 0) {
+            document.getElementById('quiz-body').innerHTML = `
+                <div style="text-align:center; padding: 40px;">
+                    <h3 style="font-family: 'Patrick Hand'; color: var(--color-oliva-oscuro);">⚠️ No se encontraron preguntas</h3>
+                    <p>Revisa que tu archivo 'preguntas1.json' tenga preguntas con el tag <strong>'ideas secundarias'</strong>.</p>
+                </div>
+            `;
+            return; 
         }
 
         state.qIndex = 0; state.qScore = 0;
         loadQuiz();
     } catch(e) {
-        console.error(e);
-        document.getElementById('quiz-body').innerHTML = "<p style='color:red; text-align:center;'>Error cargando JSON.</p>";
+        console.error("Error cargando JSON:", e);
+        document.getElementById('quiz-body').innerHTML = `
+            <p style='color:red; text-align:center; padding: 20px;'>
+                Error al cargar 'preguntas1.json'. Verifica la consola (F12).
+            </p>
+        `;
     }
 }
 
