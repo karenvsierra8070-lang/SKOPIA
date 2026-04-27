@@ -1575,7 +1575,8 @@ const G2_DATA = [
 // Estado
 let state = {
     g1Index: 0, g1Progress: 0, g1Total: 0, currentConcept: null,
-    g2Index: 0, g2Score: 0, g2Questions: [], 
+   shuffledData: [], 
+    g2Index: 0, g2Score: 0, shuffledData2: [],
     draggedElement: null, // Elemento original
     draggingClone: null,  // Clon que se mueve
     qIndex: 0, qScore: 0, qQuestions: []
@@ -1592,7 +1593,8 @@ function startGame1() {
 }
 
 function loadGame1() {
-    const q = G1_DATA[state.g1Index];
+    // Usamos el array mezclado (shuffledData) en lugar del original directo
+    const q = state.shuffledData[state.g1Index];
     const container = document.getElementById('text-container');
     
     // Reset UI
@@ -1605,47 +1607,21 @@ function loadGame1() {
     state.g1Progress = 0;
 
     let html = q.text;
+    
+    // CORRECCIÓN: Buscamos el término directamente en el texto (sin corchetes)
+    // Usamos una expresión regular con 'g' (global) por si aparece más veces, 
+    // pero tomamos la primera coincidencia relevante.
     q.concepts.forEach((c, idx) => {
-        html = html.replace(`[${c.term}]`, 
+        // Escapar caracteres especiales para la regex
+        const escapedTerm = c.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escapedTerm, ""); // Busca la primera coincidencia exacta
+        
+        html = html.replace(regex, 
             `<span class="brick" onclick="openConcept(${idx})" data-idx="${idx}">${c.term}</span>`
         );
     });
+    
     container.innerHTML = html;
-}
-
-window.openConcept = function(idx) {
-    const q = G1_DATA[state.g1Index];
-    state.currentConcept = idx;
-    
-    document.getElementById('overlay-term').textContent = q.concepts[idx].term;
-    document.getElementById('overlay-definition').textContent = q.concepts[idx].def;
-    document.getElementById('concept-overlay').style.display = 'flex';
-}
-
-window.closeOverlay = function(e) {
-    if(e.target.id === 'concept-overlay') document.getElementById('concept-overlay').style.display = 'none';
-}
-
-window.demolishConcept = function() {
-    const bricks = document.querySelectorAll('.brick');
-    bricks.forEach(b => {
-        if(parseInt(b.dataset.idx) === state.currentConcept) {
-            b.classList.add('demolished');
-            b.onclick = null;
-        }
-    });
-    
-    document.getElementById('concept-overlay').style.display = 'none';
-    state.g1Progress++;
-    
-    const pct = (state.g1Progress / state.g1Total) * 100;
-    document.getElementById('g1-progress').style.width = pct + '%';
-    
-    playSound('correct');
-    
-    if(state.g1Progress === state.g1Total) {
-        showChallengeG1();
-    }
 }
 
 function showChallengeG1() {
@@ -1689,28 +1665,33 @@ function checkParaphrase(correct, why, btn) {
     document.getElementById('next1').style.display = 'inline-flex';
 }
 
-function nextGame1() {
-    state.g1Index++;
-    if(state.g1Index >= G1_DATA.length) {
-        document.getElementById('game1-section').style.display = 'none';
-        startGame2();
-    } else {
-        loadGame1();
-    }
+function startGame1() {
+    document.getElementById('intro-section').style.display = 'none';
+    document.getElementById('game1-section').style.display = 'block';
+    state.g1Index = 0;
+    
+    // CORRECCIÓN: Mezclamos una copia de los datos al inicio
+    state.shuffledData = shuffle([...G1_DATA]); 
+    
+    loadGame1();
 }
 
 // ====== LÓGICA JUEGO 2 (ARRASTRE CORREGIDO) ======
 function startGame2() {
     document.getElementById('game2-section').style.display = 'block';
-    state.g2Index = 0; state.g2Score = 0;
-    state.g2Questions = shuffle([...G2_DATA]).slice(0, 5);
+    state.g2Index = 0; 
+    state.g2Score = 0;
+    
+    // CORRECCIÓN: Mezclamos y tomamos 5
+    state.shuffledData2 = shuffle([...G2_DATA]).slice(0, 5);
+    
     loadGame2();
 }
 
 function loadGame2() {
-    if(state.g2Index >= state.g2Questions.length) { finishGame2(); return; }
+ if(state.g2Index >= state.shuffledData2.length) { finishGame2(); return; }
     
-    const q = state.g2Questions[state.g2Index];
+    const q = state.shuffledData2[state.g2Index];
     document.getElementById('score-g2').textContent = state.g2Score;
     document.getElementById('feedback2').style.display = 'none';
     document.getElementById('next2').disabled = true;
