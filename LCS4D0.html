@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LCS4D0 - Examen Final de Clasificacion ICFES</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+        import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            authDomain: "skopia-aa786.firebaseapp.com",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        window.auth = auth;
+        window.db = db;
+        window.ref = ref;
+        window.set = set;
+        window.get = get;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            console.log("Usuario autenticado:", user.email);
+            window.currentUser = user;
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
+    <style>
+        :root {
+            --bg-main: #f5f5f0;
+            --bg-paper: #ffffff;
+            --fg-dark: #1a1a1a;
+            --fg-medium: #4a4a4a;
+            --fg-light: #6b6b6b;
+            --accent-blue: #1e3a5f;
+            --accent-blue-light: #2d5a8a;
+            --accent-gold: #b8860b;
+            --border-gray: #d1d1d1;
+            --success: #2e7d32;
+            --error: #c62828;
+            --warning: #f57c00;
+            --p1-color: #1565c0;
+            --p2-color: #6a1b9a;
+            --p3-color: #c62828;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Source Sans 3', sans-serif;
+            background: var(--bg-main);
+            color: var(--fg-dark);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .font-serif { font-family: 'Merriweather', serif; }
+
+        .top-nav {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-light) 100%);
+            border-bottom: 4px solid var(--accent-gold);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .nav-left, .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            font-family: 'Merriweather', serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn:hover { background: rgba(255,255,255,0.3); }
+
+        .timer-display {
+            font-family: 'Source Sans 3', monospace;
+            font-weight: 700;
+            font-size: 1.8rem;
+            color: white;
+        }
+
+        .timer-display.warning { color: var(--warning); animation: pulse 1s infinite; }
+        .timer-display.danger { color: var(--error); animation: pulse 0.5s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .progress-bar { height: 8px; background: #e0e0e0; }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-gold), #d4a853);
+            transition: width 0.5s ease;
+        }
+
+        .paper-texture {
+            background: var(--bg-paper);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .intro-section, .exam-section {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .intro-card, .exam-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .intro-header {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-light));
+            padding: 40px;
+            color: white;
+            text-align: center;
+        }
+
+        .intro-title {
+            font-family: 'Merriweather', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .intro-body { padding: 40px; }
+
+        .instruction-item {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .instruction-num {
+            background: var(--accent-blue);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .competency-breakdown {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .competency-card {
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .competency-card.p1 { background: #e3f2fd; border: 2px solid var(--p1-color); }
+        .competency-card.p2 { background: #f3e5f5; border: 2px solid var(--p2-color); }
+        .competency-card.p3 { background: #ffebee; border: 2px solid var(--p3-color); }
+
+        .competency-card h4 { font-size: 1.1rem; margin-bottom: 10px; }
+        .competency-card.p1 h4 { color: var(--p1-color); }
+        .competency-card.p2 h4 { color: var(--p2-color); }
+        .competency-card.p3 h4 { color: var(--p3-color); }
+
+        .competency-card .points { font-size: 1.5rem; font-weight: 700; }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-blue-light);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background: #999;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--accent-blue);
+            border: 2px solid var(--accent-blue);
+            padding: 14px 30px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .question-card {
+            border: 1px solid var(--border-gray);
+            margin-bottom: 25px;
+            padding: 25px;
+            background: white;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .question-card.p1 { border-left: 5px solid var(--p1-color); }
+        .question-card.p2 { border-left: 5px solid var(--p2-color); }
+        .question-card.p3 { border-left: 5px solid var(--p3-color); }
+
+        .question-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+        .question-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .question-meta {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .question-num {
+            background: var(--accent-blue);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        .competency-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .competency-badge.p1 { background: #e3f2fd; color: var(--p1-color); }
+        .competency-badge.p2 { background: #f3e5f5; color: var(--p2-color); }
+        .competency-badge.p3 { background: #ffebee; color: var(--p3-color); }
+
+        .points-badge {
+            background: var(--accent-gold);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .text-passage {
+            background: #f8f8f5;
+            padding: 20px;
+            border-radius: 4px;
+            border-left: 4px solid var(--accent-gold);
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+
+        .options-grid { display: grid; gap: 12px; }
+
+        .option-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            border: 2px solid var(--border-gray);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fafafa;
+        }
+
+        .option-item:hover {
+            border-color: var(--accent-blue-light);
+            background: #f0f4f8;
+        }
+
+        .option-item.selected {
+            border-color: var(--accent-blue);
+            background: #e8f0f8;
+        }
+
+        .option-item.blocked {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .option-letter {
+            min-width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--accent-blue);
+            border-radius: 50%;
+            font-weight: 700;
+            color: var(--accent-blue);
+            flex-shrink: 0;
+        }
+
+        .option-item.selected .option-letter {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .rest-overlay, .results-overlay, .blocked-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+
+        .rest-overlay { background: rgba(30, 58, 95, 0.95); }
+        .results-overlay { background: rgba(0, 0, 0, 0.85); }
+        .blocked-overlay { background: var(--accent-blue); }
+
+        .rest-overlay.active, .results-overlay.active, .blocked-overlay.active {
+            display: flex !important;
+        }
+
+        .rest-card, .results-card, .blocked-card {
+            background: white;
+            padding: 50px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 450px;
+            width: 100%;
+        }
+
+        .score-circle {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 25px auto;
+            font-size: 2.5rem;
+            font-weight: 900;
+            font-family: 'Merriweather', serif;
+        }
+
+        .score-passed {
+            background: linear-gradient(135deg, #4caf50, #2e7d32);
+            color: white;
+            box-shadow: 0 8px 24px rgba(46, 125, 50, 0.4);
+        }
+
+        .score-failed {
+            background: linear-gradient(135deg, #ef5350, #c62828);
+            color: white;
+            box-shadow: 0 8px 24px rgba(198, 40, 40, 0.4);
+        }
+
+        .user-menu { position: relative; }
+
+        .user-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+
+        .user-dropdown {
+            position: absolute;
+            top: 55px;
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            min-width: 180px;
+        }
+
+        .user-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .user-dropdown a {
+            display: block;
+            padding: 14px 20px;
+            color: var(--fg-dark);
+            text-decoration: none;
+            border-bottom: 1px solid #eee;
+        }
+
+        .user-dropdown a:hover { background: #f5f5f5; }
+
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f5f5f0;
+            border-radius: 8px;
+        }
+
+        .stat-item { text-align: center; }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--fg-light);
+        }
+
+        @media (max-width: 768px) {
+            .top-nav { padding: 12px 15px; }
+            .logo { font-size: 1.2rem; }
+            .timer-display { font-size: 1.3rem; }
+            .intro-body, .exam-card { padding: 20px; }
+            .question-card { padding: 15px; }
+            .rest-card, .results-card, .blocked-card { padding: 30px 20px; }
+            .competency-breakdown { grid-template-columns: 1fr; }
+            .stats-bar { flex-direction: column; gap: 15px; }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Blocked Screen -->
+    <div id="blockedOverlay" class="blocked-overlay">
+        <div class="blocked-card">
+            <i class="fas fa-clock" style="font-size: 4rem; color: var(--warning); margin-bottom: 20px;"></i>
+            <h2 class="font-serif" style="font-size: 1.8rem; margin-bottom: 15px;">Examen Bloqueado</h2>
+            <p style="color: var(--fg-medium); margin-bottom: 10px;">Debes esperar antes de volver a presentar este examen.</p>
+            <p style="font-size: 0.9rem; color: var(--fg-light); margin-bottom: 20px;">Tiempo restante:</p>
+            <div id="blockTimer" style="font-size: 2.5rem; font-weight: 700; color: var(--accent-blue); margin-bottom: 25px;">--:--:--</div>
+            <button onclick="window.location.href='LCDASHBOARD.html'" class="btn-primary">Volver al Dashboard</button>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="top-nav" id="topNav">
+        <div class="nav-left">
+            <div class="logo">
+                <i class="fas fa-graduation-cap"></i>
+                <span>Skopia - ICFES Saber Pro</span>
+            </div>
+            <button class="back-btn" onclick="goBack()">
+                <i class="fas fa-arrow-left"></i>
+                <span>Volver</span>
+            </button>
+        </div>
+        <div class="nav-right">
+            <div style="text-align: center;">
+                <div style="font-size: 0.75rem; opacity: 0.8;">TIEMPO</div>
+                <div id="mainTimer" class="timer-display">75:00</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 0.75rem; opacity: 0.8;">PROGRESO</div>
+                <div id="progressText" style="font-size: 1.2rem; font-weight: 700;">0/35</div>
+            </div>
+            <div class="user-menu">
+                <div class="user-avatar" id="userAvatar">U</div>
+                <div class="user-dropdown" id="userDropdown">
+                    <a href="cuenta.html">Mi Cuenta</a>
+                    <a href="index.html" id="logoutBtn">Cerrar Sesion</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Progress Bar -->
+    <div class="progress-bar" id="progressBar">
+        <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+    </div>
+
+    <!-- Intro Section -->
+    <section id="introSection" class="intro-section">
+        <div class="intro-card">
+            <div class="intro-header">
+                <h1 class="intro-title">LCS4D0 - Examen Final de Clasificacion</h1>
+                <p style="opacity: 0.9; font-size: 1.1rem;">Formato Oficial ICFES SABER PRO - Lectura Critica</p>
+            </div>
+            <div class="intro-body">
+                <h3 class="font-serif" style="font-size: 1.4rem; margin-bottom: 20px; text-align: center;">INSTRUCCIONES GENERALES</h3>
+                
+                <div class="instruction-item">
+                    <div class="instruction-num">1</div>
+                    <p>Este examen consta de <strong>35 preguntas</strong> distribuidas en tres niveles de competencia.</p>
+                </div>
+                <div class="instruction-item">
+                    <div class="instruction-num">2</div>
+                    <p>Dispone de <strong>75 minutos</strong> para completar todo el examen.</p>
+                </div>
+                <div class="instruction-item">
+                    <div class="instruction-num">3</div>
+                    <p>Despues de cada bloque de preguntas, tendra un descanso de <strong>45 segundos</strong>.</p>
+                </div>
+                <div class="instruction-item">
+                    <div class="instruction-num">4</div>
+                    <p>Puntuacion maxima: <strong>300 puntos</strong>. No se descuentan puntos por respuestas incorrectas.</p>
+                </div>
+                <div class="instruction-item">
+                    <div class="instruction-num">5</div>
+                    <p>Para aprobar necesita <strong>180 puntos o mas</strong> y desbloquear LCS5.</p>
+                </div>
+                <div class="instruction-item">
+                    <div class="instruction-num">6</div>
+                    <p>Si no aprueba, debera esperar <strong>3 horas</strong> antes de volver a presentar el examen.</p>
+                </div>
+
+                <h4 style="margin: 25px 0 15px; text-align: center;">Distribucion de Preguntas por Competencia</h4>
+                
+                <div class="competency-breakdown">
+                    <div class="competency-card p1">
+                        <h4>P1 - Basica</h4>
+                        <p style="margin-bottom: 5px;"><strong>10 preguntas</strong></p>
+                        <p style="margin-bottom: 8px; font-size: 0.9rem;">8 puntos c/u</p>
+                        <div class="points" style="color: var(--p1-color);">80 pts</div>
+                    </div>
+                    <div class="competency-card p2">
+                        <h4>P2 - Intermedia</h4>
+                        <p style="margin-bottom: 5px;"><strong>12 preguntas</strong></p>
+                        <p style="margin-bottom: 8px; font-size: 0.9rem;">9 puntos c/u</p>
+                        <div class="points" style="color: var(--p2-color);">108 pts</div>
+                    </div>
+                    <div class="competency-card p3">
+                        <h4>P3 - Avanzada</h4>
+                        <p style="margin-bottom: 5px;"><strong>13 preguntas</strong></p>
+                        <p style="margin-bottom: 8px; font-size: 0.9rem;">~8.6 puntos c/u</p>
+                        <div class="points" style="color: var(--p3-color);">112 pts</div>
+                    </div>
+                </div>
+
+                <div style="background: #e8f5e9; border: 1px solid #4caf50; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                    <p style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-trophy" style="color: #2e7d32;"></i>
+                        <span><strong>Total Maximo: 300 puntos</strong> | Minimo para aprobar: 180 puntos</span>
+                    </p>
+                </div>
+
+                <div style="text-align: center; margin-top: 30px;">
+                    <button id="startBtn" class="btn-primary">
+                        <i class="fas fa-play"></i> COMENZAR EXAMEN FINAL
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Exam Section -->
+    <section id="examSection" class="exam-section" style="display: none;">
+        <div class="exam-card paper-texture" style="padding: 30px;">
+            <div id="questionsContainer"></div>
+            
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid var(--border-gray);">
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <div class="stat-value" id="answeredP1">0/10</div>
+                        <div class="stat-label">P1 Contestadas</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="answeredP2">0/12</div>
+                        <div class="stat-label">P2 Contestadas</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="answeredP3">0/13</div>
+                        <div class="stat-label">P3 Contestadas</div>
+                    </div>
+                </div>
+                <p style="margin-bottom: 15px; color: var(--fg-medium);">
+                    Ha respondido <strong id="answeredCount">0</strong> de 35 preguntas.
+                </p>
+                <button id="submitBtn" class="btn-primary">
+                    <i class="fas fa-paper-plane"></i> ENVIAR EXAMEN
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Rest Overlay -->
+    <div id="restOverlay" class="rest-overlay">
+        <div class="rest-card">
+            <i class="fas fa-coffee" style="font-size: 4rem; color: var(--accent-blue); margin-bottom: 20px;"></i>
+            <h2 class="font-serif" style="font-size: 1.8rem; margin-bottom: 10px;">Descanso Obligatorio</h2>
+            <p style="color: var(--fg-medium); margin-bottom: 20px;">Ha completado un bloque de preguntas.</p>
+            <div id="restTimer" style="font-size: 4rem; font-weight: 700; color: var(--accent-blue);">45</div>
+            <p style="font-size: 0.9rem; color: var(--fg-light); margin-top: 10px;">El examen continuara automaticamente</p>
+        </div>
+    </div>
+
+    <!-- Results Overlay -->
+    <div id="resultsOverlay" class="results-overlay">
+        <div class="results-card" id="resultsCard"></div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            totalQuestions: 35,
+            timeLimit: 75 * 60,
+            questionsPerBlock: 12,
+            restDuration: 45,
+            passingScore: 180,
+            maxScore: 300,
+            blockDuration: 3 * 60 * 60 * 1000,
+            examKey: 'lcs4d0',
+            p1Count: 10,
+            p2Count: 12,
+            p3Count: 13,
+            p1Points: 8,
+            p2Points: 9,
+            p3Points: 112 / 13
+        };
+
+        let allQuestions = [];
+        let examQuestions = [];
+        let userAnswers = {};
+        let timeRemaining = CONFIG.timeLimit;
+        let mainTimerInterval = null;
+        let examStarted = false;
+        let examFinished = false;
+        let currentUserId = null;
+
+        const blockedOverlay = document.getElementById('blockedOverlay');
+        const blockTimer = document.getElementById('blockTimer');
+        const introSection = document.getElementById('introSection');
+        const examSection = document.getElementById('examSection');
+        const questionsContainer = document.getElementById('questionsContainer');
+        const mainTimer = document.getElementById('mainTimer');
+        const progressText = document.getElementById('progressText');
+        const progressFill = document.getElementById('progressFill');
+        const answeredCount = document.getElementById('answeredCount');
+        const answeredP1 = document.getElementById('answeredP1');
+        const answeredP2 = document.getElementById('answeredP2');
+        const answeredP3 = document.getElementById('answeredP3');
+        const restOverlay = document.getElementById('restOverlay');
+        const restTimerEl = document.getElementById('restTimer');
+        const resultsOverlay = document.getElementById('resultsOverlay');
+        const resultsCard = document.getElementById('resultsCard');
+        const userAvatar = document.getElementById('userAvatar');
+        const userDropdown = document.getElementById('userDropdown');
+        const submitBtn = document.getElementById('submitBtn');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadQuestions();
+            
+            if (window.currentUser) {
+                currentUserId = window.currentUser.uid;
+                initApp();
+            } else {
+                window.addEventListener('userReady', (e) => {
+                    currentUserId = e.detail.user.uid;
+                    initApp();
+                });
+            }
+        });
+
+        async function initApp() {
+            if (window.currentUser && window.currentUser.email) {
+                userAvatar.textContent = window.currentUser.email.charAt(0).toUpperCase();
+            }
+            await checkBlockStatus();
+        }
+
+        async function loadQuestions() {
+            try {
+                const response = await fetch('preguntas2.json');
+                const data = await response.json();
+                allQuestions = data;
+                console.log("Preguntas cargadas:", allQuestions.length);
+            } catch (error) {
+                console.error('Error cargando preguntas:', error);
+                allQuestions = generateFallbackQuestions();
+            }
+        }
+
+        function generateFallbackQuestions() {
+            const questions = [];
+            for (let i = 1; i <= 50; i++) {
+                const competency = i % 3 === 0 ? 'P3' : (i % 3 === 1 ? 'P1' : 'P2');
+                questions.push({
+                    id: `fallback_${i}`,
+                    pregunta: `Pregunta de ejemplo ${i} para competencia ${competency}. Seleccione la respuesta correcta.`,
+                    opciones: ['Opcion A', 'Opcion B', 'Opcion C', 'Opcion D'],
+                    respuestaCorrecta: Math.floor(Math.random() * 4),
+                    tags: [competency]
+                });
+            }
+            return questions;
+        }
+
+        async function checkBlockStatus() {
+            if (currentUserId) {
+                try {
+                    const progressRef = window.ref(window.db, `users/${currentUserId}/lc_progress/${CONFIG.examKey}`);
+                    const snapshot = await window.get(progressRef);
+                    
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
+                        
+                        if (data.blockedUntil && Date.now() < data.blockedUntil) {
+                            console.log("Bloqueo encontrado en Firebase");
+                            localStorage.setItem('lcs4d0_blocked_until', data.blockedUntil.toString());
+                            showBlockedScreen(data.blockedUntil);
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error verificando bloqueo:", error);
+                }
+            }
+            
+            const localBlocked = localStorage.getItem('lcs4d0_blocked_until');
+            if (localBlocked && Date.now() < parseInt(localBlocked)) {
+                showBlockedScreen(parseInt(localBlocked));
+            }
+        }
+
+        function showBlockedScreen(blockedUntil) {
+            blockedOverlay.classList.add('active');
+
+            const updateTimer = () => {
+                const remaining = blockedUntil - Date.now();
+                if (remaining <= 0) {
+                    localStorage.removeItem('lcs4d0_blocked_until');
+                    blockedOverlay.classList.remove('active');
+                    return;
+                }
+
+                const hours = Math.floor(remaining / (1000 * 60 * 60));
+                const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+
+                blockTimer.textContent = 
+                    `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+            };
+
+            updateTimer();
+            setInterval(updateTimer, 1000);
+        }
+
+        async function saveExamProgressToFirebase(userId, score, passed) {
+            try {
+                const progressRef = window.ref(window.db, `users/${userId}/lc_progress/${CONFIG.examKey}`);
+                
+                let dataToSave = {
+                    score: score,
+                    completed: passed,
+                    completedAt: passed ? new Date().toISOString() : null,
+                    lastAttempt: new Date().toISOString()
+                };
+                
+                if (!passed) {
+                    const blockedUntil = Date.now() + CONFIG.blockDuration;
+                    dataToSave.blockedUntil = blockedUntil;
+                }
+                
+                await window.set(progressRef, dataToSave);
+                
+                // Si aprobo, desbloquear LCS5
+                if (passed) {
+                    const unlockRef = window.ref(window.db, `users/${userId}/lc_progress/lcs5_unlocked`);
+                    await window.set(unlockRef, {
+                        unlocked: true,
+                        unlockedAt: new Date().toISOString(),
+                        unlockedBy: CONFIG.examKey
+                    });
+                }
+                
+                const localProgress = JSON.parse(localStorage.getItem('skopia_lc_progress_v1') || '{}');
+                localProgress[CONFIG.examKey] = dataToSave;
+                localStorage.setItem('skopia_lc_progress_v1', JSON.stringify(localProgress));
+                
+                console.log("Progreso guardado en Firebase:", dataToSave);
+                return true;
+            } catch (error) {
+                console.error("Error guardando en Firebase:", error);
+                return false;
+            }
+        }
+
+        document.getElementById('startBtn').addEventListener('click', startExam);
+
+        function startExam() {
+            const p1Questions = shuffleArray(allQuestions.filter(q => 
+                q.tags && Array.isArray(q.tags) && q.tags.includes('P1')
+            )).slice(0, CONFIG.p1Count);
+            
+            const p2Questions = shuffleArray(allQuestions.filter(q => 
+                q.tags && Array.isArray(q.tags) && q.tags.includes('P2')
+            )).slice(0, CONFIG.p2Count);
+            
+            const p3Questions = shuffleArray(allQuestions.filter(q => 
+                q.tags && Array.isArray(q.tags) && q.tags.includes('P3')
+            )).slice(0, CONFIG.p3Count);
+
+            // Si no hay suficientes preguntas, generar fallback
+            while (p1Questions.length < CONFIG.p1Count) {
+                p1Questions.push({
+                    id: `fallback_p1_${p1Questions.length}`,
+                    pregunta: `Pregunta P1 de respaldo ${p1Questions.length + 1}`,
+                    opciones: ['Opcion A', 'Opcion B', 'Opcion C', 'Opcion D'],
+                    respuestaCorrecta: 0,
+                    tags: ['P1']
+                });
+            }
+            while (p2Questions.length < CONFIG.p2Count) {
+                p2Questions.push({
+                    id: `fallback_p2_${p2Questions.length}`,
+                    pregunta: `Pregunta P2 de respaldo ${p2Questions.length + 1}`,
+                    opciones: ['Opcion A', 'Opcion B', 'Opcion C', 'Opcion D'],
+                    respuestaCorrecta: 0,
+                    tags: ['P2']
+                });
+            }
+            while (p3Questions.length < CONFIG.p3Count) {
+                p3Questions.push({
+                    id: `fallback_p3_${p3Questions.length}`,
+                    pregunta: `Pregunta P3 de respaldo ${p3Questions.length + 1}`,
+                    opciones: ['Opcion A', 'Opcion B', 'Opcion C', 'Opcion D'],
+                    respuestaCorrecta: 0,
+                    tags: ['P3']
+                });
+            }
+
+            // Mezclar todas las preguntas
+            examQuestions = shuffleArray([...p1Questions, ...p2Questions, ...p3Questions]);
+
+            examStarted = true;
+            examFinished = false;
+            userAnswers = {};
+            timeRemaining = CONFIG.timeLimit;
+
+            introSection.style.display = 'none';
+            examSection.style.display = 'block';
+
+            renderQuestions();
+            startTimer();
+        }
+
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function renderQuestions() {
+            questionsContainer.innerHTML = '';
+
+            examQuestions.forEach((question, index) => {
+                const num = index + 1;
+                const competency = question.tags && question.tags.includes('P1') ? 'P1' : 
+                                   (question.tags && question.tags.includes('P2') ? 'P2' : 'P3');
+                const points = competency === 'P1' ? CONFIG.p1Points : 
+                              (competency === 'P2' ? CONFIG.p2Points : CONFIG.p3Points);
+
+                let textBlock = '';
+                let questionText = question.pregunta || '';
+                
+                if (questionText.includes('\n\n')) {
+                    const parts = questionText.split('\n\n');
+                    textBlock = parts[0];
+                    questionText = parts.slice(1).join('\n\n');
+                }
+
+                const card = document.createElement('div');
+                card.className = `question-card ${competency.toLowerCase()}`;
+                card.id = `question-${question.id}`;
+                card.dataset.competency = competency;
+
+                let optionsHtml = (question.opciones || []).map((opt, i) => {
+                    const letter = String.fromCharCode(65 + i);
+                    return `
+                        <div class="option-item" onclick="selectAnswer('${question.id}', ${i})">
+                            <div class="option-letter">${letter}</div>
+                            <div class="option-text">${opt}</div>
+                        </div>
+                    `;
+                }).join('');
+
+                card.innerHTML = `
+                    <div class="question-header">
+                        <div class="question-meta">
+                            <div class="question-num">${num}</div>
+                            <span class="competency-badge ${competency.toLowerCase()}">${competency}</span>
+                        </div>
+                        <span class="points-badge">${points.toFixed(1)} pts</span>
+                    </div>
+                    ${textBlock ? `<div class="text-passage">${textBlock}</div>` : ''}
+                    <p style="font-size: 1.1rem; margin-bottom: 15px;">${questionText}</p>
+                    <div class="options-grid">${optionsHtml}</div>
+                `;
+
+                questionsContainer.appendChild(card);
+            });
+
+            updateProgress();
+        }
+
+        window.selectAnswer = function(questionId, optionIndex) {
+            if (examFinished) return;
+
+            userAnswers[questionId] = optionIndex;
+
+            const card = document.getElementById(`question-${questionId}`);
+            if (card) {
+                card.querySelectorAll('.option-item').forEach((opt, i) => {
+                    opt.classList.toggle('selected', i === optionIndex);
+                });
+            }
+
+            updateProgress();
+            checkForBreak();
+        };
+
+        function checkForBreak() {
+            const answered = Object.keys(userAnswers).length;
+            if (answered === 12 || answered === 24) {
+                showRest();
+            }
+        }
+
+        function updateProgress() {
+            const answered = Object.keys(userAnswers).length;
+            progressText.textContent = `${answered}/${CONFIG.totalQuestions}`;
+            progressFill.style.width = `${(answered / CONFIG.totalQuestions) * 100}%`;
+            answeredCount.textContent = answered;
+
+            // Contar por competencia
+            let p1Count = 0, p2Count = 0, p3Count = 0;
+            Object.keys(userAnswers).forEach(qId => {
+                const card = document.getElementById(`question-${qId}`);
+                if (card) {
+                    const comp = card.dataset.competency;
+                    if (comp === 'P1') p1Count++;
+                    else if (comp === 'P2') p2Count++;
+                    else if (comp === 'P3') p3Count++;
+                }
+            });
+
+            answeredP1.textContent = `${p1Count}/10`;
+            answeredP2.textContent = `${p2Count}/12`;
+            answeredP3.textContent = `${p3Count}/13`;
+        }
+
+        function startTimer() {
+            mainTimerInterval = setInterval(() => {
+                timeRemaining--;
+
+                const minutes = Math.floor(timeRemaining / 60);
+                const seconds = timeRemaining % 60;
+                mainTimer.textContent = `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+
+                mainTimer.classList.remove('warning', 'danger');
+                if (timeRemaining <= 600 && timeRemaining > 120) mainTimer.classList.add('warning');
+                else if (timeRemaining <= 120) mainTimer.classList.add('danger');
+
+                if (timeRemaining <= 0) submitExam();
+            }, 1000);
+        }
+
+        function showRest() {
+            clearInterval(mainTimerInterval);
+            restOverlay.classList.add('active');
+
+            let restTime = CONFIG.restDuration;
+            restTimerEl.textContent = restTime;
+
+            const interval = setInterval(() => {
+                restTime--;
+                restTimerEl.textContent = restTime;
+
+                if (restTime <= 0) {
+                    clearInterval(interval);
+                    restOverlay.classList.remove('active');
+                    startTimer();
+                }
+            }, 1000);
+        }
+
+        submitBtn.addEventListener('click', submitExam);
+
+        async function submitExam() {
+            if (examFinished) return;
+            
+            examFinished = true;
+            clearInterval(mainTimerInterval);
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+            document.querySelectorAll('.option-item').forEach(opt => opt.classList.add('blocked'));
+
+            let p1Correct = 0, p2Correct = 0, p3Correct = 0;
+            
+            examQuestions.forEach(q => {
+                if (userAnswers[q.id] === q.respuestaCorrecta) {
+                    const competency = q.tags && q.tags.includes('P1') ? 'P1' : 
+                                       (q.tags && q.tags.includes('P2') ? 'P2' : 'P3');
+                    if (competency === 'P1') p1Correct++;
+                    else if (competency === 'P2') p2Correct++;
+                    else p3Correct++;
+                }
+            });
+
+            const p1Score = p1Correct * CONFIG.p1Points;
+            const p2Score = p2Correct * CONFIG.p2Points;
+            const p3Score = p3Correct * CONFIG.p3Points;
+            const totalScore = Math.round(p1Score + p2Score + p3Score);
+            const totalCorrect = p1Correct + p2Correct + p3Correct;
+            const passed = totalScore >= CONFIG.passingScore;
+
+            showResults(totalScore, totalCorrect, passed, p1Correct, p2Correct, p3Correct);
+
+            if (currentUserId) {
+                saveExamProgressToFirebase(currentUserId, totalScore, passed).catch(err => {
+                    console.error("Error guardando:", err);
+                });
+            }
+
+            if (!passed) {
+                const blockedUntil = Date.now() + CONFIG.blockDuration;
+                localStorage.setItem('lcs4d0_blocked_until', blockedUntil.toString());
+            } else {
+                localStorage.setItem('lcs5_unlocked', 'true');
+            }
+        }
+
+        function showResults(score, correct, passed, p1Correct, p2Correct, p3Correct) {
+            const percentage = Math.round((correct / CONFIG.totalQuestions) * 100);
+
+            let message = '';
+            if (score >= 270) message = '¡Excelente! Dominio excepcional de la lectura critica.';
+            else if (score >= 240) message = '¡Muy bien! Solido entendimiento de textos.';
+            else if (score >= 180) message = '¡Felicitaciones! Has aprobado el examen de clasificacion.';
+            else if (score >= 150) message = 'Estas muy cerca. Un poco mas de practica.';
+            else message = 'Necesitas reforzar tus habilidades de lectura critica.';
+
+            resultsCard.innerHTML = `
+                <h2 class="font-serif" style="font-size: 2rem; color: var(--accent-blue); margin-bottom: 25px;">
+                    Resultado del Examen Final
+                </h2>
+                
+                <div class="score-circle ${passed ? 'score-passed' : 'score-failed'}">
+                    ${score}
+                </div>
+                
+                <p style="font-size: 1.2rem; font-weight: 600; margin-bottom: 5px; color: ${passed ? 'var(--success)' : 'var(--error)'}">
+                    ${passed ? 'APROBADO' : 'NO APROBADO'}
+                </p>
+                
+                <p style="color: var(--fg-light); margin-bottom: 20px;">
+                    Respuestas correctas: ${correct} de ${CONFIG.totalQuestions} (${percentage}%)
+                </p>
+
+                <div style="background: #f5f5f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: left;">
+                    <h4 style="margin-bottom: 10px; font-size: 0.95rem;">Desglose por Competencia:</h4>
+                    <p style="font-size: 0.9rem; margin-bottom: 5px;">
+                        <span style="color: var(--p1-color); font-weight: 600;">P1:</span> ${p1Correct}/10 correctas = ${p1Correct * CONFIG.p1Points} pts
+                    </p>
+                    <p style="font-size: 0.9rem; margin-bottom: 5px;">
+                        <span style="color: var(--p2-color); font-weight: 600;">P2:</span> ${p2Correct}/12 correctas = ${p2Correct * CONFIG.p2Points} pts
+                    </p>
+                    <p style="font-size: 0.9rem;">
+                        <span style="color: var(--p3-color); font-weight: 600;">P3:</span> ${p3Correct}/13 correctas = ${Math.round(p3Correct * CONFIG.p3Points)} pts
+                    </p>
+                </div>
+                
+                <p style="font-style: italic; color: var(--fg-medium); margin-bottom: 25px;">
+                    "${message}"
+                </p>
+                
+                <div style="background: #f5f5f0; padding: 15px; border-radius: 8px; margin-bottom: 25px;">
+                    <p style="font-size: 0.95rem; color: var(--fg-medium);">
+                        <strong>Puntuacion minima:</strong> ${CONFIG.passingScore} puntos
+                    </p>
+                </div>
+                
+                ${passed ? `
+                    <p style="color: var(--success); font-weight: 600; margin-bottom: 15px;">
+                        <i class="fas fa-unlock"></i> Has desbloqueado: LCS5 - Nivel Avanzado
+                    </p>
+                    <button onclick="window.location.href='LCDASHBOARD.html'" class="btn-primary">
+                        Volver al Dashboard
+                    </button>
+                ` : `
+                    <p style="color: var(--error); font-weight: 600; margin-bottom: 15px;">
+                        <i class="fas fa-clock"></i> Debes esperar 3 horas para reintentar.
+                    </p>
+                    <button onclick="window.location.href='LCS4D.html'" class="btn-secondary">
+                        Volver a Estudiar
+                    </button>
+                `}
+            `;
+
+            resultsOverlay.classList.add('active');
+        }
+
+        window.goBack = function() {
+            if (examStarted && !examFinished) {
+                if (confirm('Si sales, perderas tu progreso. ¿Continuar?')) {
+                    window.location.href = 'LCS4D.html';
+                }
+            } else {
+                window.location.href = 'LCS4D.html';
+            }
+        };
+
+        userAvatar.addEventListener('click', () => userDropdown.classList.toggle('active'));
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.user-menu')) userDropdown.classList.remove('active');
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
+                signOut(window.auth).then(() => window.location.href = 'index.html');
+            });
+        });
+    </script>
+</body>
+</html>
