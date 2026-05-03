@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cohesion Textual - Skopia</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700&family=Orbitron:wght@700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        window.auth = auth;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            window.currentUser = user;
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-beige: #f5f2e8;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+            --color-acento: #ff9e6d;
+            --color-acento-oscuro: #e07a3d;
+            --color-exito: #606c38;
+            --color-error: #bc4749;
+            --color-info: #3b82f6;
+            --color-warning: #f59e0b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Roboto', sans-serif; 
+            background: linear-gradient(135deg, var(--color-crema) 0%, #f5efe5 50%, #e8e4d9 100%); 
+            color: var(--color-oliva-oscuro); 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(255, 158, 109, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(90, 97, 51, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Navbar */
+        .navbar { 
+            display: flex; 
+            justify-content: flex-end; 
+            align-items: center; 
+            padding: 15px 40px; 
+            background-color: rgba(253, 251, 245, 0.95); 
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px var(--color-sombra); 
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .hamburger { width: 30px; height: 25px; position: relative; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; }
+        .hamburger span { display: block; height: 4px; width: 100%; background-color: var(--color-oliva-oscuro); border-radius: 2px; transition: all 0.3s ease-in-out; }
+        .user-dropdown { position: absolute; top: 70px; right: 40px; background-color: white; border-radius: 12px; box-shadow: 0 4px 20px var(--color-sombra); overflow: hidden; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.3s ease; z-index: 1000; }
+        .user-dropdown.active { opacity: 1; visibility: visible; transform: translateY(0); }
+        .user-dropdown a { display: block; padding: 15px 25px; text-decoration: none; color: var(--color-oliva-oscuro); font-weight: 500; transition: background-color 0.2s; }
+        .user-dropdown a:hover { background-color: var(--color-crema); }
+        .user-dropdown hr { border: none; border-top: 1px solid var(--color-beige); margin: 0; }
+
+        /* Hero Section */
+        .hero-section { text-align: center; padding: 30px 20px; position: relative; z-index: 1; }
+        .digital-clock { 
+            font-family: 'Orbitron', sans-serif; 
+            font-size: 3rem; 
+            font-weight: 700; 
+            color: var(--color-oliva-oscuro); 
+            letter-spacing: 4px; 
+        }
+        .digital-clock.hour-change { color: var(--color-acento); }
+        .motivational-quote { font-family: 'Patrick Hand', cursive; font-size: 1.4rem; color: var(--color-oliva-medio); margin-top: 15px; max-width: 800px; margin-left: auto; margin-right: auto; opacity: 0; animation: fadeIn 1s forwards; }
+        .bienvenida { font-family: 'Patrick Hand', cursive; font-size: 1.8rem; color: var(--color-oliva-oscuro); margin-top: 20px; }
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        /* Progress Bar */
+        .progress-section {
+            max-width: 600px;
+            margin: 0 auto 20px;
+            padding: 0 20px;
+        }
+        .progress-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.9rem;
+            color: var(--color-oliva-medio);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .progress-bar-container {
+            background: rgba(255,255,255,0.8);
+            border-radius: 20px;
+            padding: 4px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
+        }
+        .progress-bar-fill {
+            height: 12px;
+            background: linear-gradient(90deg, var(--color-oliva-medio), var(--color-acento));
+            border-radius: 16px;
+            transition: width 0.5s ease;
+        }
+
+        /* Main Content */
+        .main-content { 
+            flex-grow: 1; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 20px 40px 40px; 
+            position: relative;
+            z-index: 1;
+        }
+        .close-btn { 
+            position: absolute; 
+            top: 20px; 
+            left: 20px; 
+            background: var(--color-oliva-oscuro); 
+            color: white; 
+            width: 44px; 
+            height: 44px; 
+            border-radius: 12px; 
+            border: none; 
+            font-size: 20px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            z-index: 100; 
+        }
+        .close-btn:hover { transform: scale(1.08); background-color: var(--color-oliva-medio); }
+
+        /* Lesson Container */
+        .lesson-container { 
+            width: 100%; 
+            max-width: 900px; 
+            background: rgba(255,255,255,0.95); 
+            backdrop-filter: blur(10px);
+            border-radius: 20px; 
+            padding: 40px; 
+            box-shadow: 0 8px 30px var(--color-sombra); 
+        }
+        .lesson-header { text-align: center; margin-bottom: 40px; }
+        .lesson-header h2 { font-family: 'Patrick Hand', cursive; font-size: 2.6rem; color: var(--color-oliva-oscuro); margin-bottom: 10px; }
+        .lesson-subtitle { font-family: 'Space Grotesk', sans-serif; color: var(--color-oliva-medio); font-size: 1.05rem; }
+
+        /* Section Styles */
+        .lesson-section { margin-bottom: 40px; opacity: 0; transform: translateY(20px); animation: slideUp 0.6s forwards; }
+        .lesson-section:nth-child(1) { animation-delay: 0.1s; }
+        .lesson-section:nth-child(2) { animation-delay: 0.2s; }
+        .lesson-section:nth-child(3) { animation-delay: 0.3s; }
+        @keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
+
+        .section-title { 
+            font-family: 'Patrick Hand', cursive; 
+            font-size: 1.7rem; 
+            color: var(--color-oliva-medio); 
+            margin-bottom: 20px; 
+            padding-bottom: 10px;
+            border-bottom: 2px dashed var(--color-oliva-claro);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .section-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--color-oliva-medio), var(--color-oliva-oscuro));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+        }
+
+        /* Theory Card */
+        .theory-card {
+            background: linear-gradient(135deg, rgba(188, 192, 146, 0.12), rgba(255, 158, 109, 0.08));
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(90, 97, 51, 0.15);
+        }
+        .theory-intro {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 25px;
+        }
+        .theory-intro strong {
+            color: var(--color-acento-oscuro);
+        }
+
+        /* Key Concepts */
+        .concepts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .concept-box {
+            background: white;
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            border: 1px solid var(--color-beige);
+            transition: all 0.3s ease;
+        }
+        .concept-box:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        .concept-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .concept-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+        .concept-icon.reference {
+            background: linear-gradient(135deg, var(--color-info), #1d4ed8);
+            color: white;
+        }
+        .concept-icon.connection {
+            background: linear-gradient(135deg, var(--color-acento), var(--color-acento-oscuro));
+            color: white;
+        }
+        .concept-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--color-oliva-oscuro);
+        }
+        .concept-desc {
+            font-size: 0.95rem;
+            color: var(--color-oliva-medio);
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+        .concept-example {
+            background: var(--color-crema);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 0.9rem;
+            border-left: 3px solid var(--color-oliva-claro);
+        }
+        .concept-example em {
+            background: rgba(255, 158, 109, 0.25);
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-style: normal;
+            font-weight: 500;
+        }
+
+        /* Chain Visualization */
+        .chain-visualization {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-top: 20px;
+            border: 2px solid var(--color-oliva-claro);
+        }
+        .chain-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .chain-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .chain-link {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--color-oliva-medio), var(--color-oliva-oscuro));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 0.85rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+        }
+        .chain-link:hover {
+            transform: scale(1.1);
+        }
+        .chain-link.broken {
+            background: linear-gradient(135deg, var(--color-error), #9b2c2c);
+            animation: shake 0.5s ease;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .chain-connector {
+            width: 30px;
+            height: 4px;
+            background: var(--color-oliva-claro);
+            border-radius: 2px;
+        }
+        .chain-connector.broken {
+            background: var(--color-error);
+            height: 2px;
+            opacity: 0.5;
+        }
+        .chain-message {
+            text-align: center;
+            padding: 15px;
+            background: var(--color-crema);
+            border-radius: 10px;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.1rem;
+            color: var(--color-oliva-medio);
+        }
+        .chain-message.broken {
+            background: rgba(188, 71, 73, 0.1);
+            color: var(--color-error);
+        }
+
+        /* Interactive Demo */
+        .demo-container {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 2px dashed var(--color-oliva-claro);
+        }
+        .demo-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 15px;
+            border: 1px solid var(--color-beige);
+        }
+        .demo-toggle-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            color: var(--color-oliva-oscuro);
+        }
+        .toggle-switch {
+            position: relative;
+            width: 56px;
+            height: 30px;
+            cursor: pointer;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--color-oliva-claro);
+            border-radius: 20px;
+            transition: 0.3s;
+        }
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+        .toggle-switch input:checked + .toggle-slider { background-color: var(--color-acento); }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(26px); }
+        .demo-text-box {
+            background: var(--color-crema);
+            border-radius: 12px;
+            padding: 20px;
+            font-size: 1rem;
+            line-height: 1.9;
+            transition: all 0.4s ease;
+        }
+        .demo-text-box .highlight {
+            background: rgba(255, 158, 109, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all 0.4s ease;
+        }
+        .demo-text-box.broken .highlight {
+            background: rgba(188, 71, 73, 0.2);
+            text-decoration: line-through;
+            color: var(--color-error);
+        }
+
+        /* Practice Section */
+        .practice-container {
+            background: linear-gradient(135deg, rgba(90, 97, 51, 0.05), rgba(188, 192, 146, 0.08));
+            border-radius: 20px;
+            padding: 30px;
+            border: 2px solid rgba(90, 97, 51, 0.15);
+        }
+        .practice-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .practice-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--color-acento), var(--color-acento-oscuro));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.4rem;
+        }
+        .practice-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--color-oliva-oscuro);
+        }
+        .practice-instructions {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--color-beige);
+        }
+        .practice-instructions h4 {
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--color-oliva-medio);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .practice-instructions p {
+            font-size: 0.95rem;
+            color: var(--color-oliva-oscuro);
+            line-height: 1.6;
+        }
+
+        /* Error Detection */
+        .error-text-container {
+            background: white;
+            border-radius: 14px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid var(--color-beige);
+        }
+        .error-text {
+            font-size: 1.05rem;
+            line-height: 2;
+            color: var(--color-oliva-oscuro);
+        }
+        .error-text .error-zone {
+            cursor: pointer;
+            padding: 3px 8px;
+            margin: 0 2px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            border: 2px dashed transparent;
+        }
+        .error-text .error-zone:hover {
+            background: rgba(255, 158, 109, 0.15);
+            border-color: var(--color-acento);
+        }
+        .error-text .error-zone.marked {
+            background: rgba(188, 71, 73, 0.15);
+            border-color: var(--color-error);
+        }
+        .error-text .error-zone.correct-mark {
+            background: rgba(96, 108, 56, 0.15);
+            border-color: var(--color-exito);
+        }
+        .error-text .error-zone.wrong-mark {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: var(--color-warning);
+        }
+
+        /* Marker Tools */
+        .marker-tools {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .marker-btn {
+            padding: 12px 24px;
+            border-radius: 25px;
+            border: 2px solid;
+            background: white;
+            cursor: pointer;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .marker-btn.mark {
+            border-color: var(--color-error);
+            color: var(--color-error);
+        }
+        .marker-btn.mark:hover, .marker-btn.mark.active {
+            background: var(--color-error);
+            color: white;
+        }
+        .marker-btn.clear {
+            border-color: var(--color-oliva-medio);
+            color: var(--color-oliva-medio);
+        }
+        .marker-btn.clear:hover {
+            background: var(--color-oliva-medio);
+            color: white;
+        }
+        .marker-btn.check {
+            border-color: var(--color-exito);
+            color: var(--color-exito);
+        }
+        .marker-btn.check:hover {
+            background: var(--color-exito);
+            color: white;
+        }
+        .marker-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Results Panel */
+        .results-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            display: none;
+        }
+        .results-panel.visible { display: block; animation: fadeIn 0.4s ease; }
+        .results-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 15px;
+        }
+        .result-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            background: var(--color-crema);
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .result-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+        .result-icon.correct { background: var(--color-exito); color: white; }
+        .result-icon.missed { background: var(--color-warning); color: white; }
+        .result-icon.wrong { background: var(--color-error); color: white; }
+        .result-text {
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .result-text strong { color: var(--color-oliva-oscuro); }
+
+        /* Buttons */
+        .button-container { 
+            display: flex; 
+            justify-content: center; 
+            gap: 20px; 
+            margin: 30px auto 0; 
+            flex-wrap: wrap;
+        }
+        .play-btn { 
+            background: linear-gradient(135deg, var(--color-oliva-oscuro), var(--color-oliva-medio));
+            color: var(--color-crema); 
+            border: none; 
+            padding: 15px 40px; 
+            border-radius: 30px; 
+            font-size: 1.1rem; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .play-btn:hover { 
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(39, 43, 0, 0.25);
+        }
+        .continue-btn { 
+            background: linear-gradient(135deg, var(--color-acento), var(--color-acento-oscuro));
+            color: white; 
+            border: none; 
+            padding: 15px 40px; 
+            border-radius: 30px; 
+            font-size: 1.1rem; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .continue-btn:hover { 
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(255, 158, 109, 0.35);
+        }
+
+        /* Mascota */
+        .mascota-container { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 15px; 
+            width: 300px; 
+            margin-top: 30px; 
+        }
+        .speech-bubble { 
+            border: 2px solid var(--color-oliva-claro); 
+            border-radius: 20px; 
+            padding: 15px 20px; 
+            background: white; 
+            box-shadow: 0 5px 15px var(--color-sombra); 
+        }
+        .speech-bubble p { font-family: 'Patrick Hand', cursive; font-size: 1.05rem; margin: 0; color: var(--color-oliva-medio); }
+
+        /* Floating Icons */
+        .floating-icons { position: fixed; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; z-index: 2000; }
+        .floating-icons button { background: var(--color-oliva-oscuro); color: white; width: 54px; height: 54px; border-radius: 50%; border: none; font-size: 20px; display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0,0,0,0.12); cursor: pointer; transition: transform .15s ease, background .15s ease; }
+        .floating-icons button:hover { transform: scale(1.08); background: var(--color-oliva-medio); }
+
+        /* Panel Boxes */
+        .panel-box { position: fixed; right: 90px; top: 50%; transform: translateY(-50%); width: 400px; max-height: 75vh; background: white; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.12); overflow: auto; padding: 24px; z-index: 2100; display: none; font-family: 'Patrick Hand', cursive; font-size: 1.1rem; }
+        .panel-box.active { display: block; animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-50%) translateX(20px); } to { opacity: 1; transform: translateY(-50%) translateX(0); } }
+        .panel-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+        .panel-header h3 { margin:0; font-size:1.5rem; color:var(--color-oliva-oscuro); }
+        .close-panel { background:none; border:none; font-size:1.3rem; cursor:pointer; color:var(--color-oliva-medio); }
+        .mission-row { padding:12px; border-radius:8px; margin-bottom:10px; background:var(--color-crema); box-shadow: 0 2px 6px rgba(0,0,0,0.04); display:flex; justify-content:space-between; align-items:center; }
+        .mission-row.completed { opacity:0.6; text-decoration:line-through; background:rgba(96,108,56,0.1); }
+
+        .toast { position: fixed; right: 20px; bottom: 20px; background: white; border-left: 6px solid var(--color-acento); padding: 16px 20px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); z-index: 3000; display: none; font-size: 1rem; max-width: 380px; }
+        .toast.show { display: block; animation: slideUp 0.3s ease; }
+        .info { font-family: 'Roboto', sans-serif; color:var(--color-oliva-oscuro); font-size:1rem; margin-bottom:12px; }
+
+        /* Score Display */
+        .score-display {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(96, 108, 56, 0.1), rgba(188, 192, 146, 0.15));
+            border-radius: 14px;
+            margin-top: 20px;
+        }
+        .score-number {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--color-oliva-oscuro);
+        }
+        .score-label {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.9rem;
+            color: var(--color-oliva-medio);
+            margin-top: 5px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) { 
+            .main-content { padding: 20px; } 
+            .lesson-container { padding: 20px; } 
+            .panel-box { right: 10px; width: 92%; top: 55%; transform: translateY(-55%); } 
+            .floating-icons { right: 10px; }
+            .concepts-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 600px) {
+            .chain-diagram { gap: 4px; }
+            .chain-link { width: 45px; height: 45px; font-size: 0.75rem; }
+            .chain-connector { width: 20px; }
+        }
+    </style>
+    <script type="module" src="./global-settings.js"></script>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="hamburger" id="hamburger-menu"><span></span><span></span><span></span></div>
+        <div class="user-dropdown" id="user-dropdown">
+            <a href="cuenta.html">Mi Cuenta</a>
+            <a href="configuracion.html">Configuracion</a>
+            <a href="notificaciones.html">Notificaciones</a>
+            <hr>
+            <a href="index.html" id="logout-btn">Cerrar Sesion</a>
+        </div>
+    </nav>
+
+    <section class="hero-section">
+        <div id="digital-clock" class="digital-clock">00:00:00</div>
+        <p id="motivational-quote" class="motivational-quote"></p>
+        <h2 class="bienvenida">Cohesion Textual: El arte de conectar ideas</h2>
+        
+        <div class="progress-section">
+            <div class="progress-label">
+                <span>Progreso de la leccion</span>
+                <span id="progress-percent">25%</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progress-fill" style="width: 25%"></div>
+            </div>
+        </div>
+    </section>
+
+    <main class="main-content">
+        <button class="close-btn" id="close-btn" title="Volver a modulos"><i class="fas fa-arrow-left"></i></button>
+        
+        <div class="lesson-container" id="lesson-container">
+            <div class="lesson-header">
+                <h2>Cohesion Textual</h2>
+                <p class="lesson-subtitle">Descubre como los textos mantienen su unidad y fluidez</p>
+            </div>
+            
+            <div class="lesson-content">
+                <!-- SECCION 1: TEORIA -->
+                <div class="lesson-section">
+                    <h3 class="section-title">
+                        <span class="section-icon"><i class="fas fa-link"></i></span>
+                        Sesion de Teoria: El Pegamento del Texto
+                    </h3>
+                    
+                    <div class="theory-card">
+                        <p class="theory-intro">
+                            La <strong>cohesion</strong> es el conjunto de mecanismos linguisticos que conectan las palabras y los parrafos entre si. Sin ella, un texto seria solo una lista de oraciones aisladas sin relacion aparente.
+                        </p>
+                        
+                        <div class="concepts-grid">
+                            <!-- Concepto 1: Referencia -->
+                            <div class="concept-box">
+                                <div class="concept-header">
+                                    <div class="concept-icon reference">
+                                        <i class="fas fa-hand-point-left"></i>
+                                    </div>
+                                    <div class="concept-title">Referencia</div>
+                                </div>
+                                <p class="concept-desc">
+                                    Es el mecanismo por el cual una palabra se refiere a otra mencionada antes (anafora) o despues (catafora). Se logra mediante <strong>pronombres</strong>, <strong>determinantes</strong> y <strong>sinonimos</strong>.
+                                </p>
+                                <div class="concept-example">
+                                    "Maria estudio toda la noche. <em>Ella</em> queria aprobar el examen."
+                                    <br><small style="color: var(--color-oliva-medio);">"Ella" retoma a "Maria"</small>
+                                </div>
+                            </div>
+                            
+                            <!-- Concepto 2: Conexion -->
+                            <div class="concept-box">
+                                <div class="concept-header">
+                                    <div class="concept-icon connection">
+                                        <i class="fas fa-project-diagram"></i>
+                                    </div>
+                                    <div class="concept-title">Conexion</div>
+                                </div>
+                                <p class="concept-desc">
+                                    Es el uso de <strong>conectores logicos</strong> para establecer relaciones entre oraciones: causa, contraste, adicion, consecuencia, temporalidad, entre otras.
+                                </p>
+                                <div class="concept-example">
+                                    "Estudio mucho, <em>sin embargo</em> no aprobo."
+                                    <br><small style="color: var(--color-oliva-medio);">"sin embargo" marca contraste</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visualizacion de la Cadena -->
+                    <div class="chain-visualization">
+                        <div class="chain-title">
+                            <i class="fas fa-lightbulb" style="color: var(--color-acento); margin-right: 8px;"></i>
+                            Visualiza el texto como una cadena
+                        </div>
+                        <div class="chain-diagram" id="chain-diagram">
+                            <div class="chain-link">Ideas</div>
+                            <div class="chain-connector"></div>
+                            <div class="chain-link">Enlaces</div>
+                            <div class="chain-connector"></div>
+                            <div class="chain-link">Coherencia</div>
+                            <div class="chain-connector"></div>
+                            <div class="chain-link">Mensaje</div>
+                            <div class="chain-connector"></div>
+                            <div class="chain-link">Claro</div>
+                        </div>
+                        <div class="chain-message" id="chain-message">
+                            Si todos los eslabones estan unidos, el mensaje fluye sin interrupciones.
+                        </div>
+                        
+                        <!-- Toggle para romper cadena -->
+                        <div class="demo-container">
+                            <div class="demo-toggle">
+                                <span class="demo-toggle-label">
+                                    <i class="fas fa-unlink" style="color: var(--color-error); margin-right: 8px;"></i>
+                                    Simular error de cohesion
+                                </span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="chain-toggle">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="demo-text-box" id="demo-text-box">
+                                "La inteligencia artificial esta transformando la medicina. <span class="highlight">Sin embargo,</span> los algoritmos de deteccion temprana han reducido errores en un 20%."
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCION 2: PRACTICA -->
+                <div class="lesson-section">
+                    <h3 class="section-title">
+                        <span class="section-icon"><i class="fas fa-flask"></i></span>
+                        Sesion de Practica: La Prueba de Acido del Parrafo
+                    </h3>
+                    
+                    <div class="practice-container">
+                        <div class="practice-header">
+                            <div class="practice-icon">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <div class="practice-title">Detecta los errores de cohesion</div>
+                        </div>
+                        
+                        <div class="practice-instructions">
+                            <h4><i class="fas fa-info-circle" style="color: var(--color-info);"></i> Instrucciones</h4>
+                            <p>A continuacion encontraras un parrafo con <strong>3 errores de cohesion</strong> deliberados. Tu tarea es identificar las zonas donde el texto "suena mal" o pierde el hilo logico.</p>
+                            <ul style="margin-top: 10px; margin-left: 20px; font-size: 0.9rem; color: var(--color-oliva-medio);">
+                                <li>Un conector mal utilizado</li>
+                                <li>Una referencia incorrecta</li>
+                                <li>Una elipsis mal aplicada</li>
+                            </ul>
+                        </div>
+
+                        <!-- Herramientas de marcado -->
+                        <div class="marker-tools">
+                            <button class="marker-btn mark active" id="btn-mark">
+                                <i class="fas fa-highlighter"></i> Marcar error
+                            </button>
+                            <button class="marker-btn clear" id="btn-clear">
+                                <i class="fas fa-eraser"></i> Limpiar marcas
+                            </button>
+                            <button class="marker-btn check" id="btn-check">
+                                <i class="fas fa-check-circle"></i> Verificar
+                            </button>
+                        </div>
+
+                        <!-- Texto con errores -->
+                        <div class="error-text-container">
+                            <div class="error-text" id="error-text">
+                                <span class="error-zone" data-error="conector" data-id="1">La inteligencia artificial esta revolucionando el mercado laboral mundial. Ademas,</span>
+                                <span class="error-zone" data-error="none" data-id="2">muchos expertos advierten que hasta el 40% de los empleos actuales podrian automatizarse en las proximas dos decadas.</span>
+                                <span class="error-zone" data-error="none" data-id="3">Los trabajadores de la industria manufacturera son particularmente vulnerables.</span>
+                                <span class="error-zone" data-error="referencia" data-id="4">Ella</span>
+                                <span class="error-zone" data-error="none" data-id="5">deberan adaptarse rapidamente o enfrentar el desplazamiento laboral.</span>
+                                <span class="error-zone" data-error="none" data-id="6">Por otro lado,</span>
+                                <span class="error-zone" data-error="none" data-id="7">la IA tambien creara nuevas oportunidades laborales que aun no imaginamos.</span>
+                                <span class="error-zone" data-error="elipsis" data-id="8">Algunos sectores como la salud y la educacion seran mas resilientes.</span>
+                                <span class="error-zone" data-error="none" data-id="9">Sin embargo,</span>
+                                <span class="error-zone" data-error="none" data-id="10">la transicion requerira inversion significativa en capacitacion.</span>
+                            </div>
+                        </div>
+
+                        <!-- Panel de resultados -->
+                        <div class="results-panel" id="results-panel">
+                            <div class="results-title">
+                                <i class="fas fa-clipboard-check" style="color: var(--color-exito); margin-right: 8px;"></i>
+                                Resultados del analisis
+                            </div>
+                            <div id="results-content"></div>
+                            
+                            <div class="score-display">
+                                <div class="score-number" id="score-value">0/3</div>
+                                <div class="score-label">errores detectados correctamente</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botones de navegacion -->
+            <div class="button-container">
+                <button class="play-btn" id="play-btn">Ir al Examen</button>
+                <button class="continue-btn" id="continue-btn" style="display: none;">Continuar al siguiente modulo</button>
+            </div>
+        </div>
+
+        <aside class="mascota-container">
+            <div class="speech-bubble"><p>La cohesion es el pegamento invisible que mantiene unido el texto!</p></div>
+        </aside>
+    </main>
+
+    <!-- Floating Icons -->
+    <div class="floating-icons" aria-hidden="false">
+        <button id="btn-misiones" title="Misiones"><i class="fas fa-bullseye"></i></button>
+        <button id="btn-nivel" title="Nivel actual"><i class="fas fa-star"></i></button>
+        <button id="btn-progreso" title="Progreso"><i class="fas fa-chart-line"></i></button>
+        <button id="btn-analisis" title="Analisis"><i class="fas fa-chart-pie"></i></button>
+    </div>
+
+    <!-- Panels -->
+    <div class="panel-box" id="panel-misiones" aria-hidden="true">
+        <div class="panel-header"><h3>Misiones</h3><button class="close-panel" data-close="misiones">&times;</button></div>
+        <div id="misiones-content"></div>
+    </div>
+    <div class="panel-box" id="panel-nivel" aria-hidden="true">
+        <div class="panel-header"><h3>Tu nivel</h3><button class="close-panel" data-close="nivel">&times;</button></div>
+        <div id="nivel-content"></div>
+    </div>
+    <div class="panel-box" id="panel-progreso" aria-hidden="true">
+        <div class="panel-header"><h3>Progreso</h3><button class="close-panel" data-close="progreso">&times;</button></div>
+        <div id="progreso-content"></div>
+    </div>
+    <div class="panel-box" id="panel-analisis" aria-hidden="true">
+        <div class="panel-header"><h3>Analisis</h3><button class="close-panel" data-close="analisis">&times;</button></div>
+        <div id="analisis-content"><div id="analisis-stats" style="margin-top:12px;"></div></div>
+    </div>
+
+    <div class="toast" id="mission-toast" role="status" aria-live="polite"></div>
+    <audio id="mission-sound" src="mission.mp3" preload="auto"></audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM Cargado. Inicializando Skopia - Cohesion Textual...");
+
+            // --- CONSTANTES Y VARIABLES ---
+            const MISSIONS_KEY = 'skopia_missions_v1';
+            const USER_PROFILE_KEY = 'skopia_user_profile_v1';
+            let toastTimer = null;
+            let markedZones = new Set();
+
+            // Datos de errores para la practica
+            const errorData = {
+                conector: {
+                    text: "Ademas,",
+                    explanation: "El conector 'Ademas' indica adicion, pero el contexto sugiere una advertencia (contraste). Deberia ser 'Sin embargo' o 'No obstante'."
+                },
+                referencia: {
+                    text: "Ella",
+                    explanation: "El pronombre 'Ella' es femenino singular, pero se refiere a 'trabajadores' (masculino plural). Deberia ser 'Ellos'."
+                },
+                elipsis: {
+                    text: "Algunos sectores como la salud y la educacion seran mas resilientes.",
+                    explanation: "Esta oracion esta incompleta. Falta el verbo o contexto que la conecte con la anterior. Deberia incluir 'seran mas resilientes a la automatizacion' o conectarse mejor."
+                }
+            };
+
+            const LEVELS = [
+                { idx: 1, name: "Novato/a", min: 0, max: 299 }, { idx: 2, name: "Aprendiz/a", min: 300, max: 799 },
+                { idx: 3, name: "Explorador/a", min: 800, max: 1499 }, { idx: 4, name: "Analista", min: 1500, max: 2499 },
+                { idx: 5, name: "Estratega", min: 2500, max: 3699 }, { idx: 6, name: "Sabio/a", min: 3700, max: 4999 },
+                { idx: 7, name: "Maestro/a", min: 5000, max: 6499 }, { idx: 8, name: "Elite", min: 6500, max: 7999 },
+                { idx: 9, name: "Leyenda", min: 8000, max: 9499 }, { idx: 10, name: "Rey/Reina Skopia", min: 9500, max: Infinity }
+            ];
+
+            const missionsTemplate = [
+                { id: 1, title: "Completa tu primer examen", points: 50 },
+                { id: 2, title: "Logra al menos 180/300 en un examen", points: 80 },
+                { id: 3, title: "Lee toda la teoria de una leccion", points: 40 },
+                { id: 4, title: "Termina una sesion de estudio sin salir", points: 50 },
+                { id: 5, title: "Gana tu primer juego", points: 50 },
+                { id: 6, title: "Usa una pista o ayuda en un juego", points: 30 },
+                { id: 7, title: "Repite un examen para mejorar tu nota", points: 50 },
+                { id: 8, title: "Cambia tu nombre de usuario", points: 40 },
+                { id: 9, title: "Acumula tus primeras 200 estrellas", points: 30 },
+                { id: 10, title: "Completa 3 misiones seguidas", points: 50 },
+                { id: 11, title: "Logra 240/300 en un examen", points: 150 },
+                { id: 12, title: "Completa un examen sin errores (300/300)", points: 200 },
+                { id: 100, title: "Maestro del Saber Pro: completa todo el sistema", points: 200 }
+            ];
+
+            // --- FUNCIONES PRINCIPALES ---
+            function initMissions() {
+                if (!localStorage.getItem(MISSIONS_KEY)) {
+                    const initial = missionsTemplate.map(m => ({ ...m, completed: false }));
+                    localStorage.setItem(MISSIONS_KEY, JSON.stringify(initial));
+                }
+            }
+            
+            function initUserProfile() {
+                if (!localStorage.getItem(USER_PROFILE_KEY)) {
+                    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify({ originalEmail: "", nameChangeMissionCompleted: false }));
+                }
+            }
+
+            function completeMission(id) {
+                const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
+                const mission = data.find(m => m.id === id);
+                if (mission && !mission.completed) {
+                    mission.completed = true;
+                    localStorage.setItem(MISSIONS_KEY, JSON.stringify(data));
+                    document.getElementById('mission-sound').play().catch(() => {});
+                    showMissionToast(`Mision completada: ${mission.title} (+${mission.points} estrellas)!`, 5000);
+                    updateAllDisplays();
+                }
+            }
+
+            function showMissionToast(text, ms = 60000) {
+                const toast = document.getElementById('mission-toast');
+                toast.innerHTML = `<strong>${text}</strong>`;
+                toast.classList.add('show');
+                if (toastTimer) clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => toast.classList.remove('show'), ms);
+            }
+
+            function getTotalPoints() {
+                return JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]")
+                    .reduce((sum, m) => sum + (m.completed ? m.points : 0), 0);
+            }
+            
+            function getLevelFromPoints(total) {
+                for (let i = LEVELS.length - 1; i >= 0; i--) 
+                    if (total >= LEVELS[i].min) return LEVELS[i];
+                return LEVELS[0];
+            }
+            
+            function getCompletedCount() {
+                return JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]").filter(m => m.completed).length;
+            }
+
+            // --- RENDER FUNCTIONS ---
+            function renderMissions() {
+                const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
+                const container = document.getElementById('misiones-content');
+                container.innerHTML = '';
+                const incompleteMissions = data.filter(m => !m.completed).slice(0, 3);
+                if (incompleteMissions.length === 0) {
+                    container.innerHTML = '<div class="info">Felicidades! Has completado todas las misiones.</div>';
+                    return;
+                }
+                incompleteMissions.forEach(m => {
+                    const div = document.createElement('div');
+                    div.className = 'mission-row';
+                    div.innerHTML = `<div style="flex:1"><div style="font-weight:700; color:var(--color-oliva-oscuro)">${m.id}. ${m.title}</div><div style="font-size:0.95rem; color:var(--color-oliva-medio)">${m.points} estrellas</div></div>`;
+                    container.appendChild(div);
+                });
+            }
+            
+            function renderLevel() {
+                const total = getTotalPoints();
+                const level = getLevelFromPoints(total);
+                const neededForNext = (level.max === Infinity) ? 0 : (level.max - total + 1);
+                const progressPct = (level.max === Infinity) ? 100 : Math.min(100, Math.round(((total - level.min) / (level.max - level.min)) * 100));
+                document.getElementById('nivel-content').innerHTML = `
+                    <div class="info"><strong>Nivel:</strong> ${level.name} (${level.idx})</div>
+                    <div class="info"><strong>Puntos:</strong> ${total} estrellas</div>
+                    <div class="info"><strong>Progreso:</strong> ${progressPct}%</div>
+                    <div style="background:#f1f1f1;border-radius:10px;padding:8px;margin-top:10px"><div style="height:12px;background:linear-gradient(90deg,var(--color-oliva-medio),var(--color-acento));width:${progressPct}%;border-radius:8px"></div></div>
+                    ${level.max === Infinity ? '<div class="info" style="margin-top:8px">Nivel maximo!</div>' : `<div class="info" style="margin-top:8px">Para subir: ${neededForNext} estrellas</div>`}
+                `;
+            }
+            
+            function renderProgress() {
+                const total = getTotalPoints();
+                const pct = Math.min(100, Math.round((total / 9500) * 100));
+                document.getElementById('progreso-content').innerHTML = `
+                    <div class="info"><strong>Puntos:</strong> ${total} estrellas</div>
+                    <div class="info"><strong>Progreso Global:</strong> ${pct}%</div>
+                    <div style="background:#f1f1f1;border-radius:10px;padding:8px;margin-top:10px"><div style="height:12px;background:linear-gradient(90deg,var(--color-oliva-medio),var(--color-acento));width:${pct}%;border-radius:8px"></div></div>
+                    <div class="info" style="margin-top:10px"><strong>Misiones:</strong> ${getCompletedCount()}/100</div>
+                `;
+            }
+            
+            function renderAnalysis() {
+                document.getElementById('analisis-stats').innerHTML = '<div class="info">Analisis de examenes (pendiente de implementar).</div>';
+            }
+            
+            function updateAllDisplays() {
+                renderMissions(); renderLevel(); renderProgress(); renderAnalysis();
+            }
+            
+            function closeAllPanels() {
+                document.querySelectorAll('.panel-box').forEach(p => p.classList.remove('active'));
+            }
+
+            function updateProgress(value) {
+                const fill = document.getElementById('progress-fill');
+                const percent = document.getElementById('progress-percent');
+                fill.style.width = value + '%';
+                percent.textContent = value + '%';
+            }
+
+            // --- INTERACTIVIDAD DE LA TEORIA ---
+            
+            // Toggle de cadena rota
+            const chainToggle = document.getElementById('chain-toggle');
+            const chainDiagram = document.getElementById('chain-diagram');
+            const chainMessage = document.getElementById('chain-message');
+            const demoTextBox = document.getElementById('demo-text-box');
+
+            chainToggle.addEventListener('change', function() {
+                const links = chainDiagram.querySelectorAll('.chain-link');
+                const connectors = chainDiagram.querySelectorAll('.chain-connector');
+                
+                if (this.checked) {
+                    // Romper la cadena
+                    links[2].classList.add('broken');
+                    connectors[2].classList.add('broken');
+                    chainMessage.classList.add('broken');
+                    chainMessage.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Un eslabon roto rompe toda la cadena. El mensaje se pierde.';
+                    demoTextBox.classList.add('broken');
+                } else {
+                    // Reparar la cadena
+                    links[2].classList.remove('broken');
+                    connectors[2].classList.remove('broken');
+                    chainMessage.classList.remove('broken');
+                    chainMessage.innerHTML = 'Si todos los eslabones estan unidos, el mensaje fluye sin interrupciones.';
+                    demoTextBox.classList.remove('broken');
+                }
+            });
+
+            // --- INTERACTIVIDAD DE LA PRACTICA ---
+            
+            const errorZones = document.querySelectorAll('.error-zone');
+            const btnMark = document.getElementById('btn-mark');
+            const btnClear = document.getElementById('btn-clear');
+            const btnCheck = document.getElementById('btn-check');
+            const resultsPanel = document.getElementById('results-panel');
+            const resultsContent = document.getElementById('results-content');
+            const scoreValue = document.getElementById('score-value');
+
+            // Click en zonas de error
+            errorZones.forEach(zone => {
+                zone.addEventListener('click', function() {
+                    const id = this.dataset.id;
+                    
+                    if (markedZones.has(id)) {
+                        // Desmarcar
+                        markedZones.delete(id);
+                        this.classList.remove('marked');
+                    } else {
+                        // Marcar
+                        markedZones.add(id);
+                        this.classList.add('marked');
+                    }
+                });
+            });
+
+            // Boton limpiar
+            btnClear.addEventListener('click', function() {
+                markedZones.clear();
+                errorZones.forEach(zone => {
+                    zone.classList.remove('marked', 'correct-mark', 'wrong-mark');
+                });
+                resultsPanel.classList.remove('visible');
+            });
+
+            // Boton verificar
+            btnCheck.addEventListener('click', function() {
+                let correctCount = 0;
+                let wrongMarks = 0;
+                let missedErrors = [];
+                
+                resultsContent.innerHTML = '';
+
+                // Verificar cada zona marcada
+                markedZones.forEach(id => {
+                    const zone = document.querySelector(`.error-zone[data-id="${id}"]`);
+                    const errorType = zone.dataset.error;
+                    
+                    if (errorType !== 'none') {
+                        // Correcto
+                        correctCount++;
+                        zone.classList.remove('marked');
+                        zone.classList.add('correct-mark');
+                        
+                        const resultItem = document.createElement('div');
+                        resultItem.className = 'result-item';
+                        resultItem.innerHTML = `
+                            <div class="result-icon correct"><i class="fas fa-check"></i></div>
+                            <div class="result-text">
+                                <strong>${errorType === 'conector' ? 'Conector incorrecto' : errorType === 'referencia' ? 'Referencia erronea' : 'Elipsis mal aplicada'}:</strong><br>
+                                "${errorData[errorType].text}"<br>
+                                <small style="color: var(--color-oliva-medio);">${errorData[errorType].explanation}</small>
+                            </div>
+                        `;
+                        resultsContent.appendChild(resultItem);
+                    } else {
+                        // Incorrecto
+                        wrongMarks++;
+                        zone.classList.remove('marked');
+                        zone.classList.add('wrong-mark');
+                    }
+                });
+
+                // Verificar errores no detectados
+                errorZones.forEach(zone => {
+                    const errorType = zone.dataset.error;
+                    if (errorType !== 'none' && !markedZones.has(zone.dataset.id)) {
+                        missedErrors.push({ zone, type: errorType });
+                    }
+                });
+
+                // Mostrar errores no detectados
+                missedErrors.forEach(({ zone, type }) => {
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'result-item';
+                    resultItem.innerHTML = `
+                        <div class="result-icon missed"><i class="fas fa-eye-slash"></i></div>
+                        <div class="result-text">
+                            <strong>Error no detectado (${type === 'conector' ? 'Conector' : type === 'referencia' ? 'Referencia' : 'Elipsis'}):</strong><br>
+                            "${errorData[type].text}"<br>
+                            <small style="color: var(--color-oliva-medio);">${errorData[type].explanation}</small>
+                        </div>
+                    `;
+                    resultsContent.appendChild(resultItem);
+                });
+
+                // Actualizar puntuacion
+                scoreValue.textContent = `${correctCount}/3`;
+                
+                // Mostrar panel de resultados
+                resultsPanel.classList.add('visible');
+
+                // Actualizar progreso
+                const progressValue = Math.min(100, 25 + (correctCount * 20));
+                updateProgress(progressValue);
+
+                // Completar mision si detecta todos
+                if (correctCount === 3) {
+                    completeMission(3);
+                    showMissionToast('Excelente! Has detectado todos los errores de cohesion.', 4000);
+                }
+            });
+
+            // --- EVENT LISTENERS ---
+            window.addEventListener('userReady', (e) => {
+                const user = e.detail.user;
+                const userProfile = JSON.parse(localStorage.getItem(USER_PROFILE_KEY) || "{}");
+
+                if (!userProfile.originalEmail) {
+                    userProfile.originalEmail = user.email;
+                    userProfile.nameChangeMissionCompleted = false;
+                    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
+                }
+
+                if (!userProfile.nameChangeMissionCompleted && user.displayName && user.displayName !== userProfile.originalEmail) {
+                    completeMission(8);
+                    userProfile.nameChangeMissionCompleted = true;
+                    localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(userProfile));
+                }
+            });
+
+            document.getElementById('hamburger-menu').addEventListener('click', () => {
+                document.getElementById('user-dropdown').classList.toggle('active');
+            });
+            
+            document.getElementById('logout-btn').addEventListener('click', () => {
+                import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
+                    signOut(window.auth).then(() => window.location.href = 'index.html');
+                });
+            });
+            
+            window.addEventListener('click', (event) => {
+                if (!event.target.closest('.navbar')) document.getElementById('user-dropdown').classList.remove('active');
+                const isIcon = event.target.closest('.floating-icons');
+                const isPanel = event.target.closest('.panel-box');
+                if (!isIcon && !isPanel) closeAllPanels();
+            });
+            
+            document.getElementById('close-btn').addEventListener('click', () => window.location.href = 'modulos.html');
+            
+            document.getElementById('play-btn').addEventListener('click', () => {
+                window.location.href = 'LCS5D.html';
+            });
+
+            // Panel buttons
+            document.getElementById('btn-misiones').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-misiones').classList.add('active'); renderMissions(); });
+            document.getElementById('btn-nivel').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-nivel').classList.add('active'); renderLevel(); });
+            document.getElementById('btn-progreso').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-progreso').classList.add('active'); renderProgress(); });
+            document.getElementById('btn-analisis').addEventListener('click', () => { closeAllPanels(); document.getElementById('panel-analisis').classList.add('active'); renderAnalysis(); });
+            
+            document.querySelectorAll('.close-panel').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.getElementById('panel-' + e.target.getAttribute('data-close')).classList.remove('active');
+                });
+            });
+
+            // Clock
+            const clockElement = document.getElementById('digital-clock');
+            let lastHour = -1;
+            
+            function updateClock() {
+                const now = new Date();
+                const h = String(now.getHours()).padStart(2, '0');
+                const m = String(now.getMinutes()).padStart(2, '0');
+                const s = String(now.getSeconds()).padStart(2, '0');
+                
+                if (now.getHours() !== lastHour) {
+                    clockElement.classList.add('hour-change');
+                    setTimeout(() => {
+                        clockElement.textContent = `${h}:${m}:${s}`;
+                        clockElement.classList.remove('hour-change');
+                    }, 300);
+                    lastHour = now.getHours();
+                } else {
+                    clockElement.textContent = `${h}:${m}:${s}`;
+                }
+            }
+            
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            // Quotes
+            const quotes = [
+                "Un texto sin cohesion es como un rompecabezas con piezas sueltas.",
+                "Los conectores son los puentes entre tus ideas.",
+                "La referencia correcta evita que el lector se pierda.",
+                "Cada palabra debe tener un proposito en la cadena del texto.",
+                "Detectar errores de cohesion es leer entre lineas."
+            ];
+            
+            let currentQuoteIndex = 0;
+            const quoteElement = document.getElementById('motivational-quote');
+            
+            function changeQuote() {
+                quoteElement.style.animation = 'none';
+                setTimeout(() => {
+                    quoteElement.textContent = quotes[currentQuoteIndex];
+                    quoteElement.style.animation = 'fadeIn 1s forwards';
+                }, 20);
+                currentQuoteIndex = (currentQuoteIndex + 1) % quotes.length;
+            }
+            
+            changeQuote();
+            setInterval(changeQuote, 90000);
+
+            // --- INICIALIZACION ---
+            initMissions();
+            initUserProfile();
+            updateAllDisplays();
+            
+            // Notificacion inicial
+            const data = JSON.parse(localStorage.getItem(MISSIONS_KEY) || "[]");
+            const nextMission = data.find(m => !m.completed);
+            if (nextMission) {
+                setTimeout(() => {
+                    showMissionToast(`Mision disponible: ${nextMission.title} (+${nextMission.points} estrellas)`, 6000);
+                }, 2000);
+            }
+            
+            console.log("Skopia Cohesion Textual inicializado.");
+        });
+    </script>
+</body>
+</html>
