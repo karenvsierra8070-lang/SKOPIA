@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cohesión Textual - Skópia</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+        import { getDatabase, ref, get, set, onValue, push, update } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            authDomain: "skopia-aa786.firebaseapp.com",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        window.auth = auth;
+        window.db = db;
+        window.ref = ref;
+        window.get = get;
+        window.set = set;
+        window.onValue = onValue;
+        window.push = push;
+        window.update = update;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            window.currentUser = user;
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
+    <style>
+        :root {
+            --beige-50: #FDFCFA;
+            --beige-100: #F8F5F0;
+            --beige-200: #EDE8DF;
+            --beige-300: #DED5C6;
+            --beige-400: #C9BCA8;
+            --oliva-900: #2C3E1F;
+            --oliva-800: #3A5028;
+            --oliva-700: #4A6030;
+            --oliva-600: #5A7038;
+            --oliva-500: #6B8040;
+            --accent-gold: #B8860B;
+            --accent-copper: #A0522D;
+            --success: #2E7D32;
+            --error: #C62828;
+            --shadow-soft: 0 4px 20px rgba(44, 62, 31, 0.08);
+            --shadow-medium: 0 8px 40px rgba(44, 62, 31, 0.12);
+            --shadow-strong: 0 16px 60px rgba(44, 62, 31, 0.16);
+            --radius-sm: 8px;
+            --radius-md: 16px;
+            --radius-lg: 24px;
+            --radius-xl: 32px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--beige-100);
+            color: var(--oliva-900);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Patrones de fondo */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(ellipse at 0% 0%, rgba(107, 128, 64, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 100% 100%, rgba(184, 134, 11, 0.04) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Header minimalista */
+        .header {
+            background: rgba(253, 252, 250, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--beige-300);
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .back-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-sm);
+            background: transparent;
+            border: 2px solid var(--beige-300);
+            color: var(--oliva-800);
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .back-btn:hover {
+            background: var(--oliva-900);
+            border-color: var(--oliva-900);
+            color: var(--beige-50);
+            transform: translateX(-4px);
+        }
+
+        .header-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--oliva-900);
+            letter-spacing: 0.5px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-menu {
+            position: relative;
+        }
+
+        .user-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            background: var(--beige-200);
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .user-btn:hover {
+            background: var(--beige-300);
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--oliva-700), var(--oliva-500));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--beige-50);
+            font-size: 14px;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: var(--beige-50);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-medium);
+            min-width: 200px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.25s ease;
+            overflow: hidden;
+        }
+
+        .dropdown-menu.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            color: var(--oliva-800);
+            text-decoration: none;
+            transition: background 0.15s ease;
+            border: none;
+            background: none;
+            width: 100%;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .dropdown-item:hover {
+            background: var(--beige-200);
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: var(--beige-300);
+            margin: 4px 0;
+        }
+
+        /* Hero elegante */
+        .hero {
+            padding: 60px 40px;
+            background: linear-gradient(180deg, var(--oliva-900) 0%, var(--oliva-800) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0L60 30L30 60L0 30L30 0z' fill='none' stroke='rgba(255,255,255,0.03)' stroke-width='1'/%3E%3C/svg%3E");
+            opacity: 0.6;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 50px;
+            color: var(--beige-200);
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 24px;
+            backdrop-filter: blur(10px);
+        }
+
+        .hero-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 700;
+            color: var(--beige-50);
+            margin-bottom: 16px;
+            line-height: 1.2;
+        }
+
+        .hero-subtitle {
+            font-size: 1.1rem;
+            color: var(--beige-300);
+            line-height: 1.7;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Stats flotantes */
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            padding: 24px 40px;
+            background: var(--beige-50);
+            border-bottom: 1px solid var(--beige-200);
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 24px;
+            background: var(--beige-100);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--beige-200);
+            min-width: 160px;
+        }
+
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .stat-icon.green { background: rgba(46, 125, 50, 0.1); color: var(--success); }
+        .stat-icon.gold { background: rgba(184, 134, 11, 0.1); color: var(--accent-gold); }
+        .stat-icon.copper { background: rgba(160, 82, 45, 0.1); color: var(--accent-copper); }
+        .stat-icon.olive { background: rgba(74, 96, 48, 0.1); color: var(--oliva-700); }
+
+        .stat-info h4 {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--oliva-900);
+        }
+
+        .stat-info span {
+            font-size: 0.8rem;
+            color: var(--oliva-700);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Progress principal */
+        .progress-section {
+            padding: 32px 40px;
+            background: var(--beige-50);
+        }
+
+        .progress-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .progress-label {
+            font-weight: 600;
+            color: var(--oliva-800);
+        }
+
+        .progress-value {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-gold);
+        }
+
+        .progress-track {
+            height: 12px;
+            background: var(--beige-300);
+            border-radius: 50px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--oliva-700), var(--oliva-500), var(--accent-gold));
+            border-radius: 50px;
+            transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%);
+            animation: progressShine 2s ease-in-out infinite;
+        }
+
+        @keyframes progressShine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Main content */
+        .main-content {
+            padding: 48px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-intro {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .section-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--oliva-900);
+            margin-bottom: 12px;
+        }
+
+        .section-desc {
+            color: var(--oliva-700);
+            font-size: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* Grid de módulos - estilo alternativo */
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 28px;
+        }
+
+        .module-card {
+            background: var(--beige-50);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--beige-200);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .module-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-strong);
+            border-color: var(--beige-400);
+        }
+
+        .module-card.locked {
+            opacity: 0.75;
+        }
+
+        .module-card.locked:hover {
+            transform: translateY(-4px);
+        }
+
+        .module-card.completed {
+            border-color: var(--success);
+            border-width: 2px;
+        }
+
+        /* Nuevo header de tarjeta con gradiente diagonal */
+        .card-accent {
+            height: 6px;
+            background: linear-gradient(90deg, var(--oliva-800), var(--oliva-600));
+        }
+
+        .card-accent.connectors { background: linear-gradient(90deg, #3E6B4F, #5A9A7A); }
+        .card-accent.reference { background: linear-gradient(90deg, #6B5B3D, #A08B5A); }
+        .card-accent.lexical { background: linear-gradient(90deg, #4A5568, #718096); }
+        .card-accent.punctuation { background: linear-gradient(90deg, #7B4B3A, #B87A5A); }
+
+        .card-inner {
+            padding: 28px;
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .card-icon-box {
+            width: 56px;
+            height: 56px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .card-icon-box.connectors { background: rgba(62, 107, 79, 0.1); color: #3E6B4F; }
+        .card-icon-box.reference { background: rgba(107, 91, 61, 0.1); color: #6B5B3D; }
+        .card-icon-box.lexical { background: rgba(74, 85, 104, 0.1); color: #4A5568; }
+        .card-icon-box.punctuation { background: rgba(123, 75, 58, 0.1); color: #7B4B3A; }
+
+        .card-badge {
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-badge.success {
+            background: rgba(46, 125, 50, 0.1);
+            color: var(--success);
+        }
+
+        .card-badge.locked {
+            background: rgba(198, 40, 40, 0.1);
+            color: var(--error);
+        }
+
+        .card-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--oliva-900);
+            margin-bottom: 6px;
+        }
+
+        .card-subtitle {
+            font-size: 0.85rem;
+            color: var(--oliva-600);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+
+        .card-desc {
+            font-size: 0.95rem;
+            color: var(--oliva-700);
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        /* Requisito de desbloqueo */
+        .unlock-notice {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 16px;
+            background: rgba(198, 40, 40, 0.05);
+            border-left: 3px solid var(--error);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: var(--oliva-800);
+        }
+
+        .unlock-notice i {
+            color: var(--error);
+        }
+
+        .unlock-notice strong {
+            color: var(--error);
+        }
+
+        /* Card stats */
+        .card-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: var(--beige-100);
+            border-radius: var(--radius-sm);
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-value {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--oliva-900);
+        }
+
+        .metric-label {
+            font-size: 0.7rem;
+            color: var(--oliva-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+
+        /* Mini progress bar */
+        .card-progress {
+            margin-bottom: 20px;
+        }
+
+        .progress-mini-track {
+            height: 6px;
+            background: var(--beige-300);
+            border-radius: 50px;
+            overflow: hidden;
+        }
+
+        .progress-mini-fill {
+            height: 100%;
+            border-radius: 50px;
+            transition: width 0.6s ease;
+        }
+
+        .progress-mini-fill.connectors { background: #3E6B4F; }
+        .progress-mini-fill.reference { background: #6B5B3D; }
+        .progress-mini-fill.lexical { background: #4A5568; }
+        .progress-mini-fill.punctuation { background: #7B4B3A; }
+
+        /* Card footer */
+        .card-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .difficulty-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--beige-300);
+        }
+
+        .dot.active {
+            background: var(--accent-gold);
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--radius-md);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .action-btn.primary {
+            background: var(--oliva-800);
+            color: var(--beige-50);
+        }
+
+        .action-btn.primary:hover {
+            background: var(--oliva-900);
+            transform: scale(1.02);
+        }
+
+        .action-btn.success {
+            background: var(--success);
+            color: white;
+        }
+
+        .action-btn.success:hover {
+            background: #1B5E20;
+        }
+
+        .action-btn.disabled {
+            background: var(--beige-400);
+            color: var(--beige-200);
+            cursor: not-allowed;
+        }
+
+        /* Lock overlay */
+        .lock-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(253, 252, 250, 0.6);
+            backdrop-filter: blur(2px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .lock-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(198, 40, 40, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--error);
+            font-size: 24px;
+        }
+
+        /* Botones flotantes */
+        .floating-panel {
+            position: fixed;
+            right: 24px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            z-index: 90;
+        }
+
+        .float-btn {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: none;
+            background: var(--oliva-800);
+            color: var(--beige-50);
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: var(--shadow-medium);
+        }
+
+        .float-btn:hover {
+            background: var(--oliva-900);
+            transform: scale(1.1);
+        }
+
+        /* Paneles laterales */
+        .side-panel {
+            position: fixed;
+            right: 100px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 380px;
+            max-height: 70vh;
+            background: var(--beige-50);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-strong);
+            padding: 28px;
+            z-index: 95;
+            display: none;
+            overflow-y: auto;
+        }
+
+        .side-panel.active {
+            display: block;
+            animation: panelSlide 0.35s ease;
+        }
+
+        @keyframes panelSlide {
+            from { opacity: 0; transform: translateY(-50%) translateX(30px); }
+            to { opacity: 1; transform: translateY(-50%) translateX(0); }
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--beige-200);
+        }
+
+        .panel-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--oliva-900);
+        }
+
+        .panel-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: var(--beige-200);
+            color: var(--oliva-700);
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .panel-close:hover {
+            background: var(--beige-300);
+        }
+
+        .panel-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            background: var(--beige-100);
+            border-radius: var(--radius-sm);
+            margin-bottom: 10px;
+        }
+
+        .panel-item.done {
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
+
+        .panel-item-text {
+            font-size: 0.95rem;
+            color: var(--oliva-800);
+        }
+
+        .panel-item-status {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        /* Sync indicator */
+        .sync-badge {
+            position: fixed;
+            top: 90px;
+            right: 24px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 18px;
+            background: var(--beige-50);
+            border-radius: 50px;
+            box-shadow: var(--shadow-soft);
+            font-size: 0.85rem;
+            color: var(--oliva-700);
+            z-index: 80;
+        }
+
+        .sync-badge.visible {
+            display: flex;
+        }
+
+        .sync-badge i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 200;
+        }
+
+        .toast {
+            padding: 16px 24px;
+            background: var(--beige-50);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-medium);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            max-width: 360px;
+            border-left: 4px solid var(--oliva-700);
+        }
+
+        .toast.visible {
+            display: flex;
+            animation: toastEnter 0.3s ease;
+        }
+
+        .toast.error { border-left-color: var(--error); }
+        .toast.success { border-left-color: var(--success); }
+
+        @keyframes toastEnter {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Achievement banner */
+        .achievement-banner {
+            display: none;
+            background: linear-gradient(135deg, var(--accent-gold), var(--accent-copper));
+            padding: 24px;
+            border-radius: var(--radius-lg);
+            margin-bottom: 32px;
+            text-align: center;
+            color: white;
+        }
+
+        .achievement-banner.visible {
+            display: block;
+            animation: fadeUp 0.5s ease;
+        }
+
+        .achievement-banner h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.6rem;
+            margin-bottom: 8px;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header { padding: 12px 20px; }
+            .header-title { font-size: 1.2rem; }
+            .hero { padding: 40px 20px; }
+            .hero-title { font-size: 2rem; }
+            .stats-bar { padding: 16px 20px; gap: 12px; }
+            .stat-card { min-width: 140px; padding: 10px 16px; }
+            .main-content { padding: 32px 20px; }
+            .modules-grid { grid-template-columns: 1fr; }
+            .floating-panel { right: 12px; }
+            .side-panel { 
+                right: 12px; 
+                width: calc(100% - 24px);
+                max-height: 60vh;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <button class="back-btn" id="backBtn" title="Volver a módulos">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h1 class="header-title">Cohesión Textual</h1>
+        </div>
+        <div class="header-right">
+            <div class="user-menu">
+                <button class="user-btn" id="userBtn">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <span id="userNameDisplay">Usuario</span>
+                    <i class="fas fa-chevron-down" style="font-size: 12px; opacity: 0.6;"></i>
+                </button>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <a href="cuenta.html" class="dropdown-item">
+                        <i class="fas fa-user-circle"></i> Mi Cuenta
+                    </a>
+                    <a href="configuracion.html" class="dropdown-item">
+                        <i class="fas fa-cog"></i> Configuración
+                    </a>
+                    <a href="notificaciones.html" class="dropdown-item">
+                        <i class="fas fa-bell"></i> Notificaciones
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <button class="dropdown-item" id="logoutBtn">
+                        <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i class="fas fa-link"></i>
+                Módulo de Cohesión
+            </div>
+            <h2 class="hero-title">Domina la Cohesión Textual</h2>
+            <p class="hero-subtitle">
+                Aprende los mecanismos que dan unidad y conexión a los textos: conectores, referencias, cohesión léxica y signos de puntuación.
+            </p>
+        </div>
+    </section>
+
+    <!-- Stats -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-info">
+                <h4 id="completedCount">0/4</h4>
+                <span>Completados</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon gold">
+                <i class="fas fa-trophy"></i>
+            </div>
+            <div class="stat-info">
+                <h4 id="avgScore">0</h4>
+                <span>Promedio</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon copper">
+                <i class="fas fa-redo"></i>
+            </div>
+            <div class="stat-info">
+                <h4 id="totalAttempts">0</h4>
+                <span>Intentos</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon olive">
+                <i class="fas fa-medal"></i>
+            </div>
+            <div class="stat-info">
+                <h4 id="masteryLevel">Novato</h4>
+                <span>Nivel</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-section">
+        <div class="progress-container">
+            <div class="progress-header">
+                <span class="progress-label">Progreso General</span>
+                <span class="progress-value" id="progressPercent">0%</span>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="achievement-banner" id="achievementBanner">
+            <h3>¡Felicitaciones! Has completado todos los subtemas</h3>
+            <p>Eres un experto en Cohesión Textual. Sigue practicando para mantener tu nivel.</p>
+        </div>
+
+        <div class="section-intro">
+            <h3 class="section-title">Subtemas del Módulo</h3>
+            <p class="section-desc">
+                Completa cada cuestionario para dominar los elementos de cohesión. Desbloquea el siguiente nivel alcanzando al menos 180 puntos.
+            </p>
+        </div>
+
+        <div class="modules-grid" id="modulesGrid">
+            <!-- Cards generadas dinámicamente -->
+        </div>
+    </main>
+
+    <!-- Floating Buttons -->
+    <div class="floating-panel">
+        <button class="float-btn" id="btnMissions" title="Misiones">
+            <i class="fas fa-tasks"></i>
+        </button>
+        <button class="float-btn" id="btnLevel" title="Nivel">
+            <i class="fas fa-star"></i>
+        </button>
+        <button class="float-btn" id="btnProgress" title="Progreso">
+            <i class="fas fa-chart-bar"></i>
+        </button>
+    </div>
+
+    <!-- Side Panels -->
+    <div class="side-panel" id="panelMissions">
+        <div class="panel-header">
+            <h4 class="panel-title">Misiones</h4>
+            <button class="panel-close" data-panel="Missions">&times;</button>
+        </div>
+        <div id="missionsContent"></div>
+    </div>
+
+    <div class="side-panel" id="panelLevel">
+        <div class="panel-header">
+            <h4 class="panel-title">Tu Nivel</h4>
+            <button class="panel-close" data-panel="Level">&times;</button>
+        </div>
+        <div id="levelContent"></div>
+    </div>
+
+    <div class="side-panel" id="panelProgress">
+        <div class="panel-header">
+            <h4 class="panel-title">Progreso Detallado</h4>
+            <button class="panel-close" data-panel="Progress">&times;</button>
+        </div>
+        <div id="progressContent"></div>
+    </div>
+
+    <!-- Sync Badge -->
+    <div class="sync-badge" id="syncBadge">
+        <i class="fas fa-sync-alt"></i>
+        <span>Sincronizando...</span>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container">
+        <div class="toast" id="toast"></div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('Dashboard Cohesión Textual inicializado');
+
+        const MIN_SCORE = 180;
+
+        const modulesConfig = {
+            'LCS5D1': {
+                id: 1,
+                title: 'Conectores Lógicos',
+                subtitle: 'Preposiciones y Conjunciones',
+                description: 'Aprende a identificar y usar conectores lógicos que establecen relaciones entre ideas: adición, contraste, causa, consecuencia y más.',
+                icon: 'fas fa-project-diagram',
+                colorClass: 'connectors',
+                questions: 10,
+                time: '15 min',
+                difficulty: 1,
+                locked: false,
+                requires: null,
+                requiresScore: 0,
+                file: 'LCS5D1.html'
+            },
+            'LCS5D2': {
+                id: 2,
+                title: 'Referencia Anafórica y Catafórica',
+                subtitle: 'Pronombres y Sustitución',
+                description: 'Domina el uso de pronombres y elementos sustitutivos que hacen referencia a información anterior (anáfora) o posterior (catáfora) en el texto.',
+                icon: 'fas fa-exchange-alt',
+                colorClass: 'reference',
+                questions: 10,
+                time: '18 min',
+                difficulty: 2,
+                locked: true,
+                requires: 'LCS5D1',
+                requiresScore: MIN_SCORE,
+                file: 'LCS5D2.html'
+            },
+            'LCS5D3': {
+                id: 3,
+                title: 'Cohesión Léxica',
+                subtitle: 'Sinonimia, Hiperónimos y Repetición',
+                description: 'Identifica cómo la repetición intencional, los sinónimos y los hiperónimos crean redes de significado que mantienen unido el texto.',
+                icon: 'fas fa-layer-group',
+                colorClass: 'lexical',
+                questions: 10,
+                time: '20 min',
+                difficulty: 2,
+                locked: true,
+                requires: 'LCS5D2',
+                requiresScore: MIN_SCORE,
+                file: 'LCS5D3.html'
+            },
+            'LCS5D4': {
+                id: 4,
+                title: 'Signos de Puntuación',
+                subtitle: 'Elementos Cohesivos',
+                description: 'Reconoce cómo los signos de puntuación (coma, punto y coma, dos puntos, paréntesis) funcionan como marcadores de cohesión textual.',
+                icon: 'fas fa-paragraph',
+                colorClass: 'punctuation',
+                questions: 10,
+                time: '22 min',
+                difficulty: 3,
+                locked: true,
+                requires: 'LCS5D3',
+                requiresScore: MIN_SCORE,
+                file: 'LCS5D4.html'
+            }
+        };
+
+        // DOM Elements
+        const backBtn = document.getElementById('backBtn');
+        const userBtn = document.getElementById('userBtn');
+        const dropdownMenu = document.getElementById('dropdownMenu');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const modulesGrid = document.getElementById('modulesGrid');
+        const syncBadge = document.getElementById('syncBadge');
+        const toast = document.getElementById('toast');
+
+        let currentUserId = null;
+
+        // Firebase Functions
+        async function loadProgressFromFirebase(userId) {
+            showSync(true);
+            try {
+                const dbRef = window.ref(window.db, `users/${userId}/lcs5_progress`);
+                const snapshot = await window.get(dbRef);
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    localStorage.setItem('skopia_lcs5_progress', JSON.stringify(data));
+                    return data;
+                }
+            } catch (error) {
+                console.error('Error cargando progreso:', error);
+            } finally {
+                showSync(false);
+            }
+            return null;
+        }
+
+        function showSync(show) {
+            syncBadge.classList.toggle('visible', show);
+        }
+
+        // Data Logic
+        function getLocalProgress() {
+            const data = localStorage.getItem('skopia_lcs5_progress');
+            if (!data) return { modules: {}, stats: { completedCount: 0, totalScore: 0, attempts: 0 } };
+            try {
+                return JSON.parse(data);
+            } catch (e) {
+                return { modules: {}, stats: { completedCount: 0, totalScore: 0, attempts: 0 } };
+            }
+        }
+
+        function findModuleData(progress, moduleId) {
+            if (!progress.modules) return null;
+            if (progress.modules[moduleId]) return progress.modules[moduleId];
+            if (progress.modules[moduleId + '.html']) return progress.modules[moduleId + '.html'];
+            return null;
+        }
+
+        function isModuleUnlocked(moduleId) {
+            const config = modulesConfig[moduleId];
+            if (!config || !config.locked) return true;
+            
+            if (config.requires) {
+                const progress = getLocalProgress();
+                const requiredProgress = findModuleData(progress, config.requires);
+                if (requiredProgress && requiredProgress.completed && requiredProgress.score >= config.requiresScore) {
+                    return true;
+                }
+                return false;
+            }
+            return true;
+        }
+
+        // Render
+        function renderModuleCards() {
+            modulesGrid.innerHTML = '';
+            const progress = getLocalProgress();
+            let completedCount = 0;
+
+            Object.entries(modulesConfig).forEach(([moduleId, config]) => {
+                const isUnlocked = isModuleUnlocked(moduleId);
+                const moduleProgress = findModuleData(progress, moduleId);
+                const isCompleted = moduleProgress?.completed && moduleProgress?.score >= MIN_SCORE;
+                if (isCompleted) completedCount++;
+
+                let progressPercent = 0;
+                let scoreDisplay = '--';
+
+                if (moduleProgress) {
+                    if (moduleProgress.completed || moduleProgress.score) {
+                        progressPercent = 100;
+                        scoreDisplay = moduleProgress.score || 0;
+                    } else if (moduleProgress.currentQuestion > 0) {
+                        progressPercent = (moduleProgress.currentQuestion / config.questions) * 100;
+                    }
+                }
+
+                // Difficulty dots
+                const dots = Array(3).fill(0).map((_, i) => 
+                    `<span class="dot ${i < config.difficulty ? 'active' : ''}"></span>`
+                ).join('');
+
+                let buttonText = 'Comenzar';
+                let buttonIcon = '<i class="fas fa-play"></i>';
+                let buttonClass = 'primary';
+
+                if (!isUnlocked) {
+                    buttonText = 'Bloqueado';
+                    buttonIcon = '<i class="fas fa-lock"></i>';
+                    buttonClass = 'disabled';
+                } else if (isCompleted) {
+                    buttonText = 'Reintentar';
+                    buttonIcon = '<i class="fas fa-redo"></i>';
+                    buttonClass = 'success';
+                } else if (progressPercent > 0) {
+                    buttonText = 'Continuar';
+                }
+
+                let badgeHtml = '';
+                if (!isUnlocked) {
+                    badgeHtml = `<div class="card-badge locked">Bloqueado</div>`;
+                } else if (isCompleted) {
+                    badgeHtml = `<div class="card-badge success">Completado</div>`;
+                }
+
+                let unlockHtml = '';
+                if (!isUnlocked && config.requires) {
+                    const reqConfig = modulesConfig[config.requires];
+                    unlockHtml = `
+                        <div class="unlock-notice">
+                            <i class="fas fa-info-circle"></i>
+                            Completa <strong>${reqConfig.title}</strong> con al menos <strong>${config.requiresScore} pts</strong>
+                        </div>`;
+                }
+
+                let lockOverlay = !isUnlocked ? 
+                    `<div class="lock-overlay"><div class="lock-icon"><i class="fas fa-lock"></i></div></div>` : '';
+
+                const card = document.createElement('div');
+                card.className = `module-card ${!isUnlocked ? 'locked' : ''} ${isCompleted ? 'completed' : ''}`;
+                card.innerHTML = `
+                    <div class="card-accent ${config.colorClass}"></div>
+                    <div class="card-inner">
+                        <div class="card-top">
+                            <div class="card-icon-box ${config.colorClass}">
+                                <i class="${config.icon}"></i>
+                            </div>
+                            ${badgeHtml}
+                        </div>
+                        <h4 class="card-title">${config.title}</h4>
+                        <p class="card-subtitle">${config.subtitle}</p>
+                        <p class="card-desc">${config.description}</p>
+                        ${unlockHtml}
+                        <div class="card-metrics">
+                            <div class="metric">
+                                <div class="metric-value">${config.questions}</div>
+                                <div class="metric-label">Preguntas</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">${config.time}</div>
+                                <div class="metric-label">Duración</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">${scoreDisplay}</div>
+                                <div class="metric-label">Puntaje</div>
+                            </div>
+                        </div>
+                        <div class="card-progress">
+                            <div class="progress-mini-track">
+                                <div class="progress-mini-fill ${config.colorClass}" style="width: ${progressPercent}%"></div>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <div class="difficulty-dots">${dots}</div>
+                            <button class="action-btn ${buttonClass}" data-id="${moduleId}" ${!isUnlocked ? 'disabled' : ''}>
+                                ${buttonText} ${buttonIcon}
+                            </button>
+                        </div>
+                    </div>
+                    ${lockOverlay}`;
+
+                modulesGrid.appendChild(card);
+            });
+
+            // Event listeners for buttons
+            document.querySelectorAll('.action-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const moduleId = btn.dataset.id;
+                    if (moduleId) handleModuleStart(moduleId);
+                });
+            });
+        }
+
+        function handleModuleStart(moduleId) {
+            const config = modulesConfig[moduleId];
+            if (!config) return;
+
+            if (!isModuleUnlocked(moduleId)) {
+                showToast(`Completa el módulo anterior con al menos ${MIN_SCORE} puntos.`, 'error');
+                return;
+            }
+
+            localStorage.setItem('currentLCS5Quiz', moduleId);
+            showToast(`Iniciando ${config.title}...`, 'success');
+
+            setTimeout(() => {
+                window.location.href = config.file;
+            }, 800);
+        }
+
+        function updateStats() {
+            const progress = getLocalProgress();
+            const modules = progress.modules || {};
+
+            let completedCount = 0;
+            let totalScore = 0;
+            let scoreCount = 0;
+            let attempts = 0;
+
+            Object.values(modules).forEach(data => {
+                if (data.completed && data.score >= MIN_SCORE) completedCount++;
+                if (data.score) { totalScore += data.score; scoreCount++; }
+                attempts += data.attempts || 0;
+            });
+
+            const avgScore = scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0;
+
+            document.getElementById('completedCount').textContent = `${completedCount}/4`;
+            document.getElementById('avgScore').textContent = avgScore;
+            document.getElementById('totalAttempts').textContent = attempts;
+
+            let level = 'Novato';
+            if (completedCount === 4 && avgScore >= 250) level = 'Maestro';
+            else if (completedCount === 4) level = 'Experto';
+            else if (completedCount >= 3) level = 'Avanzado';
+            else if (completedCount >= 2) level = 'Intermedio';
+            else if (completedCount >= 1) level = 'Aprendiz';
+
+            document.getElementById('masteryLevel').textContent = level;
+            document.getElementById('progressPercent').textContent = `${Math.round((completedCount / 4) * 100)}%`;
+            document.getElementById('progressFill').style.width = `${(completedCount / 4) * 100}%`;
+
+            if (completedCount === 4) {
+                document.getElementById('achievementBanner').classList.add('visible');
+            }
+        }
+
+        function showToast(message, type = '') {
+            toast.textContent = message;
+            toast.className = 'toast visible ' + type;
+            setTimeout(() => toast.classList.remove('visible'), 4000);
+        }
+
+        function animateCards() {
+            document.querySelectorAll('.module-card').forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                setTimeout(() => {
+                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 120);
+            });
+        }
+
+        function closeAllPanels() {
+            document.querySelectorAll('.side-panel').forEach(p => p.classList.remove('active'));
+        }
+
+        function renderMissions() {
+            const progress = getLocalProgress();
+            const container = document.getElementById('missionsContent');
+            const missions = [
+                { id: 1, title: 'Conectores Lógicos', key: 'LCS5D1' },
+                { id: 2, title: 'Referencia Anafórica/Catafórica', key: 'LCS5D2' },
+                { id: 3, title: 'Cohesión Léxica', key: 'LCS5D3' },
+                { id: 4, title: 'Signos de Puntuación', key: 'LCS5D4' }
+            ];
+
+            container.innerHTML = missions.map(m => {
+                const data = findModuleData(progress, m.key);
+                const isDone = data?.completed && data?.score >= MIN_SCORE;
+                return `
+                    <div class="panel-item ${isDone ? 'done' : ''}">
+                        <span class="panel-item-text">${m.id}. ${m.title}</span>
+                        <span class="panel-item-status">${isDone ? '✓' : '○'}</span>
+                    </div>`;
+            }).join('');
+        }
+
+        function renderLevel() {
+            const progress = getLocalProgress();
+            let totalScore = 0;
+            Object.values(progress.modules || {}).forEach(m => totalScore += m.score || 0);
+
+            const level = Math.floor(totalScore / 200) + 1;
+            const exp = totalScore % 200;
+
+            document.getElementById('levelContent').innerHTML = `
+                <div class="panel-item">
+                    <span class="panel-item-text">Nivel actual</span>
+                    <span class="panel-item-status">${level}</span>
+                </div>
+                <div class="panel-item">
+                    <span class="panel-item-text">Experiencia total</span>
+                    <span class="panel-item-status">${totalScore} pts</span>
+                </div>
+                <div class="panel-item">
+                    <span class="panel-item-text">Para siguiente nivel</span>
+                    <span class="panel-item-status">${200 - exp} pts</span>
+                </div>`;
+        }
+
+        function renderProgressPanel() {
+            const progress = getLocalProgress();
+            let html = '';
+
+            Object.entries(modulesConfig).forEach(([moduleId, config]) => {
+                const data = findModuleData(progress, moduleId);
+                const status = data?.completed ? 
+                    `Completado (${data.score} pts)` : 
+                    (data?.currentQuestion > 0 ? 'En progreso' : 'No iniciado');
+                html += `
+                    <div class="panel-item">
+                        <span class="panel-item-text">${config.title}</span>
+                        <span class="panel-item-status" style="font-size: 0.8rem;">${status}</span>
+                    </div>`;
+            });
+
+            document.getElementById('progressContent').innerHTML = html;
+        }
+
+        // Event Listeners
+        window.addEventListener('userReady', async (e) => {
+            const user = e.detail.user;
+            currentUserId = user.uid;
+            document.getElementById('userNameDisplay').textContent = user.email?.split('@')[0] || 'Usuario';
+            await loadProgressFromFirebase(currentUserId);
+            renderModuleCards();
+            updateStats();
+            animateCards();
+            renderMissions();
+            renderLevel();
+            renderProgressPanel();
+        });
+
+        backBtn.addEventListener('click', () => window.location.href = 'modulos.html');
+
+        userBtn.addEventListener('click', () => dropdownMenu.classList.toggle('active'));
+
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
+                signOut(window.auth).then(() => window.location.href = 'index.html');
+            });
+        });
+
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('.user-menu')) dropdownMenu.classList.remove('active');
+            if (!e.target.closest('.floating-panel') && !e.target.closest('.side-panel')) closeAllPanels();
+        });
+
+        document.getElementById('btnMissions').addEventListener('click', () => {
+            closeAllPanels();
+            document.getElementById('panelMissions').classList.add('active');
+            renderMissions();
+        });
+
+        document.getElementById('btnLevel').addEventListener('click', () => {
+            closeAllPanels();
+            document.getElementById('panelLevel').classList.add('active');
+            renderLevel();
+        });
+
+        document.getElementById('btnProgress').addEventListener('click', () => {
+            closeAllPanels();
+            document.getElementById('panelProgress').classList.add('active');
+            renderProgressPanel();
+        });
+
+        document.querySelectorAll('.panel-close').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('panel' + btn.dataset.panel).classList.remove('active');
+            });
+        });
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'skopia_lcs5_progress') {
+                renderModuleCards();
+                updateStats();
+            }
+        });
+    });
+    </script>
+</body>
+</html>
