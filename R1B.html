@@ -71,6 +71,7 @@
             display: flex; 
             flex-direction: column; 
             overflow-x: hidden;
+            user-select: none; /* Evita selección fácil de texto */
         }
 
         /* --- BARRA DE NAVEGACIÓN PRINCIPAL --- */
@@ -667,6 +668,10 @@
             display: block;
             animation: slideDown 0.5s ease;
         }
+        
+        .feedback-container.annulled {
+            background-color: rgba(39, 43, 0, 0.05); /* Fondo diferente para anulado */
+        }
 
         @keyframes slideDown {
             from {
@@ -696,6 +701,10 @@
 
         .feedback-icon.incorrect {
             color: var(--color-incorrecto);
+        }
+        
+        .feedback-icon.annulled {
+            color: var(--color-oliva-medio);
         }
 
         .feedback-title {
@@ -1135,40 +1144,25 @@
             let isAnswered = false;
             let startTime = Date.now();
             let timerInterval = null;
+            let selectedQuestions = []; // Array para las preguntas seleccionadas
             
             // Obtener progreso guardado en localStorage
             let bambooPathProgress = JSON.parse(localStorage.getItem('bambooPathProgress')) || {
-                interpretacion: {
-                    completed: false,
-                    bambooStalks: 0,
-                    consecutiveCorrect: 0
-                },
-                logica: {
-                    unlocked: false,
-                    completed: false,
-                    bambooStalks: 0,
-                    consecutiveCorrect: 0
-                },
-                argumentacion: {
-                    unlocked: false,
-                    completed: false,
-                    bambooStalks: 0,
-                    consecutiveCorrect: 0
-                },
+                interpretacion: { completed: false, bambooStalks: 0, consecutiveCorrect: 0 },
+                logica: { unlocked: false, completed: false, bambooStalks: 0, consecutiveCorrect: 0 },
+                argumentacion: { unlocked: false, completed: false, bambooStalks: 0, consecutiveCorrect: 0 },
                 totalProgress: 0
             };
             
             // Verificar si el sector está desbloqueado
             if (!bambooPathProgress.logica.unlocked) {
                 showToast('Debes completar la Aldea de las Gráficas primero');
-                setTimeout(() => {
-                    window.location.href = 'R1.html';
-                }, 2000);
+                setTimeout(() => { window.location.href = 'R1.html'; }, 2000);
                 return;
             }
             
-            // --- BASE DE DATOS DE EJERCICIOS ---
-            const exercises = [
+            // --- BASE DE DATOS DE EJERCICIOS (TODAS LAS PREGUNTAS) ---
+            const allExercises = [
                 {
                     context: "Una empresa constructora está planeando construir un puente que conecte dos ciudades separadas por un río. Para determinar la longitud del puente, necesitan calcular la distancia entre dos puntos en un plano cartesiano.",
                     question: "Si las coordenadas de los dos extremos del puente son A(3, 4) y B(9, 12), ¿cuál es la longitud del puente?",
@@ -1264,6 +1258,16 @@
             
             // --- FUNCIONES PRINCIPALES ---
             
+            // Función para seleccionar preguntas aleatorias
+            function initializeQuiz() {
+                // Mezclar el array completo
+                const shuffled = [...allExercises].sort(() => 0.5 - Math.random());
+                // Seleccionar las primeras 5 (o menos si no hay suficientes)
+                const questionsToShow = 5; 
+                selectedQuestions = shuffled.slice(0, Math.min(questionsToShow, allExercises.length));
+                console.log(`Mostrando ${selectedQuestions.length} preguntas aleatorias.`);
+            }
+
             // Mostrar notificación toast
             function showToast(message, duration = 3000) {
                 toast.textContent = message;
@@ -1292,7 +1296,7 @@
             
             // Cargar ejercicio
             function loadExercise() {
-                if (exerciseIndex >= exercises.length) {
+                if (exerciseIndex >= selectedQuestions.length) {
                     checkCompletion();
                     return;
                 }
@@ -1302,12 +1306,13 @@
                 isAnswered = false;
                 nextBtn.disabled = true;
                 feedbackContainer.classList.remove('show');
+                feedbackContainer.classList.remove('annulled');
                 
                 // Actualizar número de ejercicio
                 currentExercise.textContent = exerciseIndex + 1;
                 
                 // Cargar contenido del ejercicio
-                const exercise = exercises[exerciseIndex];
+                const exercise = selectedQuestions[exerciseIndex];
                 exerciseContext.textContent = exercise.context;
                 exerciseQuestion.textContent = exercise.question;
                 
@@ -1368,7 +1373,7 @@
             
             // Verificar respuesta
             function checkAnswer() {
-                const exercise = exercises[exerciseIndex];
+                const exercise = selectedQuestions[exerciseIndex];
                 const isCorrect = selectedOption === exercise.correctAnswer;
                 
                 totalAnswers++;
@@ -1410,18 +1415,43 @@
                 // Detener temporizador
                 stopTimer();
             }
+
+            // Función para anular pregunta por intento de copia
+            function annulQuestion() {
+                if (isAnswered) return; // Si ya respondió, no hacer nada
+                
+                isAnswered = true;
+                totalAnswers++; // Cuenta como intento
+                
+                // Deshabilitar opciones visualmente
+                document.querySelectorAll('.option-card').forEach(card => {
+                    card.style.opacity = '0.6';
+                    card.style.pointerEvents = 'none';
+                });
+
+                // Mostrar feedback de anulación
+                feedbackContainer.classList.add('show');
+                feedbackContainer.classList.add('annulled');
+                
+                feedbackIcon.className = 'feedback-icon annulled';
+                feedbackIcon.innerHTML = '<i class="fas fa-ban"></i>';
+                feedbackTitle.textContent = 'Pregunta Anulada';
+                feedbackContent.textContent = 'Se detectó un intento de copia (Ctrl+C). Esta pregunta no suma puntos.';
+                
+                // Actualizar stats (no suma correctas)
+                updateStats();
+                nextBtn.disabled = false;
+                stopTimer();
+                
+                showToast('🚫 Copia detectada. Pregunta anulada.', 4000);
+            }
             
             // Actualizar progreso del puente
             function updateBridgeProgress() {
-                if (streak >= 1) {
-                    bridge1.style.width = '100%';
-                }
-                if (streak >= 2) {
-                    bridge2.style.width = '100%';
-                }
+                if (streak >= 1) bridge1.style.width = '100%';
+                if (streak >= 2) bridge2.style.width = '100%';
                 if (streak >= 3) {
                     bridge3.style.width = '100%';
-                    
                     // Guardar progreso en localStorage
                     bambooPathProgress.logica.consecutiveCorrect = streak;
                     if (bambooPathProgress.logica.bambooStalks < 3) {
@@ -1435,7 +1465,6 @@
             function updateStats() {
                 correctCount.textContent = correctAnswers;
                 streakCount.textContent = streak;
-                
                 const accuracy = totalAnswers > 0 ? Math.round((correctAnswers / totalAnswers) * 100) : 0;
                 accuracyRate.textContent = `${accuracy}%`;
             }
@@ -1443,6 +1472,7 @@
             // Mostrar retroalimentación
             function showFeedback(isCorrect, explanation) {
                 feedbackContainer.classList.add('show');
+                feedbackContainer.classList.remove('annulled');
                 
                 if (isCorrect) {
                     feedbackIcon.className = 'feedback-icon correct';
@@ -1453,13 +1483,12 @@
                     feedbackIcon.innerHTML = '<i class="fas fa-times-circle"></i>';
                     feedbackTitle.textContent = 'Incorrecto';
                 }
-                
                 feedbackContent.textContent = explanation;
             }
             
             // Verificar completado del sector
             function checkCompletion() {
-                const accuracy = (correctAnswers / totalAnswers) * 100;
+                const accuracy = totalAnswers > 0 ? (correctAnswers / totalAnswers) * 100 : 0;
                 
                 if (accuracy >= 60 && streak >= 3) {
                     // Desbloquear siguiente sector
@@ -1472,9 +1501,7 @@
                 } else {
                     // Permitir repetir
                     showToast('No alcanzaste el 60% de precisión con 3 ejercicios seguidos correctos. ¡Intenta de nuevo!', 5000);
-                    setTimeout(() => {
-                        resetExercise();
-                    }, 3000);
+                    setTimeout(() => { resetExercise(); }, 3000);
                 }
             }
             
@@ -1487,7 +1514,6 @@
             // Crear efecto de confeti
             function createConfetti() {
                 const colors = ['#8d6e63', '#5d4037', '#7cb342', '#5a6133', '#272b00'];
-                
                 for (let i = 0; i < 50; i++) {
                     setTimeout(() => {
                         const confetti = document.createElement('div');
@@ -1496,7 +1522,6 @@
                         confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
                         confetti.style.animationDelay = Math.random() * 0.5 + 's';
                         document.body.appendChild(confetti);
-                        
                         setTimeout(() => confetti.remove(), 3000);
                     }, i * 50);
                 }
@@ -1515,10 +1540,13 @@
                 bridge3.style.width = '0%';
                 
                 updateStats();
+                initializeQuiz(); // Volver a mezclar preguntas
                 loadExercise();
             }
             
             // --- EVENT LISTENERS ---
+            
+            // Menú de usuario
             hamburgerMenu.addEventListener('click', () => userDropdown.classList.toggle('active'));
             logoutBtn.addEventListener('click', () => {
                 import("https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js").then(({ signOut }) => {
@@ -1531,8 +1559,8 @@
             
             // Botones de ejercicio
             hintBtn.addEventListener('click', () => {
-                if (exerciseIndex < exercises.length) {
-                    showToast(exercises[exerciseIndex].hint, 4000);
+                if (exerciseIndex < selectedQuestions.length) {
+                    showToast(selectedQuestions[exerciseIndex].hint, 4000);
                 }
             });
             
@@ -1552,8 +1580,8 @@
             });
             
             btnHint.addEventListener('click', () => {
-                if (exerciseIndex < exercises.length) {
-                    showToast(exercises[exerciseIndex].hint, 4000);
+                if (exerciseIndex < selectedQuestions.length) {
+                    showToast(selectedQuestions[exerciseIndex].hint, 4000);
                 }
             });
             
@@ -1563,9 +1591,35 @@
                     showToast('Ejercicio reiniciado');
                 }
             });
+
+            // --- DETECTOR DE COPIA (ANTI-TRAMPA) ---
             
-            // Inicializar
-            loadExercise();
+            // Detectar tecla de copiar (Ctrl+C o Cmd+C en Mac)
+            document.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+                    e.preventDefault(); // Evita que se copie al portapapeles
+                    annulQuestion(); // Anula la pregunta
+                }
+            });
+
+            // Detectar intento de copia vía menú contextual (Click derecho -> Copiar)
+            document.addEventListener('copy', (e) => {
+                e.preventDefault(); // Evita la copia
+                annulQuestion(); // Anula la pregunta
+            });
+
+            // Detectar tecla de imprimir pantalla (PrintScreen) - Opcional
+            document.addEventListener('keyup', (e) => {
+                if (e.key === 'PrintScreen') {
+                    navigator.clipboard.writeText(''); // Limpia el portapapeles inmediatamente
+                    showToast('🚫 ¡Captura de pantalla detectada!');
+                    // Podrías también anular aquí si deseas: annulQuestion();
+                }
+            });
+            
+            // --- INICIALIZACIÓN ---
+            initializeQuiz(); // Selecciona las 5 preguntas aleatorias
+            loadExercise();   // Carga la primera
         });
     </script>
 </body>
