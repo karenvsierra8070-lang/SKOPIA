@@ -1076,7 +1076,162 @@
         .toast.show { 
             display: block; 
         }
+/* --- Confetti Animation --- */
+.confetti-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    overflow: hidden;
+}
 
+.confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    animation: confetti-fall 3s linear forwards;
+}
+
+.confetti.circle {
+    border-radius: 50%;
+}
+
+.confetti.square {
+    border-radius: 2px;
+}
+
+.confetti.triangle {
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 10px solid currentColor;
+    background: transparent !important;
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(-100%) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* --- Panda on Fire Animation --- */
+.panda-fire-container {
+    position: absolute;
+    top: 50%;
+    left: 10%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+}
+
+.panda-fire {
+    font-size: 2rem;
+    animation: panda-burn 2s ease-in-out forwards;
+    position: relative;
+}
+
+.panda-fire::before {
+    content: '🔥';
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.5rem;
+    animation: flame-flicker 0.15s infinite alternate;
+}
+
+.panda-fire::after {
+    content: '🔥';
+    position: absolute;
+    top: -15px;
+    left: 30%;
+    transform: translateX(-50%);
+    font-size: 1rem;
+    animation: flame-flicker 0.1s infinite alternate-reverse;
+}
+
+@keyframes panda-burn {
+    0% {
+        transform: scale(1) rotate(0deg);
+        filter: none;
+    }
+    20% {
+        transform: scale(1.1) rotate(-5deg);
+        filter: brightness(1.1);
+    }
+    40% {
+        transform: scale(1.2) rotate(5deg);
+        filter: brightness(1.2) sepia(0.3);
+    }
+    60% {
+        transform: scale(1.1) rotate(-3deg);
+        filter: brightness(1.3) sepia(0.5);
+    }
+    80% {
+        transform: scale(0.9) rotate(3deg);
+        filter: brightness(1.4) sepia(0.7);
+    }
+    100% {
+        transform: scale(0.8) rotate(0deg);
+        filter: brightness(1.5) sepia(1) saturate(2);
+        opacity: 0.8;
+    }
+}
+
+@keyframes flame-flicker {
+    0% {
+        transform: translateX(-50%) scale(1) rotate(-5deg);
+    }
+    100% {
+        transform: translateX(-50%) scale(1.2) rotate(5deg);
+    }
+}
+
+.panda-saved {
+    animation: panda-saved 0.5s ease-out forwards;
+}
+
+@keyframes panda-saved {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.3);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Smoke effect */
+.smoke-particle {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: rgba(100, 100, 100, 0.5);
+    border-radius: 50%;
+    animation: smoke-rise 1s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes smoke-rise {
+    0% {
+        transform: translateY(0) scale(1);
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(-50px) scale(2);
+        opacity: 0;
+    }
+}
         /* --- Modal --- */
         .modal {
             display: none;
@@ -2365,66 +2520,174 @@
                 });
             }
             
-            // Verificar puerta seleccionada
-            function checkSymbolGate(selectedSymbol) {
-                if (bridgeAttempts >= maxAttempts) {
-                    showToast('Ya has alcanzado el máximo de intentos. Reinicia para continuar.');
-                    return;
+        // Verificar puerta seleccionada
+function checkSymbolGate(selectedSymbol) {
+    if (bridgeAttempts >= maxAttempts) {
+        showToast('Ya has alcanzado el máximo de intentos. Reinicia para continuar.');
+        return;
+    }
+    
+    if (selectedGate) {
+        showToast('Ya has seleccionado una puerta para esta frase.');
+        return;
+    }
+    
+    bridgeAttempts++;
+    selectedGate = event.target;
+    
+    if (selectedSymbol === correctSymbol) {
+        // Respuesta correcta - CONFETTI!
+        selectedGate.classList.add('correct');
+        showToast('🎉 ¡Correcto! Has pasado por la puerta adecuada.');
+        gameProgress.symbolBridge++;
+        
+        // Lanzar confetti
+        createConfetti();
+        
+        // Animar panda celebrando
+        pandaRunner.classList.add('panda-saved');
+        setTimeout(() => {
+            pandaRunner.classList.remove('panda-saved');
+        }, 500);
+        
+        // Desbloquear accesorio
+        if (gameProgress.symbolBridge === 1) {
+            document.getElementById('hat').classList.add('unlocked');
+            showToast('🎉 ¡Has desbloqueado el Sombrero de Paja!');
+        } else if (gameProgress.symbolBridge === 2) {
+            document.getElementById('cape').classList.add('unlocked');
+            showToast('🎉 ¡Has desbloqueado la Capa de Sabio!');
+        } else if (gameProgress.symbolBridge >= 3) {
+            document.getElementById('staff').classList.add('unlocked');
+            showToast('🎉 ¡Has desbloqueado el Bastón de Bambú!');
+        }
+    } else {
+        // Respuesta incorrecta - PANDA EN LLAMAS!
+        selectedGate.classList.add('incorrect');
+        
+        // Panda se prende fuego
+        pandaOnFire();
+        
+        if (bridgeAttempts >= maxAttempts) {
+            setTimeout(() => {
+                const correctGateElement = Array.from(symbolGates).find(
+                    gate => gate.dataset.symbol === correctSymbol
+                );
+                if (correctGateElement) {
+                    correctGateElement.classList.add('correct');
                 }
-                
-                if (selectedGate) {
-                    showToast('Ya has seleccionado una puerta para esta frase.');
-                    return;
-                }
-                
-                bridgeAttempts++;
-                selectedGate = event.target;
-                
-                if (selectedSymbol === correctSymbol) {
-                    // Respuesta correcta
-                    selectedGate.classList.add('correct');
-                    showToast('¡Correcto! Has pasado por la puerta adecuada.');
-                    gameProgress.symbolBridge++;
-                    
-                    // Desbloquear accesorio
-                    if (gameProgress.symbolBridge === 1) {
-                        document.getElementById('hat').classList.add('unlocked');
-                        showToast('¡Has desbloqueado el Sombrero de Paja!');
-                    } else if (gameProgress.symbolBridge === 2) {
-                        document.getElementById('cape').classList.add('unlocked');
-                        showToast('¡Has desbloqueado la Capa de Sabio!');
-                    } else if (gameProgress.symbolBridge >= 3) {
-                        document.getElementById('staff').classList.add('unlocked');
-                        showToast('¡Has desbloqueado el Bastón de Bambú!');
-                    }
-                } else {
-                    // Respuesta incorrecta
-                    selectedGate.classList.add('incorrect');
-                    showToast('Incorrecto. El panda tropieza y debe reintentar.');
-                    
-                    // Animación de tropiezo
-                    pandaRunner.style.animation = 'shake 0.5s';
-                    setTimeout(() => {
-                        pandaRunner.style.animation = '';
-                    }, 500);
-                    
-                    if (bridgeAttempts >= maxAttempts) {
-                        setTimeout(() => {
-                            const correctGateElement = Array.from(symbolGates).find(
-                                gate => gate.dataset.symbol === correctSymbol
-                            );
-                            if (correctGateElement) {
-                                correctGateElement.classList.add('correct');
-                            }
-                            showToast(`La respuesta correcta era el símbolo ${correctSymbol}.`);
-                        }, 2000);
-                    }
-                }
-                
-                // Deshabilitar esta puerta
-                selectedGate.style.pointerEvents = 'none';
-            }
-            
+                showToast(`💀 La respuesta correcta era: ${getSymbolName(correctSymbol)}`);
+            }, 3000);
+        }
+    }
+    
+    // Deshabilitar esta puerta
+    selectedGate.style.pointerEvents = 'none';
+}
+
+// Crear efecto de confetti
+function createConfetti() {
+    const container = document.createElement('div');
+    container.className = 'confetti-container';
+    document.body.appendChild(container);
+    
+    const colors = ['#ff5252', '#ffd700', '#7cb342', '#4fc3f7', '#e040fb', '#ff6d00', '#00e676'];
+    const shapes = ['circle', 'square', 'triangle'];
+    const confettiCount = 150;
+    
+    for (let i = 0; i < confettiCount; i++) {
+        const confetti = document.createElement('div');
+        const shape = shapes[Math.floor(Math.random() * shapes.length)];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        
+        confetti.className = `confetti ${shape}`;
+        confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.backgroundColor = color;
+        confetti.style.color = color;
+        confetti.style.animationDelay = Math.random() * 0.5 + 's';
+        confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
+        
+        container.appendChild(confetti);
+    }
+    
+    // Remover el contenedor después de la animación
+    setTimeout(() => {
+        container.remove();
+    }, 4000);
+}
+
+// Panda se prende fuego
+function pandaOnFire() {
+    const bridgeContainer = document.querySelector('.bridge-container');
+    const originalPanda = pandaRunner;
+    
+    // Crear contenedor de fuego
+    const fireContainer = document.createElement('div');
+    fireContainer.className = 'panda-fire-container';
+    fireContainer.style.left = originalPanda.style.left || '10%';
+    
+    // Crear panda en llamas
+    const burningPanda = document.createElement('div');
+    burningPanda.className = 'panda-fire';
+    burningPanda.textContent = '🐼';
+    
+    fireContainer.appendChild(burningPanda);
+    
+    // Ocultar panda original
+    originalPanda.style.visibility = 'hidden';
+    
+    // Agregar panda en llamas al contenedor
+    bridgeContainer.appendChild(fireContainer);
+    
+    // Crear partículas de humo
+    const smokeInterval = setInterval(() => {
+        createSmokeParticle(fireContainer);
+    }, 200);
+    
+    // Mostrar mensaje dramático
+    showToast('🔥 ¡OH NO! ¡El panda se ha incendiado! 🔥');
+    
+    // Restaurar panda después de la animación
+    setTimeout(() => {
+        clearInterval(smokeInterval);
+        fireContainer.remove();
+        originalPanda.style.visibility = 'visible';
+        
+        // Mostrar panda un poco chamuscado
+        originalPanda.textContent = '🐼';
+        originalPanda.style.filter = 'sepia(0.5) brightness(0.9)';
+        
+        // Restaurar apariencia normal después de un momento
+        setTimeout(() => {
+            originalPanda.style.filter = '';
+        }, 2000);
+    }, 2500);
+}
+
+// Crear partícula de humo
+function createSmokeParticle(container) {
+    const smoke = document.createElement('div');
+    smoke.className = 'smoke-particle';
+    smoke.style.left = (Math.random() * 40 - 20) + 'px';
+    smoke.style.top = '-20px';
+    container.appendChild(smoke);
+    
+    setTimeout(() => {
+        smoke.remove();
+    }, 1000);
+}
+
+// Obtener nombre del símbolo
+function getSymbolName(symbol) {
+    const names = {
+        'negation': 'Negación (¬)',
+        'conjunction': 'Conjunción (∧)',
+        'disjunction': 'Disyunción (∨)',
+        'implication': 'Implicación (→)',
+        'biconditional': 'Bicondicional (↔)'
+    };
+    return names[symbol] || symbol;
+}
             // Inicializar modo Salón de Tautologías
             function initTautologyHallMode() {
                 // Actualizar estatuas desbloqueadas
