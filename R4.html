@@ -971,7 +971,22 @@
             line-height: 1.6;
             color: var(--color-oliva-medio);
         }
+/* Asegurar que el panda esté sobre el puente */
+.panda-runner {
+    z-index: 5; /* Encima del puente pero detrás de la parte superior de la puerta si es necesario */
+    transition: left 0.8s cubic-bezier(0.25, 1, 0.5, 1); /* Movimiento más suave */
+}
 
+/* Animación de caminar (opcional, da vida al movimiento) */
+.panda-runner.walking {
+    animation: panda-walk 0.3s steps(2) infinite;
+}
+
+@keyframes panda-walk {
+    0% { transform: translate(-50%, -50%) rotate(-5deg); }
+    50% { transform: translate(-50%, -50%) rotate(5deg); }
+    100% { transform: translate(-50%, -50%) rotate(-5deg); }
+}
         /* --- Controles del Juego --- */
         .game-controls {
             display: flex;
@@ -2519,9 +2534,30 @@
                     gate.style.pointerEvents = 'auto';
                 });
             }
-            
-        // Verificar puerta seleccionada
-function checkSymbolGate(selectedSymbol) {
+ // Nueva función para mover al panda
+function movePandaToGate(gateElement) {
+    return new Promise((resolve) => {
+        // Calcular el centro de la puerta seleccionada
+        // offsetLeft es relativo al contenedor padre (.symbol-gates)
+        const gateCenter = gateElement.offsetLeft + (gateElement.offsetWidth / 2);
+        
+        // Agregar clase de caminar
+        pandaRunner.classList.add('walking');
+        
+        // Mover el panda
+        // Usamos 'px' para ser precisos según la posición del gate
+        pandaRunner.style.left = gateCenter + 'px';
+        
+        // Esperar a que termine la transición (0.8s definido en CSS)
+        setTimeout(() => {
+            pandaRunner.classList.remove('walking');
+            resolve(); // Continuar con el resto del código
+        }, 850);
+    });
+}
+
+// Función verificadora MODIFICADA (agregar 'async' al inicio)
+async function checkSymbolGate(selectedSymbol) {
     if (bridgeAttempts >= maxAttempts) {
         showToast('Ya has alcanzado el máximo de intentos. Reinicia para continuar.');
         return;
@@ -2532,9 +2568,19 @@ function checkSymbolGate(selectedSymbol) {
         return;
     }
     
+    // Identificar el elemento puerta clickeado
+    const clickedGate = event.target.closest('.symbol-gate');
+    if (!clickedGate) return;
+
     bridgeAttempts++;
-    selectedGate = event.target;
+    selectedGate = clickedGate;
     
+    // 1. MOVER AL PANDA PRIMERO
+    // Usamos 'await' para esperar a que termine la animación de movimiento
+    await movePandaToGate(clickedGate);
+    
+    // 2. VERIFICAR RESULTADO (esto se ejecuta después de que el panda llega)
+
     if (selectedSymbol === correctSymbol) {
         // Respuesta correcta - CONFETTI!
         selectedGate.classList.add('correct');
@@ -2550,7 +2596,7 @@ function checkSymbolGate(selectedSymbol) {
             pandaRunner.classList.remove('panda-saved');
         }, 500);
         
-        // Desbloquear accesorio
+        // Desbloquear accesorios
         if (gameProgress.symbolBridge === 1) {
             document.getElementById('hat').classList.add('unlocked');
             showToast('🎉 ¡Has desbloqueado el Sombrero de Paja!');
@@ -2565,7 +2611,7 @@ function checkSymbolGate(selectedSymbol) {
         // Respuesta incorrecta - PANDA EN LLAMAS!
         selectedGate.classList.add('incorrect');
         
-        // Panda se prende fuego
+        // Panda se prende fuego (esta función ya maneja la animación en la posición actual)
         pandaOnFire();
         
         if (bridgeAttempts >= maxAttempts) {
@@ -2585,6 +2631,28 @@ function checkSymbolGate(selectedSymbol) {
     selectedGate.style.pointerEvents = 'none';
 }
 
+// ACTUALIZACIÓN: Modificar resetBridgeGame para devolver al panda al inicio
+function resetBridgeGame() {
+    bridgeAttempts = 0;
+    selectedGate = null;
+    
+    // Resetear posición del panda al inicio (10%)
+    pandaRunner.style.left = '10%';
+    pandaRunner.style.visibility = 'visible';
+    pandaRunner.style.filter = '';
+    
+    // Resetear puertas
+    symbolGates.forEach(gate => {
+        gate.classList.remove('correct', 'incorrect');
+        gate.style.pointerEvents = 'auto';
+    });
+    
+    // Limpiar cualquier elemento residual (fuego, humo)
+    const fireElements = document.querySelectorAll('.panda-fire-container');
+    fireElements.forEach(el => el.remove());
+    
+    showToast('El puente ha sido reiniciado.');
+}
 // Crear efecto de confetti
 function createConfetti() {
     const container = document.createElement('div');
