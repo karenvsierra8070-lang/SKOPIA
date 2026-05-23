@@ -1,0 +1,2304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reconstrucción de Tablas - ICFES Saber Pro</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Chart.js for Radar Chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+        import { getDatabase, ref, set, get, push, onValue } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com/"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const database = getDatabase(app);
+
+        window.firebaseApp = { app, auth, database, ref, set, get, push, onValue };
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            initializePage(user);
+        });
+
+        function initializePage(user) {
+            window.currentUser = user;
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    signOut(auth).then(() => window.location.href = 'index.html');
+                });
+            }
+            
+            // Initialize game with user
+            if (window.initTableGame) {
+                window.initTableGame(user);
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+            --color-exito: #4CAF50;
+            --color-error: #f44336;
+            --color-advertencia: #ff9800;
+            --float-color: var(--color-oliva-oscuro);
+            --float-color-hover: var(--color-oliva-medio);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--color-crema) 0%, #f5efe5 100%);
+            color: var(--color-oliva-oscuro);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* --- BARRA DE NAVEGACIÓN PRINCIPAL --- */
+        .main-navigation {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            width: 100%;
+        }
+        .main-navigation ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .main-navigation > ul > li {
+            position: relative;
+        }
+        .main-navigation > ul > li > span, .main-navigation > ul > li > a {
+            display: flex;
+            align-items: center;
+            padding: 18px 24px;
+            color: var(--color-oliva-oscuro);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            cursor: default;
+        }
+        .main-navigation > ul > li > a {
+            cursor: pointer;
+        }
+        .main-navigation > ul > li > a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background-color: var(--color-oliva-medio);
+            transform: translateX(-50%);
+            transition: width 0.3s ease;
+        }
+        .main-navigation > ul > li:hover > a::after {
+            width: 80%;
+        }
+        .main-navigation > ul > li:hover > span, .main-navigation > ul > li:hover > a {
+            background-color: rgba(94, 97, 51, 0.1);
+            color: var(--color-oliva-medio);
+        }
+        .main-navigation .emoji {
+            margin-right: 8px;
+            font-size: 1.2em;
+        }
+
+        /* --- Dropdowns --- */
+        .main-navigation > ul > li > .dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            min-width: 280px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+            border-radius: 0 0 12px 12px;
+            overflow: visible;
+        }
+        .main-navigation > ul > li:hover > .dropdown {
+            display: block;
+        }
+        .main-navigation > ul > li > .dropdown > li {
+            width: 100%;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            position: relative;
+        }
+        .main-navigation > ul > li > .dropdown > li:last-child {
+            border-bottom: none;
+        }
+        .main-navigation > ul > li > .dropdown > li > a, .main-navigation > ul > li > .dropdown > li > span {
+            padding: 14px 24px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            color: var(--color-oliva-oscuro);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .main-navigation > ul > li > .dropdown > li > span {
+            cursor: default;
+            font-weight: 700;
+        }
+        .main-navigation > ul > li > .dropdown > li:hover > a, .main-navigation > ul > li > .dropdown > li:hover > span {
+            background-color: rgba(94, 97, 51, 0.15);
+            color: var(--color-oliva-oscuro);
+        }
+        
+        .main-navigation > ul > li > .dropdown > li > .sub-dropdown {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            min-width: 250px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+            border-radius: 0 12px 12px 0;
+        }
+        .main-navigation > ul > li > .dropdown > li:hover > .sub-dropdown {
+            display: block;
+        }
+        .main-navigation > ul > li > .dropdown > li > .sub-dropdown li a {
+            padding: 12px 20px;
+            font-weight: 400;
+            font-size: 0.9rem;
+        }
+
+        /* --- NAVBAR DE USUARIO --- */
+        .navbar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 15px 40px;
+            background-color: white;
+            box-shadow: 0 2px 10px var(--color-sombra);
+        }
+        .hamburger {
+            width: 30px;
+            height: 25px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .hamburger span {
+            display: block;
+            height: 4px;
+            width: 100%;
+            background-color: var(--color-oliva-oscuro);
+            border-radius: 2px;
+            transition: all 0.3s ease-in-out;
+        }
+        .user-dropdown {
+            position: absolute;
+            top: 70px;
+            right: 40px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px var(--color-sombra);
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+            z-index: 1000;
+        }
+        .user-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .user-dropdown a {
+            display: block;
+            padding: 15px 25px;
+            text-decoration: none;
+            color: var(--color-oliva-oscuro);
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .user-dropdown a:hover {
+            background-color: var(--color-crema);
+        }
+        .user-dropdown hr {
+            border: none;
+            border-top: 1px solid #eee;
+            margin: 0;
+        }
+
+        /* --- CONTENIDO PRINCIPAL --- */
+        .game-container {
+            flex-grow: 1;
+            padding: 30px 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .page-header h1 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 3rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 10px;
+        }
+        .page-header p {
+            font-size: 1.1rem;
+            color: var(--color-oliva-medio);
+        }
+
+        /* --- PANEL DE ESTADO --- */
+        .status-panel {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+        .status-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px 30px;
+            box-shadow: 0 6px 20px var(--color-sombra);
+            text-align: center;
+            min-width: 150px;
+            transition: transform 0.3s ease;
+        }
+        .status-card:hover {
+            transform: translateY(-5px);
+        }
+        .status-card .icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+        .status-card .label {
+            font-size: 0.9rem;
+            color: var(--color-oliva-medio);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .status-card .value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--color-oliva-oscuro);
+        }
+        .status-card.timer .value {
+            color: var(--color-error);
+        }
+        .status-card.timer.warning .value {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* --- SELECTOR DE NIVEL --- */
+        .level-selector {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        .level-btn {
+            background: white;
+            border: 3px solid var(--color-oliva-claro);
+            border-radius: 12px;
+            padding: 15px 30px;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.2rem;
+            color: var(--color-oliva-oscuro);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .level-btn:hover {
+            background: var(--color-oliva-claro);
+            transform: scale(1.05);
+        }
+        .level-btn.active {
+            background: var(--color-oliva-oscuro);
+            color: var(--color-crema);
+            border-color: var(--color-oliva-oscuro);
+        }
+        .level-btn.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* --- TABLA DEL JUEGO --- */
+        .table-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px var(--color-sombra);
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+        .table-title {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.8rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .table-context {
+            background: linear-gradient(135deg, #f5f5dc, #faf0e6);
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--color-oliva-medio);
+        }
+        .table-context p {
+            font-size: 1rem;
+            color: #333;
+            line-height: 1.6;
+        }
+        .game-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0 auto;
+        }
+        .game-table th {
+            background: var(--color-oliva-oscuro);
+            color: var(--color-crema);
+            padding: 15px;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.1rem;
+            text-align: center;
+            border: 2px solid var(--color-oliva-medio);
+        }
+        .game-table td {
+            padding: 15px;
+            text-align: center;
+            font-size: 1.1rem;
+            border: 2px solid var(--color-oliva-claro);
+            transition: all 0.3s ease;
+        }
+        .game-table tr:nth-child(even) {
+            background: rgba(190, 192, 146, 0.1);
+        }
+        .game-table .header-col {
+            background: var(--color-oliva-medio);
+            color: white;
+            font-weight: 700;
+        }
+        .game-table .total-row {
+            background: rgba(90, 97, 51, 0.1);
+            font-weight: 700;
+        }
+        .game-table .empty-cell {
+            background: linear-gradient(135deg, #fff9e6, #fff3cd);
+            cursor: pointer;
+            position: relative;
+        }
+        .game-table .empty-cell:hover {
+            background: linear-gradient(135deg, #ffe066, #ffd633);
+            transform: scale(1.02);
+        }
+        .game-table .empty-cell.selected {
+            background: linear-gradient(135deg, #b3e0ff, #80d4ff);
+            box-shadow: 0 0 0 3px var(--color-oliva-medio);
+        }
+        .game-table .empty-cell.correct {
+            background: linear-gradient(135deg, #c8e6c9, #a5d6a7);
+        }
+        .game-table .empty-cell.incorrect {
+            background: linear-gradient(135deg, #ffcdd2, #ef9a9a);
+            animation: shake 0.5s ease;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .question-mark {
+            font-size: 1.5rem;
+            color: var(--color-oliva-medio);
+        }
+
+        /* --- TECLADO NUMÉRICO --- */
+        .numeric-keyboard {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            z-index: 2000;
+            max-width: 350px;
+            width: 90%;
+        }
+        .numeric-keyboard.active {
+            display: block;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(30px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        .keyboard-display {
+            background: var(--color-crema);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: right;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            margin-bottom: 15px;
+            min-height: 60px;
+            word-break: break-all;
+        }
+        .keyboard-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .key-btn {
+            background: var(--color-crema);
+            border: none;
+            border-radius: 10px;
+            padding: 18px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--color-oliva-oscuro);
+        }
+        .key-btn:hover {
+            background: var(--color-oliva-claro);
+            transform: scale(1.05);
+        }
+        .key-btn.action {
+            background: var(--color-oliva-medio);
+            color: white;
+        }
+        .key-btn.action:hover {
+            background: var(--color-oliva-oscuro);
+        }
+        .key-btn.clear {
+            background: var(--color-error);
+            color: white;
+        }
+
+        /* --- BOTONES DE ACCIÓN --- */
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+        .action-btn {
+            background: white;
+            border: 3px solid var(--color-oliva-medio);
+            border-radius: 30px;
+            padding: 12px 25px;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.1rem;
+            color: var(--color-oliva-oscuro);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .action-btn:hover {
+            background: var(--color-oliva-medio);
+            color: white;
+            transform: scale(1.05);
+        }
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .action-btn.primary {
+            background: var(--color-oliva-oscuro);
+            color: var(--color-crema);
+            border-color: var(--color-oliva-oscuro);
+        }
+        .action-btn.primary:hover {
+            background: var(--color-oliva-medio);
+        }
+
+        /* --- MODAL DE RETROALIMENTACIÓN --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: modalIn 0.3s ease;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .modal-header h2 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 2rem;
+            color: var(--color-oliva-oscuro);
+        }
+        .modal-header .icon {
+            font-size: 4rem;
+            margin-bottom: 10px;
+        }
+        .modal-body {
+            margin-bottom: 20px;
+        }
+        .modal-body h3 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.5rem;
+            color: var(--color-oliva-medio);
+            margin-bottom: 15px;
+        }
+        .modal-body p {
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        .solution-step {
+            background: var(--color-crema);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--color-oliva-medio);
+        }
+        .solution-step .step-number {
+            font-weight: bold;
+            color: var(--color-oliva-oscuro);
+        }
+        .icfes-connection {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .icfes-connection h4 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.3rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 10px;
+        }
+        .modal-footer {
+            text-align: center;
+        }
+
+        /* --- ESTADÍSTICAS Y RADAR --- */
+        .stats-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+        .stats-card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 25px var(--color-sombra);
+        }
+        .stats-card h3 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.6rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .radar-container {
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .metric-item:last-child {
+            border-bottom: none;
+        }
+        .metric-label {
+            font-size: 1rem;
+            color: var(--color-oliva-medio);
+        }
+        .metric-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--color-oliva-oscuro);
+        }
+
+        /* --- MODO SIMULACRO --- */
+        .marathon-section {
+            background: linear-gradient(135deg, var(--color-oliva-oscuro), var(--color-oliva-medio));
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 40px;
+            color: white;
+        }
+        .marathon-section h2 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 2.2rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .marathon-section p {
+            text-align: center;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+        .marathon-btn {
+            display: block;
+            margin: 0 auto;
+            background: white;
+            color: var(--color-oliva-oscuro);
+            border: none;
+            border-radius: 30px;
+            padding: 15px 40px;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.3rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .marathon-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .marathon-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* --- RANKING --- */
+        .ranking-section {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 25px var(--color-sombra);
+            margin-top: 30px;
+        }
+        .ranking-section h3 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.6rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .ranking-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            background: var(--color-crema);
+        }
+        .ranking-item.current-user {
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+            border: 2px solid var(--color-oliva-medio);
+        }
+        .ranking-item .position {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 700;
+            width: 40px;
+            color: var(--color-oliva-medio);
+        }
+        .ranking-item .position.top-3 {
+            color: var(--color-oliva-oscuro);
+        }
+        .ranking-item .name {
+            flex: 1;
+            font-weight: 500;
+        }
+        .ranking-item .score {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            color: var(--color-oliva-oscuro);
+        }
+        .ranking-item .time {
+            font-size: 0.9rem;
+            color: var(--color-oliva-medio);
+            margin-left: 10px;
+        }
+
+        /* --- PISTA HIGHLIGHT --- */
+        .highlight-row {
+            background: rgba(255, 235, 59, 0.3) !important;
+        }
+        .highlight-col {
+            background: rgba(255, 235, 59, 0.3) !important;
+        }
+
+        /* --- FLOATING ICONS --- */
+        .floating-icons {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 2000;
+        }
+        .floating-icons button {
+            background: var(--float-color);
+            color: white;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            border: none;
+            font-size: 20px;
+            display: grid;
+            place-items: center;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            cursor: pointer;
+            transition: transform .15s ease, background .15s ease;
+        }
+        .floating-icons button:hover { transform: scale(1.08); background: var(--float-color-hover); }
+
+        /* --- TOAST --- */
+        .toast {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            background: #fff7e6;
+            border-left: 6px solid var(--color-oliva-medio);
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            z-index: 3000;
+            display: none;
+            font-size: 1.1rem;
+            max-width: 400px;
+        }
+        .toast.show { display: block; }
+        .toast.success { border-left-color: var(--color-exito); }
+        .toast.error { border-left-color: var(--color-error); }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 1024px) {
+            .main-navigation > ul > li > .dropdown {
+                position: static;
+                display: none;
+                width: 100%;
+                box-shadow: none;
+            }
+            .main-navigation > ul > li > .dropdown > li > .sub-dropdown {
+                position: static;
+                display: none;
+                width: 100%;
+                box-shadow: none;
+            }
+            .main-navigation > ul > li:hover > .dropdown {
+                display: none;
+            }
+            .main-navigation > ul > li.active > .dropdown {
+                display: block;
+            }
+            .main-navigation > ul > li > .dropdown > li.active > .sub-dropdown {
+                display: block;
+            }
+            .main-navigation > ul > li > a, .main-navigation > ul > li > span {
+                padding: 15px;
+            }
+            .status-panel {
+                gap: 15px;
+            }
+            .status-card {
+                padding: 15px 20px;
+                min-width: 120px;
+            }
+            .game-table th, .game-table td {
+                padding: 10px;
+                font-size: 0.95rem;
+            }
+            .floating-icons { right: 10px; }
+        }
+    </style>
+    <script type="module" src="./global-settings.js"></script>
+</head>
+
+<body>
+    <!-- BARRA DE NAVEGACIÓN PRINCIPAL -->
+    <nav class="main-navigation" id="step-nav">
+        <ul>
+            <li>
+                <span><span class="emoji">🟦</span> MÓDULO 1 — Lectura Crítica</span>
+                <ul class="dropdown">
+                    <li><a href="biblioteca.html"><span class="emoji">📚</span> Biblioteca</a></li>
+                    <li>
+                        <span><span class="emoji">✍️</span> Talleres de escritura y análisis</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="reescritura.html"><span class="emoji">🔄</span> Reescritura</a></li>
+                            <li><a href="conectores.html"><span class="emoji">🔗</span> Conectores lógicos</a></li>
+                            <li><a href="parrafos.html"><span class="emoji">📝</span> Ordenar párrafos</a></li>
+                            <li><a href="cohesion.html"><span class="emoji">🧩</span> Reparación por cohesión</a></li>
+                            <li><a href="123.html"><span class="emoji">1️⃣2️⃣3️⃣</span> Técnica 1-2-3</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">📈</span> Laboratorio de análisis gráfico</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="lineal.html"><span class="emoji">📉</span> Gráfico de líneas</a></li>
+                            <li><a href="constucciongrafico.html"><span class="emoji">🛠️</span> Construcción de gráficos</a></li>
+                            <li><a href="correcciongrafico.html"><span class="emoji">✅</span> Corrección de gráfico</a></li>
+                            <li><a href="graficocomparar.html"><span class="emoji">⚖️</span> Comparación de gráficos</a></li>
+                            <li><a href="graficointerpretar.html"><span class="emoji">🤔</span> Interpretación de gráficos</a></li>
+                            <li><a href="selecciongrafico.html"><span class="emoji">👆</span> Seleccionar el gráfico correcto</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">⚡</span> Entrenador de velocidad de lectura</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="timelectura.html"><span class="emoji">⏱️</span> Lectura cronometrada</a></li>
+                            <li><a href="minutelectura.html"><span class="emoji">⏳</span> Examen tiempo por pregunta</a></li>
+                            <li><a href="palabrasdesaparecidas.html"><span class="emoji">👻</span> Desaparecer palabras</a></li>
+                            <li><a href="relojlectura.html"><span class="emoji">⏰</span> Texto a contra reloj</a></li>
+                            <li><a href="velocimetrolec.html"><span class="emoji">🚀</span> Velocímetro de lectura</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <span><span class="emoji">🟩</span> MÓDULO 2 — Razonamiento Cuantitativo</span>
+                <ul class="dropdown">
+                    <li>
+                        <span><span class="emoji">🧠</span> Laboratorio lógico-matemático</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="crepatron.html"><span class="emoji">📈</span> Patrones crecientes</a></li>
+                            <li><a href="decrepatron.html"><span class="emoji">📉</span> Patrones decrecientes</a></li>
+                            <li><a href="secuencia.html"><span class="emoji">🔢</span> Secuencias visuales</a></li>
+                            <li><a href="argumento.html"><span class="emoji">🗣️</span> Corregir argumento inválido</a></li>
+                            <li><a href="falacias.html"><span class="emoji">❌</span> Detectar falacias</a></li>
+                            <li><a href="tablas.html"><span class="emoji">📊</span> Completar tablas incompletas</a></li>
+                            <li><a href="causaefecto.html"><span class="emoji">🎯</span> Relación causa-efecto</a></li>
+                            <li><a href="datatabla.html"><span class="emoji">🔄</span> Cambiar datos</a></li>
+                            <li><a href="contradicciones.html"><span class="emoji">⚠️</span> Contradicciones</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">🔢</span> Razonamiento lógico-matemático</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="R1.html"><span class="emoji">🗺️</span> Mapa de laberintos matemáticos</a></li>
+                            <li><a href="R2.html"><span class="emoji">🔺</span> Triángulos mágicos para completar</a></li>
+                            <li><a href="R3.html"><span class="emoji">🤖</span> Algoritmo visualizado paso a paso</a></li>
+                            <li><a href="R4.html"><span class="emoji">🧩</span> Minijuegos de lógica simbólica</a></li>
+                            <li><a href="R5.html"><span class="emoji">🔢</span> Bloques de secuencias numéricas para ordenar</a></li>
+                            <li><a href="R6.html"><span class="emoji">🕵️</span> Detective matemático</a></li>
+                            <li><a href="R7.html"><span class="emoji">📊</span> Reconstrucción de tablas incompletas</a></li>
+                            <li><a href="R8.html"><span class="emoji">🔍</span> Desafío de patrones ocultos</a></li>
+                            <li><a href="R9.html"><span class="emoji">🧩</span> Sala de rompecódigos</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <span><span class="emoji">🟧</span> MÓDULO 3 — Competencias Ciudadanas</span>
+                <ul class="dropdown">
+                    <li>
+                        <span><span class="emoji">⚖️</span> Dilemas + decisiones</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="d1.html"><span class="emoji">🤔</span> Simulador de dilemas morales</a></li>
+                            <li><a href="d2.html"><span class="emoji">📖</span> Historias interactivas</a></li>
+                            <li><a href="d3.html"><span class="emoji">🤝</span> Reconstrucción de conflictos</a></li>
+                            <li><a href="d4.html"><span class="emoji">❓</span> ¿Qué harías tú?</a></li>
+                            <li><a href="d5.html"><span class="emoji">🏆</span> Retos éticos por niveles</a></li>
+                            <li><a href="d6.html"><span class="emoji">📚</span> Estudio de casos reales</a></li>
+                            <li><a href="d7.html"><span class="emoji">👥</span> Simulaciones grupales</a></li>
+                            <li><a href="d8.html"><span class="emoji">⚖️</span> Juzgado ciudadano</a></li>
+                            <li><a href="d9.html"><span class="emoji">🎤</span> Panel de debate simulado</a></li>
+                            <li><a href="d10.html"><span class="emoji">🗳️</span> Simulador de votación</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">🌍</span> Contextos sociales</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="CS1.html"><span class="emoji">🗺️</span> Mapa de problemas sociales</a></li>
+                            <li><a href="CS2.html"><span class="emoji">📰</span> Análisis de noticias reales</a></li>
+                            <li><a href="CS3.html"><span class="emoji">📜</span> Sala de derechos y deberes</a></li>
+                            <li><a href="CS4.html"><span class="emoji">🏫</span> Minijuego de convivencia</a></li>
+                            <li><a href="CS5.html"><span class="emoji">❌</span> Historias de discriminación</a></li>
+                            <li><a href="CS6.html"><span class="emoji">❤️</span> Sala de empatía</a></li>
+                            <li><a href="CS7.html"><span class="emoji">🤝</span> Resolución de conflictos</a></li>
+                            <li><a href="CS8.html"><span class="emoji">🌳</span> Árboles de decisiones</a></li>
+                            <li><a href="CS9.html"><span class="emoji">👀</span> Observatorio de normas</a></li>
+                            <li><a href="C10.html"><span class="emoji">🎙️</span> Reconstrucción de discursos</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <a href="archivo.html"><span class="emoji">🗂️</span> Archivos de casos reales</a>
+                        <ul class="sub-dropdown">
+                            <li><a href="archivo1.html"><span class="emoji">📄</span> Casos tipo Saber Pro reales</a></li>
+                            <li><a href="archivo2.html"><span class="emoji">🏢</span> Casos de empresas</a></li>
+                            <li><a href="archivo3.html"><span class="emoji">🌐</span> Casos sociales</a></li>
+                            <li><a href="archivo4.html"><span class="emoji">📈</span> Casos de datos ficticios</a></li>
+                            <li><a href="archivo5.html"><span class="emoji">⚖️</span> Casos legales simplificados</a></li>
+                            <li><a href="archivo6.html"><span class="emoji">🔬</span> Casos científicos</a></li>
+                            <li><a href="archivo7.html"><span class="emoji">❓</span> Casos ambiguos</a></li>
+                            <li><a href="archivo8.html"><span class="emoji">🤔</span> Casos contradictorios</a></li>
+                            <li><a href="archivo9.html"><span class="emoji">🔍</span> Casos para identificar sesgos</a></li>
+                            <li><a href="archivo10.html"><span class="emoji">🧩</span> Casos donde debes decidir qué dato falta</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">♟️</span> Laboratorio de estrategias</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="E1.html"><span class="emoji">✏️</span> Cómo subrayar bien (con ejemplos)</a></li>
+                            <li><a href="E2.html"><span class="emoji">📚</span> Estrategia de resumen por capas</a></li>
+                            <li><a href="E3.html"><span class="emoji">👀</span> Técnica de lectura por bloques visuales</a></li>
+                            <li><a href="E4.html"><span class="emoji">🚫</span> Cómo ignorar distractores</a></li>
+                            <li><a href="E5.html"><span class="emoji">🏃‍♂️</span> Cómo leer rápido sin perder comprensión</a></li>
+                            <li><a href="E6.html"><span class="emoji">✔️</span> Checklist antes de responder un caso</a></li>
+                            <li><a href="E7.html"><span class="emoji">🚫</span> Cómo evitar conclusiones erróneas</a></li>
+                            <li><a href="E8.html"><span class="emoji">🕵️</span> Mini-guía de preguntas trampas</a></li>
+                            <li><a href="E9.html"><span class="emoji">🎯</span> Cómo identificar el propósito del autor</a></li>
+                            <li><a href="E10.html"><span class="emoji">💡</span> Cómo transformar evidencia en conclusión</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <span><span class="emoji">🟪</span> MÓDULO 4 — Inglés</span>
+                <ul class="dropdown">
+                    <li>
+                        <span><span class="emoji">📖</span> Comprensión lectora en inglés</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="CLI1.html"><span class="emoji">📖</span> Galería de textos graduados</a></li>
+                            <li><a href="CLI2.html"><span class="emoji">💡</span> ¿Cuál es la idea principal?</a></li>
+                            <li><a href="CLI3.html"><span class="emoji">🎯</span> Identificar la intención del autor</a></li>
+                            <li><a href="CLI4.html"><span class="emoji">📝</span> Ordenar párrafos</a></li>
+                            <li><a href="CLI5.html"><span class="emoji">🔗</span> Relacionar párrafos con títulos</a></li>
+                            <li><a href="CLI6.html"><span class="emoji">🧩</span> Completa el sentido del texto</a></li>
+                            <li><a href="CLI7.html"><span class="emoji">🤔</span> Inferencias y deducciones</a></li>
+                            <li><a href="CLI8.html"><span class="emoji">😊</span> Preguntas de tono y emoción</a></li>
+                            <li><a href="CLI9.html"><span class="emoji">🎯</span> Reconocer propósito de oraciones</a></li>
+                            <li><a href="CLI10.html"><span class="emoji">🚫</span> Falsos amigos</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">📖</span> Vocabulario en contexto</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="vocab11.html"><span class="emoji">🔄</span> Sustituir palabras por sinónimos</a></li>
+                            <li><a href="vocab12.html"><span class="emoji">🧩</span> Completar frases</a></li>
+                            <li><a href="vocab13.html"><span class="emoji">🔗</span> Banco de conectores</a></li>
+                            <li><a href="vocab14.html"><span class="emoji">🤔</span> Rellenar huecos</a></li>
+                            <li><a href="vocab15.html"><span class="emoji">💬</span> Reemplazo de expresiones idiomáticas</a></li>
+                            <li><a href="vocab16.html"><span class="emoji">🔍</span> Identificar definiciones implícitas</a></li>
+                            <li><a href="vocab17.html"><span class="emoji">🎯</span> Selección de vocabulario preciso</a></li>
+                            <li><a href="vocab18.html"><span class="emoji">📂</span> Clasificador de palabras</a></li>
+                            <li><a href="vocab19.html"><span class="emoji">🚫</span> Detección de redundancias</a></li>
+                            <li><a href="vocab20.html"><span class="emoji">🤔</span> Diferencias entre palabras confuses</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">🔗</span> Cohesión en inglés</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="coh1.html"><span class="emoji">👉</span> Identificar referentes</a></li>
+                            <li><a href="coh2.html"><span class="emoji">🔄</span> Reemplazo de pronombres</a></li>
+                            <li><a href="coh3.html"><span class="emoji">❌</span> Conectores mal usados</a></li>
+                            <li><a href="coh4.html"><span class="emoji">🔍</span> Encuentra el error de cohesión</a></li>
+                            <li><a href="coh5.html"><span class="emoji">📝</span> Reordenar oraciones</a></li>
+                            <li><a href="coh6.html"><span class="emoji">🔗</span> Relacionar frases con su función</a></li>
+                            <li><a href="coh7.html"><span class="emoji">✍️</span> Parafraseo guiado</a></li>
+                            <li><a href="coh8.html"><span class="emoji">✔️</span> Detectar afirmaciones V/F</a></li>
+                            <li><a href="coh9.html"><span class="emoji">🔗</span> Conexión entre partes del texto</a></li>
+                            <li><a href="coh10.html"><span class="emoji">📄</span> Seleccionar el resumen adecuado</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </nav>
+    
+    <nav class="navbar">
+        <div class="hamburger" id="hamburger-menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        <div class="user-dropdown" id="user-dropdown">
+            <a href="cuenta.html">Mi Cuenta</a>
+            <a href="configuracion.html">Configuración</a>
+            <a href="notificaciones.html">Notificaciones</a>
+            <hr>
+            <a href="index.html" id="logout-btn">Cerrar Sesión</a>
+        </div>
+    </nav>
+
+    <!-- CONTENIDO DEL JUEGO -->
+    <main class="game-container">
+        <header class="page-header">
+            <h1><i class="fas fa-table"></i> Reconstrucción de Tablas</h1>
+            <p>Completa las celdas vacías usando deducción lógica y matemática</p>
+        </header>
+
+        <!-- PANEL DE ESTADO -->
+        <div class="status-panel">
+            <div class="status-card">
+                <div class="icon">📊</div>
+                <div class="label">Nivel</div>
+                <div class="value" id="current-level">Básico</div>
+            </div>
+            <div class="status-card">
+                <div class="icon">❤️</div>
+                <div class="label">Intentos</div>
+                <div class="value" id="attempts-left">3</div>
+            </div>
+            <div class="status-card timer">
+                <div class="icon">⏱️</div>
+                <div class="label">Tiempo</div>
+                <div class="value" id="game-timer">05:00</div>
+            </div>
+            <div class="status-card">
+                <div class="icon">⭐</div>
+                <div class="label">Puntos</div>
+                <div class="value" id="current-score">0</div>
+            </div>
+        </div>
+
+        <!-- SELECTOR DE NIVEL -->
+        <div class="level-selector">
+            <button class="level-btn active" data-level="basico">🟢 Básico</button>
+            <button class="level-btn" data-level="intermedio">🟡 Intermedio</button>
+            <button class="level-btn" data-level="avanzado">🔴 Avanzado</button>
+        </div>
+
+        <!-- TABLA DEL JUEGO -->
+        <div class="table-container">
+            <h2 class="table-title" id="table-title">Tabla de Encuesta de Preferencias</h2>
+            <div class="table-context" id="table-context">
+                <p>Una empresa realizó una encuesta a 100 personas sobre sus preferencias de transporte. Completa los datos faltantes usando la información disponible.</p>
+            </div>
+            <table class="game-table" id="game-table">
+                <!-- Se genera dinámicamente -->
+            </table>
+        </div>
+
+        <!-- BOTONES DE ACCIÓN -->
+        <div class="action-buttons">
+            <button class="action-btn" id="btn-hint-formula">
+                <i class="fas fa-lightbulb"></i> Fórmula Clave
+            </button>
+            <button class="action-btn" id="btn-hint-highlight">
+                <i class="fas fa-highlighter"></i> Resaltador
+            </button>
+            <button class="action-btn primary" id="btn-verify">
+                <i class="fas fa-check-circle"></i> Verificar Respuestas
+            </button>
+            <button class="action-btn" id="btn-new-table">
+                <i class="fas fa-sync-alt"></i> Nueva Tabla
+            </button>
+        </div>
+
+        <!-- ESTADÍSTICAS -->
+        <div class="stats-section">
+            <div class="stats-card">
+                <h3><i class="fas fa-chart-radar"></i> Radar de Habilidades</h3>
+                <div class="radar-container">
+                    <canvas id="skills-radar"></canvas>
+                </div>
+            </div>
+            <div class="stats-card">
+                <h3><i class="fas fa-chart-line"></i> Métricas de Rendimiento</h3>
+                <div class="metric-item">
+                    <span class="metric-label">Tiempo promedio por tabla</span>
+                    <span class="metric-value" id="avg-time">--:--</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Racha de respuestas correctas</span>
+                    <span class="metric-value" id="streak">0</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Tablas completadas</span>
+                    <span class="metric-value" id="tables-completed">0</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Precisión</span>
+                    <span class="metric-value" id="accuracy">0%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODO SIMULACRO -->
+        <div class="marathon-section">
+            <h2><i class="fas fa-stopwatch"></i> Desafío "Saber Pro"</h2>
+            <p>5 tablas complejas contrarreloj. Sin pistas, sin segundas oportunidades. ¿Estás listo?</p>
+            <button class="marathon-btn" id="btn-marathon">
+                <i class="fas fa-play"></i> Iniciar Simulacro
+            </button>
+        </div>
+
+        <!-- RANKING -->
+        <div class="ranking-section">
+            <h3><i class="fas fa-trophy"></i> Ranking de Mejores Tiempos</h3>
+            <div class="ranking-list" id="ranking-list">
+                <!-- Se genera dinámicamente -->
+            </div>
+        </div>
+    </main>
+
+    <!-- TECLADO NUMÉRICO -->
+    <div class="numeric-keyboard" id="numeric-keyboard">
+        <div class="keyboard-display" id="keyboard-display">0</div>
+        <div class="keyboard-buttons">
+            <button class="key-btn" data-key="7">7</button>
+            <button class="key-btn" data-key="8">8</button>
+            <button class="key-btn" data-key="9">9</button>
+            <button class="key-btn" data-key="4">4</button>
+            <button class="key-btn" data-key="5">5</button>
+            <button class="key-btn" data-key="6">6</button>
+            <button class="key-btn" data-key="1">1</button>
+            <button class="key-btn" data-key="2">2</button>
+            <button class="key-btn" data-key="3">3</button>
+            <button class="key-btn clear" data-key="clear">C</button>
+            <button class="key-btn" data-key="0">0</button>
+            <button class="key-btn action" data-key="enter">✓</button>
+        </div>
+    </div>
+
+    <!-- MODAL DE RETROALIMENTACIÓN -->
+    <div class="modal-overlay" id="feedback-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="icon" id="modal-icon">🎉</div>
+                <h2 id="modal-title">¡Excelente trabajo!</h2>
+            </div>
+            <div class="modal-body">
+                <h3><i class="fas fa-list-ol"></i> Solución paso a paso:</h3>
+                <div id="solution-steps">
+                    <!-- Se genera dinámicamente -->
+                </div>
+                <div class="icfes-connection">
+                    <h4><i class="fas fa-graduation-cap"></i> Conexión ICFES</h4>
+                    <p id="icfes-connection-text">Esta tabla evaluó la competencia de interpretación de datos cuantitativos...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="action-btn primary" id="btn-close-modal">
+                    <i class="fas fa-arrow-right"></i> Continuar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FLOATING ICONS -->
+    <div class="floating-icons">
+        <button id="btn-help" title="Ayuda">❓</button>
+        <button id="btn-stats" title="Estadísticas">📊</button>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="game-toast"></div>
+
+    <script>
+        // =====================================================
+        // CONFIGURACIÓN Y DATOS DEL JUEGO
+        // =====================================================
+        
+        const TABLE_DATA = {
+            basico: [
+                {
+                    title: "Encuesta de Transporte",
+                    context: "Una empresa encuestó a 100 personas sobre su medio de transporte preferido. Completa los datos faltantes sabiendo que cada fila representa un grupo de edad.",
+                    headers: ["", "Bus", "Metro", "Carro", "Total"],
+                    rows: [
+                        ["Jóvenes", 15, 25, "?", 50],
+                        ["Adultos", 20, "?", 15, 50],
+                        ["Total", "?", 40, 30, 100]
+                    ],
+                    emptyCells: [
+                        { row: 0, col: 3, answer: 10, formula: "Total fila - (Bus + Metro)", hint: "Suma los valores conocidos de la fila y réstalo del total" },
+                        { row: 1, col: 2, answer: 15, formula: "Total fila - (Bus + Carro)", hint: "El total de adultos es 50, resta los que usan bus y carro" },
+                        { row: 2, col: 1, answer: 35, formula: "Suma columna Bus", hint: "Suma los valores de la columna Bus" }
+                    ],
+                    solution: [
+                        "Paso 1: Para hallar Carro-Jóvenes, restamos: 50 - (15 + 25) = 10",
+                        "Paso 2: Para Metro-Adultos: 50 - (20 + 15) = 15",
+                        "Paso 3: Total Bus es la suma: 15 + 20 = 35"
+                    ],
+                    icfesCompetence: "Esta tabla evalúa la competencia de FORMULACIÓN, donde debes identificar qué operaciones son necesarias para resolver un problema con datos incompletos."
+                },
+                {
+                    title: "Producción de Fábrica",
+                    context: "Una fábrica produce tres tipos de productos. La tabla muestra la producción semanal en unidades. Completa los datos faltantes.",
+                    headers: ["", "Producto A", "Producto B", "Producto C", "Total"],
+                    rows: [
+                        ["Semana 1", 120, 80, "?", 300],
+                        ["Semana 2", "?", 90, 110, 320],
+                        ["Total", 230, "?", 200, 620]
+                    ],
+                    emptyCells: [
+                        { row: 0, col: 3, answer: 100, formula: "Total - (A + B)", hint: "300 - (120 + 80) = 100" },
+                        { row: 1, col: 1, answer: 120, formula: "Total - (B + C)", hint: "320 - (90 + 110) = 120" },
+                        { row: 2, col: 2, answer: 170, formula: "Suma columna B", hint: "80 + 90 = 170" }
+                    ],
+                    solution: [
+                        "Paso 1: Producto C en Semana 1: 300 - 200 = 100",
+                        "Paso 2: Producto A en Semana 2: 320 - 200 = 120",
+                        "Paso 3: Total Producto B: 80 + 90 = 170"
+                    ],
+                    icfesCompetence: "Evalúa EJECUCIÓN de operaciones básicas (suma y resta) en contexto de producción industrial."
+                },
+                {
+                    title: "Ventas por Tienda",
+                    context: "Una cadena de tiendas registró sus ventas mensuales en millones de pesos. Completa la tabla.",
+                    headers: ["", "Tienda 1", "Tienda 2", "Tienda 3", "Total"],
+                    rows: [
+                        ["Enero", 45, "?", 35, 120],
+                        ["Febrero", 50, 40, "?", 130],
+                        ["Total", "?", 85, 70, 250]
+                    ],
+                    emptyCells: [
+                        { row: 0, col: 2, answer: 40, formula: "Total - (T1 + T3)", hint: "120 - (45 + 35) = 40" },
+                        { row: 1, col: 3, answer: 40, formula: "Total - (T1 + T2)", hint: "130 - (50 + 40) = 40" },
+                        { row: 2, col: 1, answer: 95, formula: "Suma columna T1", hint: "45 + 50 = 95" }
+                    ],
+                    solution: [
+                        "Paso 1: Tienda 2 en Enero: 120 - 80 = 40",
+                        "Paso 2: Tienda 3 en Febrero: 130 - 90 = 40",
+                        "Paso 3: Total Tienda 1: 45 + 50 = 95"
+                    ],
+                    icfesCompetence: "Evalúa INTERPRETACIÓN de datos comerciales y capacidad de deducir información faltante."
+                }
+            ],
+            intermedio: [
+                {
+                    title: "Promedios de Notas",
+                    context: "La tabla muestra las notas promedio de tres grupos de estudiantes. El promedio general se calcula sumando todas las notas y dividiendo por el número de grupos. Completa los datos faltantes.",
+                    headers: ["", "Matemáticas", "Lenguaje", "Ciencias", "Promedio"],
+                    rows: [
+                        ["Grupo A", 4.2, 3.8, "?", 4.0],
+                        ["Grupo B", "?", 4.0, 4.5, 4.2],
+                        ["Promedio Gral", 4.3, "?", 4.4, 4.3]
+                    ],
+                    emptyCells: [
+                        { row: 0, col: 3, answer: 4.0, formula: "(Promedio × 3) - (Mat + Leng)", hint: "(4.0 × 3) - (4.2 + 3.8) = 4.0" },
+                        { row: 1, col: 1, answer: 4.1, formula: "(Promedio × 3) - (Leng + Cien)", hint: "(4.2 × 3) - (4.0 + 4.5) = 4.1" },
+                        { row: 2, col: 2, answer: 3.9, formula: "Suma columna ÷ 2", hint: "(3.8 + 4.0) ÷ 2 = 3.9" }
+                    ],
+                    solution: [
+                        "Paso 1: Ciencias Grupo A = (4.0 × 3) - 8.0 = 4.0",
+                        "Paso 2: Matemáticas Grupo B = (4.2 × 3) - 8.5 = 4.1",
+                        "Paso 3: Promedio Lenguaje = (3.8 + 4.0) ÷ 2 = 3.9"
+                    ],
+                    icfesCompetence: "Evalúa la competencia de EJECUCIÓN con promedios y comprensión de cómo los totales parciales contribuyen al promedio general."
+                },
+                {
+                    title: "Razón de Géneros",
+                    context: "Una universidad registra la cantidad de estudiantes por género en tres facultades. La razón hombre:mujer debe calcularse. Completa los datos faltantes.",
+                    headers: ["", "Hombres", "Mujeres", "Total", "Razón H:M"],
+                    rows: [
+                        ["Ingeniería", 240, "?", 400, "3:2"],
+                        ["Medicina", "?", 180, 300, "2:3"],
+                        ["Derecho", 150, 250, "?", "?"]
+                    ],
+                    emptyCells: [
+                        { row: 0, col: 2, answer: 160, formula: "Total - Hombres", hint: "Razón 3:2 significa 60% hombres, 40% mujeres. 400 × 0.4 = 160" },
+                        { row: 1, col: 1, answer: 120, formula: "Total - Mujeres", hint: "Razón 2:3 significa 40% hombres. 300 × 0.4 = 120" },
+                        { row: 2, col: 3, answer: 400, formula: "H + M", hint: "150 + 250 = 400" }
+                    ],
+                    solution: [
+                        "Paso 1: Mujeres en Ingeniería: Razón 3:2 = 60%:40%, entonces 400 × 0.4 = 160",
+                        "Paso 2: Hombres en Medicina: Razón 2:3 = 40%:60%, entonces 300 × 0.4 = 120",
+                        "Paso 3: Total Derecho: 150 + 250 = 400"
+                    ],
+                    icfesCompetence: "Evalúa la interpretación de RAZONES y PROPORCIONES, competencia clave del razonamiento cuantitativo."
+                }
+            ],
+            avanzado: [
+                {
+                    title: "Presupuesto con Porcentajes",
+                    context: "El presupuesto anual de una empresa se distribuye por porcentajes. El total del presupuesto es de $800 millones. Completa los valores y porcentajes faltantes.",
+                    headers: ["", "Marketing", "Operaciones", "Investigación", "Total"],
+                    rows: [
+                        ["Monto ($M)", "?", 320, 160, 800],
+                        ["Porcentaje", "25%", "?", "?", "100%"]
+                    ],
+                    emptyCells: [
+                        { row: 0, col: 1, answer: 200, formula: "Total × Porcentaje", hint: "25% de $800M = $200M" },
+                        { row: 1, col: 2, answer: 40, formula: "(Monto / Total) × 100", hint: "(320 / 800) × 100 = 40%" },
+                        { row: 1, col: 3, answer: 20, formula: "(Monto / Total) × 100", hint: "(160 / 800) × 100 = 20%" }
+                    ],
+                    solution: [
+                        "Paso 1: Marketing = 25% × $800M = $200M",
+                        "Paso 2: Porcentaje Operaciones = (320/800) × 100 = 40%",
+                        "Paso 3: Porcentaje Investigación = (160/800) × 100 = 20%",
+                        "Verificación: 25% + 40% + 20% = 85%... Faltan otros departamentos que representan 15%"
+                    ],
+                    icfesCompetence: "Evalúa la competencia de FORMULACIÓN E INTERPRETACIÓN con porcentajes y su aplicación en contextos financieros."
+                },
+                {
+                    title: "Crecimiento Poblacional",
+                    context: "La tabla muestra la población de tres ciudades en dos años consecutivos y su tasa de crecimiento. La tasa se calcula: ((P2-P1)/P1)×100. Completa los datos faltantes.",
+                    headers: ["", "Población 2022", "Población 2023", "Crecimiento", "Tasa (%)"],
+                    rows: [
+                        ["Ciudad A", 50000, 52500, "?", "5%"],
+                        ["Ciudad B", "?", 82500, 5500, "?"],
+                        ["Ciudad C", 120000, "?", "?", "2.5%"]
+                    ],
+                    emptyCells: [
+                        { row: 0, col: 3, answer: 2500, formula: "P2 - P1", hint: "52500 - 50000 = 2500" },
+                        { row: 1, col: 1, answer: 77000, formula: "P2 - Crecimiento", hint: "82500 - 5500 = 77000" },
+                        { row: 2, col: 2, answer: 123000, formula: "P1 × (1 + tasa)", hint: "120000 × 1.025 = 123000" },
+                        { row: 2, col: 3, answer: 3000, formula: "P2 - P1", hint: "123000 - 120000 = 3000" }
+                    ],
+                    solution: [
+                        "Paso 1: Crecimiento Ciudad A = 52500 - 50000 = 2500 habitantes",
+                        "Paso 2: Población 2022 Ciudad B = 82500 - 5500 = 77000",
+                        "Paso 3: Población 2023 Ciudad C = 120000 × 1.025 = 123000",
+                        "Paso 4: Crecimiento Ciudad C = 123000 - 120000 = 3000"
+                    ],
+                    icfesCompetence: "Evalúa la comprensión de TASAS DE CRECIMIENTO y su cálculo, una competencia avanzada de interpretación estadística."
+                }
+            ]
+        };
+
+        // =====================================================
+        // ESTADO DEL JUEGO
+        // =====================================================
+        
+        let gameState = {
+            currentLevel: 'basico',
+            currentTableIndex: 0,
+            attempts: 3,
+            score: 0,
+            timeRemaining: 300,
+            timerInterval: null,
+            selectedCell: null,
+            userAnswers: {},
+            streak: 0,
+            tablesCompleted: 0,
+            totalCorrect: 0,
+            totalAttempts: 0,
+            avgTime: 0,
+            marathonMode: false,
+            marathonTables: [],
+            marathonIndex: 0,
+            marathonStartTime: 0
+        };
+
+        let skillsData = {
+            algebra: 50,
+            geometria: 50,
+            estadistica: 50
+        };
+
+        // =====================================================
+        // INICIALIZACIÓN
+        // =====================================================
+        
+        window.initTableGame = function(user) {
+            loadUserProgress(user);
+            setupEventListeners();
+            generateTable();
+            initRadarChart();
+            loadRanking();
+        };
+
+        function loadUserProgress(user) {
+            const savedProgress = localStorage.getItem(`tableGame_progress_${user.uid}`);
+            if (savedProgress) {
+                const data = JSON.parse(savedProgress);
+                gameState.score = data.score || 0;
+                gameState.streak = data.streak || 0;
+                gameState.tablesCompleted = data.tablesCompleted || 0;
+                gameState.totalCorrect = data.totalCorrect || 0;
+                gameState.totalAttempts = data.totalAttempts || 0;
+                gameState.avgTime = data.avgTime || 0;
+                skillsData = data.skills || { algebra: 50, geometria: 50, estadistica: 50 };
+                updateStatsDisplay();
+            }
+        }
+
+        function saveUserProgress() {
+            if (!window.currentUser) return;
+            
+            const dataToSave = {
+                score: gameState.score,
+                streak: gameState.streak,
+                tablesCompleted: gameState.tablesCompleted,
+                totalCorrect: gameState.totalCorrect,
+                totalAttempts: gameState.totalAttempts,
+                avgTime: gameState.avgTime,
+                skills: skillsData,
+                lastPlayed: Date.now()
+            };
+            
+            localStorage.setItem(`tableGame_progress_${window.currentUser.uid}`, JSON.stringify(dataToSave));
+            
+            // Save to Firebase
+            if (window.firebaseApp && window.firebaseApp.database) {
+                const { ref, set } = window.firebaseApp;
+                const progressRef = ref(window.firebaseApp.database, `users/${window.currentUser.uid}/tableGameProgress`);
+                set(progressRef, dataToSave).catch(err => console.log('Firebase save error:', err));
+            }
+        }
+
+        // =====================================================
+        // GENERACIÓN DE TABLAS
+        // =====================================================
+        
+        function generateTable() {
+            const tables = TABLE_DATA[gameState.currentLevel];
+            const randomIndex = Math.floor(Math.random() * tables.length);
+            gameState.currentTableIndex = randomIndex;
+            
+            const tableData = tables[randomIndex];
+            
+            document.getElementById('table-title').textContent = tableData.title;
+            document.getElementById('table-context').innerHTML = `<p>${tableData.context}</p>`;
+            
+            const table = document.getElementById('game-table');
+            table.innerHTML = '';
+            
+            // Header row
+            const headerRow = document.createElement('tr');
+            tableData.headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+            table.appendChild(headerRow);
+            
+            // Data rows
+            tableData.rows.forEach((rowData, rowIndex) => {
+                const tr = document.createElement('tr');
+                if (rowIndex === tableData.rows.length - 1) {
+                    tr.classList.add('total-row');
+                }
+                
+                rowData.forEach((cellData, colIndex) => {
+                    const td = document.createElement('td');
+                    
+                    if (colIndex === 0) {
+                        td.classList.add('header-col');
+                        td.textContent = cellData;
+                    } else if (cellData === '?') {
+                        td.classList.add('empty-cell');
+                        td.dataset.row = rowIndex;
+                        td.dataset.col = colIndex;
+                        td.innerHTML = '<span class="question-mark">?</span>';
+                        td.addEventListener('click', () => selectCell(td, rowIndex, colIndex));
+                    } else {
+                        td.textContent = cellData;
+                    }
+                    
+                    tr.appendChild(td);
+                });
+                
+                table.appendChild(tr);
+            });
+            
+            // Reset state
+            gameState.attempts = 3;
+            gameState.userAnswers = {};
+            gameState.timeRemaining = gameState.currentLevel === 'basico' ? 300 : 
+                                      gameState.currentLevel === 'intermedio' ? 240 : 180;
+            gameState.selectedCell = null;
+            
+            updateAttemptsDisplay();
+            startTimer();
+            closeKeyboard();
+        }
+
+        function selectCell(cell, row, col) {
+            // Remove previous selection
+            document.querySelectorAll('.empty-cell.selected').forEach(c => c.classList.remove('selected'));
+            
+            cell.classList.add('selected');
+            gameState.selectedCell = { element: cell, row, col };
+            
+            // Show keyboard
+            const keyboard = document.getElementById('numeric-keyboard');
+            keyboard.classList.add('active');
+            document.getElementById('keyboard-display').textContent = 
+                gameState.userAnswers[`${row}-${col}`] || '0';
+        }
+
+        function closeKeyboard() {
+            document.getElementById('numeric-keyboard').classList.remove('active');
+            document.querySelectorAll('.empty-cell.selected').forEach(c => c.classList.remove('selected'));
+            gameState.selectedCell = null;
+        }
+
+        // =====================================================
+        // TECLADO NUMÉRICO
+        // =====================================================
+        
+        function setupKeyboard() {
+            const keyboard = document.getElementById('numeric-keyboard');
+            const display = document.getElementById('keyboard-display');
+            
+            keyboard.querySelectorAll('.key-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const key = e.target.dataset.key;
+                    
+                    if (!gameState.selectedCell) return;
+                    
+                    let currentValue = display.textContent;
+                    
+                    if (key === 'clear') {
+                        display.textContent = '0';
+                    } else if (key === 'enter') {
+                        submitAnswer();
+                    } else {
+                        if (currentValue === '0') {
+                            display.textContent = key;
+                        } else if (currentValue.length < 6) {
+                            display.textContent += key;
+                        }
+                    }
+                });
+            });
+        }
+
+        function submitAnswer() {
+            if (!gameState.selectedCell) return;
+            
+            const { row, col, element } = gameState.selectedCell;
+            const value = parseFloat(document.getElementById('keyboard-display').textContent);
+            
+            gameState.userAnswers[`${row}-${col}`] = value;
+            element.innerHTML = `<strong>${value}</strong>`;
+            element.classList.remove('selected');
+            
+            closeKeyboard();
+        }
+
+        // =====================================================
+        // VERIFICACIÓN
+        // =====================================================
+        
+        function verifyAnswers() {
+            const tables = TABLE_DATA[gameState.currentLevel];
+            const tableData = tables[gameState.currentTableIndex];
+            
+            let allCorrect = true;
+            let correctCount = 0;
+            
+            tableData.emptyCells.forEach(cell => {
+                const key = `${cell.row}-${cell.col}`;
+                const userAnswer = gameState.userAnswers[key];
+                const cellElement = document.querySelector(`.empty-cell[data-row="${cell.row}"][data-col="${cell.col}"]`);
+                
+                if (userAnswer === cell.answer) {
+                    cellElement.classList.add('correct');
+                    cellElement.classList.remove('incorrect');
+                    correctCount++;
+                } else {
+                    cellElement.classList.add('incorrect');
+                    cellElement.classList.remove('correct');
+                    allCorrect = false;
+                }
+            });
+            
+            gameState.totalAttempts++;
+            
+            if (allCorrect) {
+                gameState.totalCorrect++;
+                gameState.streak++;
+                gameState.tablesCompleted++;
+                
+                const timeUsed = (gameState.currentLevel === 'basico' ? 300 : 
+                                 gameState.currentLevel === 'intermedio' ? 240 : 180) - gameState.timeRemaining;
+                
+                gameState.avgTime = Math.round((gameState.avgTime * (gameState.tablesCompleted - 1) + timeUsed) / gameState.tablesCompleted);
+                
+                // Update score based on level and time
+                const basePoints = gameState.currentLevel === 'basico' ? 50 : 
+                                  gameState.currentLevel === 'intermedio' ? 100 : 150;
+                const timeBonus = Math.max(0, Math.floor(gameState.timeRemaining / 10));
+                const pointsEarned = basePoints + timeBonus;
+                
+                gameState.score += pointsEarned;
+                
+                // Update skills
+                if (gameState.currentLevel === 'basico') {
+                    skillsData.algebra = Math.min(100, skillsData.algebra + 5);
+                } else if (gameState.currentLevel === 'intermedio') {
+                    skillsData.geometria = Math.min(100, skillsData.geometria + 5);
+                    skillsData.estadistica = Math.min(100, skillsData.estadistica + 3);
+                } else {
+                    skillsData.estadistica = Math.min(100, skillsData.estadistica + 8);
+                    skillsData.algebra = Math.min(100, skillsData.algebra + 3);
+                }
+                
+                showFeedback(true, tableData, pointsEarned);
+                stopTimer();
+                saveUserProgress();
+                
+                if (gameState.marathonMode) {
+                    handleMarathonProgress();
+                }
+            } else {
+                gameState.attempts--;
+                gameState.streak = 0;
+                updateAttemptsDisplay();
+                
+                if (gameState.attempts <= 0) {
+                    showFeedback(false, tableData, 0);
+                    stopTimer();
+                    saveUserProgress();
+                    
+                    if (gameState.marathonMode) {
+                        endMarathon(false);
+                    }
+                } else {
+                    showToast(`Respuestas incorrectas. Te quedan ${gameState.attempts} intentos.`, 'error');
+                }
+            }
+            
+            updateStatsDisplay();
+            updateRadarChart();
+        }
+
+        // =====================================================
+        // RETROALIMENTACIÓN
+        // =====================================================
+        
+        function showFeedback(success, tableData, points) {
+            const modal = document.getElementById('feedback-modal');
+            const icon = document.getElementById('modal-icon');
+            const title = document.getElementById('modal-title');
+            const stepsContainer = document.getElementById('solution-steps');
+            const icfesText = document.getElementById('icfes-connection-text');
+            
+            if (success) {
+                icon.textContent = '🎉';
+                title.textContent = `¡Excelente! +${points} puntos`;
+            } else {
+                icon.textContent = '😔';
+                title.textContent = 'Se acabaron los intentos';
+            }
+            
+            stepsContainer.innerHTML = '';
+            tableData.solution.forEach((step, index) => {
+                const stepDiv = document.createElement('div');
+                stepDiv.className = 'solution-step';
+                stepDiv.innerHTML = `<span class="step-number">Paso ${index + 1}:</span> ${step}`;
+                stepsContainer.appendChild(stepDiv);
+            });
+            
+            icfesText.textContent = tableData.icfesCompetence;
+            
+            modal.classList.add('active');
+        }
+
+        // =====================================================
+        // PISTAS
+        // =====================================================
+        
+        function showFormulaHint() {
+            const tables = TABLE_DATA[gameState.currentLevel];
+            const tableData = tables[gameState.currentTableIndex];
+            
+            // Find first empty cell without answer
+            let hintCell = null;
+            for (const cell of tableData.emptyCells) {
+                if (!gameState.userAnswers[`${cell.row}-${cell.col}`]) {
+                    hintCell = cell;
+                    break;
+                }
+            }
+            
+            if (hintCell) {
+                showToast(`<strong>Fórmula:</strong> ${hintCell.formula}<br><small>${hintCell.hint}</small>`, 'success');
+            } else {
+                showToast('¡Ya completaste todas las celdas!', 'success');
+            }
+        }
+
+        function highlightRelations() {
+            const tables = TABLE_DATA[gameState.currentLevel];
+            const tableData = tables[gameState.currentTableIndex];
+            
+            // Clear previous highlights
+            document.querySelectorAll('.highlight-row, .highlight-col').forEach(el => {
+                el.classList.remove('highlight-row', 'highlight-col');
+            });
+            
+            // Find first empty cell
+            let hintCell = null;
+            for (const cell of tableData.emptyCells) {
+                if (!gameState.userAnswers[`${cell.row}-${cell.col}`]) {
+                    hintCell = cell;
+                    break;
+                }
+            }
+            
+            if (hintCell) {
+                // Highlight row
+                const table = document.getElementById('game-table');
+                const rows = table.querySelectorAll('tr');
+                rows[hintCell.row + 1].querySelectorAll('td').forEach(td => {
+                    td.classList.add('highlight-row');
+                });
+                
+                // Highlight column
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td, th');
+                    if (cells[hintCell.col]) {
+                        cells[hintCell.col].classList.add('highlight-col');
+                    }
+                });
+                
+                showToast('Mira las celdas resaltadas para encontrar la relación', 'success');
+                
+                // Remove highlights after 5 seconds
+                setTimeout(() => {
+                    document.querySelectorAll('.highlight-row, .highlight-col').forEach(el => {
+                        el.classList.remove('highlight-row', 'highlight-col');
+                    });
+                }, 5000);
+            }
+        }
+
+        // =====================================================
+        // TEMPORIZADOR
+        // =====================================================
+        
+        function startTimer() {
+            stopTimer();
+            updateTimerDisplay();
+            
+            gameState.timerInterval = setInterval(() => {
+                gameState.timeRemaining--;
+                updateTimerDisplay();
+                
+                if (gameState.timeRemaining <= 0) {
+                    stopTimer();
+                    const tables = TABLE_DATA[gameState.currentLevel];
+                    showFeedback(false, tables[gameState.currentTableIndex], 0);
+                    gameState.streak = 0;
+                    saveUserProgress();
+                    
+                    if (gameState.marathonMode) {
+                        endMarathon(false);
+                    }
+                }
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (gameState.timerInterval) {
+                clearInterval(gameState.timerInterval);
+                gameState.timerInterval = null;
+            }
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(gameState.timeRemaining / 60);
+            const seconds = gameState.timeRemaining % 60;
+            const display = document.getElementById('game-timer');
+            display.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            const timerCard = display.closest('.status-card');
+            if (gameState.timeRemaining <= 60) {
+                timerCard.classList.add('warning');
+            } else {
+                timerCard.classList.remove('warning');
+            }
+        }
+
+        // =====================================================
+        // ESTADÍSTICAS
+        // =====================================================
+        
+        function updateStatsDisplay() {
+            document.getElementById('current-score').textContent = gameState.score;
+            document.getElementById('streak').textContent = gameState.streak;
+            document.getElementById('tables-completed').textContent = gameState.tablesCompleted;
+            
+            const avgMin = Math.floor(gameState.avgTime / 60);
+            const avgSec = gameState.avgTime % 60;
+            document.getElementById('avg-time').textContent = 
+                gameState.tablesCompleted > 0 ? `${avgMin}:${avgSec.toString().padStart(2, '0')}` : '--:--';
+            
+            const accuracy = gameState.totalAttempts > 0 
+                ? Math.round((gameState.totalCorrect / gameState.totalAttempts) * 100) 
+                : 0;
+            document.getElementById('accuracy').textContent = `${accuracy}%`;
+        }
+
+        function updateAttemptsDisplay() {
+            document.getElementById('attempts-left').textContent = gameState.attempts;
+        }
+
+        // =====================================================
+        // GRÁFICO RADAR
+        // =====================================================
+        
+        let radarChart = null;
+
+        function initRadarChart() {
+            const ctx = document.getElementById('skills-radar').getContext('2d');
+            
+            radarChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Álgebra/Cálculo', 'Geometría/Medición', 'Estadística/Probabilidad'],
+                    datasets: [{
+                        label: 'Habilidades',
+                        data: [skillsData.algebra, skillsData.geometria, skillsData.estadistica],
+                        backgroundColor: 'rgba(90, 97, 51, 0.2)',
+                        borderColor: 'rgba(90, 97, 51, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(90, 97, 51, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(90, 97, 51, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                stepSize: 20,
+                                font: { size: 10 }
+                            },
+                            pointLabels: {
+                                font: { size: 11, family: 'Roboto' }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function updateRadarChart() {
+            if (radarChart) {
+                radarChart.data.datasets[0].data = [skillsData.algebra, skillsData.geometria, skillsData.estadistica];
+                radarChart.update();
+            }
+        }
+
+        // =====================================================
+        // MODO SIMULACRO (MARATÓN)
+        // =====================================================
+        
+        function startMarathon() {
+            gameState.marathonMode = true;
+            gameState.marathonIndex = 0;
+            gameState.marathonStartTime = Date.now();
+            
+            // Generate 5 random tables from advanced level
+            gameState.marathonTables = [];
+            const allTables = [...TABLE_DATA.avanzado, ...TABLE_DATA.intermedio];
+            
+            for (let i = 0; i < 5; i++) {
+                const randomIndex = Math.floor(Math.random() * allTables.length);
+                gameState.marathonTables.push(allTables[randomIndex]);
+            }
+            
+            // Disable hints in marathon mode
+            document.getElementById('btn-hint-formula').disabled = true;
+            document.getElementById('btn-hint-highlight').disabled = true;
+            document.getElementById('btn-new-table').disabled = true;
+            
+            showToast('¡Simulacro iniciado! 5 tablas, sin pistas. ¡Buena suerte!', 'success');
+            generateMarathonTable();
+        }
+
+        function generateMarathonTable() {
+            if (gameState.marathonIndex >= 5) {
+                endMarathon(true);
+                return;
+            }
+            
+            const tableData = gameState.marathonTables[gameState.marathonIndex];
+            
+            document.getElementById('table-title').textContent = `Tabla ${gameState.marathonIndex + 1}/5: ${tableData.title}`;
+            document.getElementById('table-context').innerHTML = `<p>${tableData.context}</p>`;
+            
+            // Generate table (similar to generateTable but with marathon table data)
+            generateSpecificTable(tableData);
+        }
+
+        function generateSpecificTable(tableData) {
+            const table = document.getElementById('game-table');
+            table.innerHTML = '';
+            
+            // Header row
+            const headerRow = document.createElement('tr');
+            tableData.headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+            table.appendChild(headerRow);
+            
+            // Data rows
+            tableData.rows.forEach((rowData, rowIndex) => {
+                const tr = document.createElement('tr');
+                if (rowIndex === tableData.rows.length - 1) {
+                    tr.classList.add('total-row');
+                }
+                
+                rowData.forEach((cellData, colIndex) => {
+                    const td = document.createElement('td');
+                    
+                    if (colIndex === 0) {
+                        td.classList.add('header-col');
+                        td.textContent = cellData;
+                    } else if (cellData === '?') {
+                        td.classList.add('empty-cell');
+                        td.dataset.row = rowIndex;
+                        td.dataset.col = colIndex;
+                        td.innerHTML = '<span class="question-mark">?</span>';
+                        td.addEventListener('click', () => selectCell(td, rowIndex, colIndex));
+                    } else {
+                        td.textContent = cellData;
+                    }
+                    
+                    tr.appendChild(td);
+                });
+                
+                table.appendChild(tr);
+            });
+            
+            // Reset state for this table
+            gameState.attempts = 1; // Only 1 attempt in marathon
+            gameState.userAnswers = {};
+            gameState.timeRemaining = 120; // 2 minutes per table
+            gameState.selectedCell = null;
+            
+            updateAttemptsDisplay();
+            startTimer();
+            closeKeyboard();
+        }
+
+        function handleMarathonProgress() {
+            gameState.marathonIndex++;
+            
+            if (gameState.marathonIndex < 5) {
+                setTimeout(() => {
+                    document.getElementById('feedback-modal').classList.remove('active');
+                    generateMarathonTable();
+                }, 1500);
+            } else {
+                endMarathon(true);
+            }
+        }
+
+        function endMarathon(success) {
+            gameState.marathonMode = false;
+            stopTimer();
+            
+            // Re-enable buttons
+            document.getElementById('btn-hint-formula').disabled = false;
+            document.getElementById('btn-hint-highlight').disabled = false;
+            document.getElementById('btn-new-table').disabled = false;
+            
+            const totalTime = Math.floor((Date.now() - gameState.marathonStartTime) / 1000);
+            
+            if (success) {
+                const minutes = Math.floor(totalTime / 60);
+                const seconds = totalTime % 60;
+                
+                showToast(`¡Simulacro completado! Tiempo total: ${minutes}:${seconds.toString().padStart(2, '0')}`, 'success');
+                
+                // Save to ranking
+                saveToRanking(totalTime);
+                
+                // Award bonus points
+                gameState.score += 500;
+                saveUserProgress();
+                updateStatsDisplay();
+            } else {
+                showToast('Simulacro terminado. ¡Sigue practicando!', 'error');
+            }
+            
+            // Return to normal mode
+            setTimeout(() => {
+                document.getElementById('feedback-modal').classList.remove('active');
+                generateTable();
+            }, 2000);
+        }
+
+        // =====================================================
+        // RANKING
+        // =====================================================
+        
+        function saveToRanking(totalSeconds) {
+            if (!window.currentUser || !window.firebaseApp) return;
+            
+            const { ref, push, set } = window.firebaseApp;
+            const rankingRef = ref(window.firebaseApp.database, 'tableGameRanking');
+            
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            
+            const entry = {
+                userId: window.currentUser.uid,
+                userName: window.currentUser.displayName || window.currentUser.email.split('@')[0],
+                totalTime: totalSeconds,
+                timeDisplay: `${minutes}:${seconds.toString().padStart(2, '0')}`,
+                date: Date.now()
+            };
+            
+            const newEntryRef = push(rankingRef);
+            set(newEntryRef, entry).then(() => {
+                loadRanking();
+            }).catch(err => console.log('Error saving to ranking:', err));
+        }
+
+        function loadRanking() {
+            const rankingList = document.getElementById('ranking-list');
+            
+            if (!window.firebaseApp) {
+                rankingList.innerHTML = '<p style="text-align:center;padding:20px;color:#888;">Cargando ranking...</p>';
+                return;
+            }
+            
+            const { ref, onValue } = window.firebaseApp;
+            const rankingRef = ref(window.firebaseApp.database, 'tableGameRanking');
+            
+            onValue(rankingRef, (snapshot) => {
+                const data = snapshot.val();
+                
+                if (!data) {
+                    rankingList.innerHTML = '<p style="text-align:center;padding:20px;color:#888;">Sé el primero en completar el simulacro</p>';
+                    return;
+                }
+                
+                // Convert to array and sort by time (ascending)
+                const entries = Object.values(data).sort((a, b) => a.totalTime - b.totalTime);
+                
+                // Take top 10
+                const topEntries = entries.slice(0, 10);
+                
+                rankingList.innerHTML = '';
+                
+                topEntries.forEach((entry, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'ranking-item';
+                    if (window.currentUser && entry.userId === window.currentUser.uid) {
+                        item.classList.add('current-user');
+                    }
+                    
+                    const positionClass = index < 3 ? 'top-3' : '';
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                    
+                    item.innerHTML = `
+                        <span class="position ${positionClass}">${medal || (index + 1)}</span>
+                        <span class="name">${entry.userName}</span>
+                        <span class="score">${entry.timeDisplay}</span>
+                    `;
+                    
+                    rankingList.appendChild(item);
+                });
+            }, { onlyOnce: true });
+        }
+
+        // =====================================================
+        // UTILIDADES
+        // =====================================================
+        
+        function showToast(message, type = '') {
+            const toast = document.getElementById('game-toast');
+            toast.innerHTML = message;
+            toast.className = `toast show ${type}`;
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 5000);
+        }
+
+        // =====================================================
+        // EVENT LISTENERS
+        // =====================================================
+        
+        function setupEventListeners() {
+            // Level buttons
+            document.querySelectorAll('.level-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const level = e.target.dataset.level;
+                    
+                    document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    
+                    gameState.currentLevel = level;
+                    document.getElementById('current-level').textContent = 
+                        level === 'basico' ? 'Básico' : 
+                        level === 'intermedio' ? 'Intermedio' : 'Avanzado';
+                    
+                    stopTimer();
+                    generateTable();
+                });
+            });
+            
+            // Action buttons
+            document.getElementById('btn-hint-formula').addEventListener('click', showFormulaHint);
+            document.getElementById('btn-hint-highlight').addEventListener('click', highlightRelations);
+            document.getElementById('btn-verify').addEventListener('click', verifyAnswers);
+            document.getElementById('btn-new-table').addEventListener('click', () => {
+                stopTimer();
+                generateTable();
+            });
+            
+            // Marathon button
+            document.getElementById('btn-marathon').addEventListener('click', startMarathon);
+            
+            // Modal close
+            document.getElementById('btn-close-modal').addEventListener('click', () => {
+                document.getElementById('feedback-modal').classList.remove('active');
+                generateTable();
+            });
+            
+            // Keyboard setup
+            setupKeyboard();
+            
+            // Close keyboard on outside click
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.numeric-keyboard') && 
+                    !e.target.closest('.empty-cell')) {
+                    closeKeyboard();
+                }
+            });
+            
+            // Help button
+            document.getElementById('btn-help').addEventListener('click', () => {
+                showToast(`
+                    <strong>Cómo jugar:</strong><br>
+                    1. Haz clic en una celda con ?<br>
+                    2. Ingresa el valor usando el teclado<br>
+                    3. Verifica tus respuestas<br>
+                    4. Usa las pistas si necesitas ayuda
+                `, 'success');
+            });
+            
+            // Mobile navigation
+            const navItems = document.querySelectorAll('.main-navigation > ul > li');
+            navItems.forEach(item => {
+                const link = item.querySelector('span');
+                if (link && item.querySelector('.dropdown')) {
+                    link.addEventListener('click', (e) => {
+                        if (window.innerWidth <= 1024) {
+                            e.preventDefault();
+                            item.classList.toggle('active');
+                        }
+                    });
+                }
+                
+                const subItems = item.querySelectorAll('.dropdown > li');
+                subItems.forEach(subItem => {
+                    const subLink = subItem.querySelector('span');
+                    if (subLink && subItem.querySelector('.sub-dropdown')) {
+                        subLink.addEventListener('click', (e) => {
+                            if (window.innerWidth <= 1024) {
+                                e.preventDefault();
+                                subItem.classList.toggle('active');
+                            }
+                        });
+                    }
+                });
+            });
+            
+            // Hamburger menu
+            const hamburgerMenu = document.getElementById('hamburger-menu');
+            const userDropdown = document.getElementById('user-dropdown');
+            
+            hamburgerMenu.addEventListener('click', () => {
+                userDropdown.classList.toggle('active');
+            });
+            
+            window.addEventListener('click', (event) => {
+                if (!event.target.closest('.navbar')) {
+                    userDropdown.classList.remove('active');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
