@@ -58,7 +58,6 @@
                 });
             }
             
-            // Initialize game with user
             if (window.initTableGame) {
                 window.initTableGame(user);
             }
@@ -1459,7 +1458,10 @@
             marathonMode: false,
             marathonTables: [],
             marathonIndex: 0,
-            marathonStartTime: 0
+            marathonStartTime: 0,
+            activeTableData: null,      // <--- AGREGADO
+            marathonFailed: false,      // <--- AGREGADO
+            marathonAdvance: false      // <--- AGREGADO
         };
 
         let skillsData = {
@@ -1511,7 +1513,6 @@
             
             localStorage.setItem(`tableGame_progress_${window.currentUser.uid}`, JSON.stringify(dataToSave));
             
-            // Save to Firebase
             if (window.firebaseApp && window.firebaseApp.database) {
                 const { ref, set } = window.firebaseApp;
                 const progressRef = ref(window.firebaseApp.database, `users/${window.currentUser.uid}/tableGameProgress`);
@@ -1529,6 +1530,9 @@
             gameState.currentTableIndex = randomIndex;
             
             const tableData = tables[randomIndex];
+            
+            // IMPORTANTE: Guardar referencia a la tabla activa
+            gameState.activeTableData = tableData;
             
             document.getElementById('table-title').textContent = tableData.title;
             document.getElementById('table-context').innerHTML = `<p>${tableData.context}</p>`;
@@ -1580,6 +1584,8 @@
             gameState.timeRemaining = gameState.currentLevel === 'basico' ? 300 : 
                                       gameState.currentLevel === 'intermedio' ? 240 : 180;
             gameState.selectedCell = null;
+            gameState.marathonFailed = false;
+            gameState.marathonAdvance = false;
             
             updateAttemptsDisplay();
             startTimer();
@@ -1587,13 +1593,11 @@
         }
 
         function selectCell(cell, row, col) {
-            // Remove previous selection
             document.querySelectorAll('.empty-cell.selected').forEach(c => c.classList.remove('selected'));
             
             cell.classList.add('selected');
             gameState.selectedCell = { element: cell, row, col };
             
-            // Show keyboard
             const keyboard = document.getElementById('numeric-keyboard');
             keyboard.classList.add('active');
             document.getElementById('keyboard-display').textContent = 
@@ -1655,8 +1659,13 @@
         // =====================================================
         
         function verifyAnswers() {
-            const tables = TABLE_DATA[gameState.currentLevel];
-            const tableData = tables[gameState.currentTableIndex];
+            // Usamos la tabla activa guardada (soluciona el bug del simulacro)
+            const tableData = gameState.activeTableData;
+            
+            if (!tableData) {
+                console.error("No hay tabla activa");
+                return;
+            }
             
             let allCorrect = true;
             let correctCount = 0;
@@ -1684,12 +1693,15 @@
                 gameState.streak++;
                 gameState.tablesCompleted++;
                 
-                const timeUsed = (gameState.currentLevel === 'basico' ? 300 : 
-                                 gameState.currentLevel === 'intermedio' ? 240 : 180) - gameState.timeRemaining;
+                const totalTimeForLevel = gameState.marathonMode ? 120 : 
+                                          (gameState.currentLevel === 'basico' ? 300 : 
+                                           gameState.currentLevel === 'intermedio' ? 240 : 180);
+                const timeUsed = totalTimeForLevel - gameState.timeRemaining;
                 
-                gameState.avgTime = Math.round((gameState.avgTime * (gameState.tablesCompleted - 1) + timeUsed) / gameState.tablesCompleted);
+                if (!gameState.marathonMode) {
+                    gameState.avgTime = Math.round((gameState.avgTime * (gameState.tablesCompleted - 1) + timeUsed) / gameState.tablesCompleted);
+                }
                 
-                // Update score based on level and time
                 const basePoints = gameState.currentLevel === 'basico' ? 50 : 
                                   gameState.currentLevel === 'intermedio' ? 100 : 150;
                 const timeBonus = Math.max(0, Math.floor(gameState.timeRemaining / 10));
@@ -1697,15 +1709,17 @@
                 
                 gameState.score += pointsEarned;
                 
-                // Update skills
-                if (gameState.currentLevel === 'basico') {
-                    skillsData.algebra = Math.min(100, skillsData.algebra + 5);
-                } else if (gameState.currentLevel === 'intermedio') {
-                    skillsData.geometria = Math.min(100, skillsData.geometria + 5);
-                    skillsData.estadistica = Math.min(100, skillsData.estadistica + 3);
-                } else {
-                    skillsData.estadistica = Math.min(100, skillsData.estadistica + 8);
-                    skillsData.algebra = Math.min(100, skillsData.algebra + 3);
+                // Actualizar habilidades
+                if (!gameState.marathonMode) {
+                    if (gameState.currentLevel === 'basico') {
+                        skillsData.algebra = Math.min(100, skillsData.algebra + 5);
+                    } else if (gameState.currentLevel === 'intermedio') {
+                        skillsData.geometria = Math.min(100, skillsData.geometria + 5);
+                        skillsData.estadistica = Math.min(100, skillsData.estadistica + 3);
+                    } else {
+                        skillsData.estadistica = Math.min(100, skillsData.estadistica + 8);
+                        skillsData.algebra = Math.min(100, skillsData.algebra + 3);
+                    }
                 }
                 
                 showFeedback(true, tableData, pointsEarned);
@@ -1713,7 +1727,7 @@
                 saveUserProgress();
                 
                 if (gameState.marathonMode) {
-                    handleMarathonProgress();
+                    gameState.marathonAdvance = true;
                 }
             } else {
                 gameState.attempts--;
@@ -1726,7 +1740,7 @@
                     saveUserProgress();
                     
                     if (gameState.marathonMode) {
-                        endMarathon(false);
+                        gameState.marathonFailed = true;
                     }
                 } else {
                     showToast(`Respuestas incorrectas. Te quedan ${gameState.attempts} intentos.`, 'error');
@@ -1774,10 +1788,9 @@
         // =====================================================
         
         function showFormulaHint() {
-            const tables = TABLE_DATA[gameState.currentLevel];
-            const tableData = tables[gameState.currentTableIndex];
+            const tableData = gameState.activeTableData;
+            if (!tableData) return;
             
-            // Find first empty cell without answer
             let hintCell = null;
             for (const cell of tableData.emptyCells) {
                 if (!gameState.userAnswers[`${cell.row}-${cell.col}`]) {
@@ -1794,15 +1807,13 @@
         }
 
         function highlightRelations() {
-            const tables = TABLE_DATA[gameState.currentLevel];
-            const tableData = tables[gameState.currentTableIndex];
+            const tableData = gameState.activeTableData;
+            if (!tableData) return;
             
-            // Clear previous highlights
             document.querySelectorAll('.highlight-row, .highlight-col').forEach(el => {
                 el.classList.remove('highlight-row', 'highlight-col');
             });
             
-            // Find first empty cell
             let hintCell = null;
             for (const cell of tableData.emptyCells) {
                 if (!gameState.userAnswers[`${cell.row}-${cell.col}`]) {
@@ -1812,14 +1823,12 @@
             }
             
             if (hintCell) {
-                // Highlight row
                 const table = document.getElementById('game-table');
                 const rows = table.querySelectorAll('tr');
                 rows[hintCell.row + 1].querySelectorAll('td').forEach(td => {
                     td.classList.add('highlight-row');
                 });
                 
-                // Highlight column
                 rows.forEach(row => {
                     const cells = row.querySelectorAll('td, th');
                     if (cells[hintCell.col]) {
@@ -1829,7 +1838,6 @@
                 
                 showToast('Mira las celdas resaltadas para encontrar la relación', 'success');
                 
-                // Remove highlights after 5 seconds
                 setTimeout(() => {
                     document.querySelectorAll('.highlight-row, .highlight-col').forEach(el => {
                         el.classList.remove('highlight-row', 'highlight-col');
@@ -1852,13 +1860,17 @@
                 
                 if (gameState.timeRemaining <= 0) {
                     stopTimer();
-                    const tables = TABLE_DATA[gameState.currentLevel];
-                    showFeedback(false, tables[gameState.currentTableIndex], 0);
+                    
+                    const tableData = gameState.activeTableData;
+                    
+                    showFeedback(false, tableData, 0);
+                    
                     gameState.streak = 0;
+                    gameState.totalAttempts++;
                     saveUserProgress();
                     
                     if (gameState.marathonMode) {
-                        endMarathon(false);
+                        gameState.marathonFailed = true;
                     }
                 }
             }, 1000);
@@ -1972,7 +1984,6 @@
             gameState.marathonIndex = 0;
             gameState.marathonStartTime = Date.now();
             
-            // Generate 5 random tables from advanced level
             gameState.marathonTables = [];
             const allTables = [...TABLE_DATA.avanzado, ...TABLE_DATA.intermedio];
             
@@ -1981,7 +1992,6 @@
                 gameState.marathonTables.push(allTables[randomIndex]);
             }
             
-            // Disable hints in marathon mode
             document.getElementById('btn-hint-formula').disabled = true;
             document.getElementById('btn-hint-highlight').disabled = true;
             document.getElementById('btn-new-table').disabled = true;
@@ -2001,15 +2011,15 @@
             document.getElementById('table-title').textContent = `Tabla ${gameState.marathonIndex + 1}/5: ${tableData.title}`;
             document.getElementById('table-context').innerHTML = `<p>${tableData.context}</p>`;
             
-            // Generate table (similar to generateTable but with marathon table data)
             generateSpecificTable(tableData);
         }
 
         function generateSpecificTable(tableData) {
+            gameState.activeTableData = tableData;
+            
             const table = document.getElementById('game-table');
             table.innerHTML = '';
             
-            // Header row
             const headerRow = document.createElement('tr');
             tableData.headers.forEach(header => {
                 const th = document.createElement('th');
@@ -2018,7 +2028,6 @@
             });
             table.appendChild(headerRow);
             
-            // Data rows
             tableData.rows.forEach((rowData, rowIndex) => {
                 const tr = document.createElement('tr');
                 if (rowIndex === tableData.rows.length - 1) {
@@ -2047,11 +2056,12 @@
                 table.appendChild(tr);
             });
             
-            // Reset state for this table
-            gameState.attempts = 1; // Only 1 attempt in marathon
+            gameState.attempts = 1;
             gameState.userAnswers = {};
-            gameState.timeRemaining = 120; // 2 minutes per table
+            gameState.timeRemaining = 120; 
             gameState.selectedCell = null;
+            gameState.marathonFailed = false;
+            gameState.marathonAdvance = false;
             
             updateAttemptsDisplay();
             startTimer();
@@ -2065,7 +2075,7 @@
                 setTimeout(() => {
                     document.getElementById('feedback-modal').classList.remove('active');
                     generateMarathonTable();
-                }, 1500);
+                }, 500);
             } else {
                 endMarathon(true);
             }
@@ -2075,23 +2085,17 @@
             gameState.marathonMode = false;
             stopTimer();
             
-            // Re-enable buttons
             document.getElementById('btn-hint-formula').disabled = false;
             document.getElementById('btn-hint-highlight').disabled = false;
             document.getElementById('btn-new-table').disabled = false;
             
-            const totalTime = Math.floor((Date.now() - gameState.marathonStartTime) / 1000);
-            
             if (success) {
+                const totalTime = Math.floor((Date.now() - gameState.marathonStartTime) / 1000);
                 const minutes = Math.floor(totalTime / 60);
                 const seconds = totalTime % 60;
                 
                 showToast(`¡Simulacro completado! Tiempo total: ${minutes}:${seconds.toString().padStart(2, '0')}`, 'success');
-                
-                // Save to ranking
                 saveToRanking(totalTime);
-                
-                // Award bonus points
                 gameState.score += 500;
                 saveUserProgress();
                 updateStatsDisplay();
@@ -2099,11 +2103,7 @@
                 showToast('Simulacro terminado. ¡Sigue practicando!', 'error');
             }
             
-            // Return to normal mode
-            setTimeout(() => {
-                document.getElementById('feedback-modal').classList.remove('active');
-                generateTable();
-            }, 2000);
+            generateTable();
         }
 
         // =====================================================
@@ -2152,10 +2152,7 @@
                     return;
                 }
                 
-                // Convert to array and sort by time (ascending)
                 const entries = Object.values(data).sort((a, b) => a.totalTime - b.totalTime);
-                
-                // Take top 10
                 const topEntries = entries.slice(0, 10);
                 
                 rankingList.innerHTML = '';
@@ -2200,7 +2197,6 @@
         // =====================================================
         
         function setupEventListeners() {
-            // Level buttons
             document.querySelectorAll('.level-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const level = e.target.dataset.level;
@@ -2218,7 +2214,6 @@
                 });
             });
             
-            // Action buttons
             document.getElementById('btn-hint-formula').addEventListener('click', showFormulaHint);
             document.getElementById('btn-hint-highlight').addEventListener('click', highlightRelations);
             document.getElementById('btn-verify').addEventListener('click', verifyAnswers);
@@ -2227,19 +2222,26 @@
                 generateTable();
             });
             
-            // Marathon button
             document.getElementById('btn-marathon').addEventListener('click', startMarathon);
             
-            // Modal close
+            // MODAL CLOSE - Controlado por banderas
             document.getElementById('btn-close-modal').addEventListener('click', () => {
-                document.getElementById('feedback-modal').classList.remove('active');
-                generateTable();
+                const modal = document.getElementById('feedback-modal');
+                modal.classList.remove('active');
+                
+                if (gameState.marathonMode) {
+                    if (gameState.marathonFailed) {
+                        endMarathon(false);
+                    } else if (gameState.marathonAdvance) {
+                        handleMarathonProgress();
+                    }
+                } else {
+                    generateTable();
+                }
             });
             
-            // Keyboard setup
             setupKeyboard();
             
-            // Close keyboard on outside click
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('.numeric-keyboard') && 
                     !e.target.closest('.empty-cell')) {
@@ -2247,7 +2249,6 @@
                 }
             });
             
-            // Help button
             document.getElementById('btn-help').addEventListener('click', () => {
                 showToast(`
                     <strong>Cómo jugar:</strong><br>
@@ -2258,7 +2259,6 @@
                 `, 'success');
             });
             
-            // Mobile navigation
             const navItems = document.querySelectorAll('.main-navigation > ul > li');
             navItems.forEach(item => {
                 const link = item.querySelector('span');
@@ -2285,7 +2285,6 @@
                 });
             });
             
-            // Hamburger menu
             const hamburgerMenu = document.getElementById('hamburger-menu');
             const userDropdown = document.getElementById('user-dropdown');
             
