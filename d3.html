@@ -1,0 +1,2134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reconstrucción de Conflictos - Skópia</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            initializePage(user);
+        });
+
+        function initializePage(user) {
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    signOut(auth).then(() => window.location.href = 'index.html');
+                });
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+            --color-alerta: #c45c3e;
+            --color-advertencia: #d4a03a;
+            --color-exito: #4a7c59;
+            --color-tension-baja: #7cb87c;
+            --color-tension-media: #d4a03a;
+            --color-tension-alta: #c45c3e;
+            --color-tension-critica: #8b2635;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--color-crema) 0%, #f5efe5 100%);
+            color: var(--color-oliva-oscuro);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- BARRA DE NAVEGACIÓN PRINCIPAL --- */
+        .main-navigation {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            width: 100%;
+        }
+        .main-navigation ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .main-navigation > ul > li {
+            position: relative;
+        }
+        .main-navigation > ul > li > span, .main-navigation > ul > li > a {
+            display: flex;
+            align-items: center;
+            padding: 18px 24px;
+            color: var(--color-oliva-oscuro);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            cursor: default;
+        }
+        .main-navigation > ul > li > a {
+            cursor: pointer;
+        }
+        .main-navigation > ul > li > a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background-color: var(--color-oliva-medio);
+            transform: translateX(-50%);
+            transition: width 0.3s ease;
+        }
+        .main-navigation > ul > li:hover > a::after {
+            width: 80%;
+        }
+        .main-navigation > ul > li:hover > span, .main-navigation > ul > li:hover > a {
+            background-color: rgba(94, 97, 51, 0.1);
+            color: var(--color-oliva-medio);
+        }
+        .main-navigation .emoji {
+            margin-right: 8px;
+            font-size: 1.2em;
+        }
+
+        /* --- Dropdowns --- */
+        .main-navigation > ul > li > .dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            min-width: 280px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+            border-radius: 0 0 12px 12px;
+            overflow: visible;
+        }
+        .main-navigation > ul > li:hover > .dropdown {
+            display: block;
+        }
+        .main-navigation > ul > li > .dropdown > li {
+            width: 100%;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            position: relative;
+        }
+        .main-navigation > ul > li > .dropdown > li:last-child {
+            border-bottom: none;
+        }
+        .main-navigation > ul > li > .dropdown > li > a, .main-navigation > ul > li > .dropdown > li > span {
+            padding: 14px 24px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            color: var(--color-oliva-oscuro);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .main-navigation > ul > li > .dropdown > li > span {
+            cursor: default;
+            font-weight: 700;
+        }
+        .main-navigation > ul > li > .dropdown > li:hover > a, .main-navigation > ul > li > .dropdown > li:hover > span {
+            background-color: rgba(94, 97, 51, 0.15);
+            color: var(--color-oliva-oscuro);
+        }
+        
+        .main-navigation > ul > li > .dropdown > li > .sub-dropdown {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            min-width: 250px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+            border-radius: 0 12px 12px 0;
+        }
+        .main-navigation > ul > li > .dropdown > li:hover > .sub-dropdown {
+            display: block;
+        }
+        .main-navigation > ul > li > .dropdown > li > .sub-dropdown li a {
+            padding: 12px 20px;
+            font-weight: 400;
+            font-size: 0.9rem;
+        }
+
+        /* --- NAVBAR DE USUARIO --- */
+        .navbar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 15px 40px;
+            background-color: white;
+            box-shadow: 0 2px 10px var(--color-sombra);
+        }
+        .hamburger {
+            width: 30px;
+            height: 25px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .hamburger span {
+            display: block;
+            height: 4px;
+            width: 100%;
+            background-color: var(--color-oliva-oscuro);
+            border-radius: 2px;
+            transition: all 0.3s ease-in-out;
+        }
+        .user-dropdown {
+            position: absolute;
+            top: 70px;
+            right: 40px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px var(--color-sombra);
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+            z-index: 1000;
+        }
+        .user-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .user-dropdown a {
+            display: block;
+            padding: 15px 25px;
+            text-decoration: none;
+            color: var(--color-oliva-oscuro);
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .user-dropdown a:hover {
+            background-color: var(--color-crema);
+        }
+        .user-dropdown hr {
+            border: none;
+            border-top: 1px solid #eee;
+            margin: 0;
+        }
+
+        /* --- HEADER SECTION --- */
+        .header-section {
+            text-align: center;
+            padding: 40px 20px 20px;
+            position: relative;
+        }
+        .header-section h1 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 3rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 10px;
+        }
+        .header-section .subtitle {
+            font-family: 'Roboto', sans-serif;
+            font-size: 1.1rem;
+            color: var(--color-oliva-medio);
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        .breadcrumb {
+            font-size: 0.9rem;
+            color: var(--color-oliva-claro);
+            margin-bottom: 15px;
+        }
+        .breadcrumb a {
+            color: var(--color-oliva-medio);
+            text-decoration: none;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        /* --- MAIN CONTAINER --- */
+        .main-container {
+            display: flex;
+            gap: 30px;
+            padding: 20px 40px 60px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* --- CASE SELECTOR --- */
+        .case-selector {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 8px 25px var(--color-sombra);
+            margin-bottom: 30px;
+        }
+        .case-selector h3 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: var(--color-oliva-oscuro);
+        }
+        .case-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .case-card {
+            background: linear-gradient(135deg, var(--color-crema), #f5efe5);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        .case-card:hover {
+            border-color: var(--color-oliva-medio);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(90, 97, 51, 0.15);
+        }
+        .case-card.active {
+            border-color: var(--color-oliva-oscuro);
+            background: linear-gradient(135deg, #e8f0e3, #ddebd5);
+        }
+        .case-card .case-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .case-card .case-title {
+            font-weight: 700;
+            color: var(--color-oliva-oscuro);
+            font-size: 0.95rem;
+        }
+        .case-card .case-difficulty {
+            font-size: 0.8rem;
+            color: var(--color-oliva-medio);
+            margin-top: 5px;
+        }
+
+        /* --- GAME AREA --- */
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        /* --- CASE CONTEXT --- */
+        .case-context {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 8px 25px var(--color-sombra);
+            border-left: 5px solid var(--color-oliva-medio);
+        }
+        .case-context h3 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.8rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .case-context .context-text {
+            line-height: 1.7;
+            color: #444;
+        }
+        .perspective-badges {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .perspective-badge {
+            background: linear-gradient(135deg, var(--color-oliva-claro), #a8ab7a);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        /* --- TIMELINE CONTAINER --- */
+        .timeline-container {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 8px 25px var(--color-sombra);
+        }
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        .timeline-header h3 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.8rem;
+            color: var(--color-oliva-oscuro);
+        }
+        .hint-btn {
+            background: var(--color-oliva-claro);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        .hint-btn:hover {
+            background: var(--color-oliva-medio);
+        }
+
+        /* --- EVENTS POOL --- */
+        .events-pool {
+            background: linear-gradient(135deg, #f8f6f0, #f0ede5);
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 120px;
+            margin-bottom: 25px;
+            border: 2px dashed var(--color-oliva-claro);
+        }
+        .events-pool-title {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.2rem;
+            color: var(--color-oliva-medio);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .events-pool .events-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            min-height: 60px;
+        }
+        .event-chip {
+            background: white;
+            border: 2px solid var(--color-oliva-claro);
+            border-radius: 10px;
+            padding: 12px 18px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 100%;
+        }
+        .event-chip:hover {
+            border-color: var(--color-oliva-medio);
+            box-shadow: 0 4px 15px rgba(90, 97, 51, 0.2);
+            transform: translateY(-2px);
+        }
+        .event-chip.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+        .event-chip .event-icon {
+            font-size: 1.3rem;
+        }
+        .event-chip .event-text {
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        /* --- TIMELINE SLOTS --- */
+        .timeline-slots {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .timeline-slot {
+            background: linear-gradient(135deg, #fafaf8, #f5f5f0);
+            border: 2px dashed var(--color-oliva-claro);
+            border-radius: 12px;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .timeline-slot.drag-over {
+            border-color: var(--color-oliva-medio);
+            background: linear-gradient(135deg, #e8f0e3, #ddebd5);
+            transform: scale(1.02);
+        }
+        .timeline-slot.correct {
+            border-color: var(--color-exito);
+            background: linear-gradient(135deg, #e8f5e8, #d4ead4);
+        }
+        .timeline-slot.incorrect {
+            border-color: var(--color-alerta);
+            background: linear-gradient(135deg, #fde8e4, #f8d7d2);
+            animation: shake 0.5s ease;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+        .slot-number {
+            background: var(--color-oliva-oscuro);
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        .slot-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-oliva-claro);
+            font-style: italic;
+            min-height: 40px;
+        }
+        .slot-content .event-chip {
+            margin: 0;
+        }
+        .slot-feedback {
+            position: absolute;
+            right: 15px;
+            font-size: 1.5rem;
+        }
+
+        /* --- TENSION BAR --- */
+        .tension-sidebar {
+            width: 120px;
+            flex-shrink: 0;
+        }
+        .tension-bar-container {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 25px var(--color-sombra);
+            position: sticky;
+            top: 120px;
+        }
+        .tension-bar-title {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.1rem;
+            text-align: center;
+            margin-bottom: 15px;
+            color: var(--color-oliva-oscuro);
+        }
+        .tension-bar-wrapper {
+            position: relative;
+            height: 300px;
+            background: linear-gradient(to top, 
+                var(--color-tension-baja) 0%, 
+                var(--color-tension-media) 40%, 
+                var(--color-tension-alta) 70%, 
+                var(--color-tension-critica) 100%);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .tension-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.85);
+            transition: height 0.5s ease;
+            border-radius: 0 0 12px 12px;
+        }
+        .tension-indicator {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 4px;
+            background: var(--color-oliva-oscuro);
+            border-radius: 2px;
+            transition: bottom 0.5s ease;
+        }
+        .tension-labels {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 300px;
+            position: absolute;
+            right: 8px;
+            top: 0;
+            padding: 10px 0;
+            pointer-events: none;
+        }
+        .tension-label {
+            font-size: 0.7rem;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            font-weight: 600;
+        }
+        .tension-level {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: 700;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        .tension-level.baja { background: #d4ead4; color: var(--color-exito); }
+        .tension-level.media { background: #f5e6c8; color: var(--color-advertencia); }
+        .tension-level.alta { background: #f8d7d2; color: var(--color-alerta); }
+        .tension-level.critica { background: #e8c5c5; color: var(--color-tension-critica); }
+
+        /* --- VALIDATION BUTTON --- */
+        .validate-section {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .validate-btn {
+            background: linear-gradient(135deg, var(--color-oliva-oscuro), #3d4200);
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            border-radius: 30px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Patrick Hand', cursive;
+        }
+        .validate-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(39, 43, 0, 0.3);
+        }
+        .validate-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .reset-btn {
+            background: transparent;
+            color: var(--color-oliva-medio);
+            border: 2px solid var(--color-oliva-medio);
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: 15px;
+        }
+        .reset-btn:hover {
+            background: var(--color-oliva-medio);
+            color: white;
+        }
+
+        /* --- PREVENTION QUESTION MODAL --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 35px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalSlide 0.4s ease;
+        }
+        @keyframes modalSlide {
+            from { transform: translateY(-30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .modal-header h3 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 2rem;
+            color: var(--color-oliva-oscuro);
+        }
+        .modal-header p {
+            color: #666;
+            margin-top: 10px;
+        }
+        .prevention-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        .prevention-option {
+            background: linear-gradient(135deg, #f8f6f0, #f0ede5);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            padding: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .prevention-option:hover {
+            border-color: var(--color-oliva-medio);
+            transform: translateX(5px);
+        }
+        .prevention-option.selected {
+            border-color: var(--color-oliva-oscuro);
+            background: linear-gradient(135deg, #e8f0e3, #ddebd5);
+        }
+        .prevention-option .option-number {
+            background: var(--color-oliva-oscuro);
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .prevention-option .option-text {
+            flex: 1;
+        }
+        .submit-prevention-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--color-oliva-oscuro), #3d4200);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .submit-prevention-btn:hover:not(:disabled) {
+            transform: scale(1.02);
+        }
+        .submit-prevention-btn:disabled {
+            opacity: 0.5;
+        }
+
+        /* --- RESULT MODAL --- */
+        .result-modal .modal-content {
+            text-align: center;
+        }
+        .medal-container {
+            margin: 30px 0;
+        }
+        .medal {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #ffd700, #ffaa00);
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 25px rgba(255, 170, 0, 0.4);
+            animation: medalPulse 2s ease-in-out infinite;
+        }
+        @keyframes medalPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .medal-icon {
+            font-size: 3rem;
+        }
+        .medal-title {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 2rem;
+            color: var(--color-oliva-oscuro);
+            margin-top: 15px;
+        }
+        .result-message {
+            font-size: 1.1rem;
+            color: #555;
+            line-height: 1.7;
+            margin: 20px 0;
+        }
+        .result-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 25px 0;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            color: var(--color-oliva-oscuro);
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            color: #888;
+        }
+        .close-modal-btn {
+            background: var(--color-oliva-oscuro);
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+        }
+        .close-modal-btn:hover {
+            transform: scale(1.05);
+        }
+        .next-case-btn {
+            background: linear-gradient(135deg, var(--color-exito), #3d6347);
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: 10px;
+        }
+        .next-case-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* --- ALERT TOAST --- */
+        .alert-toast {
+            position: fixed;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: white;
+            border-radius: 12px;
+            padding: 16px 25px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            z-index: 3000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.4s ease;
+            max-width: 400px;
+            text-align: center;
+        }
+        .alert-toast.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+        .alert-toast.error {
+            border-left: 5px solid var(--color-alerta);
+        }
+        .alert-toast.warning {
+            border-left: 5px solid var(--color-advertencia);
+        }
+        .alert-toast.success {
+            border-left: 5px solid var(--color-exito);
+        }
+        .alert-toast .toast-icon {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+        .alert-toast .toast-message {
+            font-size: 1rem;
+            color: #444;
+        }
+
+        /* --- INSTRUCTIONS PANEL --- */
+        .instructions-panel {
+            background: linear-gradient(135deg, #e8f0e3, #ddebd5);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-left: 5px solid var(--color-oliva-medio);
+        }
+        .instructions-panel h4 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.3rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 10px;
+        }
+        .instructions-panel ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .instructions-panel li {
+            padding: 6px 0;
+            padding-left: 25px;
+            position: relative;
+            color: #555;
+        }
+        .instructions-panel li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: var(--color-oliva-medio);
+            font-weight: bold;
+        }
+
+        /* --- ADD CASE FORM --- */
+        .add-case-section {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 8px 25px var(--color-sombra);
+            margin-top: 30px;
+        }
+        .add-case-section h3 {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.5rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 20px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .form-group label {
+            font-weight: 600;
+            color: var(--color-oliva-oscuro);
+            font-size: 0.95rem;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            padding: 12px 15px;
+            border: 2px solid var(--color-oliva-claro);
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--color-oliva-medio);
+        }
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .add-event-btn {
+            background: var(--color-oliva-claro);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        .add-event-btn:hover {
+            background: var(--color-oliva-medio);
+        }
+        .save-case-btn {
+            background: linear-gradient(135deg, var(--color-oliva-oscuro), #3d4200);
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        .save-case-btn:hover {
+            transform: scale(1.02);
+        }
+        .events-preview {
+            background: #f8f6f0;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .events-preview h5 {
+            font-family: 'Patrick Hand', cursive;
+            margin-bottom: 10px;
+            color: var(--color-oliva-medio);
+        }
+        .preview-event {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+        .preview-event .order-num {
+            background: var(--color-oliva-oscuro);
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 1024px) {
+            .main-navigation > ul > li > .dropdown {
+                position: static;
+                display: none;
+                width: 100%;
+                box-shadow: none;
+            }
+            .main-navigation > ul > li:hover > .dropdown {
+                display: none;
+            }
+            .main-navigation > ul > li.active > .dropdown {
+                display: block;
+            }
+            .main-navigation > ul > li > .dropdown > li > .sub-dropdown {
+                position: static;
+                display: none;
+                width: 100%;
+                box-shadow: none;
+            }
+            .main-navigation > ul > li > .dropdown > li.active > .sub-dropdown {
+                display: block;
+            }
+            .main-container {
+                flex-direction: column;
+                padding: 20px;
+            }
+            .tension-sidebar {
+                width: 100%;
+            }
+            .tension-bar-container {
+                position: static;
+            }
+            .tension-bar-wrapper {
+                height: 200px;
+            }
+            .tension-labels {
+                height: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-section h1 {
+                font-size: 2rem;
+            }
+            .case-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .navbar {
+                padding: 15px 20px;
+            }
+            .user-dropdown {
+                right: 20px;
+            }
+        }
+    </style>
+    <script type="module" src="./global-settings.js"></script>
+</head>
+
+<body>
+    <!-- ALERT TOAST -->
+    <div class="alert-toast" id="alertToast">
+        <div class="toast-icon"></div>
+        <div class="toast-message"></div>
+    </div>
+
+    <!-- BARRA DE NAVEGACIÓN PRINCIPAL -->
+    <nav class="main-navigation">
+        <ul>
+            <li>
+                <span><span class="emoji">🟦</span> MÓDULO 1 — Lectura Crítica</span>
+                <ul class="dropdown">
+                    <li><a href="biblioteca.html"><span class="emoji">📚</span> Biblioteca</a></li>
+                    <li>
+                        <span><span class="emoji">✍️</span> Talleres de escritura y análisis</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="reescritura.html"><span class="emoji">🔄</span> Reescritura</a></li>
+                            <li><a href="conectores.html"><span class="emoji">🔗</span> Conectores lógicos</a></li>
+                            <li><a href="parrafos.html"><span class="emoji">📝</span> Ordenar párrafos</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <span><span class="emoji">🟩</span> MÓDULO 2 — Razonamiento Cuantitativo</span>
+                <ul class="dropdown">
+                    <li>
+                        <span><span class="emoji">🧠</span> Laboratorio lógico-matemático</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="crepatron.html"><span class="emoji">📈</span> Patrones crecientes</a></li>
+                            <li><a href="secuencia.html"><span class="emoji">🔢</span> Secuencias visuales</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <span><span class="emoji">🟧</span> MÓDULO 3 — Competencias Ciudadanas</span>
+                <ul class="dropdown">
+                    <li>
+                        <span><span class="emoji">⚖️</span> Dilemas + decisiones</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="d1.html"><span class="emoji">🤔</span> Simulador de dilemas morales</a></li>
+                            <li><a href="d2.html"><span class="emoji">📖</span> Historias interactivas</a></li>
+                            <li><a href="d3.html" style="background:rgba(90,97,51,0.15);"><span class="emoji">🤝</span> Reconstrucción de conflictos</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">🌍</span> Contextos sociales</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="CS1.html"><span class="emoji">🗺️</span> Mapa de problemas sociales</a></li>
+                            <li><a href="CS7.html"><span class="emoji">🤝</span> Resolución de conflictos</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <span><span class="emoji">🟪</span> MÓDULO 4 — Inglés</span>
+                <ul class="dropdown">
+                    <li>
+                        <span><span class="emoji">📖</span> Comprensión lectora en inglés</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="CLI1.html"><span class="emoji">📖</span> Galería de textos graduados</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </nav>
+    
+    <nav class="navbar">
+        <div class="hamburger" id="hamburger-menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        <div class="user-dropdown" id="user-dropdown">
+            <a href="cuenta.html">Mi Cuenta</a>
+            <a href="configuracion.html">Configuración</a>
+            <hr>
+            <a href="index.html" id="logout-btn">Cerrar Sesión</a>
+        </div>
+    </nav>
+
+    <!-- HEADER SECTION -->
+    <section class="header-section">
+        <div class="breadcrumb">
+            <a href="mapa.html">Inicio</a> / 
+            <a href="CC.html">Competencias Ciudadanas</a> / 
+            <span>Reconstrucción de Conflictos</span>
+        </div>
+        <h1>Reconstrucción de Conflictos</h1>
+        <p class="subtitle">Ordena los eventos cronológicamente para comprender cómo escalan los conflictos sociales e identifica dónde se pudieron prevenir vulneraciones de derechos.</p>
+    </section>
+
+    <!-- MAIN CONTAINER -->
+    <div class="main-container">
+        <!-- GAME AREA -->
+        <div class="game-area">
+            <!-- CASE SELECTOR -->
+            <div class="case-selector">
+                <h3><i class="fas fa-folder-open"></i> Selecciona un Caso</h3>
+                <div class="case-cards" id="caseCards">
+                    <!-- Cases loaded dynamically -->
+                </div>
+            </div>
+
+            <!-- CASE CONTEXT -->
+            <div class="case-context" id="caseContext" style="display: none;">
+                <h3><i class="fas fa-scroll"></i> <span id="caseTitle">Título del Caso</span></h3>
+                <p class="context-text" id="caseDescription"></p>
+                <div class="perspective-badges" id="perspectiveBadges">
+                    <!-- Perspective badges loaded dynamically -->
+                </div>
+            </div>
+
+            <!-- INSTRUCTIONS -->
+            <div class="instructions-panel" id="instructionsPanel" style="display: none;">
+                <h4><i class="fas fa-info-circle"></i> Instrucciones</h4>
+                <ul>
+                    <li>Arrastra los eventos desde el área de abajo hacia la línea de tiempo.</li>
+                    <li>Ordénalos cronológicamente: desde la causa original hasta la consecuencia final.</li>
+                    <li>La barra de tensión subirá mientras colocas eventos más críticos.</li>
+                    <li>Al finalizar, identifica dónde se pudo evitar la vulneración de derechos.</li>
+                </ul>
+            </div>
+
+            <!-- TIMELINE CONTAINER -->
+            <div class="timeline-container" id="timelineContainer" style="display: none;">
+                <div class="timeline-header">
+                    <h3><i class="fas fa-clock"></i> Línea de Tiempo</h3>
+                    <button class="hint-btn" id="hintBtn">
+                        <i class="fas fa-lightbulb"></i> Pista
+                    </button>
+                </div>
+
+                <!-- EVENTS POOL -->
+                <div class="events-pool">
+                    <div class="events-pool-title">
+                        <i class="fas fa-puzzle-piece"></i> Eventos para ordenar (arrastra hacia abajo)
+                    </div>
+                    <div class="events-list" id="eventsPool">
+                        <!-- Events loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- TIMELINE SLOTS -->
+                <div class="timeline-slots" id="timelineSlots">
+                    <!-- Slots loaded dynamically -->
+                </div>
+            </div>
+
+            <!-- VALIDATION SECTION -->
+            <div class="validate-section" id="validateSection" style="display: none;">
+                <button class="validate-btn" id="validateBtn" disabled>
+                    <i class="fas fa-check-circle"></i> Validar Orden
+                </button>
+                <button class="reset-btn" id="resetBtn">
+                    <i class="fas fa-undo"></i> Reiniciar
+                </button>
+            </div>
+
+            <!-- ADD CASE SECTION -->
+            <div class="add-case-section">
+                <h3><i class="fas fa-plus-circle"></i> Agregar Nuevo Caso</h3>
+                <p style="color: #666; margin-bottom: 20px;">Crea tus propios casos de conflictos sociales para practicar.</p>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="newCaseTitle">Título del Caso</label>
+                        <input type="text" id="newCaseTitle" placeholder="Ej: Conflicto en el parque industrial">
+                    </div>
+                    <div class="form-group">
+                        <label for="newCaseDifficulty">Dificultad</label>
+                        <select id="newCaseDifficulty">
+                            <option value="facil">Fácil</option>
+                            <option value="medio">Medio</option>
+                            <option value="dificil">Difícil</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label for="newCaseDescription">Contexto del Caso</label>
+                        <textarea id="newCaseDescription" placeholder="Describe el contexto del conflicto social..."></textarea>
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label for="newCasePerspectives">Perspectivas (separadas por coma)</label>
+                        <input type="text" id="newCasePerspectives" placeholder="Ej: Alcaldía, Vendedores, Vecinos, Policía">
+                    </div>
+                </div>
+
+                <h4 style="font-family: 'Patrick Hand', cursive; font-size: 1.3rem; margin: 25px 0 15px; color: var(--color-oliva-oscuro);">
+                    <i class="fas fa-list-ol"></i> Eventos del Conflicto (en orden cronológico)
+                </h4>
+                
+                <div id="newEventsContainer">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Evento 1 (Causa original)</label>
+                            <input type="text" class="event-input" placeholder="Describe el primer evento" data-order="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Ícono</label>
+                            <select class="event-icon-select" data-order="1">
+                                <option value="📜">📜 Documento/Ley</option>
+                                <option value="📢">📢 Anuncio</option>
+                                <option value="⚡">⚡ Conflicto</option>
+                                <option value="🔥">🔥 Incidente</option>
+                                <option value="👥">👥 Reunión</option>
+                                <option value="🤝">🤝 Acuerdo</option>
+                                <option value="⚠️">⚠️ Advertencia</option>
+                                <option value="🚨">🚨 Emergencia</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="add-event-btn" id="addEventBtn">
+                    <i class="fas fa-plus"></i> Agregar otro evento
+                </button>
+
+                <div class="events-preview" id="eventsPreview">
+                    <h5>Vista previa de eventos:</h5>
+                    <div id="previewList"></div>
+                </div>
+
+                <div class="form-group" style="margin-top: 20px;">
+                    <label for="preventionPoint">Punto de prevención (número de evento donde se pudo evitar)</label>
+                    <input type="number" id="preventionPoint" min="1" max="5" value="2" style="width: 100px;">
+                </div>
+
+                <button class="save-case-btn" id="saveCaseBtn">
+                    <i class="fas fa-save"></i> Guardar Caso
+                </button>
+            </div>
+        </div>
+
+        <!-- TENSION SIDEBAR -->
+        <aside class="tension-sidebar">
+            <div class="tension-bar-container" id="tensionContainer" style="display: none;">
+                <div class="tension-bar-title">
+                    <i class="fas fa-chart-line"></i> Tensión Social
+                </div>
+                <div class="tension-bar-wrapper">
+                    <div class="tension-fill" id="tensionFill" style="height: 100%;"></div>
+                    <div class="tension-indicator" id="tensionIndicator" style="bottom: 0%;"></div>
+                    <div class="tension-labels">
+                        <span class="tension-label">CRÍTICA</span>
+                        <span class="tension-label">ALTA</span>
+                        <span class="tension-label">MEDIA</span>
+                        <span class="tension-label">BAJA</span>
+                    </div>
+                </div>
+                <div class="tension-level baja" id="tensionLevel">Baja</div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- PREVENTION QUESTION MODAL -->
+    <div class="modal-overlay" id="preventionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-question-circle"></i> Pregunta Clave</h3>
+                <p>¿En qué punto de esta cadena se pudo haber evitado la vulneración de derechos?</p>
+            </div>
+            <div class="prevention-options" id="preventionOptions">
+                <!-- Options loaded dynamically -->
+            </div>
+            <button class="submit-prevention-btn" id="submitPreventionBtn" disabled>
+                Confirmar Respuesta
+            </button>
+        </div>
+    </div>
+
+    <!-- RESULT MODAL -->
+    <div class="modal-overlay result-modal" id="resultModal">
+        <div class="modal-content">
+            <div class="medal-container" id="medalContainer" style="display: none;">
+                <div class="medal">
+                    <span class="medal-icon">🕊️</span>
+                </div>
+                <h3 class="medal-title">Mediador de Paz</h3>
+            </div>
+            <h3 id="resultTitle" style="font-family: 'Patrick Hand', cursive; font-size: 2rem; color: var(--color-oliva-oscuro);"></h3>
+            <p class="result-message" id="resultMessage"></p>
+            <div class="result-stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="correctEvents">0</div>
+                    <div class="stat-label">Eventos correctos</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="preventionCorrect">-</div>
+                    <div class="stat-label">Prevención</div>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                <button class="close-modal-btn" id="closeResultBtn">
+                    <i class="fas fa-redo"></i> Reintentar
+                </button>
+                <button class="next-case-btn" id="nextCaseBtn">
+                    Siguiente Caso <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =====================================================
+        // CONFLICT CASES DATABASE
+        // =====================================================
+        const CASES_STORAGE_KEY = 'skopia_conflict_cases_v1';
+        
+        const defaultCases = [
+            {
+                id: 1,
+                title: "Conflicto en el Centro Histórico",
+                icon: "🏛️",
+                difficulty: "medio",
+                context: "En el centro histórico de una ciudad, los vendedores informales ocupaban las calles peatonales desde hace décadas. La alcaldía decidió recuperar el espacio público, pero la implementación generó un conflicto escalado que terminó en enfrentamientos.",
+                perspectives: ["Alcaldía", "Vendedores", "Comerciantes formales", "Peatones"],
+                events: [
+                    { text: "La alcaldía anuncia un plan de reubicación de vendedores informales sin consulta previa.", icon: "📜", tension: 15 },
+                    { text: "Los vendedores se organizan y realizan una protesta pacífica exigiendo diálogo.", icon: "📢", tension: 30 },
+                    { text: "La alcaldía ignora las solicitudes de reunión y emite decreto de desalojo.", icon: "⚠️", tension: 55 },
+                    { text: "Durante el desalojo, hay enfrentamientos entre policía y vendedores con heridos.", icon: "🔥", tension: 85 },
+                    { text: "Se convoca mesa de diálogo y se acuerda una reubicación gradual.", icon: "🤝", tension: 45 }
+                ],
+                preventionPoint: 2,
+                preventionReason: "Si desde el anuncio inicial se hubiera convocado a una mesa de diálogo con los vendedores, se podría haber evitado la escalada violenta."
+            },
+            {
+                id: 2,
+                title: "Proyecto Minero y Comunidad Indígena",
+                icon: "⛰️",
+                difficulty: "dificil",
+                context: "Una empresa minera recibió licencia ambiental para operar en territorio ancestral de una comunidad indígena. La comunidad no fue consultada adecuadamente, lo que desató un conflicto por derechos territoriales y ambientales.",
+                perspectives: ["Comunidad indígena", "Empresa minera", "Gobierno", "ONG ambientalistas"],
+                events: [
+                    { text: "El gobierno otorga licencia ambiental sin consulta previa libre e informada.", icon: "📜", tension: 25 },
+                    { text: "La comunidad presenta tutela por violación al derecho a la consulta.", icon: "⚖️", tension: 40 },
+                    { text: "El juez falla a favor de la empresa argumentando interés nacional.", icon: "⚠️", tension: 60 },
+                    { text: "La comunidad bloquea los accesos al proyecto en protesta.", icon: "🚧", tension: 80 },
+                    { text: "Intervención de la Defensoría logra suspender el proyecto temporalmente.", icon: "🤝", tension: 50 }
+                ],
+                preventionPoint: 1,
+                preventionReason: "La consulta previa libre e informada es un derecho fundamental de los pueblos indígenas. Realizarla desde el inicio habría prevenido todo el conflicto."
+            },
+            {
+                id: 3,
+                title: "Crisis de Transporte Urbano",
+                icon: "🚌",
+                difficulty: "medio",
+                context: "La implementación de un nuevo sistema de transporte masivo generó rechazo de los conductores de transporte tradicional, quienes perdieron sus rutas sin alternativa clara de ingresos.",
+                perspectives: ["Conductores tradicionales", "Alcaldía", "Usuarios", "Nueva empresa"],
+                events: [
+                    { text: "Se anuncia la entrada en operación del nuevo sistema sin plan de transición.", icon: "📢", tension: 20 },
+                    { text: "Conductores tradicionales solicitan ser incluidos en el nuevo sistema.", icon: "📝", tension: 35 },
+                    { text: "La alcaldía rechaza la solicitud alegando requisitos técnicos.", icon: "❌", tension: 55 },
+                    { text: "Conductores organizan paro de transporte que afecta a toda la ciudad.", icon: "🛑", tension: 75 },
+                    { text: "Tras mediación, se crea programa de capacitación e inclusión gradual.", icon: "🤝", tension: 40 }
+                ],
+                preventionPoint: 2,
+                preventionReason: "Incluir a los conductores tradicionales en el plan desde el inicio habría evitado el paro y la afectación a los usuarios."
+            },
+            {
+                id: 4,
+                title: "Conflicto por Uso de Agua",
+                icon: "💧",
+                difficulty: "facil",
+                context: "Una comunidad rural enfrentó escasez de agua cuando una empresa agrícola vecina comenzó a usar el acuífero compartido para riego intensivo, reduciendo drásticamente el acceso al agua de los campesinos.",
+                perspectives: ["Campesinos", "Empresa agrícola", "Autoridad ambiental", "Acueducto rural"],
+                events: [
+                    { text: "La empresa agrícola perfora pozos profundos sin estudio de impacto.", icon: "🔧", tension: 20 },
+                    { text: "Los campesinos reportan reducción significativa de agua en sus pozos.", icon: "📉", tension: 35 },
+                    { text: "La autoridad ambiental no responde a las quejas por meses.", icon: "⏳", tension: 50 },
+                    { text: "Campesinos cortan el acceso a las tuberías de la empresa.", icon: "🚧", tension: 70 },
+                    { text: "Mediación logra acuerdo de uso compartido y horarios de riego.", icon: "🤝", tension: 35 }
+                ],
+                preventionPoint: 1,
+                preventionReason: "Un estudio de impacto hidrológico previo y licenciamiento adecuado habría prevenido la afectación a la comunidad."
+            },
+            {
+                id: 5,
+                title: "Construcción en Zona de Riesgo",
+                icon: "🏗️",
+                difficulty: "medio",
+                context: "Un desarrollador construyó un conjunto residencial en una zona identificada como de alto riesgo de deslizamiento. Las familias que compraron no fueron informadas del peligro.",
+                perspectives: ["Familias afectadas", "Constructora", "Curaduría urbana", "Autoridad de riesgos"],
+                events: [
+                    { text: "La curaduría otorga licencia sin verificar estudios de suelos.", icon: "📜", tension: 15 },
+                    { text: "Las familias compran viviendas sin conocer el riesgo.", icon: "🏠", tension: 25 },
+                    { text: "Lluvias intensas causan grietas y primeros deslizamientos.", icon: "🌧️", tension: 50 },
+                    { text: "La autoridad ordena evacuación preventiva de emergencia.", icon: "🚨", tension: 80 },
+                    { text: "Se abre investigación y se ordena reubicación de familias.", icon: "⚖️", tension: 45 }
+                ],
+                preventionPoint: 1,
+                preventionReason: "La curaduría debería haber exigido y verificado los estudios de suelos antes de otorgar la licencia, previniendo todo el daño."
+            }
+        ];
+
+        // =====================================================
+        // STATE MANAGEMENT
+        // =====================================================
+        let currentCase = null;
+        let placedEvents = [];
+        let draggedEvent = null;
+        let hintsUsed = 0;
+
+        // =====================================================
+        // INITIALIZATION
+        // =====================================================
+        function initCases() {
+            let stored = localStorage.getItem(CASES_STORAGE_KEY);
+            if (!stored) {
+                localStorage.setItem(CASES_STORAGE_KEY, JSON.stringify(defaultCases));
+                stored = JSON.stringify(defaultCases);
+            } else {
+                stored = JSON.parse(stored);
+            }
+            return stored;
+        }
+
+        function renderCaseCards() {
+            const cases = initCases();
+            const container = document.getElementById('caseCards');
+            container.innerHTML = '';
+
+            cases.forEach(c => {
+                const card = document.createElement('div');
+                card.className = 'case-card';
+                card.dataset.caseId = c.id;
+                card.innerHTML = `
+                    <div class="case-icon">${c.icon}</div>
+                    <div class="case-title">${c.title}</div>
+                    <div class="case-difficulty">Dificultad: ${c.difficulty}</div>
+                `;
+                card.addEventListener('click', () => selectCase(c.id));
+                container.appendChild(card);
+            });
+        }
+
+        function selectCase(caseId) {
+            const cases = initCases();
+            currentCase = cases.find(c => c.id === caseId);
+            
+            if (!currentCase) return;
+
+            // Update UI
+            document.querySelectorAll('.case-card').forEach(card => {
+                card.classList.toggle('active', parseInt(card.dataset.caseId) === caseId);
+            });
+
+            // Show game elements
+            document.getElementById('caseContext').style.display = 'block';
+            document.getElementById('instructionsPanel').style.display = 'block';
+            document.getElementById('timelineContainer').style.display = 'block';
+            document.getElementById('validateSection').style.display = 'block';
+            document.getElementById('tensionContainer').style.display = 'block';
+
+            // Load case data
+            document.getElementById('caseTitle').textContent = currentCase.title;
+            document.getElementById('caseDescription').textContent = currentCase.context;
+
+            // Render perspectives
+            const perspectivesContainer = document.getElementById('perspectiveBadges');
+            perspectivesContainer.innerHTML = currentCase.perspectives.map(p => 
+                `<span class="perspective-badge">${p}</span>`
+            ).join('');
+
+            // Shuffle and render events
+            renderEventsPool();
+            renderTimelineSlots();
+            resetGame();
+        }
+
+        function renderEventsPool() {
+            const pool = document.getElementById('eventsPool');
+            pool.innerHTML = '';
+
+            // Shuffle events
+            const shuffled = [...currentCase.events].sort(() => Math.random() - 0.5);
+
+            shuffled.forEach((event, index) => {
+                const chip = createEventChip(event, index);
+                pool.appendChild(chip);
+            });
+        }
+
+        function createEventChip(event, id) {
+            const chip = document.createElement('div');
+            chip.className = 'event-chip';
+            chip.draggable = true;
+            chip.dataset.eventId = id;
+            chip.dataset.tension = event.tension;
+            chip.dataset.originalText = event.text;
+            chip.innerHTML = `
+                <span class="event-icon">${event.icon}</span>
+                <span class="event-text">${event.text}</span>
+            `;
+
+            // Drag events
+            chip.addEventListener('dragstart', handleDragStart);
+            chip.addEventListener('dragend', handleDragEnd);
+
+            return chip;
+        }
+
+        function renderTimelineSlots() {
+            const container = document.getElementById('timelineSlots');
+            container.innerHTML = '';
+
+            currentCase.events.forEach((_, index) => {
+                const slot = document.createElement('div');
+                slot.className = 'timeline-slot';
+                slot.dataset.slotIndex = index;
+                slot.innerHTML = `
+                    <div class="slot-number">${index + 1}</div>
+                    <div class="slot-content">Arrastra un evento aquí</div>
+                    <div class="slot-feedback"></div>
+                `;
+
+                // Drop events
+                slot.addEventListener('dragover', handleDragOver);
+                slot.addEventListener('dragleave', handleDragLeave);
+                slot.addEventListener('drop', handleDrop);
+
+                container.appendChild(slot);
+            });
+
+            placedEvents = new Array(currentCase.events.length).fill(null);
+        }
+
+        // =====================================================
+        // DRAG AND DROP HANDLERS
+        // =====================================================
+        function handleDragStart(e) {
+            draggedEvent = e.target;
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', e.target.dataset.eventId);
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            draggedEvent = null;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const slot = e.currentTarget;
+            slot.classList.remove('drag-over');
+
+            if (!draggedEvent) return;
+
+            const slotIndex = parseInt(slot.dataset.slotIndex);
+            const eventId = draggedEvent.dataset.eventId;
+            const tension = parseInt(draggedEvent.dataset.tension);
+
+            // Check if slot already has an event
+            const currentContent = slot.querySelector('.event-chip');
+            if (currentContent) {
+                // Move back to pool
+                document.getElementById('eventsPool').appendChild(currentContent);
+                const prevIndex = placedEvents.findIndex(pe => pe && pe.eventId === currentContent.dataset.eventId);
+                if (prevIndex !== -1) placedEvents[prevIndex] = null;
+            }
+
+            // Place the dragged event
+            const slotContent = slot.querySelector('.slot-content');
+            slotContent.innerHTML = '';
+            
+            // Clone the chip for the slot
+            const clone = draggedEvent.cloneNode(true);
+            clone.draggable = false;
+            clone.classList.remove('dragging');
+            slotContent.appendChild(clone);
+
+            // Remove original from pool
+            draggedEvent.remove();
+
+            // Update placed events
+            placedEvents[slotIndex] = { eventId, tension };
+
+            // Update tension bar
+            updateTensionBar();
+
+            // Check if all slots filled
+            checkAllSlotsFilled();
+        }
+
+        // =====================================================
+        // TENSION BAR
+        // =====================================================
+        function updateTensionBar() {
+            const filledSlots = placedEvents.filter(e => e !== null);
+            if (filledSlots.length === 0) {
+                setTensionLevel(0, 'baja');
+                return;
+            }
+
+            // Calculate average tension of placed events
+            const avgTension = filledSlots.reduce((sum, e) => sum + e.tension, 0) / filledSlots.length;
+            
+            // Map to percentage (tension is 0-100)
+            const percentage = avgTension;
+            
+            // Update fill (inverse - white covers lower part)
+            document.getElementById('tensionFill').style.height = (100 - percentage) + '%';
+            document.getElementById('tensionIndicator').style.bottom = percentage + '%';
+
+            // Set level
+            if (percentage < 30) {
+                setTensionLevel(percentage, 'baja');
+            } else if (percentage < 55) {
+                setTensionLevel(percentage, 'media');
+            } else if (percentage < 75) {
+                setTensionLevel(percentage, 'alta');
+            } else {
+                setTensionLevel(percentage, 'critica');
+            }
+        }
+
+        function setTensionLevel(value, level) {
+            const levelEl = document.getElementById('tensionLevel');
+            levelEl.className = 'tension-level ' + level;
+            
+            const labels = {
+                'baja': 'Baja',
+                'media': 'Media',
+                'alta': 'Alta',
+                'critica': 'Crítica'
+            };
+            levelEl.textContent = labels[level];
+        }
+
+        // =====================================================
+        // VALIDATION
+        // =====================================================
+        function checkAllSlotsFilled() {
+            const allFilled = placedEvents.every(e => e !== null);
+            document.getElementById('validateBtn').disabled = !allFilled;
+        }
+
+        document.getElementById('validateBtn').addEventListener('click', validateOrder);
+
+        function validateOrder() {
+            let correctCount = 0;
+            const slots = document.querySelectorAll('.timeline-slot');
+
+            slots.forEach((slot, index) => {
+                const chip = slot.querySelector('.event-chip');
+                if (!chip) return;
+
+                const eventText = chip.dataset.originalText;
+                const correctEvent = currentCase.events[index];
+                
+                slot.classList.remove('correct', 'incorrect');
+                
+                if (eventText === correctEvent.text) {
+                    slot.classList.add('correct');
+                    slot.querySelector('.slot-feedback').innerHTML = '<i class="fas fa-check-circle" style="color: var(--color-exito);"></i>';
+                    correctCount++;
+                } else {
+                    slot.classList.add('incorrect');
+                    slot.querySelector('.slot-feedback').innerHTML = '<i class="fas fa-times-circle" style="color: var(--color-alerta);"></i>';
+                    showToast('Este evento no corresponde al orden cronológico correcto.', 'error');
+                }
+            });
+
+            if (correctCount === currentCase.events.length) {
+                // All correct - show prevention question
+                setTimeout(() => {
+                    showPreventionQuestion();
+                }, 1000);
+            }
+        }
+
+        // =====================================================
+        // PREVENTION QUESTION
+        // =====================================================
+        function showPreventionQuestion() {
+            const modal = document.getElementById('preventionModal');
+            const optionsContainer = document.getElementById('preventionOptions');
+            optionsContainer.innerHTML = '';
+
+            currentCase.events.forEach((event, index) => {
+                const option = document.createElement('div');
+                option.className = 'prevention-option';
+                option.dataset.eventIndex = index + 1;
+                option.innerHTML = `
+                    <div class="option-number">${index + 1}</div>
+                    <div class="option-text">${event.text}</div>
+                `;
+                option.addEventListener('click', () => selectPreventionOption(option));
+                optionsContainer.appendChild(option);
+            });
+
+            modal.classList.add('active');
+        }
+
+        function selectPreventionOption(selectedOption) {
+            document.querySelectorAll('.prevention-option').forEach(opt => opt.classList.remove('selected'));
+            selectedOption.classList.add('selected');
+            document.getElementById('submitPreventionBtn').disabled = false;
+        }
+
+        document.getElementById('submitPreventionBtn').addEventListener('click', submitPreventionAnswer);
+
+        function submitPreventionAnswer() {
+            const selected = document.querySelector('.prevention-option.selected');
+            if (!selected) return;
+
+            const selectedIndex = parseInt(selected.dataset.eventIndex);
+            const correctIndex = currentCase.preventionPoint;
+            const isCorrect = selectedIndex === correctIndex;
+
+            // Close prevention modal
+            document.getElementById('preventionModal').classList.remove('active');
+
+            // Show result
+            showResult(isCorrect, selectedIndex);
+        }
+
+        // =====================================================
+        // RESULT
+        // =====================================================
+        function showResult(preventionCorrect, selectedPrevention) {
+            const modal = document.getElementById('resultModal');
+            
+            // Count correct events
+            let correctEvents = 0;
+            document.querySelectorAll('.timeline-slot').forEach((slot, index) => {
+                const chip = slot.querySelector('.event-chip');
+                if (chip && chip.dataset.originalText === currentCase.events[index].text) {
+                    correctEvents++;
+                }
+            });
+
+            document.getElementById('correctEvents').textContent = correctEvents + '/' + currentCase.events.length;
+            document.getElementById('preventionCorrect').textContent = preventionCorrect ? '✓' : '✗';
+
+            if (preventionCorrect && correctEvents === currentCase.events.length) {
+                // Perfect score - show medal
+                document.getElementById('medalContainer').style.display = 'block';
+                document.getElementById('resultTitle').textContent = '¡Excelente trabajo!';
+                document.getElementById('resultMessage').textContent = currentCase.preventionReason;
+                
+                // Award points if system exists
+                if (window.SKOPIA) {
+                    window.SKOPIA.completeMission(5); // Example mission
+                }
+            } else if (correctEvents === currentCase.events.length) {
+                document.getElementById('medalContainer').style.display = 'none';
+                document.getElementById('resultTitle').textContent = '¡Bien hecho!';
+                document.getElementById('resultMessage').textContent = 'Ordenaste correctamente los eventos, pero el punto de prevención era el evento #' + currentCase.preventionPoint + '. ' + currentCase.preventionReason;
+            } else {
+                document.getElementById('medalContainer').style.display = 'none';
+                document.getElementById('resultTitle').textContent = 'Sigue practicando';
+                document.getElementById('resultMessage').textContent = 'Revisa el orden cronológico e intenta identificar la causa raíz del conflicto.';
+            }
+
+            modal.classList.add('active');
+        }
+
+        // =====================================================
+        // RESET AND NAVIGATION
+        // =====================================================
+        document.getElementById('resetBtn').addEventListener('click', resetGame);
+
+        function resetGame() {
+            if (currentCase) {
+                renderEventsPool();
+                renderTimelineSlots();
+                updateTensionBar();
+                document.getElementById('validateBtn').disabled = true;
+                hintsUsed = 0;
+            }
+        }
+
+        document.getElementById('closeResultBtn').addEventListener('click', () => {
+            document.getElementById('resultModal').classList.remove('active');
+            resetGame();
+        });
+
+        document.getElementById('nextCaseBtn').addEventListener('click', () => {
+            document.getElementById('resultModal').classList.remove('active');
+            const cases = initCases();
+            const currentIndex = cases.findIndex(c => c.id === currentCase.id);
+            const nextIndex = (currentIndex + 1) % cases.length;
+            selectCase(cases[nextIndex].id);
+        });
+
+        // =====================================================
+        // HINT SYSTEM
+        // =====================================================
+        document.getElementById('hintBtn').addEventListener('click', () => {
+            hintsUsed++;
+            const hints = [
+                'El primer evento suele ser la causa original o el detonante del conflicto.',
+                'Busca el evento que inició todo: una decisión, un anuncio o un cambio.',
+                'Los eventos de violencia o crisis suelen estar en las posiciones intermedias o finales.',
+                'El evento final suele ser una resolución o acuerdo.'
+            ];
+            showToast(hints[(hintsUsed - 1) % hints.length], 'warning');
+        });
+
+        // =====================================================
+        // ADD NEW CASE
+        // =====================================================
+        let newEventCount = 1;
+
+        document.getElementById('addEventBtn').addEventListener('click', () => {
+            newEventCount++;
+            if (newEventCount > 5) {
+                showToast('Máximo 5 eventos por caso', 'warning');
+                newEventCount = 5;
+                return;
+            }
+
+            const container = document.getElementById('newEventsContainer');
+            const eventDiv = document.createElement('div');
+            eventDiv.className = 'form-grid';
+            eventDiv.style.marginTop = '15px';
+            eventDiv.innerHTML = `
+                <div class="form-group">
+                    <label>Evento ${newEventCount}</label>
+                    <input type="text" class="event-input" placeholder="Describe el evento" data-order="${newEventCount}">
+                </div>
+                <div class="form-group">
+                    <label>Ícono</label>
+                    <select class="event-icon-select" data-order="${newEventCount}">
+                        <option value="📜">📜 Documento/Ley</option>
+                        <option value="📢">📢 Anuncio</option>
+                        <option value="⚡">⚡ Conflicto</option>
+                        <option value="🔥">🔥 Incidente</option>
+                        <option value="👥">👥 Reunión</option>
+                        <option value="🤝">🤝 Acuerdo</option>
+                        <option value="⚠️">⚠️ Advertencia</option>
+                        <option value="🚨">🚨 Emergencia</option>
+                    </select>
+                </div>
+            `;
+            container.appendChild(eventDiv);
+            updatePreview();
+        });
+
+        // Update preview on input change
+        document.addEventListener('input', (e) => {
+            if (e.target.classList.contains('event-input') || e.target.id.startsWith('newCase')) {
+                updatePreview();
+            }
+        });
+
+        function updatePreview() {
+            const inputs = document.querySelectorAll('.event-input');
+            const icons = document.querySelectorAll('.event-icon-select');
+            const previewList = document.getElementById('previewList');
+            previewList.innerHTML = '';
+
+            inputs.forEach((input, index) => {
+                if (input.value.trim()) {
+                    const icon = icons[index]?.value || '📌';
+                    const div = document.createElement('div');
+                    div.className = 'preview-event';
+                    div.innerHTML = `
+                        <span class="order-num">${index + 1}</span>
+                        <span>${icon} ${input.value}</span>
+                    `;
+                    previewList.appendChild(div);
+                }
+            });
+        }
+
+        document.getElementById('saveCaseBtn').addEventListener('click', () => {
+            const title = document.getElementById('newCaseTitle').value.trim();
+            const description = document.getElementById('newCaseDescription').value.trim();
+            const difficulty = document.getElementById('newCaseDifficulty').value;
+            const perspectives = document.getElementById('newCasePerspectives').value.split(',').map(p => p.trim()).filter(p => p);
+            const preventionPoint = parseInt(document.getElementById('preventionPoint').value);
+
+            const eventInputs = document.querySelectorAll('.event-input');
+            const eventIcons = document.querySelectorAll('.event-icon-select');
+            
+            const events = [];
+            eventInputs.forEach((input, index) => {
+                if (input.value.trim()) {
+                    events.push({
+                        text: input.value.trim(),
+                        icon: eventIcons[index]?.value || '📌',
+                        tension: 15 + (index * 15)
+                    });
+                }
+            });
+
+            if (!title || !description || events.length < 3) {
+                showToast('Por favor completa todos los campos y agrega al menos 3 eventos.', 'error');
+                return;
+            }
+
+            const cases = initCases();
+            const newCase = {
+                id: Date.now(),
+                title: title,
+                icon: "📁",
+                difficulty: difficulty,
+                context: description,
+                perspectives: perspectives.length > 0 ? perspectives : ['General'],
+                events: events,
+                preventionPoint: preventionPoint,
+                preventionReason: 'Este punto representa la oportunidad perdida de prevenir el conflicto mediante el diálogo y la participación.'
+            };
+
+            cases.push(newCase);
+            localStorage.setItem(CASES_STORAGE_KEY, JSON.stringify(cases));
+
+            showToast('¡Caso guardado exitosamente!', 'success');
+            renderCaseCards();
+
+            // Clear form
+            document.getElementById('newCaseTitle').value = '';
+            document.getElementById('newCaseDescription').value = '';
+            document.getElementById('newCasePerspectives').value = '';
+            document.getElementById('newEventsContainer').innerHTML = `
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Evento 1 (Causa original)</label>
+                        <input type="text" class="event-input" placeholder="Describe el primer evento" data-order="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Ícono</label>
+                        <select class="event-icon-select" data-order="1">
+                            <option value="📜">📜 Documento/Ley</option>
+                            <option value="📢">📢 Anuncio</option>
+                            <option value="⚡">⚡ Conflicto</option>
+                            <option value="🔥">🔥 Incidente</option>
+                            <option value="👥">👥 Reunión</option>
+                            <option value="🤝">🤝 Acuerdo</option>
+                            <option value="⚠️">⚠️ Advertencia</option>
+                            <option value="🚨">🚨 Emergencia</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+            newEventCount = 1;
+            document.getElementById('previewList').innerHTML = '';
+        });
+
+        // =====================================================
+        // TOAST NOTIFICATIONS
+        // =====================================================
+        function showToast(message, type = 'warning') {
+            const toast = document.getElementById('alertToast');
+            toast.className = 'alert-toast ' + type;
+            
+            const icons = {
+                'error': '❌',
+                'warning': '⚠️',
+                'success': '✅'
+            };
+            
+            toast.querySelector('.toast-icon').textContent = icons[type] || 'ℹ️';
+            toast.querySelector('.toast-message').textContent = message;
+            
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 4000);
+        }
+
+        // =====================================================
+        // MOBILE MENU HANDLING
+        // =====================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            const navItems = document.querySelectorAll('.main-navigation > ul > li');
+            navItems.forEach(item => {
+                const link = item.querySelector('span');
+                if (link && item.querySelector('.dropdown')) {
+                    link.addEventListener('click', (e) => {
+                        if (window.innerWidth <= 1024) {
+                            e.preventDefault();
+                            item.classList.toggle('active');
+                        }
+                    });
+                }
+
+                const subItems = item.querySelectorAll('.dropdown > li');
+                subItems.forEach(subItem => {
+                    const subLink = subItem.querySelector('span');
+                    if (subLink && subItem.querySelector('.sub-dropdown')) {
+                        subLink.addEventListener('click', (e) => {
+                            if (window.innerWidth <= 1024) {
+                                e.preventDefault();
+                                subItem.classList.toggle('active');
+                            }
+                        });
+                    }
+                });
+            });
+
+            const hamburgerMenu = document.getElementById('hamburger-menu');
+            const userDropdown = document.getElementById('user-dropdown');
+            hamburgerMenu.addEventListener('click', () => {
+                userDropdown.classList.toggle('active');
+            });
+
+            window.addEventListener('click', (event) => {
+                if (!event.target.closest('.navbar')) {
+                    userDropdown.classList.remove('active');
+                }
+            });
+
+            // Initialize case cards
+            renderCaseCards();
+        });
+    </script>
+</body>
+</html>
