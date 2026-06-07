@@ -60,14 +60,13 @@
             color: var(--color-oliva-oscuro);
             display: flex;
             justify-content: center;
-            /* CAMBIO: Alineamos desde arriba para permitir scroll */
-            align-items: flex-start; 
+            align-items: center;
             min-height: 100vh;
             margin: 0;
-            padding: 40px 20px; /* CAMBIO: Más padding superior e inferior */
+            padding: 20px;
             box-sizing: border-box;
-            /* CAMBIO: Eliminamos overflow: hidden para permitir bajar */
-            /* overflow: hidden;  <-- ELIMINADO */
+            /* CAMBIO: Permitir scroll en el body si es necesario, aunque el contenedor lo manejará */
+            overflow: auto; 
         }
 
         .welcome-overlay {
@@ -82,12 +81,14 @@
             align-items: center;
             z-index: 1000;
             transition: opacity 0.5s ease;
-        }
-
-        .welcome-overlay.hidden {
+            /* Ocultamos por defecto hasta verificar Firebase */
             opacity: 0;
             pointer-events: none;
-            display: none; /* Aseguramos que desaparezca */
+        }
+
+        .welcome-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
         }
 
         .welcome-modal {
@@ -98,6 +99,8 @@
             text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             border-top: 5px solid var(--color-oliva-oscuro);
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .welcome-modal h2 {
@@ -140,14 +143,16 @@
             display: none;
             flex-direction: column;
             overflow: hidden;
-            /* CAMBIO: Margen inferior por si el footer queda corto */
-            margin-bottom: 50px; 
+            /* CAMBIO CLAVE: Limitar altura y permitir scroll interno */
+            max-height: 95vh; 
+            overflow-y: auto;
         }
 
         .progress-bar-container {
             width: 100%;
             height: 8px;
             background-color: #e0e0e0;
+            flex-shrink: 0; /* Para que no se achique */
         }
 
         .progress-bar-fill {
@@ -286,6 +291,9 @@
             text-align: center;
             padding: 20px;
             background-color: #f7f7f7;
+            flex-shrink: 0; /* Asegura que el botón no se achique */
+            position: sticky;
+            bottom: 0;
         }
 
         .submit-button, .next-button {
@@ -375,8 +383,8 @@
 </head>
 
 <body>
-    <!-- Agregamos la clase hidden por defecto para controlar la carga -->
-    <div id="welcome-overlay" class="welcome-overlay hidden">
+    <!-- Agregamos la clase 'visible' por JS solo si es necesario -->
+    <div id="welcome-overlay" class="welcome-overlay">
         <div class="welcome-modal">
             <h2>¡No tan rápido!</h2>
             <p>Como es tu primera vez en esta página, te invitamos a realizar un cuestionario de prueba para saber tus competencias en el Saber Pro. Pero no te preocupes, tu resultado no interferirá en las notas ni en tus objetivos, solo es para saber tu nivel inicial.</p>
@@ -438,48 +446,42 @@
             let currentUserId = null;
 
             // =====================================================
-            // LÓGICA DE AUTENTICACIÓN Y VERIFICACIÓN DE DATOS
+            // NUEVA LÓGICA: Verificar si ya hizo el diagnóstico
             // =====================================================
-            
-            const checkUserStatus = new Promise((resolve) => {
-                if (window.currentUser) {
-                    resolve(window.currentUser);
-                } else {
-                    window.addEventListener('userReady', (e) => {
-                        resolve(e.detail.user);
-                    });
+            async function checkPreviousDiagnostic(user) {
+                try {
+                    const diagnosticRef = window.ref(window.db, `users/${user.uid}/diagnostico`);
+                    const snapshot = await window.get(diagnosticRef);
+                    
+                    if (snapshot.exists()) {
+                        console.log("Usuario ya tiene diagnóstico. Redirigiendo a errores.html");
+                        window.location.href = 'errores.html';
+                    } else {
+                        console.log("No hay diagnóstico previo. Mostrando modal de inicio.");
+                        welcomeOverlay.classList.add('visible');
+                    }
+                } catch (error) {
+                    console.error("Error verificando diagnóstico:", error);
+                    // Si hay error, mostramos el quiz por seguridad
+                    welcomeOverlay.classList.add('visible');
                 }
-            });
+            }
 
-            try {
-                const user = await checkUserStatus;
-                currentUserId = user.uid;
-                console.log("Usuario detectado:", currentUserId);
-
-                // Verificar si ya existe el diagnóstico en Firebase
-                const diagnosticRef = window.ref(window.db, `users/${currentUserId}/diagnostico`);
-                const snapshot = await window.get(diagnosticRef);
-
-                if (snapshot.exists()) {
-                    console.log("Diagnóstico previo encontrado. Redirigiendo a errores.html...");
-                    window.location.href = "errores.html";
-                } else {
-                    console.log("No hay diagnóstico previo. Mostrando ventana de inicio.");
-                    // Solo mostramos el overlay si NO hay datos
-                    welcomeOverlay.classList.remove('hidden');
-                }
-            } catch (error) {
-                console.error("Error verificando autenticación o base de datos:", error);
-                // En caso de error, mostramos el quiz para no bloquear al usuario
-                welcomeOverlay.classList.remove('hidden');
+            // Esperar a que el usuario esté autenticado
+            if (window.currentUser) {
+                currentUserId = window.currentUser.uid;
+                checkPreviousDiagnostic(window.currentUser);
+            } else {
+                window.addEventListener('userReady', (e) => {
+                    currentUserId = e.detail.user.uid;
+                    checkPreviousDiagnostic(e.detail.user);
+                });
             }
 
             // =====================================================
-            // LÓGICA DEL QUIZ
-            // =====================================================
 
             startQuizBtn.addEventListener('click', () => {
-                welcomeOverlay.classList.add('hidden');
+                welcomeOverlay.classList.remove('visible');
                 quizContainer.style.display = 'flex';
                 loadQuestions();
             });
@@ -563,6 +565,9 @@
                     optionsContainer.appendChild(label);
                 });
                 updateProgress();
+                
+                // Scroll al inicio del contenedor para la nueva pregunta
+                quizContainer.scrollTop = 0;
             }
 
             submitBtn.addEventListener('click', () => {
