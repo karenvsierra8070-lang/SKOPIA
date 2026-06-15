@@ -1,0 +1,2598 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Dilemas Morales - Competencias Ciudadanas | Skópia</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;500;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        } else {
+            firebaseConfig.authDomain = "skopia-aa786.firebaseapp.com";
+        }
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            initializePage(user);
+        });
+
+        function initializePage(user) {
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    signOut(auth).then(() => window.location.href = 'index.html');
+                });
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+            --color-exito: #2d5a27;
+            --color-advertencia: #8b6914;
+            --color-acento: #7a3d00;
+            --float-color: var(--color-oliva-oscuro);
+            --float-color-hover: var(--color-oliva-medio);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--color-crema) 0%, #f0ebe0 100%);
+            color: var(--color-oliva-oscuro);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ========== NAVEGACIÓN PRINCIPAL ========== */
+        .main-navigation {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 20px rgba(39, 43, 0, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            width: 100%;
+        }
+
+        .main-navigation ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .main-navigation > ul > li {
+            position: relative;
+        }
+
+        .main-navigation > ul > li > span,
+        .main-navigation > ul > li > a {
+            display: flex;
+            align-items: center;
+            padding: 14px 18px;
+            color: var(--color-oliva-oscuro);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            cursor: default;
+        }
+
+        .main-navigation > ul > li > a { cursor: pointer; }
+
+        .main-navigation > ul > li:hover > span,
+        .main-navigation > ul > li:hover > a {
+            background-color: rgba(94, 97, 51, 0.1);
+            color: var(--color-oliva-medio);
+        }
+
+        .main-navigation .emoji {
+            margin-right: 6px;
+            font-size: 1em;
+        }
+
+        .main-navigation > ul > li > .dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            min-width: 260px;
+            box-shadow: 0 10px 30px rgba(39, 43, 0, 0.15);
+            border-radius: 0 0 12px 12px;
+            overflow: visible;
+        }
+
+        .main-navigation > ul > li:hover > .dropdown {
+            display: block;
+            animation: slideDown 0.25s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .main-navigation > ul > li > .dropdown > li {
+            width: 100%;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            position: relative;
+        }
+
+        .main-navigation > ul > li > .dropdown > li:last-child {
+            border-bottom: none;
+        }
+
+        .main-navigation > ul > li > .dropdown > li > a,
+        .main-navigation > ul > li > .dropdown > li > span {
+            padding: 11px 18px;
+            font-weight: 500;
+            font-size: 0.82rem;
+            display: flex;
+            align-items: center;
+            color: var(--color-oliva-oscuro);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .main-navigation > ul > li > .dropdown > li > span {
+            cursor: default;
+            font-weight: 700;
+        }
+
+        .main-navigation > ul > li > .dropdown > li:hover > a,
+        .main-navigation > ul > li > .dropdown > li:hover > span {
+            background-color: rgba(94, 97, 51, 0.12);
+        }
+
+        .main-navigation > ul > li > .dropdown > li > .sub-dropdown {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            min-width: 230px;
+            box-shadow: 0 10px 30px rgba(39, 43, 0, 0.15);
+            border-radius: 0 12px 12px 0;
+        }
+
+        .main-navigation > ul > li > .dropdown > li:hover > .sub-dropdown {
+            display: block;
+            animation: slideRight 0.25s ease;
+        }
+
+        @keyframes slideRight {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .main-navigation > ul > li > .dropdown > li > .sub-dropdown li a {
+            padding: 9px 16px;
+            font-weight: 400;
+            font-size: 0.8rem;
+        }
+
+        /* ========== NAVBAR USUARIO ========== */
+        .navbar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 10px 30px;
+            background-color: white;
+            box-shadow: 0 2px 8px var(--color-sombra);
+        }
+
+        .hamburger {
+            width: 26px;
+            height: 20px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .hamburger span {
+            display: block;
+            height: 3px;
+            width: 100%;
+            background-color: var(--color-oliva-oscuro);
+            border-radius: 2px;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .user-dropdown {
+            position: absolute;
+            top: 60px;
+            right: 30px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 6px 25px var(--color-sombra);
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            min-width: 170px;
+        }
+
+        .user-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .user-dropdown a {
+            display: block;
+            padding: 12px 20px;
+            text-decoration: none;
+            color: var(--color-oliva-oscuro);
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+
+        .user-dropdown a:hover {
+            background-color: var(--color-crema);
+        }
+
+        .user-dropdown hr {
+            border: none;
+            border-top: 1px solid #eee;
+            margin: 0;
+        }
+
+        /* ========== CONTENIDO PRINCIPAL ========== */
+        .game-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 25px 20px 60px;
+            min-height: calc(100vh - 120px);
+        }
+
+        /* PANTALLA DE INICIO */
+        .start-screen {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .game-logo {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 25px;
+            background: linear-gradient(135deg, var(--color-oliva-medio), var(--color-oliva-oscuro));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            box-shadow: 0 10px 30px rgba(39, 43, 0, 0.2);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .game-title {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 2.8rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 15px;
+        }
+
+        .game-description {
+            font-size: 1.05rem;
+            color: #555;
+            max-width: 600px;
+            margin: 0 auto 30px;
+            line-height: 1.7;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            max-width: 800px;
+            margin: 0 auto 40px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 25px 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px var(--color-sombra);
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--color-oliva-claro), #a8ab7a);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 1.4rem;
+        }
+
+        .feature-title {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.3rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 8px;
+        }
+
+        .feature-text {
+            font-size: 0.88rem;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, var(--color-oliva-medio), var(--color-oliva-oscuro));
+            color: var(--color-crema);
+            border: none;
+            padding: 18px 50px;
+            border-radius: 30px;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.4rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(39, 43, 0, 0.25);
+        }
+
+        .start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(39, 43, 0, 0.3);
+        }
+
+        /* PANTALLA DE JUEGO */
+        .game-screen {
+            display: none;
+        }
+
+        .game-screen.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* HEADER DEL DILEMA */
+        .dilemma-header {
+            background: white;
+            border-radius: 16px;
+            padding: 25px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px var(--color-sombra);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dilemma-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--color-oliva-medio), var(--color-oliva-claro), var(--color-oliva-medio));
+        }
+
+        .dilemma-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .dilemma-number {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            color: var(--color-oliva-medio);
+            background: rgba(94, 97, 51, 0.1);
+            padding: 6px 14px;
+            border-radius: 20px;
+        }
+
+        .progress-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .progress-bar {
+            width: 150px;
+            height: 8px;
+            background: rgba(94, 97, 51, 0.15);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--color-oliva-medio), var(--color-oliva-claro));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            font-size: 0.85rem;
+            color: var(--color-oliva-medio);
+            font-weight: 500;
+        }
+
+        .dilemma-title {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.9rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 15px;
+        }
+
+        .dilemma-context {
+            background: linear-gradient(135deg, #f8f7f2, #f0efe8);
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid var(--color-oliva-medio);
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: #444;
+        }
+
+        /* PANEL DE TESTIMONIOS */
+        .testimonies-section {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px var(--color-sombra);
+        }
+
+        .section-title {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.5rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            color: var(--color-oliva-medio);
+        }
+
+        .actors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .actor-card {
+            background: var(--color-crema);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            padding: 18px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .actor-card:hover {
+            border-color: var(--color-oliva-medio);
+            transform: translateY(-3px);
+        }
+
+        .actor-card.viewed {
+            border-color: var(--color-oliva-claro);
+            background: rgba(94, 97, 51, 0.05);
+        }
+
+        .actor-card.viewed::after {
+            content: '✓';
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--color-oliva-medio);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .actor-avatar {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--color-oliva-claro), #9a9c78);
+            border-radius: 50%;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+        }
+
+        .actor-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 4px;
+        }
+
+        .actor-role {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        /* TESTIMONIO DESPLEGADO */
+        .testimony-display {
+            background: linear-gradient(135deg, #faf9f5, #f5f4ef);
+            border-radius: 12px;
+            padding: 20px;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        .testimony-display.active {
+            display: block;
+        }
+
+        .testimony-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+
+        .testimony-avatar {
+            width: 50px;
+            height: 50px;
+            background: var(--color-oliva-medio);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .testimony-name {
+            font-weight: 700;
+            color: var(--color-oliva-oscuro);
+        }
+
+        .testimony-role {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .testimony-text {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: #444;
+            margin-bottom: 15px;
+        }
+
+        .interests-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .interest-tag {
+            background: rgba(94, 97, 51, 0.12);
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            color: var(--color-oliva-oscuro);
+        }
+
+        /* BALANZA DE DERECHOS */
+        .rights-balance-section {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px var(--color-sombra);
+        }
+
+        .balance-visual {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            padding: 20px 0;
+            position: relative;
+        }
+
+        .balance-side {
+            flex: 1;
+            max-width: 200px;
+            text-align: center;
+        }
+
+        .balance-icon {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 12px;
+            background: linear-gradient(135deg, var(--color-oliva-claro), #a8ab7a);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            transition: transform 0.5s ease;
+        }
+
+        .balance-label {
+            font-weight: 700;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 4px;
+        }
+
+        .balance-desc {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .balance-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .vs-badge {
+            background: var(--color-oliva-oscuro);
+            color: var(--color-crema);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .scale-icon {
+            margin-top: 15px;
+            font-size: 2rem;
+            color: var(--color-oliva-medio);
+        }
+
+        /* DETECTOR DE PREJUICIOS */
+        .prejudice-section {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px var(--color-sombra);
+            display: none;
+        }
+
+        .prejudice-section.active {
+            display: block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .prejudice-text {
+            background: linear-gradient(135deg, #fff9e6, #fff5d6);
+            padding: 18px;
+            border-radius: 10px;
+            border-left: 4px solid var(--color-advertencia);
+            font-size: 0.95rem;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+
+        .prejudice-question {
+            font-weight: 700;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 15px;
+        }
+
+        .prejudice-options {
+            display: grid;
+            gap: 10px;
+        }
+
+        .prejudice-option {
+            background: var(--color-crema);
+            border: 2px solid transparent;
+            padding: 14px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            font-size: 0.9rem;
+        }
+
+        .prejudice-option:hover {
+            border-color: var(--color-oliva-medio);
+            background: white;
+        }
+
+        .prejudice-option.selected {
+            border-color: var(--color-oliva-oscuro);
+            background: white;
+        }
+
+        .prejudice-option.correct {
+            border-color: var(--color-exito);
+            background: rgba(45, 90, 39, 0.1);
+        }
+
+        .prejudice-option.incorrect {
+            border-color: #c0392b;
+            background: rgba(192, 57, 43, 0.1);
+        }
+
+        .prejudice-feedback {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .prejudice-feedback.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .prejudice-feedback.correct {
+            background: rgba(45, 90, 39, 0.12);
+            border: 1px solid var(--color-exito);
+        }
+
+        .prejudice-feedback.incorrect {
+            background: rgba(192, 57, 43, 0.12);
+            border: 1px solid #c0392b;
+        }
+
+        /* CONSOLA DE DECISIONES */
+        .decisions-section {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 4px 15px var(--color-sombra);
+        }
+
+        .decision-options {
+            display: grid;
+            gap: 15px;
+        }
+
+        .decision-option {
+            background: linear-gradient(135deg, var(--color-crema), #f5f3e8);
+            border: 2px solid transparent;
+            padding: 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .decision-option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--color-oliva-medio);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .decision-option:hover {
+            border-color: var(--color-oliva-medio);
+            transform: translateX(5px);
+        }
+
+        .decision-option:hover::before {
+            transform: scaleY(1);
+        }
+
+        .decision-option.selected {
+            border-color: var(--color-oliva-oscuro);
+            background: white;
+        }
+
+        .decision-option.selected::before {
+            transform: scaleY(1);
+            background: var(--color-oliva-oscuro);
+        }
+
+        .decision-letter {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            background: var(--color-oliva-medio);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-right: 12px;
+        }
+
+        .decision-text {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .decision-implications {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed rgba(0,0,0,0.1);
+            font-size: 0.85rem;
+            color: #666;
+            display: none;
+        }
+
+        .decision-implications.show {
+            display: block;
+        }
+
+        .btn-confirm {
+            width: 100%;
+            margin-top: 20px;
+            background: linear-gradient(135deg, var(--color-oliva-medio), var(--color-oliva-oscuro));
+            color: var(--color-crema);
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: none;
+        }
+
+        .btn-confirm.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(39, 43, 0, 0.2);
+        }
+
+        /* PANEL DE IMPACTO */
+        .impact-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(39, 43, 0, 0.85);
+            backdrop-filter: blur(10px);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .impact-panel.active {
+            display: flex;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .impact-content {
+            background: white;
+            border-radius: 20px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: scale(0.9);
+            opacity: 0;
+            transition: all 0.4s ease;
+        }
+
+        .impact-panel.active .impact-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .impact-header {
+            padding: 25px 30px;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .impact-title {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.8rem;
+            color: var(--color-oliva-oscuro);
+        }
+
+        .impact-body {
+            padding: 30px;
+        }
+
+        .impact-newspaper {
+            background: linear-gradient(135deg, #faf9f5, #f0efe8);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(0,0,0,0.08);
+        }
+
+        .newspaper-date {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .newspaper-headline {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.6rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 15px;
+            line-height: 1.3;
+        }
+
+        .newspaper-text {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: #444;
+        }
+
+        .impact-analysis {
+            background: rgba(94, 97, 51, 0.08);
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .analysis-title {
+            font-weight: 700;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 12px;
+        }
+
+        .analysis-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        .analysis-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .analysis-icon.positive {
+            background: rgba(45, 90, 39, 0.15);
+            color: var(--color-exito);
+        }
+
+        .analysis-icon.negative {
+            background: rgba(192, 57, 43, 0.15);
+            color: #c0392b;
+        }
+
+        .btn-continue {
+            width: 100%;
+            margin-top: 25px;
+            background: var(--color-oliva-oscuro);
+            color: var(--color-crema);
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.15rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-continue:hover {
+            background: var(--color-oliva-medio);
+        }
+
+        /* PANTALLA DE RESULTADOS */
+        .results-screen {
+            display: none;
+            text-align: center;
+            padding: 30px 20px;
+        }
+
+        .results-screen.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .results-header {
+            margin-bottom: 40px;
+        }
+
+        .results-title {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 2.5rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 10px;
+        }
+
+        .results-subtitle {
+            font-size: 1.1rem;
+            color: #666;
+        }
+
+        .profile-card {
+            background: white;
+            border-radius: 20px;
+            padding: 35px;
+            max-width: 500px;
+            margin: 0 auto 30px;
+            box-shadow: 0 8px 30px var(--color-sombra);
+        }
+
+        .profile-badge {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, var(--color-oliva-medio), var(--color-oliva-oscuro));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            box-shadow: 0 8px 20px rgba(39, 43, 0, 0.2);
+        }
+
+        .profile-type {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 2rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 10px;
+        }
+
+        .profile-description {
+            font-size: 0.95rem;
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .scores-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            color: var(--color-oliva-oscuro);
+        }
+
+        .score-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .score-bar {
+            height: 6px;
+            background: rgba(94, 97, 51, 0.15);
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .score-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--color-oliva-medio), var(--color-oliva-claro));
+            border-radius: 3px;
+            transition: width 1s ease;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, var(--color-oliva-medio), var(--color-oliva-oscuro));
+            color: var(--color-crema);
+            border: none;
+            padding: 16px 45px;
+            border-radius: 30px;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(39, 43, 0, 0.2);
+        }
+
+        .restart-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(39, 43, 0, 0.25);
+        }
+
+        /* TOAST */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--color-oliva-oscuro);
+            color: var(--color-crema);
+            padding: 14px 28px;
+            border-radius: 12px;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.2);
+            z-index: 3000;
+            opacity: 0;
+            transition: all 0.4s ease;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .main-navigation > ul > li > .dropdown {
+                position: static;
+                box-shadow: none;
+            }
+            
+            .main-navigation > ul > li:hover > .dropdown {
+                display: none;
+            }
+            
+            .main-navigation > ul > li.active > .dropdown {
+                display: block;
+            }
+            
+            .main-navigation > ul > li > .dropdown > li > .sub-dropdown {
+                position: static;
+                box-shadow: none;
+            }
+
+            .game-title {
+                font-size: 2.2rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .actors-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .balance-visual {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .balance-side {
+                max-width: 100%;
+            }
+
+            .scores-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .dilemma-title {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- NAVEGACIÓN PRINCIPAL -->
+    <nav class="main-navigation">
+        <ul>
+            <li>
+                <span><span class="emoji">🟦</span> MÓDULO 1 — Lectura Crítica</span>
+                <ul class="dropdown">
+                    <li><a href="biblioteca.html"><span class="emoji">📚</span> Biblioteca</a></li>
+                    <li>
+                        <span><span class="emoji">✍️</span> Talleres de escritura</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="reescritura.html"><span class="emoji">🔄</span> Reescritura</a></li>
+                            <li><a href="conectores.html"><span class="emoji">🔗</span> Conectores</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <span><span class="emoji">🟩</span> MÓDULO 2 — Razonamiento Cuantitativo</span>
+                <ul class="dropdown">
+                    <li><a href="crepatron.html"><span class="emoji">📈</span> Patrones</a></li>
+                </ul>
+            </li>
+            <li>
+                <span><span class="emoji">🟧</span> MÓDULO 3 — Competencias Ciudadanas</span>
+                <ul class="dropdown">
+                    <li>
+                        <span><span class="emoji">⚖️</span> Dilemas + decisiones</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="d1.html"><span class="emoji">🤔</span> Simulador de dilemas</a></li>
+                            <li><a href="d2.html"><span class="emoji">📖</span> Historias interactivas</a></li>
+                        </ul>
+                    </li>
+                    <li>
+                        <span><span class="emoji">🌍</span> Contextos sociales</span>
+                        <ul class="sub-dropdown">
+                            <li><a href="CS1.html"><span class="emoji">🗺️</span> Mapa de problemas</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <span><span class="emoji">🟪</span> MÓDULO 4 — Inglés</span>
+                <ul class="dropdown">
+                    <li><a href="CLI1.html"><span class="emoji">📖</span> Textos graduados</a></li>
+                </ul>
+            </li>
+        </ul>
+    </nav>
+    
+    <!-- NAVBAR USUARIO -->
+    <nav class="navbar">
+        <div class="hamburger" id="hamburger-menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        <div class="user-dropdown" id="user-dropdown">
+            <a href="cuenta.html">Mi Cuenta</a>
+            <a href="configuracion.html">Configuración</a>
+            <a href="notificaciones.html">Notificaciones</a>
+            <hr>
+            <a href="index.html" id="logout-btn">Cerrar Sesión</a>
+        </div>
+    </nav>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div class="game-container">
+        <!-- PANTALLA DE INICIO -->
+        <div class="start-screen" id="start-screen">
+            <div class="game-logo">
+                <i class="fas fa-balance-scale"></i>
+            </div>
+            <h1 class="game-title">Simulador de Dilemas Morales</h1>
+            <p class="game-description">
+                Enfréntate a situaciones complejas donde los derechos y principios chocan. 
+                Analiza múltiples perspectivas, detecta prejuicios y toma decisiones informadas 
+                como lo haría un ciudadano responsable.
+            </p>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-users"></i></div>
+                    <h3 class="feature-title">Multiperspectivismo</h3>
+                    <p class="feature-text">Escucha a todos los actores involucrados antes de decidir</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-search"></i></div>
+                    <h3 class="feature-title">Detector de Prejuicios</h3>
+                    <p class="feature-text">Identifica falacias y argumentos sesgados en los testimonios</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+                    <h3 class="feature-title">Análisis de Impacto</h3>
+                    <p class="feature-text">Visualiza las consecuencias de tus decisiones</p>
+                </div>
+            </div>
+            
+            <button class="start-btn" id="start-btn">
+                <i class="fas fa-play"></i> Iniciar Simulación
+            </button>
+        </div>
+
+        <!-- PANTALLA DE JUEGO -->
+        <div class="game-screen" id="game-screen">
+            <div class="dilemma-header">
+                <div class="dilemma-meta">
+                    <span class="dilemma-number" id="dilemma-number">DILEMA 1 DE 5</span>
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill"></div>
+                        </div>
+                        <span class="progress-text" id="progress-text">20%</span>
+                    </div>
+                </div>
+                <h2 class="dilemma-title" id="dilemma-title">Cargando dilema...</h2>
+                <div class="dilemma-context" id="dilemma-context"></div>
+            </div>
+
+            <div class="testimonies-section">
+                <h3 class="section-title"><i class="fas fa-comments"></i> Perspectivas de los Actores</h3>
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">Haz clic en cada actor para conocer su postura</p>
+                <div class="actors-grid" id="actors-grid"></div>
+                <div class="testimony-display" id="testimony-display"></div>
+            </div>
+
+            <div class="rights-balance-section">
+                <h3 class="section-title"><i class="fas fa-balance-scale-left"></i> Balanza de Derechos en Conflicto</h3>
+                <div class="balance-visual" id="balance-visual"></div>
+            </div>
+
+            <div class="prejudice-section" id="prejudice-section">
+                <h3 class="section-title"><i class="fas fa-exclamation-triangle"></i> Detector de Prejuicios</h3>
+                <div class="prejudice-text" id="prejudice-text"></div>
+                <p class="prejudice-question" id="prejudice-question"></p>
+                <div class="prejudice-options" id="prejudice-options"></div>
+                <div class="prejudice-feedback" id="prejudice-feedback"></div>
+            </div>
+
+            <div class="decisions-section">
+                <h3 class="section-title"><i class="fas fa-gavel"></i> Tu Decisión</h3>
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">Selecciona la opción que mejor concilia los intereses en conflicto</p>
+                <div class="decision-options" id="decision-options"></div>
+                <button class="btn-confirm" id="btn-confirm">Confirmar Decisión</button>
+            </div>
+        </div>
+
+        <!-- PANTALLA DE RESULTADOS -->
+        <div class="results-screen" id="results-screen">
+            <div class="results-header">
+                <h2 class="results-title">Tu Perfil Ciudadano</h2>
+                <p class="results-subtitle">Basado en tus decisiones durante la simulación</p>
+            </div>
+            
+            <div class="profile-card">
+                <div class="profile-badge" id="profile-badge">
+                    <i class="fas fa-user-tie"></i>
+                </div>
+                <h3 class="profile-type" id="profile-type">Analizando...</h3>
+                <p class="profile-description" id="profile-description"></p>
+                
+                <div class="scores-grid">
+                    <div class="score-item">
+                        <div class="score-value" id="score-multiperspectiva">0</div>
+                        <div class="score-label">Multiperspectiva</div>
+                        <div class="score-bar"><div class="score-bar-fill" id="bar-multiperspectiva"></div></div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-value" id="score-sistemico">0</div>
+                        <div class="score-label">Pensamiento Sistémico</div>
+                        <div class="score-bar"><div class="score-bar-fill" id="bar-sistemico"></div></div>
+                    </div>
+                    <div class="score-item">
+                        <div class="score-value" id="score-prejuicios">0</div>
+                        <div class="score-label">Detección de Prejuicios</div>
+                        <div class="score-bar"><div class="score-bar-fill" id="bar-prejuicios"></div></div>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="restart-btn" id="restart-btn">
+                <i class="fas fa-redo"></i> Nueva Simulación
+            </button>
+        </div>
+    </div>
+
+    <!-- PANEL DE IMPACTO -->
+    <div class="impact-panel" id="impact-panel">
+        <div class="impact-content">
+            <div class="impact-header">
+                <h3 class="impact-title">Consecuencias de tu Decisión</h3>
+            </div>
+            <div class="impact-body">
+                <div class="impact-newspaper">
+                    <div class="newspaper-date" id="newspaper-date">3 meses después</div>
+                    <h4 class="newspaper-headline" id="newspaper-headline">Titular de la noticia</h4>
+                    <p class="newspaper-text" id="newspaper-text">Contenido de la noticia...</p>
+                </div>
+                <div class="impact-analysis">
+                    <h4 class="analysis-title">Análisis de Impacto:</h4>
+                    <div id="analysis-items"></div>
+                </div>
+                <button class="btn-continue" id="btn-continue">Continuar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ==================== BASE DE DATOS DE DILEMAS ====================
+        const DILEMMAS_DATABASE = [
+            {
+                id: 1,
+                title: "El Megaproyecto vs. El Territorio Ancestral",
+                context: "Una multinacional energética planea construir una represa hidroeléctrica que proveerá energía limpia a 3 millones de habitantes y generará 2,000 empleos directos. Sin embargo, el proyecto inundaría 5,000 hectáreas de territorio sagrado de una comunidad indígena que ha habitado la zona por más de 500 años. El gobierno debe decidir si aprueba el proyecto.",
+                actors: [
+                    {
+                        name: "Representante del Gobierno",
+                        role: "Ministerio de Energía",
+                        avatar: "🏛️",
+                        testimony: "Este proyecto es fundamental para la transición energética del país. La energía limpia beneficiará a millones de ciudadanos y cumpliremos nuestros compromisos internacionales de reducción de carbono. No podemos detener el progreso por un grupo pequeño.",
+                        interests: ["Desarrollo nacional", "Cumplimiento internacional", "Energía limpia"]
+                    },
+                    {
+                        name: "Líder Indígena",
+                        role: "Consejo de Ancianos",
+                        avatar: "🪶",
+                        testimony: "Ese territorio es nuestra casa, nuestro templo y nuestra historia. No son solo tierras, son nuestra identidad. Nos ofrecen dinero, pero ¿cuánto cuesta una cultura? ¿Cuánto cuesta 500 años de memoria? No queremos reubicación, queremos respeto.",
+                        interests: ["Preservación cultural", "Derechos territoriales", "Autonomía"]
+                    },
+                    {
+                        name: "Líder Comunitario Local",
+                        role: "Junta de Acción Comunal",
+                        avatar: "👷",
+                        testimony: "Este pueblo tiene 60% de desempleo. Mis vecinos no tienen para comer. La empresa promete trabajo, escuelas y hospitales. Los indígenas tienen razón en reclamar, pero nosotros también tenemos derecho a una vida digna. ¿Por qué nadie habla de nuestros derechos?",
+                        interests: ["Empleo", "Desarrollo local", "Servicios básicos"]
+                    },
+                    {
+                        name: "Bióloga Ambiental",
+                        role: "Universidad Nacional",
+                        avatar: "🌱",
+                        testimony: "La zona tiene 23 especies endémicas en peligro de extinción. La represa destruiría un ecosistema irrepetible. Sin embargo, si no se construye, la energía vendrá de plantas de carbón que contaminan más. No hay soluciones perfectas, solo decisiones responsables.",
+                        interests: ["Conservación", "Ciencia", "Sostenibilidad"]
+                    }
+                ],
+                rights: {
+                    left: { icon: "🏭", label: "Desarrollo Económico", desc: "Progreso y bienestar material" },
+                    right: { icon: "🪶", label: "Derechos Colectivos", desc: "Identidad cultural y territorio" }
+                },
+                prejudice: {
+                    text: "Todos los indígenas se oponen al progreso. Siempre rechazan cualquier proyecto de desarrollo sin siquiera analizarlo. Es una postura retrógrada que nos mantiene en el subdesarrollo.",
+                    question: "¿Qué tipo de falacia o prejuicio contiene esta afirmación?",
+                    options: [
+                        "Es un argumento válido basado en hechos observables",
+                        "Generalización injustificada sobre todo un grupo humano",
+                        "Apelación a la autoridad tradicional",
+                        "Falsa causalidad entre progreso y oposición"
+                    ],
+                    correct: 1,
+                    explanation: "Esta afirmación es una generalización injustificada que atribuye una característica negativa a todos los miembros de un grupo sin evidencia. Es un prejuicio étnico que ignora la diversidad de opiniones dentro de cualquier comunidad."
+                },
+                decisions: [
+                    {
+                        text: "Aprobar el proyecto con compensación económica para la comunidad indígena",
+                        implications: "Prioriza el desarrollo económico pero genera rechazo social y posibles conflictos"
+                    },
+                    {
+                        text: "Rechazar el proyecto y buscar alternativas energéticas en otras zonas",
+                        implications: "Respeta los derechos indígenas pero posterga el desarrollo regional"
+                    },
+                    {
+                        text: "Modificar el proyecto reduciendo el área inundada y establecer un plan de manejo conjunto",
+                        implications: "Busca equilibrar intereses mediante el diálogo y la negociación"
+                    },
+                    {
+                        text: "Realizar una consulta previa binding donde la comunidad decida",
+                        implications: "Democratiza la decisión pero puede extender el proceso por años"
+                    }
+                ],
+                impacts: [
+                    {
+                        headline: "Represa construida tras compensación millonaria",
+                        text: "La comunidad recibió $50 millones en compensación. Sin embargo, protestas y bloqueos paralizaron la obra durante 8 meses. El costo final superó el presupuesto en un 40%. Líderes indígenas denuncian que 'el dinero no recupera nuestra cultura'.",
+                        analysis: [
+                            { type: "positive", text: "Se generaron los empleos prometidos" },
+                            { type: "positive", text: "El país avanza en energía limpia" },
+                            { type: "negative", text: "Conflictos sociales persistentes" },
+                            { type: "negative", text: "Pérdida cultural irreversible" }
+                        ]
+                    },
+                    {
+                        headline: "Gobierno cancela megaproyecto energético",
+                        text: "La decisión generó críticas de sectores empresariales y sindicatos. El desempleo aumentó un 12% en la región. La comunidad indígena celebró la decisión, pero habitantes locales sienten que 'el gobierno prefiere a unos pocos sobre la mayoría'.",
+                        analysis: [
+                            { type: "positive", text: "Territorio ancestral preservado" },
+                            { type: "positive", text: "Derechos indígenas respetados" },
+                            { type: "negative", text: "Pérdida de 2,000 empleos" },
+                            { type: "negative", text: "Tensión entre comunidades" }
+                        ]
+                    },
+                    {
+                        headline: "Acuerdo histórico: represa modificada",
+                        text: "Tras 14 meses de negociación, se redujo el área inundada un 35%. Se creó un Comité de Gestión paritario entre empresa y comunidad. El proyecto se completó con 2 años de retraso pero sin conflictos sociales mayores.",
+                        analysis: [
+                            { type: "positive", text: "Solución negociada y consensuada" },
+                            { type: "positive", text: "Menor impacto ambiental" },
+                            { type: "positive", text: "Participación ciudadana real" },
+                            { type: "negative", text: "Mayores costos y tiempos" }
+                        ]
+                    },
+                    {
+                        headline: "Consulta popular define futuro del proyecto",
+                        text: "Con el 89% de participación, la comunidad votó en contra del proyecto. La empresa anunció que buscará ubicaciones alternativas. El gobierno inició proceso similar en otra región del país.",
+                        analysis: [
+                            { type: "positive", text: "Decisión democrática legitima" },
+                            { type: "positive", text: "Derechos participativos ejercidos" },
+                            { type: "negative", text: "Incertidumbre para inversionistas" },
+                            { type: "negative", text: "Proceso extenso y costoso" }
+                        ]
+                    }
+                ],
+                weights: { multiperspectiva: 30, sistemico: 25, prejuicios: 15 }
+            },
+            {
+                id: 2,
+                title: "Salud Pública vs. Autonomía Individual",
+                context: "Ante un brote epidemiológico de alta contagiosidad, el Ministerio de Salud ordena tratamiento preventivo obligatorio y aislamiento estricto por 21 días. Un colectivo de ciudadanos demanda la medida argumentando violación al libre desarrollo de la personalidad y objeción de conciencia. La Corte Constitucional debe evaluar si las medidas son proporcionales.",
+                actors: [
+                    {
+                        name: "Secretaria de Salud",
+                        role: "Ministerio de Salud",
+                        avatar: "⚕️",
+                        testimony: "Tenemos 3,000 casos nuevos diarios y el sistema hospitalario al 95% de capacidad. La medida salva vidas. El Estado tiene la obligación constitucional de proteger la salud pública. Quienes no se tratan se convierten en vectores de contagio.",
+                        interests: ["Salud pública", "Prevención", "Capacidad hospitalaria"]
+                    },
+                    {
+                        name: "Abogado Demandante",
+                        role: "Colectivo de Ciudadanos",
+                        avatar: "⚖️",
+                        testimony: "Mi cuerpo, mi decisión. El Estado no puede obligarme a un tratamiento médico contra mi voluntad. Esto es una dictadura sanitaria. Además, hay dudas sobre la eficacia y efectos secundarios del tratamiento. ¿Dónde termina la protección y empieza el autoritarismo?",
+                        interests: ["Libertad individual", "Autonomía corporal", "Derechos fundamentales"]
+                    },
+                    {
+                        name: "Médico Intensivista",
+                        role: "Hospital Central",
+                        avatar: "🏥",
+                        testimony: "Estoy viendo morir a 10 personas diarias. La mayoría no se trató por 'libertad personal'. Ahora exigen camas UCI que no tenemos. La libertad de uno termina donde empieza el derecho a la vida del otro. Es simple responsabilidad ciudadana.",
+                        interests: ["Vida humana", "Sistema de salud", "Responsabilidad"]
+                    },
+                    {
+                        name: "Defensor del Pueblo",
+                        role: "Defensoría Pública",
+                        avatar: "🛡️",
+                        testimony: "Los derechos no son absolutos pero cualquier limitación debe ser necesaria, proporcional y temporal. La medida tiene justificación, pero ¿es proporcional un aislamiento de 21 días? ¿Hay alternativas menos restrictivas? Esos son los límites que debemos evaluar.",
+                        interests: ["Equilibrio de derechos", "Proporcionalidad", "Garantías constitucionales"]
+                    }
+                ],
+                rights: {
+                    left: { icon: "🏥", label: "Salud Colectiva", desc: "Protección del bien común" },
+                    right: { icon: "🧍", label: "Libertad Individual", desc: "Autonomía y libre desarrollo" }
+                },
+                prejudice: {
+                    text: "Todos los que se oponen al tratamiento obligatorio son egoístas que no les importa matar a sus vecinos. Solo piensan en sí mismos y no tienen sentido de responsabilidad social.",
+                    question: "¿Qué error de razonamiento contiene esta afirmación?",
+                    options: [
+                        "Es una observación correcta sobre comportamiento egoísta",
+                        "Ad hominem: ataca a las personas en lugar de sus argumentos",
+                        "Apelación a las emociones del miedo",
+                        "Falsa dicotomía entre opciones extremas"
+                    ],
+                    correct: 1,
+                    explanation: "Esta afirmación comete una falacia ad hominem circuntancial. Descalifica a los opositores atribuyéndoles motivaciones egoístas en lugar de responder a sus argumentos sobre autonomía, dudas científicas o derechos constitucionales."
+                },
+                decisions: [
+                    {
+                        text: "Mantener las medidas obligatorias sin modificaciones",
+                        implications: "Prioriza la salud colectiva sobre las libertades individuales"
+                    },
+                    {
+                        text: "Eliminar todas las medidas obligatorias y dejar la decisión a cada persona",
+                        implications: "Maximiza la libertad individual pero arriesga la salud pública"
+                    },
+                    {
+                        text: "Mantener el tratamiento obligatorio pero reducir el aislamiento a 10 días",
+                        implications: "Busca un punto medio entre protección y libertad"
+                    },
+                    {
+                        text: "Establecer excepciones por objeción de conciencia con contraprestaciones",
+                        implications: "Respeta la autonomía pero establece responsabilidades para quienes optan"
+                    }
+                ],
+                impacts: [
+                    {
+                        headline: "Corte ratifica medidas sanitarias obligatorias",
+                        text: "La decisión fue celebrada por el gremio médico pero generó protestas ciudadanas. Los casos disminuyeron un 65% en 6 semanas. Sin embargo, se reportaron 150 amparos por supuestas violaciones a derechos durante los controles.",
+                        analysis: [
+                            { type: "positive", text: "Reducción significativa de contagios" },
+                            { type: "positive", text: "Sistema de salud despresurizado" },
+                            { type: "negative", text: "Tensión social y protestas" },
+                            { type: "negative", text: "Denuncias de excesos en controles" }
+                        ]
+                    },
+                    {
+                        headline: "Gobierno levanta todas las restricciones sanitarias",
+                        text: "La libertad volvió, pero también los contagios. En 3 semanas, los casos se triplicaron y el sistema colapsó. El Ministerio de Salud admitió que la medida fue 'prematura'. 400 muertes adicionales se atribuyeron a la decisión.",
+                        analysis: [
+                            { type: "positive", text: "Libertades individuales restauradas" },
+                            { type: "positive", text: "Economía se reactivó" },
+                            { type: "negative", text: "Colapso del sistema de salud" },
+                            { type: "negative", text: "Aumento de mortalidad" }
+                        ]
+                    },
+                    {
+                        headline: "Corte ordena ajuste proporcional de medidas",
+                        text: "La reducción a 10 días de aislamiento mantuvo el control epidemiológico con menor afectación a libertades. El tratamiento siguió obligatorio pero con mecanismos de objeción regulados. Un equilibrio frágil que requirió ajustes constantes.",
+                        analysis: [
+                            { type: "positive", text: "Balance entre derechos en conflicto" },
+                            { type: "positive", text: "Medidas más aceptadas socialmente" },
+                            { type: "negative", text: "Complejidad administrativa" },
+                            { type: "negative", text: "Menor efectividad que medidas estrictas" }
+                        ]
+                    },
+                    {
+                        headline: "Sistema de objeción con responsabilidades implementado",
+                        text: "Quienes objetaron el tratamiento firmaron compromisos de autocuidado y aceptaron restricciones de acceso a ciertos espacios. Un 15% optó por la objeción. Los casos se mantuvieron controlados aunque el sistema fue complejo de administrar.",
+                        analysis: [
+                            { type: "positive", text: "Respeto a la autonomía personal" },
+                            { type: "positive", text: "Responsabilidades claras para objetores" },
+                            { type: "positive", text: "Menor conflicto social" },
+                            { type: "negative", text: "Sistema burocrático complejo" }
+                        ]
+                    }
+                ],
+                weights: { multiperspectiva: 25, sistemico: 30, prejuicios: 15 }
+            },
+            {
+                id: 3,
+                title: "Acción Afirmativa vs. Igualdad Formal",
+                context: "Una empresa de transporte público lanza una convocatoria exclusiva para mujeres conductoras, con el objetivo de cerrar la brecha de género en el sector donde solo el 8% son mujeres. El sindicato de conductores hombres demanda la convocatoria argumentando discriminación por sexo. El caso llega a un juzgado laboral.",
+                actors: [
+                    {
+                        name: "Gerente de Recursos Humanos",
+                        role: "Empresa de Transporte",
+                        avatar: "👔",
+                        testimony: "En 30 años, solo hemos tenido 12 conductoras. Las mujeres no aplican porque piensan que no es trabajo para ellas. Esta acción afirmativa busca equilibrar la cancha. No discriminamos a los hombres, corregimos una discriminación histórica.",
+                        interests: ["Equidad de género", "Responsabilidad social", "Diversidad"]
+                    },
+                    {
+                        name: "Líder Sindical",
+                        role: "Sindicato de Conductores",
+                        avatar: "🚌",
+                        testimony: "Tengo 15 años conduciendo y ahora me dicen que no puedo aplicar por ser hombre. ¿Eso no es discriminación? La ley dice que todos somos iguales. Si una mujer quiere el trabajo, que compita en igualdad de condiciones. Esto es injusto al revés.",
+                        interests: ["Igualdad ante la ley", "Oportunidades laborales", "No discriminación"]
+                    },
+                    {
+                        name: "Socióloga Laboral",
+                        role: "Universidad Nacional",
+                        avatar: "📊",
+                        testimony: "La igualdad formal ignora que partimos de posiciones diferentes. Las mujeres han tenido barreras históricas de acceso a ciertos trabajos. La acción afirmativa no discrimina, sino que compensa una desventaja estructural. Es igualdad real, no solo formal.",
+                        interests: ["Justicia social", "Investigación", "Políticas públicas"]
+                    },
+                    {
+                        name: "Candidata Conductora",
+                        role: "Primera promoción",
+                        avatar: "👩",
+                        testimony: "Siempre quise ser conductora pero me dijeron que era 'trabajo de hombres'. Esta convocatoria me dio la oportunidad. Sí, es un trato diferente, pero también fue diferente el trato que recibí por años cuando me cerraban puertas. Ahora sí puedo competir.",
+                        interests: ["Oportunidad laboral", "Superación de estereotipos", "Ingreso económico"]
+                    }
+                ],
+                rights: {
+                    left: { icon: "⚖️", label: "Igualdad Formal", desc: "Mismo trato para todos" },
+                    right: { icon: "👩‍👩‍👧", label: "Igualdad Real", desc: "Equidad y justicia sustantiva" }
+                },
+                prejudice: {
+                    text: "Las mujeres no pueden conducir vehículos pesados igual que los hombres. Es un hecho biológico: ellas no tienen la fuerza ni los reflejos necesarios para este trabajo. Por eso son minoría en el gremio.",
+                    question: "¿Qué tipo de argumento erróneo representa esta afirmación?",
+                    options: [
+                        "Es un argumento basado en diferencias biológicas reales",
+                        "Prejuicio de género sin base científica que generaliza capacidades",
+                        "Apelación a la naturaleza y tradición del sector",
+                        "Argumento estadístico sobre rendimiento laboral"
+                    ],
+                    correct: 1,
+                    explanation: "Esta afirmación es un prejuicio de género que generaliza capacidades de todo un grupo basándose en estereotipos. No hay evidencia científica de que las mujeres no puedan conducir vehículos pesados. La minoría en el gremio se debe a barreras culturales, no biológicas."
+                },
+                decisions: [
+                    {
+                        text: "Declarar la convocatoria discriminatoria y ordenar su apertura a todos los géneros",
+                        implications: "Aplica la igualdad formal pero perpetúa la desigualdad estructural"
+                    },
+                    {
+                        text: "Validar la convocatoria exclusiva como medida de acción afirmativa temporal",
+                        implications: "Reconoce la necesidad de corregir desigualdades históricas"
+                    },
+                    {
+                        text: "Ordenar que el 50% de los cupos sean para mujeres y el 50% para hombres",
+                        implications: "Busca un equilibrio numérico que puede no reflejar la demanda real"
+                    },
+                    {
+                        text: "Rechazar la demanda pero ordenar a la empresa crear un plan de formación para todos",
+                        implications: "Combina la acción afirmativa con oportunidades amplias"
+                    }
+                ],
+                impacts: [
+                    {
+                        headline: "Juez declara discriminatoria convocatoria exclusiva",
+                        text: "La empresa abrió la convocatoria a todos. Solo 3 mujeres aplicaron frente a 200 hombres. El sindicato celebró la 'victoria por la igualdad'. En 5 años, la participación femenina bajó del 8% al 5%.",
+                        analysis: [
+                            { type: "positive", text: "Igualdad formal garantizada" },
+                            { type: "positive", text: "Precedente legal claro" },
+                            { type: "negative", text: "Brecha de género aumentó" },
+                            { type: "negative", text: "Perpetuación de desigualdad" }
+                        ]
+                    },
+                    {
+                        headline: "Corte valida acción afirmativa por 5 años",
+                        text: "La medida fue declarada constitucional. En 5 años, la participación femenina subió al 28%. La empresa mantuvo el programa aunque ya no es exclusivo. Se convirtió en modelo para otras empresas del sector.",
+                        analysis: [
+                            { type: "positive", text: "Avance significativo en equidad" },
+                            { type: "positive", text: "Diversidad laboral real" },
+                            { type: "positive", text: "Cambio cultural en el sector" },
+                            { type: "negative", text: "Resistencia inicial de algunos trabajadores" }
+                        ]
+                    },
+                    {
+                        headline: "Sistema de cuotas 50-50 implementado",
+                        text: "El sistema de cuotas funcionó parcialmente. Hubo足够的 mujeres para llenar los cupos, pero algunos hombres con más experiencia quedaron excluidos. Generó tensiones internas entre mérito y equidad.",
+                        analysis: [
+                            { type: "positive", text: "Paridad de género alcanzada" },
+                            { type: "positive", text: "Cambió la cara de la empresa" },
+                            { type: "negative", text: "Conflictos por percepción de injusticia" },
+                            { type: "negative", text: "Rigidez del sistema de cuotas" }
+                        ]
+                    },
+                    {
+                        headline: "Plan integral de inclusión laboral aprobado",
+                        text: "La empresa mantuvo la convocatoria especial pero creó también un programa de formación abierto. En 3 años, la participación femenina subió al 22% y los conflictos laborales disminuyeron. Modelo replicado en 15 empresas más.",
+                        analysis: [
+                            { type: "positive", text: "Solución integral y equilibrada" },
+                            { type: "positive", text: "Menor conflicto social" },
+                            { type: "positive", text: "Sostenibilidad del cambio" },
+                            { type: "negative", text: "Mayor inversión requerida" }
+                        ]
+                    }
+                ],
+                weights: { multiperspectiva: 28, sistemico: 25, prejuicios: 17 }
+            },
+            {
+                id: 4,
+                title: "Libertad de Expresión vs. Discurso de Odio",
+                context: "Un profesor universitario publica en redes sociales opiniones negativas sobre un grupo religioso minoritario, usando términos despectivos y sugiriendo que sus miembros no deberían ocupar cargos públicos. La universidad abre proceso disciplinario. El profesor alega que ejerce su derecho a la libertad de expresión y que sus opiniones están protegidas constitucionalmente.",
+                actors: [
+                    {
+                        name: "Profesor Demandado",
+                        role: "Catedrático de Derecho",
+                        avatar: "👨‍🏫",
+                        testimony: "Tengo derecho a expresar mis opiniones. Si no les gusta lo que digo, que no me lean. La libertad de expresión protege precisamente las opiniones incómodas. La universidad no puede sancionarme por pensar diferente. Esto es censura pura.",
+                        interests: ["Libertad de expresión", "Autonomía universitaria", "Derechos civiles"]
+                    },
+                    {
+                        name: "Representante Religioso",
+                        role: "Comunidad Afectada",
+                        avatar: "🕍",
+                        testimony: "Sus palabras nos pusieron en peligro. Después de su publicación, recibimos amenazas y dos de nuestros templos fueron vandalizados. La libertad de expresión no cubre el discurso de odio que incita a la violencia contra minorías.",
+                        interests: ["Seguridad de la comunidad", "No discriminación", "Derechos de minorías"]
+                    },
+                    {
+                        name: "Constitucionalista",
+                        role: "Experto en Derechos",
+                        avatar: "📜",
+                        testimony: "La libertad de expresión no es absoluta. No protege el discurso de odio, la incitación a la violencia o la discriminación. El profesor cruzó la línea de la opinión legítima al discurso que pone en riesgo a un grupo. La universidad tiene deber de protección.",
+                        interests: ["Derecho constitucional", "Límites de derechos", "Justicia"]
+                    },
+                    {
+                        name: "Defensora Académica",
+                        role: "Sindicato de Profesores",
+                        avatar: "🎓",
+                        testimony: "Preocupante que una universidad sancione a un profesor por sus opiniones. Mañana podría ser cualquiera de nosotros. Sin embargo, la libertad académica también implica responsabilidad profesional. ¿Dónde está la línea de lo académicamente aceptable?",
+                        interests: ["Libertad de cátedra", "Debido proceso", "Comunidad académica"]
+                    }
+                ],
+                rights: {
+                    left: { icon: "🗣️", label: "Libertad de Expresión", desc: "Derecho a opinar y disentir" },
+                    right: { icon: "🛡️", label: "Dignidad y No Discriminación", desc: "Protección de minorías" }
+                },
+                prejudice: {
+                    text: "Esa comunidad religiosa es peligrosa y no debería tener derechos como los demás ciudadanos. Sus creencias son incompatibles con nuestra sociedad y representan una amenaza para todos nosotros.",
+                    question: "¿Qué característica tiene esta afirmación desde la perspectiva de los derechos humanos?",
+                    options: [
+                        "Es una opinión legítima sobre riesgos reales para la sociedad",
+                        "Es discurso de odio que deshumaniza y excluye a un grupo",
+                        "Es una crítica válida de prácticas religiosas problemáticas",
+                        "Es una exageración retórica sin consecuencias reales"
+                    ],
+                    correct: 1,
+                    explanation: "Esta afirmación constituye discurso de odio: deshumaniza a un grupo, los presenta como amenaza y sugiere que no merecen los mismos derechos. Las opiniones sobre prácticas religiosas son legítimas, pero negar derechos básicos a un grupo cruza el límite de lo permitido."
+                },
+                decisions: [
+                    {
+                        text: "Absolver al profesor argumentando que sus opiniones están protegidas por la libertad de expresión",
+                        implications: "Protege la libertad de expresión pero podría normalizar el discurso de odio"
+                    },
+                    {
+                        text: "Despedir al profesor por violar los principios institucionales y poner en riesgo a la comunidad",
+                        implications: "Protege a la comunidad pero genera debate sobre censura académica"
+                    },
+                    {
+                        text: "Sancionar con suspensión y obligar a capacitación en derechos humanos",
+                        implications: "Combina responsabilidad con oportunidad educativa"
+                    },
+                    {
+                        text: "Mantener al profesor pero exigir aclaración pública y disculpa formal",
+                        implications: "Preserva su puesto pero exige reconocimiento del daño causado"
+                    }
+                ],
+                impacts: [
+                    {
+                        headline: "Tribunal absuelve al profesor por libertad de expresión",
+                        text: "La decisión fue celebrada por defensores de las libertades civiles pero criticada por organizaciones de derechos humanos. Incidentes contra la comunidad religiosa aumentaron un 40% en los siguientes 6 meses. El profesor sigue dando cátedra.",
+                        analysis: [
+                            { type: "positive", text: "Precedente de protección a libertad de expresión" },
+                            { type: "positive", text: "Sin sanción al disenso" },
+                            { type: "negative", text: "Aumento de incidentes discriminatorios" },
+                            { type: "negative", text: "Comunidad religiosa se siente desprotegida" }
+                        ]
+                    },
+                    {
+                        headline: "Universidad despide a profesor por discurso de odio",
+                        text: "El despido generó debate nacional. Algunos lo vieron como justicia, otros como censura. La comunidad religiosa agradeció la decisión. El profesor demandó a la universidad y el caso sigue en tribunales.",
+                        analysis: [
+                            { type: "positive", text: "Mensaje claro contra discriminación" },
+                            { type: "positive", text: "Protección a minorías" },
+                            { type: "negative", text: "Debate sobre censura académica" },
+                            { type: "negative", text: "Polarización del debate público" }
+                        ]
+                    },
+                    {
+                        headline: "Sanción educativa marca precedente institucional",
+                        text: "El profesor cumplió la suspensión y la capacitación. Publicó una reflexión sobre los límites de la expresión. La universidad creó un protocolo de manejo de estos casos. El debate académico mejoró en calidad.",
+                        analysis: [
+                            { type: "positive", text: "Solución formativa, no punitiva" },
+                            { type: "positive", text: "Protocolo institucional creado" },
+                            { type: "positive", text: "Debate público mejorado" },
+                            { type: "negative", text: "Algunos consideran la sanción insuficiente" }
+                        ]
+                    },
+                    {
+                        headline: "Profesor emite disculpa pública formal",
+                        text: "La aclaración redujo tensiones pero algunos consideraron que fue insuficiente. La comunidad religiosa aceptó la disculpa pero pidió acciones concretas. La universidad implementó formación en diversidad para todo el cuerpo docente.",
+                        analysis: [
+                            { type: "positive", text: "Reconocimiento del daño causado" },
+                            { type: "positive", text: "Espacio para reconciliación" },
+                            { type: "negative", text: "Críticas de insuficiencia" },
+                            { type: "negative", text: "Cicatrices permanecen en la comunidad" }
+                        ]
+                    }
+                ],
+                weights: { multiperspectiva: 27, sistemico: 28, prejuicios: 20 }
+            },
+            {
+                id: 5,
+                title: "Desarrollo Económico vs. Ambiente Sostenible",
+                context: "Una empresa maderera solicita licencia para explotar 50,000 hectáreas de bosque tropical. El proyecto generaría 800 empleos directos y sería la principal fuente de ingresos del municipio más pobre de la región. Sin embargo, un estudio ambiental advierte que la tala afectaría el hábitat de 15 especies en peligro crítico y contaminaría la principal fuente de agua de comunidades vecinas.",
+                actors: [
+                    {
+                        name: "Alcalde Municipal",
+                        role: "Gobierno Local",
+                        avatar: "🏛️",
+                        testimony: "Mi municipio tiene 70% de pobreza. Los jóvenes se van porque no hay trabajo. Este proyecto es nuestra única oportunidad de desarrollo. ¿Qué les digo a las familias que no tienen qué comer? ¿Que protegimos al mono pero ellos se mueren de hambre?",
+                        interests: ["Desarrollo local", "Empleo", "Bienestar ciudadano"]
+                    },
+                    {
+                        name: "Bióloga Investigadora",
+                        role: "Instituto de Ciencias",
+                        avatar: "🔬",
+                        testimony: "Este bosque es irreemplazable. Las 15 especies no existen en otro lugar. Si se talan, se extinguen para siempre. Además, la contaminación del agua afectará a 20,000 personas. El daño ambiental es permanente; el empleo maderero es temporal.",
+                        interests: ["Conservación", "Ciencia", "Biodiversidad"]
+                    },
+                    {
+                        name: "Líder Campesino",
+                        role: "Asociación de Productores",
+                        avatar: "🧑‍🌾",
+                        testimony: "Mi familia ha vivido de este bosque por generaciones. La tala nos dejaría sin agua y sin tierra fértil. El empleo que prometen dura 10 años, pero nosotros vivimos aquí desde siempre. ¿Y después qué? ¿Nos vamos también nosotros?",
+                        interests: ["Aguas limpias", "Tierra productiva", "Permanencia"]
+                    },
+                    {
+                        name: "Gerente de la Empresa",
+                        role: "Maderera del Sur",
+                        avatar: "🌲",
+                        testimony: "Somos una empresa responsable. Tenemos certificación internacional y compromisos de reforestación. Generaremos recursos para el municipio, escuelas, hospitales. Podemos hacer extracción selectiva que minimiza el impacto. El desarrollo y el ambiente no son enemigos.",
+                        interests: ["Rentabilidad", "Responsabilidad social", "Sostenibilidad empresarial"]
+                    }
+                ],
+                rights: {
+                    left: { icon: "💰", label: "Desarrollo Económico", desc: "Progreso y bienestar material" },
+                    right: { icon: "🌿", label: "Derechos Ambientales", desc: "Sostenibilidad y futuro" }
+                },
+                prejudice: {
+                    text: "Los ambientalistas se oponen a todo proyecto de desarrollo. No les importa la gente real que sufre hambre y pobreza. Prefieren proteger animales y árboles antes que a seres humanos. Son extremistas desconectados de la realidad.",
+                    question: "¿Qué falacia contiene esta generalización?",
+                    options: [
+                        "Es una observación válida sobre prioridades equivocadas",
+                        "Falsa dicotomía que presenta el debate como humanos vs. naturaleza",
+                        "Apelación a la emoción mediante la pobreza",
+                        "Argumento ad verecundiam a la autoridad moral"
+                    ],
+                    correct: 1,
+                    explanation: "Esta afirmación crea una falsa dicotomía: presenta el debate como si debiéramos elegir entre humanos o naturaleza. Esta visión ignora que el bienestar humano depende a largo plazo de ecosistemas saludables. No es humanos vs. ambiente, sino desarrollo sostenible vs. insostenible."
+                },
+                decisions: [
+                    {
+                        text: "Aprobar el proyecto completo para generar empleo urgente",
+                        implications: "Resuelve la pobreza a corto plazo pero causa daño ambiental irreversible"
+                    },
+                    {
+                        text: "Rechazar el proyecto para proteger el ecosistema",
+                        implications: "Preserva el ambiente pero posterga las necesidades económicas urgentes"
+                    },
+                    {
+                        text: "Aprobar con condiciones: extracción selectiva, fondo de compensación y monitoreo independiente",
+                        implications: "Busca equilibrar desarrollo y conservación con controles estrictos"
+                    },
+                    {
+                        text: "Desarrollar un proyecto alternativo de ecoturismo y agricultura sostenible",
+                        implications: "Apuesta por un modelo de desarrollo diferente a largo plazo"
+                    }
+                ],
+                impacts: [
+                    {
+                        headline: "Proyecto maderero aprobado sin restricciones",
+                        text: "800 empleos se crearon inmediatamente. La pobreza bajó del 70% al 45%. Pero en 8 años, el bosque se agotó y la empresa se fue. El río se contaminó y 15,000 personas quedaron sin agua potable. Las 15 especies se extinguieron localmente.",
+                        analysis: [
+                            { type: "positive", text: "Empleo inmediato generado" },
+                            { type: "positive", text: "Reducción temporal de pobreza" },
+                            { type: "negative", text: "Daño ambiental irreversible" },
+                            { type: "negative", text: "Crisis hídrica posterior" }
+                        ]
+                    },
+                    {
+                        headline: "Autoridad ambiental rechaza proyecto maderero",
+                        text: "El bosque se preservó intacto. Sin embargo, sin alternativas económicas, el desempleo subió al 80%. Muchos jóvenes migraron y la población envejeció. Tala ilegal aumentó ante la falta de oportunidades.",
+                        analysis: [
+                            { type: "positive", text: "Ecosistema completamente preservado" },
+                            { type: "positive", text: "Agua limpia garantizada" },
+                            { type: "negative", text: "Crisis económica persistente" },
+                            { type: "negative", text: "Migración masiva de jóvenes" }
+                        ]
+                    },
+                    {
+                        headline: "Proyecto aprobado con estrictas condiciones ambientales",
+                        text: "La empresa operó con controles. Solo se taló el 30% del área planificada. Se creó un fondo de $2 millones para la comunidad. El monitoreo detectó violaciones menores que fueron corregidas. Modelo replicado en 3 municipios más.",
+                        analysis: [
+                            { type: "positive", text: "Balance entre desarrollo y ambiente" },
+                            { type: "positive", text: "Empleo y conservación coexisten" },
+                            { type: "positive", text: "Modelo replicable" },
+                            { type: "negative", text: "Costos de monitoreo elevados" }
+                        ]
+                    },
+                    {
+                        headline: "Municipio apuesta por ecoturismo sostenible",
+                        text: "Tardó 5 años en consolidarse, pero hoy el ecoturismo genera 500 empleos permanentes. La agricultura orgánica beneficia a 200 familias. El bosque se mantiene y el municipio es modelo de desarrollo sostenible.",
+                        analysis: [
+                            { type: "positive", text: "Desarrollo sostenible a largo plazo" },
+                            { type: "positive", text: "Empleos permanentes" },
+                            { type: "positive", text: "Bosque preservado" },
+                            { type: "negative", text: "Demora en ver resultados" },
+                            { type: "negative", text: "Inversión inicial significativa" }
+                        ]
+                    }
+                ],
+                weights: { multiperspectiva: 30, sistemico: 27, prejuicios: 13 }
+            },
+            {
+                id: 6,
+                title: "Seguridad Ciudadana vs. Derechos de los Detenidos",
+                context: "Ante el aumento de la criminalidad, el gobierno propone modificar el código penal para permitir la detención preventiva automática por 72 horas sin necesidad de orden judicial para personas sorprendidas en flagrancia de delitos graves. Organizaciones de derechos humanos se oponen argumentando que vulnera la presunción de inocencia y facilita abusos.",
+                actors: [
+                    {
+                        name: "Ministro de Justicia",
+                        role: "Gobierno Nacional",
+                        avatar: "⚖️",
+                        testimony: "La delincuencia está desbordada. Los jueces tardan días en emitir órdenes y los delincuentes escapan. Esta medida nos da tiempo para investigar. Solo afecta a quienes son sorprendidos cometiendo delitos. La seguridad de los ciudadanos honestos también es un derecho.",
+                        interests: ["Seguridad ciudadana", "Eficiencia judicial", "Combate al crimen"]
+                    },
+                    {
+                        name: "Defensora de DDHH",
+                        role: "Organización Internacional",
+                        avatar: "🕊️",
+                        testimony: "Sin control judicial, cualquier persona puede ser detenida arbitrariamente. 'Flagrancia' se presta para interpretaciones abusivas. En otros países, estas medidas llevaron a detenciones masivas de inocentes. La seguridad no puede construirse sobre la violación de derechos.",
+                        interests: ["Derechos fundamentales", "Debido proceso", "Protección de inocentes"]
+                    },
+                    {
+                        name: "Juez Penal",
+                        role: "Tribunal Superior",
+                        avatar: "👨‍⚖️",
+                        testimony: "Entiendo la preocupación por la seguridad, pero las garantías procesales existen por algo. He visto casos de personas inocentes detenidas por errores policiales. 72 horas sin control judicial es mucho tiempo. Podría haber una solución intermedia.",
+                        interests: ["Justicia", "Garantías procesales", "Equidad"]
+                    },
+                    {
+                        name: "Víctima de Robo",
+                        role: "Ciudadano Afectado",
+                        avatar: "😰",
+                        testimony: "Me asaltaron en mi casa. El ladrón salió con mis cosas y la policía lo detuvo dos calles más allá. Pero lo soltaron al día siguiente porque no había orden judicial a tiempo. Yo sigo con miedo. ¿Dónde están mis derechos como víctima?",
+                        interests: ["Justicia para víctimas", "Seguridad personal", "Protección estatal"]
+                    }
+                ],
+                rights: {
+                    left: { icon: "🔒", label: "Seguridad Ciudadana", desc: "Protección contra el delito" },
+                    right: { icon: "🤝", label: "Garantías Procesales", desc: "Debido proceso y libertad" }
+                },
+                prejudice: {
+                    text: "Quienes se oponen a medidas de seguridad más estrictas nunca han sido víctimas de un delito. No saben lo que es el miedo. Protegen más a los delincuentes que a las personas honestas que trabajamos y cumplimos la ley.",
+                    question: "¿Qué error de razonamiento contiene esta afirmación?",
+                    options: [
+                        "Es una crítica válida a quienes no entienden el sufrimiento de las víctimas",
+                        "Ad hominem circunstancial que deslegitima argumentos sin responderlos",
+                        "Apelación a la emoción basada en el miedo real",
+                        "Argumento de autoridad desde la experiencia personal"
+                    ],
+                    correct: 1,
+                    explanation: "Esta afirmación comete un ad hominem circunstancial: descalifica a quienes disienten atribuyéndoles una condición personal (no haber sido víctimas) en lugar de responder sus argumentos sobre derechos, debido proceso y riesgos de abusos. Un argumento válido no depende de la experiencia personal de quien lo expresa."
+                },
+                decisions: [
+                    {
+                        text: "Aprobar la medida de detención preventiva automática de 72 horas",
+                        implications: "Agiliza la acción policial pero aumenta el riesgo de abusos y detenciones arbitrarias"
+                    },
+                    {
+                        text: "Rechazar la medida y mantener el control judicial previo en todos los casos",
+                        implications: "Preserva garantías pero puede limitar la eficiencia en casos urgentes"
+                    },
+                    {
+                        text: "Aprobar la medida solo para delitos graves con fiscal presente y registro obligatorio",
+                        implications: "Combina agilidad con controles que reducen riesgo de abusos"
+                    },
+                    {
+                        text: "Crear un juez de guardia 24/7 para autorizaciones rápidas en lugar de detención automática",
+                        implications: "Mantiene el control judicial con mayor disponibilidad horaria"
+                    }
+                ],
+                impacts: [
+                    {
+                        headline: "Detención preventiva automática implementada",
+                        text: "La detención de sospechosos aumentó 40%. Sin embargo, en el primer año se documentaron 200 casos de personas detenidas erróneamente. Hubo protestas por abusos policiales. La medida fue declarada inconstitucional 18 meses después.",
+                        analysis: [
+                            { type: "positive", text: "Mayor capacidad de respuesta policial" },
+                            { type: "positive", text: "Criminales capturados más rápidamente" },
+                            { type: "negative", text: "Detenciones arbitrarias documentadas" },
+                            { type: "negative", text: "Medida declarada inconstitucional" }
+                        ]
+                    },
+                    {
+                        headline: "Control judicial previo mantenido sin cambios",
+                        text: "Las garantías se preservaron pero los tiempos judiciales siguen siendo un problema. Los jueces están saturados y las órdenes tardan en promedio 48 horas. Algunos delincuentes aprovechan esta ventaja.",
+                        analysis: [
+                            { type: "positive", text: "Derechos fundamentales protegidos" },
+                            { type: "positive", text: "Cero detenciones arbitrarias" },
+                            { type: "negative", text: "Ineficiencia del sistema judicial persiste" },
+                            { type: "negative", text: "Insatisfacción ciudadana con seguridad" }
+                        ]
+                    },
+                    {
+                        headline: "Medida con controles: fiscal y registro obligatorio",
+                        text: "El sistema funcionó con controles. Solo el 5% de las detenciones resultaron erróneas y fueron compensadas. Los controles agregaron burocracia pero generaron confianza en el sistema.",
+                        analysis: [
+                            { type: "positive", text: "Balance entre seguridad y derechos" },
+                            { type: "positive", text: "Errores mínimos con compensación" },
+                            { type: "positive", text: "Confianza institucional mejorada" },
+                            { type: "negative", text: "Proceso más burocrático" }
+                        ]
+                    },
+                    {
+                        headline: "Jueces de guardia 24/7 autorizan detenciones rápidas",
+                        text: "El tiempo promedio de autorización bajó a 4 horas. Los derechos se protegieron con eficiencia. El sistema requirió contratar más jueces, pero el costo fue menor que las demandas por detenciones arbitrarias.",
+                        analysis: [
+                            { type: "positive", text: "Control judicial garantizado" },
+                            { type: "positive", text: "Tiempos de respuesta mejorados" },
+                            { type: "positive", text: "Sistema eficiente y justo" },
+                            { type: "negative", text: "Inversión en personal judicial requerida" }
+                        ]
+                    }
+                ],
+                weights: { multiperspectiva: 26, sistemico: 29, prejuicios: 15 }
+            }
+        ];
+
+        // ==================== VARIABLES GLOBALES ====================
+        let currentGameDilemmas = [];
+        let currentDilemmaIndex = 0;
+        let viewedActors = [];
+        let selectedDecision = null;
+        let prejudiceAnswered = false;
+        let prejudiceCorrect = false;
+        
+        let scores = {
+            multiperspectiva: 0,
+            sistemico: 0,
+            prejuicios: 0,
+            total: 0
+        };
+        
+        let decisionTypes = {
+            utilitarista: 0,
+            deontologico: 0,
+            comunitario: 0
+        };
+
+        // ==================== INICIALIZACIÓN ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            initNavigation();
+            initHamburger();
+            initEventListeners();
+        });
+
+        function initNavigation() {
+            const navItems = document.querySelectorAll('.main-navigation > ul > li');
+            navItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    if (window.innerWidth <= 768) {
+                        navItems.forEach(i => i !== this && i.classList.remove('active'));
+                        this.classList.toggle('active');
+                    }
+                });
+            });
+        }
+
+        function initHamburger() {
+            const hamburger = document.getElementById('hamburger-menu');
+            const dropdown = document.getElementById('user-dropdown');
+
+            hamburger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdown.classList.toggle('active');
+            });
+
+            document.addEventListener('click', () => {
+                dropdown.classList.remove('active');
+            });
+        }
+
+        function initEventListeners() {
+            document.getElementById('start-btn').addEventListener('click', startGame);
+            document.getElementById('btn-confirm').addEventListener('click', confirmDecision);
+            document.getElementById('btn-continue').addEventListener('click', continueGame);
+            document.getElementById('restart-btn').addEventListener('click', restartGame);
+        }
+
+        // ==================== FUNCIONES DEL JUEGO ====================
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        function startGame() {
+            // Reiniciar variables
+            currentDilemmaIndex = 0;
+            scores = { multiperspectiva: 0, sistemico: 0, prejuicios: 0, total: 0 };
+            decisionTypes = { utilitarista: 0, deontologico: 0, comunitario: 0 };
+            
+            // Seleccionar 5 dilemas aleatorios y aleatorizar su contenido
+            currentGameDilemmas = shuffleArray(DILEMMAS_DATABASE).slice(0, 5).map(dilemma => ({
+                ...dilemma,
+                actors: shuffleArray(dilemma.actors),
+                decisions: shuffleArray(dilemma.decisions.map((d, i) => ({ ...d, originalIndex: i })))
+            }));
+
+            // Mostrar pantalla de juego
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('results-screen').classList.remove('active');
+            document.getElementById('game-screen').classList.add('active');
+            
+            loadDilemma();
+        }
+
+        function loadDilemma() {
+            const dilemma = currentGameDilemmas[currentDilemmaIndex];
+            viewedActors = [];
+            selectedDecision = null;
+            prejudiceAnswered = false;
+            prejudiceCorrect = false;
+
+            // Actualizar header
+            document.getElementById('dilemma-number').textContent = `DILEMA ${currentDilemmaIndex + 1} DE 5`;
+            document.getElementById('dilemma-title').textContent = dilemma.title;
+            document.getElementById('dilemma-context').textContent = dilemma.context;
+            
+            const progress = ((currentDilemmaIndex) / 5) * 100;
+            document.getElementById('progress-fill').style.width = `${progress}%`;
+            document.getElementById('progress-text').textContent = `${Math.round(progress)}%`;
+
+            // Renderizar actores
+            renderActors(dilemma);
+            
+            // Renderizar balanza de derechos
+            renderRightsBalance(dilemma);
+            
+            // Renderizar detector de prejuicios
+            renderPrejudice(dilemma);
+            
+            // Renderizar decisiones
+            renderDecisions(dilemma);
+            
+            // Ocultar botón de confirmar
+            document.getElementById('btn-confirm').classList.remove('show');
+            
+            // Scroll al inicio
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderActors(dilemma) {
+            const grid = document.getElementById('actors-grid');
+            const display = document.getElementById('testimony-display');
+            
+            grid.innerHTML = dilemma.actors.map((actor, index) => `
+                <div class="actor-card" data-index="${index}">
+                    <div class="actor-avatar">${actor.avatar}</div>
+                    <div class="actor-name">${actor.name}</div>
+                    <div class="actor-role">${actor.role}</div>
+                </div>
+            `).join('');
+
+            display.classList.remove('active');
+            display.innerHTML = '';
+
+            // Event listeners para actores
+            grid.querySelectorAll('.actor-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const index = parseInt(card.dataset.index);
+                    showTestimony(dilemma.actors[index], index);
+                    card.classList.add('viewed');
+                    if (!viewedActors.includes(index)) {
+                        viewedActors.push(index);
+                    }
+                });
+            });
+        }
+
+        function showTestimony(actor, index) {
+            const display = document.getElementById('testimony-display');
+            
+            display.innerHTML = `
+                <div class="testimony-header">
+                    <div class="testimony-avatar">${actor.avatar}</div>
+                    <div>
+                        <div class="testimony-name">${actor.name}</div>
+                        <div class="testimony-role">${actor.role}</div>
+                    </div>
+                </div>
+                <p class="testimony-text">${actor.testimony}</p>
+                <div class="interests-tags">
+                    ${actor.interests.map(int => `<span class="interest-tag">${int}</span>`).join('')}
+                </div>
+            `;
+            
+            display.classList.add('active');
+        }
+
+        function renderRightsBalance(dilemma) {
+            const visual = document.getElementById('balance-visual');
+            
+            visual.innerHTML = `
+                <div class="balance-side">
+                    <div class="balance-icon">${dilemma.rights.left.icon}</div>
+                    <div class="balance-label">${dilemma.rights.left.label}</div>
+                    <div class="balance-desc">${dilemma.rights.left.desc}</div>
+                </div>
+                <div class="balance-center">
+                    <span class="vs-badge">VS</span>
+                    <span class="scale-icon"><i class="fas fa-balance-scale"></i></span>
+                </div>
+                <div class="balance-side">
+                    <div class="balance-icon">${dilemma.rights.right.icon}</div>
+                    <div class="balance-label">${dilemma.rights.right.label}</div>
+                    <div class="balance-desc">${dilemma.rights.right.desc}</div>
+                </div>
+            `;
+        }
+
+        function renderPrejudice(dilemma) {
+            const section = document.getElementById('prejudice-section');
+            const text = document.getElementById('prejudice-text');
+            const question = document.getElementById('prejudice-question');
+            const options = document.getElementById('prejudice-options');
+            const feedback = document.getElementById('prejudice-feedback');
+            
+            text.textContent = dilemma.prejudice.text;
+            question.textContent = dilemma.prejudice.question;
+            
+            const shuffledOptions = dilemma.prejudice.options.map((opt, i) => ({
+                text: opt,
+                originalIndex: i
+            }));
+            
+            options.innerHTML = shuffledOptions.map((opt, i) => `
+                <div class="prejudice-option" data-index="${i}" data-original="${opt.originalIndex}">
+                    ${opt.text}
+                </div>
+            `).join('');
+
+            feedback.classList.remove('show', 'correct', 'incorrect');
+            section.classList.add('active');
+
+            // Event listeners
+            options.querySelectorAll('.prejudice-option').forEach(opt => {
+                opt.addEventListener('click', () => {
+                    if (prejudiceAnswered) return;
+                    
+                    prejudiceAnswered = true;
+                    const selectedIndex = parseInt(opt.dataset.original);
+                    const isCorrect = selectedIndex === dilemma.prejudice.correct;
+                    prejudiceCorrect = isCorrect;
+                    
+                    // Marcar respuesta
+                    options.querySelectorAll('.prejudice-option').forEach(o => {
+                        const oIndex = parseInt(o.dataset.original);
+                        o.classList.remove('selected');
+                        if (oIndex === dilemma.prejudice.correct) {
+                            o.classList.add('correct');
+                        } else if (o === opt && !isCorrect) {
+                            o.classList.add('incorrect');
+                        }
+                    });
+                    
+                    // Mostrar feedback
+                    feedback.innerHTML = `
+                        <strong>${isCorrect ? '¡Correcto!' : 'Incorrecto'}</strong>
+                        <p style="margin-top: 8px;">${dilemma.prejudice.explanation}</p>
+                    `;
+                    feedback.classList.add('show', isCorrect ? 'correct' : 'incorrect');
+                    
+                    if (isCorrect) {
+                        scores.prejuicios += dilemma.weights.prejuicios;
+                    }
+                });
+            });
+        }
+
+        function renderDecisions(dilemma) {
+            const container = document.getElementById('decision-options');
+            const letters = ['A', 'B', 'C', 'D'];
+            
+            container.innerHTML = dilemma.decisions.map((decision, index) => `
+                <div class="decision-option" data-index="${index}">
+                    <span class="decision-letter">${letters[index]}</span>
+                    <span class="decision-text">${decision.text}</span>
+                    <div class="decision-implications" id="implications-${index}">
+                        <i class="fas fa-info-circle"></i> ${decision.implications}
+                    </div>
+                </div>
+            `).join('');
+
+            // Event listeners para decisiones
+            container.querySelectorAll('.decision-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    const index = parseInt(option.dataset.index);
+                    selectDecision(index, dilemma);
+                });
+            });
+        }
+
+        function selectDecision(index, dilemma) {
+            selectedDecision = index;
+            
+            // Actualizar UI
+            document.querySelectorAll('.decision-option').forEach((opt, i) => {
+                opt.classList.toggle('selected', i === index);
+                const impl = document.getElementById(`implications-${i}`);
+                impl.classList.toggle('show', i === index);
+            });
+            
+            // Mostrar botón de confirmar
+            document.getElementById('btn-confirm').classList.add('show');
+        }
+
+        function confirmDecision() {
+            if (selectedDecision === null) return;
+            
+            const dilemma = currentGameDilemmas[currentDilemmaIndex];
+            const decision = dilemma.decisions[selectedDecision];
+            
+            // Calcular puntuación por multiperspectiva
+            const viewedPercentage = viewedActors.length / dilemma.actors.length;
+            scores.multiperspectiva += Math.round(dilemma.weights.multiperspectiva * viewedPercentage);
+            
+            // Calcular pensamiento sistémico (basado en la decisión tomada)
+            scores.sistemico += dilemma.weights.sistemico;
+            
+            // Clasificar tipo de decisión
+            classifyDecision(selectedDecision);
+            
+            // Mostrar impacto
+            showImpact(dilemma, decision.originalIndex);
+        }
+
+        function classifyDecision(index) {
+            // Clasificación simplificada basada en el tipo de opción
+            const types = ['utilitarista', 'deontologico', 'comunitario', 'equilibrado'];
+            const type = types[index % 4];
+            
+            if (type === 'equilibrado') {
+                decisionTypes.comunitario++;
+            } else {
+                decisionTypes[type]++;
+            }
+        }
+
+        function showImpact(dilemma, originalIndex) {
+            const impact = dilemma.impacts[originalIndex];
+            const panel = document.getElementById('impact-panel');
+            
+            // Generar fecha futura aleatoria
+            const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
+                           'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+            const futureMonth = months[Math.floor(Math.random() * 12)];
+            const futureYear = 2025 + Math.floor(Math.random() * 2);
+            
+            document.getElementById('newspaper-date').textContent = `${futureMonth} ${futureYear}`;
+            document.getElementById('newspaper-headline').textContent = impact.headline;
+            document.getElementById('newspaper-text').textContent = impact.text;
+            
+            const analysisContainer = document.getElementById('analysis-items');
+            analysisContainer.innerHTML = impact.analysis.map(item => `
+                <div class="analysis-item">
+                    <span class="analysis-icon ${item.type}">
+                        <i class="fas fa-${item.type === 'positive' ? 'check' : 'times'}"></i>
+                    </span>
+                    <span>${item.text}</span>
+                </div>
+            `).join('');
+            
+            panel.classList.add('active');
+        }
+
+        function continueGame() {
+            document.getElementById('impact-panel').classList.remove('active');
+            
+            currentDilemmaIndex++;
+            
+            if (currentDilemmaIndex >= 5) {
+                showResults();
+            } else {
+                loadDilemma();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('game-screen').classList.remove('active');
+            document.getElementById('results-screen').classList.add('active');
+            
+            // Calcular totales
+            const maxMultiperspectiva = 145; // Máximo posible acumulado
+            const maxSistemico = 130;
+            const maxPrejuicios = 80;
+            
+            const normalizedMulti = Math.min(100, Math.round((scores.multiperspectiva / maxMultiperspectiva) * 100));
+            const normalizedSistemico = Math.min(100, Math.round((scores.sistemico / maxSistemico) * 100));
+            const normalizedPrejuicios = Math.min(100, Math.round((scores.prejuicios / maxPrejuicios) * 100));
+            
+            // Mostrar puntuaciones con animación
+            setTimeout(() => {
+                document.getElementById('score-multiperspectiva').textContent = normalizedMulti;
+                document.getElementById('bar-multiperspectiva').style.width = `${normalizedMulti}%`;
+            }, 300);
+            
+            setTimeout(() => {
+                document.getElementById('score-sistemico').textContent = normalizedSistemico;
+                document.getElementById('bar-sistemico').style.width = `${normalizedSistemico}%`;
+            }, 500);
+            
+            setTimeout(() => {
+                document.getElementById('score-prejuicios').textContent = normalizedPrejuicios;
+                document.getElementById('bar-prejuicios').style.width = `${normalizedPrejuicios}%`;
+            }, 700);
+            
+            // Determinar perfil
+            const profile = determineProfile(normalizedMulti, normalizedSistemico, normalizedPrejuicios);
+            
+            document.getElementById('profile-type').textContent = profile.type;
+            document.getElementById('profile-description').textContent = profile.description;
+            document.getElementById('profile-badge').innerHTML = `<i class="fas fa-${profile.icon}"></i>`;
+        }
+
+        function determineProfile(multi, sistemico, prejuicios) {
+            const avg = (multi + sistemico + prejuicios) / 3;
+            
+            // Determinar estilo predominante
+            let dominantType = 'equilibrado';
+            const maxDecision = Math.max(decisionTypes.utilitarista, decisionTypes.deontologico, decisionTypes.comunitario);
+            
+            if (decisionTypes.utilitariste === maxDecision) dominantType = 'utilitarista';
+            else if (decisionTypes.deontologico === maxDecision) dominantType = 'deontologico';
+            else if (decisionTypes.comunitario === maxDecision) dominantType = 'comunitario';
+            
+            if (avg >= 80) {
+                return {
+                    type: 'Ciudadano Visionario',
+                    icon: 'crown',
+                    description: 'Demuestras una capacidad excepcional para analizar conflictos morales desde múltiples perspectivas, identificar prejuicios ocultos y anticipar consecuencias sistémicas. Tu pensamiento crítico ciudadano está altamente desarrollado.'
+                };
+            } else if (avg >= 60) {
+                return {
+                    type: 'Ciudadano Reflexivo',
+                    icon: 'lightbulb',
+                    description: 'Tienes buenas competencias para analizar dilemas ciudadanos. Identificas diferentes perspectivas y evalúas consecuencias, aunque puedes seguir desarrollando tu capacidad para detectar prejuicios y pensar sistémicamente.'
+                };
+            } else if (avg >= 40) {
+                return {
+                    type: 'Ciudadano en Formación',
+                    icon: 'seedling',
+                    description: 'Estás desarrollando tus competencias ciudadanas. Te recomendamos practicar más la escucha activa de diferentes perspectivas, cuestionar tus propios prejuicios y considerar las consecuencias a largo plazo de las decisiones.'
+                };
+            } else {
+                return {
+                    type: 'Ciudadano Explorador',
+                    icon: 'compass',
+                    description: 'Estás comenzando tu camino en el desarrollo de competencias ciudadanas. Te sugerimos leer más sobre ética, derechos humanos y participar en debates sobre temas de interés público para fortalecer tu pensamiento crítico.'
+                };
+            }
+        }
+
+        function restartGame() {
+            document.getElementById('results-screen').classList.remove('active');
+            document.getElementById('start-screen').style.display = 'block';
+        }
+
+        // ==================== UTILIDADES ====================
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
