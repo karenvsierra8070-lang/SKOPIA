@@ -27,6 +27,11 @@
             appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
         };
 
+        // Soporte localhost (igual que el juego)
+        if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+            firebaseConfig.authDomain = "localhost";
+        }
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getDatabase(app);
@@ -201,9 +206,8 @@
         }
         .play-btn:hover { transform: translateY(-3px); box-shadow: 0 15px 25px rgba(39, 43, 0, 0.3); }
         
-        /* Estilo específico para el botón de repetir */
         #replay-btn {
-            background: linear-gradient(45deg, #555, #777); /* Color gris distintivo */
+            background: linear-gradient(45deg, #555, #777);
         }
 
         .button-container { display: flex; justify-content: center; gap: 20px; margin: 30px auto 0; flex-wrap: wrap; }
@@ -346,14 +350,14 @@
             </div>
             
             <div class="button-container">
-                <!-- Botón Jugar (Visible por defecto) -->
+                <!-- Botón Jugar (Visible por defecto, cuando NO ha completado el juego) -->
                 <button class="play-btn" id="play-btn">Jugar</button>
                 
-                <!-- Botón Volver a Jugar (Oculto por defecto) -->
-                <button class="play-btn" id="replay-btn" style="display: none;">Volver a Jugar</button>
+                <!-- Botón Jugar Nuevamente (Oculto por defecto, visible cuando ya completó el juego) -->
+                <button class="play-btn" id="replay-btn" style="display: none;">Jugar Nuevamente</button>
                 
-                <!-- Botón Continuar (Oculto por defecto) -->
-                <button class="continue-btn" id="continue-btn" style="display: none;">Continuar</button>
+                <!-- Botón Ir al Dashboard (Oculto por defecto, visible cuando ya completó el juego) -->
+                <button class="continue-btn" id="continue-btn" style="display: none;">Ir al Dashboard</button>
             </div>
         </div>
 
@@ -397,8 +401,6 @@
             // --- CONSTANTES Y VARIABLES ---
             const MISSIONS_KEY = 'skopia_missions_v1';
             const USER_PROFILE_KEY = 'skopia_user_profile_v1';
-            const GAME_PROGRESS_KEY = 'skopia_game_progress_v1';
-            const LESSON_PROGRESS_KEY = 'skopia_lesson_progress_v1';
             let toastTimer = null;
             let currentUserId = null;
             
@@ -685,7 +687,7 @@
             }
 
             // =====================================================
-            // LÓGICA DE DETECCIÓN DE JUEGO COMPLETADO
+            // LÓGICA DE DETECCIÓN DE JUEGO COMPLETADO EN FIREBASE
             // =====================================================
             async function checkGameCompletionStatus(userId) {
                 const playBtn = document.getElementById('play-btn');
@@ -693,24 +695,26 @@
                 const continueBtn = document.getElementById('continue-btn');
 
                 try {
-                    // Consultar el flag hasCompletedGame1 en Firebase
+                    // Consultar Firebase: users/{uid}/stats/hasCompletedGame1
                     const statsRef = window.ref(window.db, `users/${userId}/stats/hasCompletedGame1`);
                     const snapshot = await window.get(statsRef);
 
                     if (snapshot.exists() && snapshot.val() === true) {
-                        console.log("Juego detectado como completado en Firebase.");
+                        console.log("✅ Juego detectado como COMPLETADO en Firebase.");
+                        // Ocultar botón "Jugar"
                         playBtn.style.display = 'none';
-                        replayBtn.style.display = 'inline-flex'; // Mostrar botón volver a jugar
-                        continueBtn.style.display = 'inline-block'; // Mostrar botón continuar
+                        // Mostrar "Jugar Nuevamente" y "Ir al Dashboard"
+                        replayBtn.style.display = 'inline-flex';
+                        continueBtn.style.display = 'inline-block';
                     } else {
-                        console.log("Juego no completado aún.");
+                        console.log("⏳ Juego NO completado aún. Mostrando botón Jugar.");
                         playBtn.style.display = 'inline-flex';
                         replayBtn.style.display = 'none';
                         continueBtn.style.display = 'none';
                     }
                 } catch (error) {
-                    console.error("Error verificando estado del juego:", error);
-                    // Por defecto mostrar Jugar si falla
+                    console.error("Error verificando estado del juego en Firebase:", error);
+                    // Por defecto mostrar "Jugar" si hay error
                     playBtn.style.display = 'inline-flex';
                     replayBtn.style.display = 'none';
                     continueBtn.style.display = 'none';
@@ -740,10 +744,10 @@
                     }
                 }
                 
-                // Cargar misiones desde localStorage inicialmente para velocidad
+                // Cargar misiones desde localStorage inicialmente
                 updateAllDisplays();
                 
-                // Verificar si el juego ya fue completado para mostrar botones correctos
+                // Verificar en Firebase si el juego ya fue completado
                 await checkGameCompletionStatus(currentUserId);
             });
 
@@ -766,21 +770,21 @@
                 document.getElementById('video-container').style.display = 'none';
                 document.getElementById('lesson-container').classList.add('active');
                 startMissionTimer();
-                // Re-verificar estado al mostrar lección por si cambió
+                // Re-verificar estado al mostrar la lección
                 if(currentUserId) checkGameCompletionStatus(currentUserId);
             });
             
-            // Botón Jugar
+            // Botón Jugar (cuando el juego NO está completado)
             document.getElementById('play-btn').addEventListener('click', () => {
                 window.location.href = 'juego1.html';
             });
             
-            // Botón Volver a Jugar (Nuevo)
+            // Botón Jugar Nuevamente (cuando el juego YA está completado)
             document.getElementById('replay-btn').addEventListener('click', () => {
                 window.location.href = 'juego1.html';
             });
             
-            // Botón Continuar
+            // Botón Ir al Dashboard
             document.getElementById('continue-btn').addEventListener('click', () => {
                 window.location.href = 'LCDASHBOARD.html';
             });
