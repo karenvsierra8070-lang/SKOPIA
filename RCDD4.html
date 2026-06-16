@@ -1595,9 +1595,11 @@
             appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
         };
 
+        // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // Generar ID de usuario único (persistente)
         function getUserId() {
             let userId = localStorage.getItem('skopia_user_id');
             if (!userId) {
@@ -1609,6 +1611,7 @@
 
         const userId = getUserId();
 
+        // Estado global
         const globalState = {
             completedTopics: new Set(),
             visitedTopics: new Set(),
@@ -1621,9 +1624,13 @@
             allTopicsVisited: false
         };
 
-        // Firebase Functions
+        // ---------------------------------------------------------
+        // 2. GUARDAR PROGRESO EN FIREBASE
+        // ---------------------------------------------------------
         function saveProgressToFirebase(contentId = null) {
             const userRef = db.ref(`users/${userId}`);
+            
+            // Preparamos los datos a guardar (Sets a Arrays)
             const dataToSave = {
                 progress: {
                     completedTopics: Array.from(globalState.completedTopics),
@@ -1633,6 +1640,8 @@
                     lastUpdated: Date.now()
                 }
             };
+
+            // Si estamos visitando una página específica, guardamos el timestamp
             if (contentId) {
                 dataToSave.visits = {};
                 dataToSave.visits[contentId] = {
@@ -1640,41 +1649,169 @@
                     lastVisit: new Date().toLocaleString()
                 };
             }
-            userRef.update(dataToSave).catch(e => console.error(e));
+
+            // Actualizamos en Firebase (merge: true)
+            userRef.update(dataToSave)
+                .then(() => {
+                    console.log("Progreso guardado en Firebase correctamente.");
+                })
+                .catch((error) => {
+                    console.error("Error guardando en Firebase:", error);
+                });
         }
 
+        // ---------------------------------------------------------
+        // 3. CARGAR Y SINCRONIZAR VISUALMENTE TODO EL PROGRESO
+        // ---------------------------------------------------------
         function loadProgressFromFirebase() {
-            db.ref(`users/${userId}/progress`).once('value', (snapshot) => {
+            const userRef = db.ref(`users/${userId}/progress`);
+            
+            userRef.once('value', (snapshot) => {
                 const data = snapshot.val();
+                
                 if (data) {
+                    // 1. Restaurar el estado desde Firebase
                     globalState.completedTopics = new Set(data.completedTopics || []);
                     globalState.visitedTopics = new Set(data.visitedTopics || []);
                     globalState.quizScores = data.quizScores || { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
                     globalState.allTopicsVisited = data.allTopicsVisited || false;
-                    
-                    globalState.completedTopics.forEach(topicId => {
-                        const menuItem = document.querySelector(`[data-content="${topicId}"]`);
-                        if (menuItem) menuItem.classList.add('completed');
-                    });
-                    
-                    if (globalState.allTopicsVisited) unlockQuiz(1);
-                    updateEnergyBar();
+                } else {
+                    console.log("No hay datos previos en Firebase para este usuario.");
+                    // Limpiamos estado por si acaso
+                    globalState.completedTopics.clear();
+                    globalState.visitedTopics.clear();
                 }
+
+                // 2. ACTUALIZAR LA BARRA LATERAL COMPLETA (Visual)
+                // Recorremos TODOS los items del menú actual para iluminar los que ya están hechos
+                const allMenuItems = document.querySelectorAll('.menu-item');
+                allMenuItems.forEach(item => {
+                    const itemId = item.dataset.content;
+                    // Verificamos si este ID está en la lista de completados descargada de Firebase
+                    if (globalState.completedTopics.has(itemId)) {
+                        item.classList.add('completed');
+                        // Si es un cuestionario que se completó con nota alta, podríamos desbloquear el siguiente aquí también
+                        if (itemId === 'RCDD9' && globalState.quizScores.quiz1 >= 170) unlockQuiz(2);
+                        if (itemId === 'RCDD10' && globalState.quizScores.quiz2 >= 170) unlockQuiz(3);
+                    } else {
+                        item.classList.remove('completed');
+                    }
+                });
+
+                // 3. VERIFICAR DESBLOQUEO INICIAL (Basado en la regla de los 8 temas)
+                if (globalState.allTopicsVisited) {
+                    unlockQuiz(1);
+                }
+
+                // 4. Actualizar barra de energía
+                updateEnergyBar();
+            }).catch((error) => {
+                console.error("Error cargando de Firebase:", error);
             });
         }
 
-        // Exercise System
+        // ---------------------------------------------------------
+        // 4. MARCAR VISITA (Lógica Central)
+        // ---------------------------------------------------------
+        function markAsVisited(contentId) {
+            // Agregar al estado local
+            globalState.visitedTopics.add(contentId);
+            
+            // Si no es cuestionario ni evaluación final, marcar como "Tema Completado"
+            if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
+                !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
+                
+                globalState.completedTopics.add(contentId);
+                
+                // Feedback visual inmediato en el DOM (solo para el item actual)
+                const currentMenuItem = document.querySelector(`[data-content="${contentId}"]`);
+                if (currentMenuItem && !currentMenuItem.classList.contains('completed')) {
+                    currentMenuItem.classList.add('completed');
+                }
+            }
+
+            // Verificar si ya completamos todos los teóricos (1 al 8) para desbloquear el quiz
+            checkAllTopicsVisited();
+
+            // Guardar en Firebase
+            saveProgressToFirebase(contentId);
+        }
+
+        // ---------------------------------------------------------
+        // 5. LÓGICA DE VERIFICACIÓN Y DESBLOQUEO
+        // ---------------------------------------------------------
+        function checkAllTopicsVisited() {
+            // Definimos explícitamente los 8 temas teóricos
+            const theoreticalTopics = ['RCDD1', 'RCDD2', 'RCDD3', 'RCDD4', 'RCDD5', 'RCDD6', 'RCDD7', 'RCDD8'];
+            
+            let completedCount = 0;
+            
+            // Contamos cuántos de estos 8 están en el Set de completados
+            theoreticalTopics.forEach(topicId => {
+                if (globalState.completedTopics.has(topicId)) {
+                    completedCount++;
+                }
+            });
+
+            // Si los 8 están completados y aún no hemos marcado la bandera
+            if (completedCount >= 8 && !globalState.allTopicsVisited) {
+                globalState.allTopicsVisited = true;
+                unlockQuiz(1);
+                showNotification('¡Logro Desbloqueado!', 'Has completado todos los temas teóricos. Cuestionario 1 desbloqueado.');
+            }
+        }
+
+        function unlockQuiz(quizNumber) {
+            const quizId = (quizNumber === 1) ? 'RCDD9' : (quizNumber === 2) ? 'RCDD10' : 'RCDD11';
+            const quizItem = document.querySelector(`[data-content="${quizId}"]`);
+            
+            if (quizItem && quizItem.classList.contains('locked')) {
+                quizItem.classList.remove('locked');
+                quizItem.classList.add('unlocking'); // Animación
+                
+                // Quitar animación después
+                setTimeout(() => {
+                    quizItem.classList.remove('unlocking');
+                }, 600);
+            }
+        }
+
+        function updateEnergyBar() {
+            const totalTopics = 8;
+            const completedCount = globalState.completedTopics.size; // Cuenta todos los items completados en el set
+            // Nota: globalState.completedTopics contiene RCDD1...RCDD12. 
+            // Si quieres que la barra sea SOLO de temas teóricos (1-8), debemos filtrar:
+            
+            let theoreticalCount = 0;
+            for(let i=1; i<=8; i++) {
+                if(globalState.completedTopics.has(`RCDD${i}`)) theoreticalCount++;
+            }
+
+            const percentage = Math.min(100, Math.round((theoreticalCount / totalTopics) * 100));
+            
+            const fill = document.getElementById('energyFill');
+            const text = document.getElementById('energyPercentage');
+            
+            if (fill) fill.style.width = percentage + '%';
+            if (text) text.textContent = percentage + '%';
+        }
+
+        // ---------------------------------------------------------
+        // 6. EJERCICIOS Y LÓGICA DE PÁGINA
+        // ---------------------------------------------------------
+        
+        // Base de datos de preguntas
         const exerciseLevels = {
             advanced: [
                 {
                     question: "Calcula el valor de: -5 * (2 - 8) + (-3)",
                     answer: 27,
-                    explanation: "Primero el paréntesis: (2-8) = -6. Luego multiplicas: -5 * (-6) = 30. Finalmente sumas: 30 + (-3) = 27."
+                    explanation: "Paréntesis: (2-8) = -6. Multiplicación: -5 * (-6) = 30. Suma: 30 + (-3) = 27."
                 },
                 {
                     question: "Calcula el valor de: 12 - [4 + (-2) * 5]",
                     answer: 18,
-                    explanation: "Primero multiplicación dentro del corchete: -2 * 5 = -10. Luego suma: 4 + (-10) = -6. Finalmente: 12 - (-6) = 18."
+                    explanation: "Multiplicación: -2 * 5 = -10. Corchete: 4 + (-10) = -6. Total: 12 - (-6) = 18."
                 },
                 {
                     question: "Calcula el valor de: (-4)² + 3 * (-5)",
@@ -1691,18 +1828,27 @@
             const pool = exerciseLevels.advanced;
             const randomIndex = Math.floor(Math.random() * pool.length);
             currentExercise = pool[randomIndex];
-            document.getElementById('exerciseQuestion').textContent = currentExercise.question;
-            document.getElementById('userAnswer').value = '';
-            document.getElementById('feedback').style.display = 'none';
-            document.getElementById('feedback').className = 'exercise-feedback';
-            document.getElementById('streakIndicator').textContent = `Racha: ${streak} correctos seguidos`;
+            
+            const qEl = document.getElementById('exerciseQuestion');
+            const aEl = document.getElementById('userAnswer');
+            const fEl = document.getElementById('feedback');
+            const sEl = document.getElementById('streakIndicator');
+            
+            if(qEl) qEl.textContent = currentExercise.question;
+            if(aEl) aEl.value = '';
+            if(fEl) {
+                fEl.style.display = 'none';
+                fEl.className = 'exercise-feedback';
+            }
+            if(sEl) sEl.textContent = `Racha: ${streak} correctos seguidos`;
         }
 
         window.checkAnswer = function() {
-            const input = document.getElementById('userAnswer').value;
-            const userVal = parseInt(input);
+            const input = document.getElementById('userAnswer');
+            if(!input) return;
+            const userVal = parseInt(input.value);
             const feedbackBox = document.getElementById('feedback');
-
+            
             if (isNaN(userVal)) {
                 feedbackBox.textContent = "Por favor ingresa un número válido.";
                 feedbackBox.className = 'exercise-feedback incorrect';
@@ -1727,24 +1873,31 @@
             loadExercise();
         };
 
-        // Placeholders for Activity Buttons
-        window.startDiaryActivity = function() { alert("Iniciando actividad: Diario de Operaciones..."); };
-        window.startErrorAnalysis = function() { alert("Iniciando análisis de errores..."); };
-        window.startSpeedChallenge = function() { alert("Iniciando cronómetro..."); };
-        window.startTeachingActivity = function() { alert("Modo de enseñanza activado."); };
+        // Placeholders botones
+        window.startDiaryActivity = function() { alert("Iniciando actividad..."); };
+        window.startErrorAnalysis = function() { alert("Analizando errores..."); };
+        window.startSpeedChallenge = function() { alert("Cronómetro iniciado."); };
+        window.startTeachingActivity = function() { alert("Modo enseñanza activo."); };
 
-        // Init
+        // ---------------------------------------------------------
+        // 7. INICIALIZACIÓN Y EVENTOS
+        // ---------------------------------------------------------
         document.addEventListener('DOMContentLoaded', function() {
             setupEventListeners();
+            // Cargar TODO el progreso de Firebase al inicio
             loadProgressFromFirebase();
+            
             highlightCurrentPage();
             setupSidebarToggle();
             loadExercise();
             
+            // Marcar la página actual como visitada
             const currentPage = window.location.pathname.split('/').pop();
             const currentPageElement = document.querySelector(`[href="${currentPage}"]`);
+            
             if (currentPageElement) {
                 const contentId = currentPageElement.dataset.content;
+                // Solo si no son cuestionarios/evaluación
                 if (contentId && !contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
                     !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
                     markAsVisited(contentId);
@@ -1755,15 +1908,25 @@
         function setupEventListeners() {
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.addEventListener('click', function(e) {
+                    const isQuiz = this.dataset.quiz;
+                    const isFinal = this.dataset.final;
+                    
+                    // Prevenir navegación si está bloqueado
                     if (this.classList.contains('locked')) {
                         e.preventDefault();
+                        if (isQuiz) showNotification('Cuestionario Bloqueado', `Completa los requisitos previos.`);
+                        else if (isFinal) showNotification('Evaluación Bloqueada', 'Completa todos los cuestionarios primero.');
                         return false;
                     }
+                    
+                    // Marcar visitado al hacer click (antes de navegar)
                     const contentId = this.dataset.content;
                     if (contentId && !contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
                         !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
                         markAsVisited(contentId);
                     }
+                    
+                    // Permitir navegación normal
                     return true;
                 });
             });
@@ -1773,29 +1936,47 @@
             const sidebarToggle = document.getElementById('sidebarToggle');
             const sidebar = document.getElementById('sidebar');
             const contentArea = document.getElementById('contentArea');
-            sidebarToggle.addEventListener('click', function() {
-                sidebar.classList.toggle('hidden');
-                contentArea.classList.toggle('expanded');
-                const icon = this.querySelector('i');
-                if (sidebar.classList.contains('hidden')) {
-                    icon.classList.remove('fa-bars');
-                    icon.classList.add('fa-chevron-right');
-                } else {
-                    icon.classList.remove('fa-chevron-right');
-                    icon.classList.add('fa-bars');
-                }
-            });
+            if(sidebarToggle && sidebar && contentArea) {
+                sidebarToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('hidden');
+                    contentArea.classList.toggle('expanded');
+                    
+                    const icon = this.querySelector('i');
+                    if (sidebar.classList.contains('hidden')) {
+                        icon.classList.remove('fa-bars');
+                        icon.classList.add('fa-chevron-right');
+                    } else {
+                        icon.classList.remove('fa-chevron-right');
+                        icon.classList.add('fa-bars');
+                    }
+                });
+            }
         }
 
         function resetProgress() {
-            if (confirm('¿Reiniciar progreso en la nube?')) {
+            if (confirm('¿Estás seguro de que deseas reiniciar todo tu progreso en la nube?')) {
+                // Limpiar estado local
                 globalState.completedTopics.clear();
                 globalState.visitedTopics.clear();
                 globalState.allTopicsVisited = false;
+                globalState.quizScores = { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
+                
+                // Limpiar visuales
                 document.querySelectorAll('.menu-item.completed').forEach(item => item.classList.remove('completed'));
                 document.querySelectorAll('[data-quiz]').forEach(item => item.classList.add('locked'));
+                document.querySelectorAll('[data-final="true"]').forEach(item => item.classList.add('locked'));
+                
+                // Actualizar UI
                 updateEnergyBar();
-                db.ref(`users/${userId}`).remove().catch(e => console.error(e));
+                
+                // Borrar de Firebase
+                db.ref(`users/${userId}`).remove()
+                    .then(() => {
+                        showNotification('Reinicio', 'Progreso eliminado de la base de datos.');
+                    })
+                    .catch((error) => {
+                        console.error("Error borrando datos:", error);
+                    });
             }
         }
 
@@ -1805,50 +1986,10 @@
             if (menuItem) menuItem.classList.add('active');
         }
 
-        function markAsVisited(contentId) {
-            globalState.visitedTopics.add(contentId);
-            if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
-                !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
-                globalState.completedTopics.add(contentId);
-                const menuItem = document.querySelector(`[data-content="${contentId}"]`);
-                if (menuItem && !menuItem.classList.contains('completed')) {
-                    menuItem.classList.add('completed');
-                    updateEnergyBar();
-                }
-            }
-            checkAllTopicsVisited();
-            saveProgressToFirebase(contentId);
+        function showNotification(title, message) {
+            alert(`${title}: ${message}`); // Usando alert simple por compatibilidad, pero idealmente usaríamos tu modal HTML
         }
-
-        function checkAllTopicsVisited() {
-            const totalTopics = 8;
-            let count = 0;
-            for(let i=1; i<=totalTopics; i++) {
-                if(globalState.completedTopics.has(`RCDD${i}`)) count++;
-            }
-            if (count >= totalTopics && !globalState.allTopicsVisited) {
-                globalState.allTopicsVisited = true;
-                unlockQuiz(1);
-                alert('¡Prueba desbloqueada!');
-            }
-        }
-
-        function unlockQuiz(n) {
-            const item = document.querySelector(`[data-quiz="${n}"]`);
-            if (item) {
-                item.classList.remove('locked');
-                item.classList.add('unlocking');
-                setTimeout(() => item.classList.remove('unlocking'), 600);
-            }
-        }
-
-        function updateEnergyBar() {
-            const totalTopics = 8;
-            const completedCount = globalState.completedTopics.size;
-            const percentage = Math.min(100, Math.round((completedCount / totalTopics) * 100));
-            document.getElementById('energyFill').style.width = percentage + '%';
-            document.getElementById('energyPercentage').textContent = percentage + '%';
-        }
+    
     </script>
 </body>
 </html>
