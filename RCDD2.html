@@ -5,11 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Análisis de Distractores Comunes</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Scripts de Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
     <style>
         * {
             margin: 0;
@@ -339,10 +334,20 @@
             color: var(--gris-texto);
         }
 
+        /* Animación de desbloqueo */
         @keyframes unlock {
-            0% { transform: scale(0.8); opacity: 0.5; }
-            50% { transform: scale(1.1); opacity: 0.8; }
-            100% { transform: scale(1); opacity: 1; }
+            0% { 
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            50% { 
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+            100% { 
+                transform: scale(1);
+                opacity: 1;
+            }
         }
 
         .menu-item.unlocking {
@@ -601,7 +606,7 @@
             background: linear-gradient(135deg, var(--dorado-claro), rgba(212, 175, 55, 0.2));
             border-radius: 12px;
             border-left: 5px solid var(--dorado);
-            display: none;
+            display: none; /* Se muestra con JS */
         }
 
         .explanation-box.show {
@@ -610,8 +615,14 @@
         }
 
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { 
+                opacity: 0; 
+                transform: translateY(20px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
         }
 
         .explanation-box h4 {
@@ -708,8 +719,14 @@
         }
 
         @keyframes slideUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { 
+                opacity: 0; 
+                transform: translateY(30px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
         }
 
         .close-modal {
@@ -828,6 +845,29 @@
         .notification-message {
             font-size: 0.9rem;
             opacity: 0.9;
+        }
+
+        /* Efecto de partículas para logros */
+        .achievement-particle {
+            position: fixed;
+            pointer-events: none;
+            animation: floatUp 2s ease-out forwards;
+            z-index: 9999;
+        }
+
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(0);
+            }
+            50% {
+                opacity: 1;
+                transform: translateY(-20px) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-60px) scale(0.5);
+            }
         }
 
         /* Responsive */
@@ -1099,8 +1139,14 @@
         </div>
     </div>
 
-    <script>
+    <!-- Script Principal + Integración Firebase + Lógica del Ejercicio -->
+    <script type="module">
+        // ==========================================
         // 1. CONFIGURACIÓN DE FIREBASE
+        // ==========================================
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
         const firebaseConfig = {
             apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
             authDomain: "skopia-aa786.firebaseapp.com",
@@ -1112,35 +1158,39 @@
         };
 
         // Inicializar Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
 
-        // Generar o recuperar ID de Usuario único (Misma lógica que RCDD1)
-        function getUserId() {
-            let userId = localStorage.getItem('skopia_user_id');
-            if (!userId) {
-                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('skopia_user_id', userId);
-            }
-            return userId;
+        // Recuperar o generar ID de usuario consistente con otros archivos
+        let userId = localStorage.getItem('skopia_user_id');
+        if (!userId) {
+            userId = 'user_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+            localStorage.setItem('skopia_user_id', userId);
         }
 
-        const userId = getUserId();
+        const userProgressRef = ref(db, 'users/' + userId + '/module1/topics');
+        const requiredTopicsForQuiz1 = ['RCDD1', 'RCDD2', 'RCDD3', 'RCDD4', 'RCDD5', 'RCDD6', 'RCDD7', 'RCDD8'];
 
-        // Estado global
+        // Función para escribir visita en Firebase
+        window.markTopicInFirebase = function(topicId) {
+            set(ref(db, 'users/' + userId + '/module1/topics/' + topicId), true);
+        };
+
+        // Función para limpiar progreso en Firebase
+        window.clearFirebaseProgress = function() {
+            remove(ref(db, 'users/' + userId + '/module1'));
+        };
+
+        // ==========================================
+        // 2. ESTADO GLOBAL Y DATOS
+        // ==========================================
         const globalState = {
             completedTopics: new Set(),
             visitedTopics: new Set(),
-            quizScores: {
-                quiz1: 0,
-                quiz2: 0,
-                quiz3: 0,
-                final: 0
-            },
+            quizScores: { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 },
             allTopicsVisited: false
         };
 
-        // Base de datos de preguntas para el ejercicio
         const questionPool = [
             {
                 question: "Calcula el valor de 5 + 3 × 2",
@@ -1182,102 +1232,84 @@
 
         let currentQuestion = null;
 
-        // 2. GUARDAR EN FIREBASE
-        function saveProgressToFirebase(contentId = null) {
-            const userRef = db.ref(`users/${userId}`);
+        // ==========================================
+        // 3. SINCRONIZACIÓN EN TIEMPO REAL
+        // ==========================================
+        onValue(userProgressRef, (snapshot) => {
+            const data = snapshot.val();
             
-            const dataToSave = {
-                progress: {
-                    completedTopics: Array.from(globalState.completedTopics),
-                    visitedTopics: Array.from(globalState.visitedTopics),
-                    quizScores: globalState.quizScores,
-                    allTopicsVisited: globalState.allTopicsVisited,
-                    lastUpdated: Date.now()
-                }
-            };
-
-            if (contentId) {
-                dataToSave.visits = {};
-                dataToSave.visits[contentId] = {
-                    timestamp: firebase.database.ServerValue.timestamp,
-                    lastVisit: new Date().toLocaleString()
-                };
+            globalState.completedTopics.clear();
+            globalState.visitedTopics.clear();
+            
+            if (data) {
+                Object.keys(data).forEach(topicId => {
+                    globalState.completedTopics.add(topicId);
+                    globalState.visitedTopics.add(topicId);
+                });
             }
 
-            userRef.update(dataToSave)
-                .then(() => {
-                    console.log("Progreso guardado en Firebase correctamente");
-                })
-                .catch((error) => {
-                    console.error("Error guardando en Firebase:", error);
-                });
-        }
-
-        // 3. CARGAR DESDE FIREBASE
-        function loadProgressFromFirebase() {
-            const userRef = db.ref(`users/${userId}/progress`);
-            
-            userRef.once('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    globalState.completedTopics = new Set(data.completedTopics || []);
-                    globalState.visitedTopics = new Set(data.visitedTopics || []);
-                    globalState.quizScores = data.quizScores || { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
-                    globalState.allTopicsVisited = data.allTopicsVisited || false;
-                    
-                    globalState.completedTopics.forEach(topicId => {
-                        const menuItem = document.querySelector(`[data-content="${topicId}"]`);
-                        if (menuItem) {
-                            menuItem.classList.add('completed');
-                        }
-                    });
-                    
-                    if (globalState.allTopicsVisited) {
-                        unlockQuiz(1);
-                    }
-                    
-                    updateEnergyBar();
-                    updateDashboardStats();
+            // Actualizar Checks Visuales
+            document.querySelectorAll('.menu-item').forEach(item => {
+                const id = item.dataset.content;
+                if (globalState.completedTopics.has(id)) {
+                    item.classList.add('completed');
                 } else {
-                    console.log("No hay datos previos para este usuario en Firebase.");
+                    item.classList.remove('completed');
                 }
-            }).catch((error) => {
-                console.error("Error cargando de Firebase:", error);
             });
-        }
 
-        // Función para generar el ejercicio interactivo
+            // Desbloqueo Cuestionario 1
+            const visitedCount = requiredTopicsForQuiz1.filter(id => globalState.completedTopics.has(id)).length;
+            if (visitedCount === requiredTopicsForQuiz1.length) {
+                unlockQuiz(1);
+                globalState.allTopicsVisited = true;
+            } else {
+                globalState.allTopicsVisited = false;
+            }
+
+            // Actualizar UI
+            updateEnergyBar();
+            updateDashboardStats();
+            
+            // Espejo en sessionStorage
+            sessionStorage.setItem('module1Progress', JSON.stringify({
+                completedTopics: Array.from(globalState.completedTopics),
+                visitedTopics: Array.from(globalState.visitedTopics),
+                quizScores: globalState.quizScores,
+                allTopicsVisited: globalState.allTopicsVisited
+            }));
+        });
+
+        // ==========================================
+        // 4. LÓGICA DE EJERCICIOS E INTERACCIÓN
+        // ==========================================
+        
         function generateNewExercise() {
             const container = document.getElementById('exercise-container');
-            
-            // Seleccionar una pregunta aleatoria
+            // Seleccionar pregunta aleatoria
             const randomIndex = Math.floor(Math.random() * questionPool.length);
             currentQuestion = questionPool[randomIndex];
-            
-            // Mezclar respuestas (correcta + distractores)
-            const allOptions = [currentQuestion.correctAnswer, ...currentQuestion.distractors];
-            // Función simple para mezclar array
-            for (let i = allOptions.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [allOptions[i], allOptions[j]] = [allOptions[j], allOptions[i]];
-            }
 
-            // Crear HTML
+            // Preparar opciones (Mezclar correcta con distractores)
+            const allOptions = [...currentQuestion.distractors, currentQuestion.correctAnswer];
+            // Mezclar array
+            allOptions.sort(() => Math.random() - 0.5);
+
+            // Renderizar HTML
             let html = `
                 <div class="question-text">${currentQuestion.question}</div>
                 <div class="options-grid">
-            `;
-            
-            allOptions.forEach(opt => {
-                html += `<button class="option-button" onclick="checkAnswer(this, '${opt}')">${opt}</button>`;
-            });
-            
-            html += `</div>
+                    ${allOptions.map(opt => `
+                        <button class="option-button" onclick="window.checkAnswer(this, ${JSON.stringify(opt).replace(/"/g, '&quot;')})">
+                            ${opt}
+                        </button>
+                    `).join('')}
+                </div>
                 <div class="explanation-box" id="explanationBox">
-                    <h4><i class="fas fa-lightbulb"></i> Explicación</h4>
+                    <h4><i class="fas fa-lightbulb"></i> Análisis:</h4>
                     <p>${currentQuestion.explanation}</p>
                 </div>
-                <button class="next-question-btn" onclick="generateNewExercise()" style="display:none;" id="nextBtn">
+                <button class="next-question-btn" id="nextBtn" onclick="window.generateNewExerciseUI()" style="display:none">
                     Siguiente Pregunta <i class="fas fa-arrow-right"></i>
                 </button>
             `;
@@ -1285,54 +1317,69 @@
             container.innerHTML = html;
         }
 
-        // Verificar respuesta
+        // Exponer funciones al objeto window para que funcionen con onclick en HTML
+        window.generateNewExerciseUI = function() {
+            generateNewExercise();
+        };
+
         window.checkAnswer = function(btn, selectedValue) {
-            // Convertir a string para comparación segura
-            const selectedStr = String(selectedValue);
-            const correctStr = String(currentQuestion.correctAnswer);
-            
             // Deshabilitar botones
             const buttons = document.querySelectorAll('.option-button');
             buttons.forEach(b => b.disabled = true);
-            
-            if (selectedStr === correctStr) {
+
+            const isCorrect = String(selectedValue) === String(currentQuestion.correctAnswer);
+
+            if (isCorrect) {
                 btn.classList.add('correct');
+                showNotification('¡Correcto!', 'Has identificado la respuesta adecuada.');
             } else {
                 btn.classList.add('incorrect');
                 // Resaltar la correcta
                 buttons.forEach(b => {
-                    if (String(b.textContent).trim() === correctStr) {
+                    if (String(b.textContent.trim()) === String(currentQuestion.correctAnswer)) {
                         b.classList.add('correct');
                     }
                 });
+                showNotification('Incorrecto', 'Revisa el análisis para entender el error.');
             }
-            
+
             // Mostrar explicación
             document.getElementById('explanationBox').classList.add('show');
             document.getElementById('nextBtn').style.display = 'block';
         };
 
-        // Inicialización
+        // ==========================================
+        // 5. INICIALIZACIÓN Y EVENTOS
+        // ==========================================
         document.addEventListener('DOMContentLoaded', function() {
             setupEventListeners();
-            loadProgressFromFirebase();
             highlightCurrentPage();
             setupSidebarToggle();
-            generateNewExercise();
+            generateNewExercise(); // Cargar ejercicio inicial
             
+            // Marcar RCDD2 como visitado
             const currentPage = window.location.pathname.split('/').pop();
             const currentPageElement = document.querySelector(`[href="${currentPage}"]`);
             if (currentPageElement) {
                 const contentId = currentPageElement.dataset.content;
                 if (contentId && !contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
                     !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
-                    markAsVisited(contentId);
+                    
+                    window.markTopicInFirebase(contentId);
+                    globalState.completedTopics.add(contentId);
+                    globalState.visitedTopics.add(contentId);
+                    
+                    // Efecto visual inmediato
+                    if (!currentPageElement.classList.contains('completed')) {
+                        currentPageElement.classList.add('completed');
+                        createAchievementParticles(currentPageElement);
+                    }
                 }
             }
         });
 
-        // Configurar event listeners
         function setupEventListeners() {
+            // Menu items
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.addEventListener('click', function(e) {
                     const isQuiz = this.dataset.quiz;
@@ -1340,38 +1387,23 @@
                     
                     if (this.classList.contains('locked')) {
                         e.preventDefault();
-                        if (isQuiz) {
-                            showNotification('Cuestionario Bloqueado', `Completa los requisitos previos para desbloquear el Cuestionario ${isQuiz}.`);
-                        } else if (isFinal) {
-                            showNotification('Evaluación Bloqueada', 'Completa todos los cuestionarios primero para desbloquear la evaluación final.');
-                        }
+                        const msg = isQuiz 
+                            ? `Completa los requisitos previos para el Cuestionario ${isQuiz}.` 
+                            : 'Completa todos los cuestionarios primero.';
+                        showNotification(isQuiz ? 'Cuestionario Bloqueado' : 'Evaluación Bloqueada', msg);
                         return false;
                     }
                     
-                    const contentId = this.dataset.content;
-                    if (contentId) {
-                        if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
-                            !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
-                            markAsVisited(contentId);
-                        }
-                    }
+                    // La navegación es automática, Firebase se encargará del estado en la carga
                     return true;
                 });
             });
 
-            document.getElementById('cheatSheetBtn').addEventListener('click', function() {
-                document.getElementById('cheatSheetModal').classList.add('active');
-            });
-
-            document.getElementById('closeModal').addEventListener('click', function() {
-                document.getElementById('cheatSheetModal').classList.remove('active');
-            });
-
-            document.getElementById('cheatSheetModal').addEventListener('click', function(e) {
-                if (e.target === this) {
-                    this.classList.remove('active');
-                }
-            });
+            // Modal
+            const modal = document.getElementById('cheatSheetModal');
+            document.getElementById('cheatSheetBtn').addEventListener('click', () => modal.classList.add('active'));
+            document.getElementById('closeModal').addEventListener('click', () => modal.classList.remove('active'));
+            modal.addEventListener('click', (e) => { if(e.target === modal) modal.classList.remove('active'); });
         }
 
         function setupSidebarToggle() {
@@ -1394,64 +1426,49 @@
             });
         }
 
-        function resetProgress() {
-            if (confirm('¿Estás seguro de que deseas reiniciar todo tu progreso en la nube? Esta acción no se puede deshacer.')) {
+        window.resetProgress = function() {
+            if (confirm('¿Estás seguro de que deseas reiniciar todo tu progreso?')) {
+                window.clearFirebaseProgress();
+                document.querySelectorAll('.menu-item.completed').forEach(item => item.classList.remove('completed'));
+                document.querySelectorAll('[data-quiz], [data-final="true"]').forEach(item => item.classList.add('locked'));
+                
                 globalState.completedTopics.clear();
                 globalState.visitedTopics.clear();
-                globalState.quizScores = { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
                 globalState.allTopicsVisited = false;
-                
-                document.querySelectorAll('.menu-item.completed').forEach(item => {
-                    item.classList.remove('completed');
-                });
-                
-                document.querySelectorAll('[data-quiz]').forEach(item => {
-                    item.classList.add('locked');
-                });
-                
-                document.querySelectorAll('[data-final="true"]').forEach(item => {
-                    item.classList.add('locked');
-                });
                 
                 updateEnergyBar();
                 updateDashboardStats(true);
-                
-                db.ref(`users/${userId}`).remove()
-                    .then(() => {
-                        showNotification('Progreso Reiniciado', 'Tus datos han sido eliminados de la base de datos.');
-                    })
-                    .catch((error) => {
-                        console.error("Error borrando datos:", error);
-                    });
+                sessionStorage.removeItem('module1Progress');
+                showNotification('Progreso Reiniciado', 'Se ha eliminado el progreso correctamente.');
             }
-        }
+        };
 
         function highlightCurrentPage() {
             const currentPage = window.location.pathname.split('/').pop();
             const menuItem = document.querySelector(`[href="${currentPage}"]`);
-            if (menuItem) {
-                menuItem.classList.add('active');
+            if (menuItem) menuItem.classList.add('active');
+        }
+
+        function unlockQuiz(quizNumber) {
+            const quizItem = document.querySelector(`[data-quiz="${quizNumber}"]`);
+            if (quizItem && quizItem.classList.contains('locked')) {
+                quizItem.classList.remove('locked');
+                quizItem.classList.add('unlocking');
+                showNotification('¡Desbloqueado!', `El Cuestionario ${quizNumber} está disponible.`);
+                setTimeout(() => quizItem.classList.remove('unlocking'), 600);
             }
         }
 
-        function markAsVisited(contentId) {
-            globalState.visitedTopics.add(contentId);
-            
-            if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
-                !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
-                globalState.completedTopics.add(contentId);
-                const menuItem = document.querySelector(`[data-content="${contentId}"]`);
-                if (menuItem && !menuItem.classList.contains('completed')) {
-                    menuItem.classList.add('completed');
-                    createAchievementParticles(menuItem);
-                    updateDashboardStats(true);
-                }
-            }
-            
-            checkAllTopicsVisited();
-            
-            // GUARDAR EN FIREBASE
-            saveProgressToFirebase(contentId);
+        function updateEnergyBar() {
+            const total = requiredTopicsForQuiz1.length;
+            const count = requiredTopicsForQuiz1.filter(id => globalState.completedTopics.has(id)).length;
+            const percentage = Math.round((count / total) * 100);
+            document.getElementById('energyFill').style.width = percentage + '%';
+            document.getElementById('energyPercentage').textContent = percentage + '%';
+        }
+
+        function updateDashboardStats() {
+            // Placeholder para futuras integraciones de dashboard
         }
 
         function createAchievementParticles(element) {
@@ -1464,68 +1481,23 @@
                 particle.innerHTML = '✨';
                 particle.style.left = (rect.left + rect.width / 2) + 'px';
                 particle.style.top = (rect.top + rect.height / 2) + 'px';
-                
-                const x = (Math.random() - 0.5) * 100;
-                const y = (Math.random() - 0.5) * 100;
-                particle.style.transform = `translate(${x}px, ${y}px)`;
-                
+                particle.style.fontSize = (Math.random() * 20 + 10) + 'px';
+                particle.style.color = colors[Math.floor(Math.random() * colors.length)];
                 document.body.appendChild(particle);
-                
-                setTimeout(() => {
-                    particle.remove();
-                }, 2000);
+                setTimeout(() => particle.remove(), 2000);
             }
-        }
-
-        function checkAllTopicsVisited() {
-            const totalTheoreticalTopics = 8; 
-            
-            let count = 0;
-            for(let i=1; i<=totalTheoreticalTopics; i++) {
-                if(globalState.completedTopics.has(`RCDD${i}`)) {
-                    count++;
-                }
-            }
-
-            if (count >= totalTheoreticalTopics && !globalState.allTopicsVisited) {
-                globalState.allTopicsVisited = true;
-                unlockQuiz(1);
-                showNotification('¡Logro Desbloqueado!', 'Has completado todos los temas teóricos. ¡Prueba desbloqueada!');
-            }
-        }
-
-        function unlockQuiz(quizNumber) {
-            const quizItem = document.querySelector(`[data-quiz="${quizNumber}"]`);
-            if (quizItem) {
-                quizItem.classList.remove('locked');
-                quizItem.classList.add('unlocking');
-                setTimeout(() => quizItem.classList.remove('unlocking'), 600);
-            }
-        }
-
-        function updateEnergyBar() {
-            const totalTopics = 8; 
-            const completedCount = globalState.completedTopics.size;
-            const percentage = Math.min(100, Math.round((completedCount / totalTopics) * 100));
-            
-            document.getElementById('energyFill').style.width = percentage + '%';
-            document.getElementById('energyPercentage').textContent = percentage + '%';
         }
 
         function showNotification(title, message) {
             const notification = document.getElementById('notification');
-            document.querySelector('.notification-title').textContent = title;
-            document.getElementById('notificationMessage').textContent = message;
+            const titleEl = notification.querySelector('.notification-title');
+            const msgEl = document.getElementById('notificationMessage');
+            
+            titleEl.textContent = title;
+            msgEl.textContent = message;
             
             notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
-        }
-        
-        function updateDashboardStats(showNotification = false) {
-            updateEnergyBar();
+            setTimeout(() => notification.classList.remove('show'), 4000);
         }
     </script>
 </body>
