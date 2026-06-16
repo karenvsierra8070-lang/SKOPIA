@@ -66,7 +66,6 @@
             --float-color: var(--color-oliva-oscuro);
             --float-color-hover: var(--color-oliva-medio);
             
-            /* Colores por tipo */
             --color-ejemplificacion: #606c38;
             --color-explicacion: #bc6c25;
             --color-comparacion: #5a6133;
@@ -567,6 +566,102 @@
             font-size: 1rem;
         }
 
+        /* ✅ NUEVO: Modal de Completado */
+        .completion-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 5000;
+            animation: fadeIn 0.3s ease;
+        }
+        .completion-modal.visible {
+            display: flex;
+        }
+        .completion-content {
+            background: white;
+            border-radius: 24px;
+            padding: 50px 40px;
+            text-align: center;
+            max-width: 450px;
+            width: 90%;
+            animation: scaleIn 0.5s ease;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        @keyframes scaleIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .completion-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, var(--color-correcto), #388e3c);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+            animation: bounce 0.6s ease infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .completion-icon i {
+            font-size: 3rem;
+            color: white;
+        }
+        .completion-title {
+            font-family: 'Patrick Hand', cursive;
+            font-size: 2.2rem;
+            color: var(--color-oliva-oscuro);
+            margin-bottom: 15px;
+        }
+        .completion-text {
+            color: var(--color-oliva-medio);
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        .completion-timer {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.95rem;
+            color: var(--color-acento);
+            margin-bottom: 20px;
+        }
+        .completion-btn {
+            background: linear-gradient(135deg, var(--color-oliva-medio), var(--color-oliva-oscuro));
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .completion-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(39, 43, 0, 0.3);
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            animation: confettiFall 3s ease-out forwards;
+        }
+        @keyframes confettiFall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -660,6 +755,12 @@
                 transform: translateY(-55%); 
             }
             .floating-icons { right: 10px; }
+            .completion-content {
+                padding: 30px 20px;
+            }
+            .completion-title {
+                font-size: 1.8rem;
+            }
         }
     </style>
 </head>
@@ -737,6 +838,21 @@
         </div>
     </main>
 
+    <!-- ✅ NUEVO: Modal de Completado -->
+    <div class="completion-modal" id="completion-modal">
+        <div class="completion-content">
+            <div class="completion-icon">
+                <i class="fas fa-trophy"></i>
+            </div>
+            <h2 class="completion-title">¡Módulo Completado!</h2>
+            <p class="completion-text">Has dominado las 4 técnicas de Ideas Secundarias. El módulo de <strong>Parafraseo</strong> ha sido desbloqueado.</p>
+            <p class="completion-timer">Serás redirigido automáticamente en <span id="redirect-timer">5</span> segundos...</p>
+            <button class="completion-btn" id="go-dashboard-btn">
+                <i class="fas fa-arrow-right"></i> Ir al Dashboard
+            </button>
+        </div>
+    </div>
+
     <div class="floating-icons" aria-hidden="false">
         <button id="btn-misiones" title="Misiones"><i class="fas fa-bullseye"></i></button>
         <button id="btn-nivel" title="Nivel actual"><i class="fas fa-star"></i></button>
@@ -780,6 +896,7 @@
         console.log("DOM Cargado. Inicializando Dashboard Ideas Secundarias...");
 
         const MIN_SCORE_TO_UNLOCK = 180;
+        const REDIRECT_DELAY = 5; // segundos
         
         const techniquesConfig = {
             'LCS2D1': {
@@ -860,8 +977,12 @@
         const toast = document.getElementById('toast');
         const techniquesGrid = document.getElementById('techniques-grid');
         const syncIndicator = document.getElementById('sync-indicator');
+        const completionModal = document.getElementById('completion-modal');
+        const redirectTimerEl = document.getElementById('redirect-timer');
+        const goDashboardBtn = document.getElementById('go-dashboard-btn');
 
         let currentUserId = null;
+        let redirectInterval = null;
 
         // ============================================
         // FUNCIONES DE FIREBASE
@@ -886,12 +1007,28 @@
             return null;
         }
 
+        // ✅ NUEVO: Guardar estado completado en lc_progress
+        async function markLCS2AsCompletedInLCProgress(userId, averageScore) {
+            try {
+                const dbRef = window.ref(window.db, `users/${userId}/lc_progress/lcs2f`);
+                await window.set(dbRef, {
+                    completed: true,
+                    score: averageScore,
+                    completedAt: Date.now(),
+                    fromSubmodules: true
+                });
+                console.log("LCS2 marcado como completado en lc_progress");
+            } catch (error) {
+                console.error("Error guardando completado:", error);
+            }
+        }
+
         function showSyncIndicator(show) {
             syncIndicator.classList.toggle('visible', show);
         }
 
         // ============================================
-        // LÓGICA DE DATOS (CORREGIDA PARA LEER CUALQUIER FORMATO)
+        // LÓGICA DE DATOS
         // ============================================
         
         function getLocalProgress() {
@@ -904,12 +1041,9 @@
             }
         }
 
-        // ✅ FUNCIÓN CLAVE: Busca el progreso con o sin .html
         function findTechData(progress, techId) {
             if (!progress.techniques) return null;
-            // Intenta con 'LCS2D1'
             if (progress.techniques[techId]) return progress.techniques[techId];
-            // Intenta con 'LCS2D1.html' (por si quedó guardado así)
             if (progress.techniques[techId + '.html']) return progress.techniques[techId + '.html'];
             return null;
         }
@@ -920,7 +1054,6 @@
             
             if (config.requires) {
                 const progress = getLocalProgress();
-                // Usamos la función inteligente para buscar el requisito
                 const requiredProgress = findTechData(progress, config.requires);
                 
                 if (requiredProgress && requiredProgress.completed && requiredProgress.score >= config.requiresScore) {
@@ -929,6 +1062,95 @@
                 return false;
             }
             return true;
+        }
+
+        // ✅ NUEVA FUNCIÓN: Verificar si todo está completado
+        function checkIfAllCompleted() {
+            const progress = getLocalProgress();
+            const techniques = ['LCS2D1', 'LCS2D2', 'LCS2D3', 'LCS2D4'];
+            
+            for (const tech of techniques) {
+                const techData = findTechData(progress, tech);
+                if (!techData || !techData.completed || (techData.score || 0) < MIN_SCORE_TO_UNLOCK) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // ✅ NUEVA FUNCIÓN: Calcular puntaje promedio
+        function calculateAverageScore() {
+            const progress = getLocalProgress();
+            const techniques = ['LCS2D1', 'LCS2D2', 'LCS2D3', 'LCS2D4'];
+            let totalScore = 0;
+            let count = 0;
+            
+            for (const tech of techniques) {
+                const techData = findTechData(progress, tech);
+                if (techData && techData.score) {
+                    totalScore += techData.score;
+                    count++;
+                }
+            }
+            
+            return count > 0 ? Math.round(totalScore / count) : 0;
+        }
+
+        // ✅ NUEVA FUNCIÓN: Mostrar modal de completado y redirigir
+        function showCompletionModalAndRedirect() {
+            const averageScore = calculateAverageScore();
+            
+            // Guardar en Firebase que LCS2 está completado
+            if (currentUserId) {
+                markLCS2AsCompletedInLCProgress(currentUserId, averageScore);
+            }
+            
+            // Mostrar el modal
+            completionModal.classList.add('visible');
+            
+            // Crear confetti
+            createConfetti();
+            
+            // Iniciar contador de redirección
+            let timeLeft = REDIRECT_DELAY;
+            redirectTimerEl.textContent = timeLeft;
+            
+            redirectInterval = setInterval(() => {
+                timeLeft--;
+                redirectTimerEl.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(redirectInterval);
+                    redirectToDashboard();
+                }
+            }, 1000);
+        }
+
+        // ✅ NUEVA FUNCIÓN: Crear confetti
+        function createConfetti() {
+            const colors = ['#ffd700', '#4caf50', '#ff9e6d', '#606c38', '#bc6c25'];
+            const modal = document.getElementById('completion-modal');
+            
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
+                modal.appendChild(confetti);
+                
+                // Remover confetti después de la animación
+                setTimeout(() => confetti.remove(), 5000);
+            }
+        }
+
+        // ✅ NUEVA FUNCIÓN: Redirigir al dashboard
+        function redirectToDashboard() {
+            if (redirectInterval) {
+                clearInterval(redirectInterval);
+            }
+            window.location.href = 'LCDASHBOARD.html';
         }
 
         // ============================================
@@ -942,7 +1164,6 @@
             
             Object.entries(techniquesConfig).forEach(([techId, config]) => {
                 const isUnlocked = isTechniqueUnlocked(techId);
-                // ✅ Usamos la función inteligente para encontrar el puntaje
                 const techProgress = findTechData(progress, techId);
                 
                 const isCompleted = techProgress?.completed && techProgress?.score >= MIN_SCORE_TO_UNLOCK;
@@ -1046,6 +1267,14 @@
                     if (techId) handleTechniqueStart(techId);
                 });
             });
+
+            // ✅ NUEVO: Verificar si todo está completado después de renderizar
+            if (checkIfAllCompleted()) {
+                // Pequeño delay para que el usuario vea las tarjetas completadas
+                setTimeout(() => {
+                    showCompletionModalAndRedirect();
+                }, 1000);
+            }
         }
 
         function handleTechniqueStart(techId) {
@@ -1074,7 +1303,6 @@
             let scoreCount = 0;
             let attempts = 0;
             
-            // Iteramos sobre todo lo que encuentre
             Object.values(techniques).forEach(data => {
                 if (data.completed && data.score >= MIN_SCORE_TO_UNLOCK) completedCount++;
                 if (data.score) { totalScore += data.score; scoreCount++; }
@@ -1134,7 +1362,6 @@
             ];
             
             container.innerHTML = missions.map(m => {
-                // Usamos findTechData para verificar misiones también
                 const data = findTechData(progress, m.key);
                 const isDone = data?.completed && data?.score >= MIN_SCORE_TO_UNLOCK;
                 return `<div class="mission-row ${isDone ? 'completed' : ''}">
@@ -1163,7 +1390,7 @@
             let html = '<div class="info"><strong>Progreso por Tecnica:</strong></div>';
             
             Object.entries(techniquesConfig).forEach(([techId, config]) => {
-                const techProgress = findTechData(progress, techId); // Usamos función inteligente
+                const techProgress = findTechData(progress, techId);
                 const status = techProgress?.completed ? 
                     `Completado (${techProgress.score} pts)` : 
                     (techProgress?.currentQuestion > 0 ? 'En progreso' : 'No iniciado');
@@ -1187,6 +1414,20 @@
             renderMissions();
             renderLevel();
             renderProgressPanel();
+            
+            // ✅ NUEVO: Escuchar cambios en tiempo real
+            const progressRef = window.ref(window.db, `users/${currentUserId}/lcs2_progress`);
+            window.onValue(progressRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    localStorage.setItem('skopia_lcs2_progress', JSON.stringify(data));
+                    renderTechniqueCards();
+                    updateStats();
+                    renderMissions();
+                    renderLevel();
+                    renderProgressPanel();
+                }
+            });
         });
 
         hamburgerMenu.addEventListener('click', () => userDropdown.classList.toggle('active'));
@@ -1197,6 +1438,10 @@
             });
         });
         closeBtn.addEventListener('click', () => window.location.href = 'LCS2.html');
+        
+        // ✅ NUEVO: Botón para ir al dashboard manualmente
+        goDashboardBtn.addEventListener('click', redirectToDashboard);
+        
         window.addEventListener('click', (event) => {
             if (!event.target.closest('.navbar')) userDropdown.classList.remove('active');
             if (!event.target.closest('.floating-icons') && !event.target.closest('.panel-box')) closeAllPanels();
@@ -1214,6 +1459,9 @@
             if (e.key === 'skopia_lcs2_progress') {
                 renderTechniqueCards();
                 updateStats();
+                renderMissions();
+                renderLevel();
+                renderProgressPanel();
             }
         });
     });
