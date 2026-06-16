@@ -1139,14 +1139,13 @@
         </div>
     </div>
 
-    <!-- Script Principal + Integración Firebase + Lógica del Ejercicio -->
+    <!-- Script con Integración Firebase y Lógica Completa -->
     <script type="module">
-        // ==========================================
-        // 1. CONFIGURACIÓN DE FIREBASE
-        // ==========================================
+        // 1. Importaciones de Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+        // 2. Configuración de Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
             authDomain: "skopia-aa786.firebaseapp.com",
@@ -1157,33 +1156,22 @@
             appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
         };
 
-        // Inicializar Firebase
+        // Inicializar app
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Recuperar o generar ID de usuario consistente con otros archivos
+        // 3. Gestión de Usuario (ID consistente)
         let userId = localStorage.getItem('skopia_user_id');
         if (!userId) {
-            userId = 'user_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+            userId = 'user_' + Date.now();
             localStorage.setItem('skopia_user_id', userId);
         }
 
+        // Referencia a la base de datos
         const userProgressRef = ref(db, 'users/' + userId + '/module1/topics');
         const requiredTopicsForQuiz1 = ['RCDD1', 'RCDD2', 'RCDD3', 'RCDD4', 'RCDD5', 'RCDD6', 'RCDD7', 'RCDD8'];
 
-        // Función para escribir visita en Firebase
-        window.markTopicInFirebase = function(topicId) {
-            set(ref(db, 'users/' + userId + '/module1/topics/' + topicId), true);
-        };
-
-        // Función para limpiar progreso en Firebase
-        window.clearFirebaseProgress = function() {
-            remove(ref(db, 'users/' + userId + '/module1'));
-        };
-
-        // ==========================================
-        // 2. ESTADO GLOBAL Y DATOS
-        // ==========================================
+        // 4. Estado Global
         const globalState = {
             completedTopics: new Set(),
             visitedTopics: new Set(),
@@ -1191,6 +1179,7 @@
             allTopicsVisited: false
         };
 
+        // 5. Base de datos de preguntas
         const questionPool = [
             {
                 question: "Calcula el valor de 5 + 3 × 2",
@@ -1229,18 +1218,27 @@
                 explanation: "La respuesta correcta es 0. Primero resolvemos el paréntesis: (1+1)=2. Luego la multiplicación: 5×2=10. Finalmente la resta: 10-10=0. El distractor 10 ignora la multiplicación y solo resta 5."
             }
         ];
-
         let currentQuestion = null;
 
-        // ==========================================
-        // 3. SINCRONIZACIÓN EN TIEMPO REAL
-        // ==========================================
+        // 6. Funciones de Firebase y Sincronización
+        // Marcar tema en Firebase
+        window.markTopicInFirebase = function(topicId) {
+            set(ref(db, 'users/' + userId + '/module1/topics/' + topicId), true);
+        };
+
+        // Limpiar progreso
+        window.clearFirebaseProgress = function() {
+            remove(ref(db, 'users/' + userId + '/module1'));
+        };
+
+        // Escuchar cambios en Firebase y actualizar UI
         onValue(userProgressRef, (snapshot) => {
             const data = snapshot.val();
             
+            // Actualizar Set global
             globalState.completedTopics.clear();
             globalState.visitedTopics.clear();
-            
+
             if (data) {
                 Object.keys(data).forEach(topicId => {
                     globalState.completedTopics.add(topicId);
@@ -1248,7 +1246,8 @@
                 });
             }
 
-            // Actualizar Checks Visuales
+            // ACTUALIZAR VISUALMENTE TODOS LOS ITEMS DEL MENÚ
+            // Aquí es donde se leen "los otros"
             document.querySelectorAll('.menu-item').forEach(item => {
                 const id = item.dataset.content;
                 if (globalState.completedTopics.has(id)) {
@@ -1258,7 +1257,7 @@
                 }
             });
 
-            // Desbloqueo Cuestionario 1
+            // Verificar desbloqueo de cuestionario 1
             const visitedCount = requiredTopicsForQuiz1.filter(id => globalState.completedTopics.has(id)).length;
             if (visitedCount === requiredTopicsForQuiz1.length) {
                 unlockQuiz(1);
@@ -1267,11 +1266,11 @@
                 globalState.allTopicsVisited = false;
             }
 
-            // Actualizar UI
+            // Actualizar barra de energía
             updateEnergyBar();
             updateDashboardStats();
-            
-            // Espejo en sessionStorage
+
+            // Guardar espejo local
             sessionStorage.setItem('module1Progress', JSON.stringify({
                 completedTopics: Array.from(globalState.completedTopics),
                 visitedTopics: Array.from(globalState.visitedTopics),
@@ -1280,22 +1279,14 @@
             }));
         });
 
-        // ==========================================
-        // 4. LÓGICA DE EJERCICIOS E INTERACCIÓN
-        // ==========================================
-        
+        // 7. Funciones de Lógica de Ejercicios
         function generateNewExercise() {
             const container = document.getElementById('exercise-container');
-            // Seleccionar pregunta aleatoria
             const randomIndex = Math.floor(Math.random() * questionPool.length);
             currentQuestion = questionPool[randomIndex];
-
-            // Preparar opciones (Mezclar correcta con distractores)
             const allOptions = [...currentQuestion.distractors, currentQuestion.correctAnswer];
-            // Mezclar array
             allOptions.sort(() => Math.random() - 0.5);
 
-            // Renderizar HTML
             let html = `
                 <div class="question-text">${currentQuestion.question}</div>
                 <div class="options-grid">
@@ -1313,20 +1304,16 @@
                     Siguiente Pregunta <i class="fas fa-arrow-right"></i>
                 </button>
             `;
-            
             container.innerHTML = html;
         }
 
-        // Exponer funciones al objeto window para que funcionen con onclick en HTML
         window.generateNewExerciseUI = function() {
             generateNewExercise();
         };
 
         window.checkAnswer = function(btn, selectedValue) {
-            // Deshabilitar botones
             const buttons = document.querySelectorAll('.option-button');
             buttons.forEach(b => b.disabled = true);
-
             const isCorrect = String(selectedValue) === String(currentQuestion.correctAnswer);
 
             if (isCorrect) {
@@ -1334,7 +1321,6 @@
                 showNotification('¡Correcto!', 'Has identificado la respuesta adecuada.');
             } else {
                 btn.classList.add('incorrect');
-                // Resaltar la correcta
                 buttons.forEach(b => {
                     if (String(b.textContent.trim()) === String(currentQuestion.correctAnswer)) {
                         b.classList.add('correct');
@@ -1343,33 +1329,41 @@
                 showNotification('Incorrecto', 'Revisa el análisis para entender el error.');
             }
 
-            // Mostrar explicación
             document.getElementById('explanationBox').classList.add('show');
             document.getElementById('nextBtn').style.display = 'block';
         };
 
-        // ==========================================
-        // 5. INICIALIZACIÓN Y EVENTOS
-        // ==========================================
+        // 8. Eventos e Inicialización
         document.addEventListener('DOMContentLoaded', function() {
             setupEventListeners();
             highlightCurrentPage();
             setupSidebarToggle();
-            generateNewExercise(); // Cargar ejercicio inicial
-            
-            // Marcar RCDD2 como visitado
+            generateNewExercise();
+
+            // Cargar estado local inicial
+            const saved = sessionStorage.getItem('module1Progress');
+            if (saved) {
+                const progress = JSON.parse(saved);
+                progress.completedTopics.forEach(id => {
+                    const item = document.querySelector(`[data-content="${id}"]`);
+                    if (item) item.classList.add('completed');
+                });
+            }
+
+            // Marcar página actual (RCDD2)
             const currentPage = window.location.pathname.split('/').pop();
             const currentPageElement = document.querySelector(`[href="${currentPage}"]`);
+            
             if (currentPageElement) {
                 const contentId = currentPageElement.dataset.content;
                 if (contentId && !contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
                     !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
                     
-                    window.markTopicInFirebase(contentId);
-                    globalState.completedTopics.add(contentId);
                     globalState.visitedTopics.add(contentId);
+                    globalState.completedTopics.add(contentId);
                     
-                    // Efecto visual inmediato
+                    window.markTopicInFirebase(contentId);
+                    
                     if (!currentPageElement.classList.contains('completed')) {
                         currentPageElement.classList.add('completed');
                         createAchievementParticles(currentPageElement);
@@ -1379,7 +1373,6 @@
         });
 
         function setupEventListeners() {
-            // Menu items
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.addEventListener('click', function(e) {
                     const isQuiz = this.dataset.quiz;
@@ -1393,13 +1386,10 @@
                         showNotification(isQuiz ? 'Cuestionario Bloqueado' : 'Evaluación Bloqueada', msg);
                         return false;
                     }
-                    
-                    // La navegación es automática, Firebase se encargará del estado en la carga
                     return true;
                 });
             });
 
-            // Modal
             const modal = document.getElementById('cheatSheetModal');
             document.getElementById('cheatSheetBtn').addEventListener('click', () => modal.classList.add('active'));
             document.getElementById('closeModal').addEventListener('click', () => modal.classList.remove('active'));
@@ -1467,14 +1457,11 @@
             document.getElementById('energyPercentage').textContent = percentage + '%';
         }
 
-        function updateDashboardStats() {
-            // Placeholder para futuras integraciones de dashboard
-        }
+        function updateDashboardStats() {}
 
         function createAchievementParticles(element) {
             const rect = element.getBoundingClientRect();
             const colors = ['#d4af37', '#f4e4bc', '#2ecc71'];
-            
             for (let i = 0; i < 8; i++) {
                 const particle = document.createElement('div');
                 particle.className = 'achievement-particle';
