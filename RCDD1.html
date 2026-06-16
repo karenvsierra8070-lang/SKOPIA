@@ -41,7 +41,6 @@
             position: relative;
         }
 
-        /* Background Pattern */
         body::before {
             content: '';
             position: fixed;
@@ -631,10 +630,6 @@
             box-shadow: 0 15px 40px rgba(212, 175, 55, 0.5);
         }
 
-        .floating-button:active {
-            transform: scale(0.95);
-        }
-
         /* Modal Moderno */
         .modal {
             display: none;
@@ -1120,10 +1115,10 @@
         </div>
     </div>
 
-    <!-- Script Principal + Integración Firebase -->
+    <!-- Script Principal: BLINDADO -->
     <script type="module">
         // ==========================================
-        // 1. CONFIGURACIÓN DE FIREBASE
+        // 1. FIREBASE SETUP
         // ==========================================
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
@@ -1138,73 +1133,95 @@
             appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
         };
 
-        // Inicializar Firebase
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Generar o recuperar un ID único para este usuario/navegador
-        let userId = localStorage.getItem('skopia_user_id');
+        // ==========================================
+        // 2. GESTIÓN DE USUARIO (ROBUSTA)
+        // ==========================================
+        // Estrategia: Usar localStorage y sessionStorage en conjunto.
+        let userId = localStorage.getItem('skopia_uid') || sessionStorage.getItem('skopia_uid');
+        
         if (!userId) {
             userId = 'user_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
-            localStorage.setItem('skopia_user_id', userId);
+            localStorage.setItem('skopia_uid', userId);
+            sessionStorage.setItem('skopia_uid', userId);
+            console.log("✨ Nuevo Usuario Creado:", userId);
+        } else {
+            // Sincronizar ambos storages por si acaso
+            localStorage.setItem('skopia_uid', userId);
+            sessionStorage.setItem('skopia_uid', userId);
+            console.log("🔄 Usuario Recuperado:", userId);
         }
 
-        // Referencias a la base de datos
+        // Referencias
         const userProgressRef = ref(db, 'users/' + userId + '/module1/topics');
-
-        // Lista de temas requeridos para desbloquear el Cuestionario 1
         const requiredTopicsForQuiz1 = ['RCDD1', 'RCDD2', 'RCDD3', 'RCDD4', 'RCDD5', 'RCDD6', 'RCDD7', 'RCDD8'];
 
-        // Función para escribir visita en Firebase
-        window.markTopicInFirebase = function(topicId) {
-            set(ref(db, 'users/' + userId + '/module1/topics/' + topicId), true)
-                .then(() => {
-                    console.log(`Tema ${topicId} marcado como visitado en Firebase`);
-                })
-                .catch((error) => {
-                    console.error("Error escribiendo en Firebase:", error);
-                });
-        };
-
-        // Función para limpiar progreso en Firebase
-        window.clearFirebaseProgress = function() {
-            remove(ref(db, 'users/' + userId + '/module1'))
-                .then(() => {
-                    console.log("Progreso eliminado de Firebase");
-                })
-                .catch((error) => {
-                    console.error("Error limpiando Firebase:", error);
-                });
-        };
-
         // ==========================================
-        // 2. LÓGICA DE LA APLICACIÓN
+        // 3. ESTADO GLOBAL
         // ==========================================
-
-        // Estado global
         const globalState = {
             completedTopics: new Set(),
             visitedTopics: new Set(),
-            quizScores: {
-                quiz1: 0,
-                quiz2: 0,
-                quiz3: 0,
-                final: 0
-            },
+            quizScores: { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 },
             allTopicsVisited: false
         };
 
         // ==========================================
-        // 3. SINCRONIZACIÓN CON FIREBASE (REALTIME)
+        // 4. FUNCIONES DE SINCRONIZACIÓN (LA CLAVE)
         // ==========================================
-        // Escuchar cambios en Firebase en tiempo real
+
+        // Cargar desde SessionStorage (MUY RÁPIDO) para evitar parpadeos
+        function loadFromSessionStorage() {
+            const saved = sessionStorage.getItem('skopia_topics_cache');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    data.topics.forEach(id => {
+                        globalState.completedTopics.add(id);
+                        const item = document.querySelector(`[data-content="${id}"]`);
+                        if (item) item.classList.add('completed');
+                    });
+                    updateEnergyBar();
+                } catch (e) {
+                    console.error("Error cargando cache:", e);
+                }
+            }
+        }
+
+        // Guardar en SessionStorage (Para sincronización entre pestañas instantánea)
+        function saveToSessionStorage(topicsSet) {
+            const data = {
+                topics: Array.from(topicsSet),
+                timestamp: Date.now()
+            };
+            sessionStorage.setItem('skopia_topics_cache', JSON.stringify(data));
+        }
+
+        // Actualizar UI basada en el estado actual (Set)
+        function syncUI() {
+            document.querySelectorAll('.menu-item').forEach(item => {
+                const id = item.dataset.content;
+                if (globalState.completedTopics.has(id)) {
+                    item.classList.add('completed');
+                } else {
+                    item.classList.remove('completed');
+                }
+            });
+            updateEnergyBar();
+        }
+
+        // ==========================================
+        // 5. FIREBASE LISTENER (FUENTE DE VERDAD)
+        // ==========================================
         onValue(userProgressRef, (snapshot) => {
             const data = snapshot.val();
+            console.log("📥 Datos crudos de Firebase:", data);
             
-            // Resetear estado local basado en datos frescos de Firebase
             globalState.completedTopics.clear();
             globalState.visitedTopics.clear();
-            
+
             if (data) {
                 Object.keys(data).forEach(topicId => {
                     globalState.completedTopics.add(topicId);
@@ -1212,76 +1229,96 @@
                 });
             }
 
-            // Actualizar UI: Agregar checks a los elementos visitados
-            document.querySelectorAll('.menu-item').forEach(item => {
-                const id = item.dataset.content;
-                if (globalState.completedTopics.has(id)) {
-                    item.classList.add('completed');
-                } else {
-                    // Si no está en Firebase, quitar el check (por consistencia)
-                    item.classList.remove('completed');
-                }
-            });
+            // 1. Actualizar UI visual
+            syncUI();
 
-            // Verificar si se completaron todos los temas requeridos
-            const visitedRequiredCount = requiredTopicsForQuiz1.filter(id => globalState.completedTopics.has(id)).length;
-            const totalRequired = requiredTopicsForQuiz1.length;
-            
-            // Lógica de Desbloqueo del Cuestionario 1 (RCDD9)
-            if (visitedRequiredCount === totalRequired) {
+            // 2. Guardar en SessionStorage para que otras pestañas lo vean YA
+            saveToSessionStorage(globalState.completedTopics);
+
+            // 3. Verificar Desbloqueo
+            const visitedCount = requiredTopicsForQuiz1.filter(id => globalState.completedTopics.has(id)).length;
+            if (visitedCount === requiredTopicsForQuiz1.length) {
                 unlockQuiz(1);
                 globalState.allTopicsVisited = true;
             } else {
                 globalState.allTopicsVisited = false;
             }
-
-            // Actualizar barra de energía
-            updateEnergyBar();
-            updateDashboardStats();
-            
-            // Sincronizar con sessionStorage por si acaso
-            sessionStorage.setItem('module1Progress', JSON.stringify({
-                completedTopics: Array.from(globalState.completedTopics),
-                visitedTopics: Array.from(globalState.visitedTopics),
-                quizScores: globalState.quizScores,
-                allTopicsVisited: globalState.allTopicsVisited
-            }));
         });
 
         // ==========================================
-        // 4. FUNCIONES DE INTERFAZ Y EVENTOS
+        // 6. SINCRONIZACIÓN ENTRE PESTAÑAS (TRUCO FINAL)
         // ==========================================
+        // Cuando SessionStorage cambia en otra pestaña, esta pestaña se entera
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'skopia_topics_cache' && e.newValue) {
+                try {
+                    const data = JSON.parse(e.newValue);
+                    globalState.completedTopics = new Set(data.topics);
+                    syncUI(); // Actualizar visualmente inmediatamente
+                } catch (err) {
+                    console.error("Error sincronizando pestañas:", err);
+                }
+            }
+        });
 
-        // Inicialización
+        // ==========================================
+        // 7. FUNCIONES PÚBLICAS
+        // ==========================================
+        window.markTopicInFirebase = function(topicId) {
+            console.log(`📝 Marcando ${topicId} como visitado...`);
+            
+            // 1. Actualizar Firebase (Permanente)
+            set(ref(db, 'users/' + userId + '/module1/topics/' + topicId), true);
+
+            // 2. Actualizar Estado Local (Inmediato)
+            globalState.completedTopics.add(topicId);
+            globalState.visitedTopics.add(topicId);
+            
+            // 3. Guardar en SessionStorage (Disparar evento 'storage' en otras pestañas)
+            saveToSessionStorage(globalState.completedTopics);
+
+            // 4. UI visual instantánea
+            syncUI();
+        };
+
+        window.clearFirebaseProgress = function() {
+            remove(ref(db, 'users/' + userId + '/module1'));
+            localStorage.removeItem('skopia_topics_cache');
+            sessionStorage.removeItem('skopia_topics_cache');
+        };
+
+        // ==========================================
+        // 8. INICIALIZACIÓN Y EVENTOS
+        // ==========================================
         document.addEventListener('DOMContentLoaded', function() {
+            // Cargar caché local INMEDIATAMENTO para que los checks aparezcan al instante
+            loadFromSessionStorage();
+            
             setupEventListeners();
             highlightCurrentPage();
             setupSidebarToggle();
             
-            // Detectar la página actual y marcarla en Firebase
+            // Marcar RCDD1 como visitado
             const currentPage = window.location.pathname.split('/').pop();
             const currentPageElement = document.querySelector(`[href="${currentPage}"]`);
-            
             if (currentPageElement) {
                 const contentId = currentPageElement.dataset.content;
-                // Solo marcar si no es un cuestionario o evaluación final
                 if (contentId && !contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
                     !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
                     
-                    // Marcamos en Firebase
+                    // Llamada principal a Firebase
                     window.markTopicInFirebase(contentId);
                     
-                    // Actualizamos localmente inmediatamente para respuesta rápida
-                    globalState.completedTopics.add(contentId);
-                    globalState.visitedTopics.add(contentId);
-                    currentPageElement.classList.add('completed');
-                    createAchievementParticles(currentPageElement);
+                    // Efecto visual
+                    if (!currentPageElement.classList.contains('completed')) {
+                        currentPageElement.classList.add('completed');
+                        createAchievementParticles(currentPageElement);
+                    }
                 }
             }
         });
 
         function setupEventListeners() {
-            // Menu items - Prevenir navegación si está bloqueado
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.addEventListener('click', function(e) {
                     const isQuiz = this.dataset.quiz;
@@ -1289,36 +1326,30 @@
                     
                     if (this.classList.contains('locked')) {
                         e.preventDefault();
-                        if (isQuiz) {
-                            showNotification('Cuestionario Bloqueado', `Completa los requisitos previos para desbloquear el Cuestionario ${isQuiz}.`);
-                        } else if (isFinal) {
-                            showNotification('Evaluación Bloqueada', 'Completa todos los cuestionarios primero para desbloquear la evaluación final.');
-                        }
+                        const msg = isQuiz 
+                            ? `Completa los requisitos previos para desbloquear el Cuestionario ${isQuiz}.` 
+                            : 'Completa todos los cuestionarios primero.';
+                        showNotification(isQuiz ? 'Cuestionario Bloqueado' : 'Evaluación Bloqueada', msg);
                         return false;
                     }
                     
-                    // La navegación ya se maneja por defecto, Firebase ya escuchará
-                    // cuando la nueva página cargue.
+                    // La navegación es automática, pero marcamos como visitado por seguridad
+                    const contentId = this.dataset.content;
+                    if (contentId) {
+                        if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
+                            !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
+                            window.markTopicInFirebase(contentId);
+                        }
+                    }
                     return true;
                 });
             });
 
-            // Modal
-            document.getElementById('cheatSheetBtn').addEventListener('click', function() {
-                document.getElementById('cheatSheetModal').classList.add('active');
-            });
+            const modal = document.getElementById('cheatSheetModal');
+            document.getElementById('cheatSheetBtn').addEventListener('click', () => modal.classList.add('active'));
+            document.getElementById('closeModal').addEventListener('click', () => modal.classList.remove('active'));
+            modal.addEventListener('click', (e) => { if(e.target === modal) modal.classList.remove('active'); });
 
-            document.getElementById('closeModal').addEventListener('click', function() {
-                document.getElementById('cheatSheetModal').classList.remove('active');
-            });
-
-            document.getElementById('cheatSheetModal').addEventListener('click', function(e) {
-                if (e.target === this) {
-                    this.classList.remove('active');
-                }
-            });
-
-            // Botón de reproducción de video
             document.getElementById('playVideo').addEventListener('click', function() {
                 const videoContainer = document.getElementById('videoContainer');
                 const videoIframe = document.createElement('iframe');
@@ -1333,8 +1364,7 @@
                 
                 videoContainer.innerHTML = '';
                 videoContainer.appendChild(videoIframe);
-                
-                showNotification('Video', 'El video comenzará a reproducirse en breve.');
+                showNotification('Video', 'El video comenzará a reproducirse.');
             });
         }
 
@@ -1358,62 +1388,55 @@
             });
         }
 
-        // Botón de reinicio global
         window.resetProgress = function() {
-            if (confirm('¿Estás seguro de que deseas reiniciar todo tu progreso? Esta acción no se puede deshacer.')) {
-                // Limpiar Firebase
+            if (confirm('¿Estás seguro de reiniciar todo tu progreso?')) {
                 window.clearFirebaseProgress();
+                document.querySelectorAll('.menu-item.completed').forEach(item => item.classList.remove('completed'));
+                document.querySelectorAll('[data-quiz], [data-final="true"]').forEach(item => item.classList.add('locked'));
                 
-                // Limpiar estado visual local
-                document.querySelectorAll('.menu-item.completed').forEach(item => {
-                    item.classList.remove('completed');
-                });
+                globalState.completedTopics.clear();
+                globalState.visitedTopics.clear();
+                globalState.allTopicsVisited = false;
                 
-                // Bloquear todos los cuestionarios y finales
-                document.querySelectorAll('[data-quiz]').forEach(item => {
-                    item.classList.add('locked');
-                });
-                document.querySelectorAll('[data-final="true"]').forEach(item => {
-                    item.classList.add('locked');
-                });
-                
-                // Limpiar sessionStorage
-                sessionStorage.removeItem('module1Progress');
-                
-                // Actualizar UI
                 updateEnergyBar();
                 updateDashboardStats(true);
-                
-                showNotification('Progreso Reiniciado', 'Todo tu progreso ha sido eliminado correctamente.');
+                showNotification('Reiniciado', 'Progreso eliminado.');
             }
         };
 
         function highlightCurrentPage() {
             const currentPage = window.location.pathname.split('/').pop();
             const menuItem = document.querySelector(`[href="${currentPage}"]`);
-            if (menuItem) {
-                menuItem.classList.add('active');
-            }
+            if (menuItem) menuItem.classList.add('active');
         }
 
-        // Función para desbloquear cuestionarios
         function unlockQuiz(quizNumber) {
             const quizItem = document.querySelector(`[data-quiz="${quizNumber}"]`);
             if (quizItem && quizItem.classList.contains('locked')) {
                 quizItem.classList.remove('locked');
                 quizItem.classList.add('unlocking');
-                showNotification('¡Desbloqueado!', `Has completado los requisitos. El Cuestionario ${quizNumber} ya está disponible.`);
-                
-                setTimeout(() => {
-                    quizItem.classList.remove('unlocking');
-                }, 600);
+                showNotification('¡Desbloqueado!', `Cuestionario ${quizNumber} disponible.`);
+                setTimeout(() => quizItem.classList.remove('unlocking'), 600);
             }
         }
+
+        function updateEnergyBar() {
+            const total = requiredTopicsForQuiz1.length;
+            const count = requiredTopicsForQuiz1.filter(id => globalState.completedTopics.has(id)).length;
+            const percentage = Math.round((count / total) * 100);
+            
+            const fill = document.getElementById('energyFill');
+            const text = document.getElementById('energyPercentage');
+            
+            if(fill) fill.style.width = percentage + '%';
+            if(text) text.textContent = percentage + '%';
+        }
+
+        function updateDashboardStats() {}
 
         function createAchievementParticles(element) {
             const rect = element.getBoundingClientRect();
             const colors = ['#d4af37', '#f4e4bc', '#2ecc71'];
-            
             for (let i = 0; i < 8; i++) {
                 const particle = document.createElement('div');
                 particle.className = 'achievement-particle';
@@ -1422,33 +1445,9 @@
                 particle.style.top = (rect.top + rect.height / 2) + 'px';
                 particle.style.fontSize = (Math.random() * 20 + 10) + 'px';
                 particle.style.color = colors[Math.floor(Math.random() * colors.length)];
-                
-                // Randomize direction slightly
-                const randomX = (Math.random() - 0.5) * 100;
-                particle.style.setProperty('--tx', `${randomX}px`);
-                
                 document.body.appendChild(particle);
-                
-                // Remove after animation
-                setTimeout(() => {
-                    particle.remove();
-                }, 2000);
+                setTimeout(() => particle.remove(), 2000);
             }
-        }
-
-        // Actualizar barra de energía
-        function updateEnergyBar() {
-            const totalTopics = 8; // RCDD1 a RCDD8
-            const visitedCount = requiredTopicsForQuiz1.filter(id => globalState.completedTopics.has(id)).length;
-            const percentage = Math.round((visitedCount / totalTopics) * 100);
-            
-            document.getElementById('energyFill').style.width = percentage + '%';
-            document.getElementById('energyPercentage').textContent = percentage + '%';
-        }
-
-        // Actualizar estadísticas del dashboard (simulado para visualización local)
-        function updateDashboardStats(reset = false) {
-            // Aquí podrías agregar lógica adicional para reflejar stats en otras partes
         }
 
         function showNotification(title, message) {
@@ -1456,14 +1455,12 @@
             const titleEl = notification.querySelector('.notification-title');
             const msgEl = document.getElementById('notificationMessage');
             
-            titleEl.textContent = title;
-            msgEl.textContent = message;
-            
-            notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 4000);
+            if(notification && titleEl && msgEl) {
+                titleEl.textContent = title;
+                msgEl.textContent = message;
+                notification.classList.add('show');
+                setTimeout(() => notification.classList.remove('show'), 4000);
+            }
         }
     </script>
 </body>
