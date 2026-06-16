@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Operaciones básicas</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Scripts de Firebase (Versión Compat para facilitar uso en HTML directo) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
     <style>
         * {
             margin: 0;
@@ -969,28 +974,6 @@
             <main class="content-area" id="contentArea">
                 <!-- Contenedor del Video -->
                 <div class="video-container" id="videoContainer">
-                    <!-- 
-                    ========================================
-                    INSTRUCCIONES PARA AGREGAR EL VÍDEO:
-                    ========================================
-                    1. Ve a YouTube (o tu plataforma de video) y busca tu video.
-                    2. Haz clic en "Compartir" y luego en "Insertar".
-                    3. Copia el código <iframe>... que te proporcionen.
-                    4. Elimina TODO el bloque <div class="video-placeholder">...</div> de abajo.
-                    5. Pega el código del iframe en su lugar.
-                    
-                    EJEMPLO de cómo debería quedar:
-                    <iframe 
-                        width="560" 
-                        height="315" 
-                        src="https://www.youtube.com/embed/VIDEO_ID_AQUI" 
-                        title="YouTube video player" 
-                        frameborder="0" 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                        allowfullscreen>
-                    </iframe>
-                    -->
-                    
                     <!-- ESTE BLOQUE DEBE SER REEMPLAZADO POR TU IFRAME -->
                     <div class="video-placeholder" id="videoPlaceholder">
                         <i class="fas fa-play-circle"></i>
@@ -1121,7 +1104,34 @@
     </div>
 
     <script>
-        // Estado global compartido entre páginas
+        // 1. CONFIGURACIÓN DE FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            authDomain: "skopia-aa786.firebaseapp.com",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Generar o recuperar ID de Usuario único
+        function getUserId() {
+            let userId = localStorage.getItem('skopia_user_id');
+            if (!userId) {
+                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('skopia_user_id', userId);
+            }
+            return userId;
+        }
+
+        const userId = getUserId();
+
+        // Estado global
         const globalState = {
             completedTopics: new Set(),
             visitedTopics: new Set(),
@@ -1134,56 +1144,86 @@
             allTopicsVisited: false
         };
 
-        // Función para guardar en sessionStorage
-        function saveToSessionStorage() {
-            sessionStorage.setItem('module1Progress', JSON.stringify({
-                completedTopics: Array.from(globalState.completedTopics),
-                visitedTopics: Array.from(globalState.visitedTopics),
-                quizScores: globalState.quizScores,
-                allTopicsVisited: globalState.allTopicsVisited
-            }));
+        // 2. GUARDAR EN FIREBASE (Reemplaza a sessionStorage)
+        function saveProgressToFirebase(contentId = null) {
+            const userRef = db.ref(`users/${userId}`);
+            
+            // Preparar datos para guardar (Convertir Sets a Arrays)
+            const dataToSave = {
+                progress: {
+                    completedTopics: Array.from(globalState.completedTopics),
+                    visitedTopics: Array.from(globalState.visitedTopics),
+                    quizScores: globalState.quizScores,
+                    allTopicsVisited: globalState.allTopicsVisited,
+                    lastUpdated: Date.now()
+                }
+            };
+
+            // Si se pasa un contentId, registramos la visita específica con timestamp
+            if (contentId) {
+                dataToSave.visits = {};
+                dataToSave.visits[contentId] = {
+                    timestamp: firebase.database.ServerValue.timestamp,
+                    lastVisit: new Date().toLocaleString()
+                };
+            }
+
+            // Actualizar en Firebase
+            userRef.update(dataToSave)
+                .then(() => {
+                    console.log("Progreso guardado en Firebase correctamente");
+                })
+                .catch((error) => {
+                    console.error("Error guardando en Firebase:", error);
+                });
         }
 
-        // Función para cargar desde sessionStorage y aplicar estado visual
-        function loadFromSessionStorage() {
-            const saved = sessionStorage.getItem('module1Progress');
-            if (saved) {
-                const progress = JSON.parse(saved);
-                globalState.completedTopics = new Set(progress.completedTopics || []);
-                globalState.visitedTopics = new Set(progress.visited || []);
-                globalState.quizScores = progress.quizScores || { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
-                globalState.allTopicsVisited = progress.allTopicsVisited || false;
-                
-                // APLICAR LAS CLASES CSS A LOS ELEMENTOS VISITADOS
-                globalState.completedTopics.forEach(topicId => {
-                    const menuItem = document.querySelector(`[data-content="${topicId}"]`);
-                    if (menuItem) {
-                        menuItem.classList.add('completed');
+        // 3. CARGAR DESDE FIREBASE (Reemplaza a sessionStorage)
+        function loadProgressFromFirebase() {
+            const userRef = db.ref(`users/${userId}/progress`);
+            
+            userRef.once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    // Restaurar estado
+                    globalState.completedTopics = new Set(data.completedTopics || []);
+                    globalState.visitedTopics = new Set(data.visitedTopics || []);
+                    globalState.quizScores = data.quizScores || { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
+                    globalState.allTopicsVisited = data.allTopicsVisited || false;
+                    
+                    // Aplicar clases visuales
+                    globalState.completedTopics.forEach(topicId => {
+                        const menuItem = document.querySelector(`[data-content="${topicId}"]`);
+                        if (menuItem) {
+                            menuItem.classList.add('completed');
+                        }
+                    });
+                    
+                    // Desbloquear cuestionario 1 si aplica
+                    if (globalState.allTopicsVisited) {
+                        unlockQuiz(1);
                     }
-                });
-                
-                // SOLO DESBLOQUEAR CUESTIONARIO 1 SI TODOS LOS TEMAS FUERON VISITADOS
-                if (globalState.allTopicsVisited) {
-                    unlockQuiz(1);
+                    
+                    // Actualizar UI
+                    updateEnergyBar();
+                    updateDashboardStats();
+                } else {
+                    console.log("No hay datos previos para este usuario en Firebase.");
                 }
-                
-                // NO DESBLOQUEAR LOS DEMÁS CUESTIONARIOS AUTOMÁTICAMENTE
-                // Solo se desbloquearán cuando se completen los anteriores con >= 170
-                
-                // Actualizar barra de energía
-                updateEnergyBar();
-                updateDashboardStats();
-            }
+            }).catch((error) => {
+                console.error("Error cargando de Firebase:", error);
+            });
         }
 
         // Inicialización
         document.addEventListener('DOMContentLoaded', function() {
             setupEventListeners();
-            loadFromSessionStorage();
+            // Cargamos los datos de Firebase al inicio
+            loadProgressFromFirebase();
             highlightCurrentPage();
             setupSidebarToggle();
             
-            // MARCAR LA PÁGINA ACTUAL COMO VISITADA AL CARGAR
+            // Marcar la página actual como visitada al cargar
             const currentPage = window.location.pathname.split('/').pop();
             const currentPageElement = document.querySelector(`[href="${currentPage}"]`);
             if (currentPageElement) {
@@ -1197,7 +1237,7 @@
 
         // Configurar event listeners
         function setupEventListeners() {
-            // Menu items - Prevenir navegación si está bloqueado
+            // Menu items
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.addEventListener('click', function(e) {
                     const isQuiz = this.dataset.quiz;
@@ -1213,17 +1253,13 @@
                         return false;
                     }
                     
-                    // Marcar como visitado ANTES de navegar
                     const contentId = this.dataset.content;
                     if (contentId) {
-                        // Solo marcar como visitado si no es cuestionario
                         if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
                             !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
                             markAsVisited(contentId);
                         }
                     }
-                    
-                    // Permitir navegación normal
                     return true;
                 });
             });
@@ -1243,27 +1279,22 @@
                 }
             });
 
-            // Botón de reproducción de video - MODIFICADO
+            // Video Play Button
             document.getElementById('playVideo').addEventListener('click', function() {
-                // Obtener el contenedor del video
                 const videoContainer = document.getElementById('videoContainer');
-                
-                // Crear el iframe del video de YouTube
                 const videoIframe = document.createElement('iframe');
                 videoIframe.width = '560';
                 videoIframe.height = '315';
-                videoIframe.src = 'https://www.youtube.com/embed/kt_mckSKmOk?si=R_8Crx5I1GJF81Jc&autoplay=1'; // Añadido autoplay=1
+                videoIframe.src = 'https://www.youtube.com/embed/kt_mckSKmOk?si=R_8Crx5I1GJF81Jc&autoplay=1';
                 videoIframe.title = 'YouTube video player';
                 videoIframe.frameBorder = '0';
                 videoIframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
                 videoIframe.referrerpolicy = 'strict-origin-when-cross-origin';
                 videoIframe.allowFullscreen = true;
                 
-                // Limpiar el contenedor y agregar el iframe
                 videoContainer.innerHTML = '';
                 videoContainer.appendChild(videoIframe);
                 
-                // Mostrar notificación
                 showNotification('Video', 'El video comenzará a reproducirse en breve.');
             });
         }
@@ -1278,7 +1309,6 @@
                 sidebar.classList.toggle('hidden');
                 contentArea.classList.toggle('expanded');
                 
-                // Cambiar el ícono del botón
                 const icon = this.querySelector('i');
                 if (sidebar.classList.contains('hidden')) {
                     icon.classList.remove('fa-bars');
@@ -1292,36 +1322,36 @@
 
         // Botón de reinicio
         function resetProgress() {
-            if (confirm('¿Estás seguro de que deseas reiniciar todo tu progreso? Esta acción no se puede deshacer.')) {
-                // Limpiar estado global
+            if (confirm('¿Estás seguro de que deseas reiniciar todo tu progreso en la nube? Esta acción no se puede deshacer.')) {
                 globalState.completedTopics.clear();
                 globalState.visitedTopics.clear();
                 globalState.quizScores = { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
                 globalState.allTopicsVisited = false;
                 
-                // Limpiar estado visual
                 document.querySelectorAll('.menu-item.completed').forEach(item => {
                     item.classList.remove('completed');
                 });
                 
-                // Bloquear todos los cuestionarios
                 document.querySelectorAll('[data-quiz]').forEach(item => {
                     item.classList.add('locked');
                 });
                 
-                // Bloquear evaluación final
                 document.querySelectorAll('[data-final="true"]').forEach(item => {
                     item.classList.add('locked');
                 });
                 
-                // Actualizar barras de progreso con animación
                 updateEnergyBar();
                 updateDashboardStats(true);
                 
-                // Limpiar sessionStorage
-                sessionStorage.removeItem('module1Progress');
-                
-                showNotification('Progreso Reiniciado', 'Todo tu progreso ha sido eliminado correctamente.');
+                // Borrar datos de Firebase para este usuario
+                db.ref(`users/${userId}`).remove()
+                    .then(() => {
+                        showNotification('Progreso Reiniciado', 'Tus datos han sido eliminados de la base de datos.');
+                    })
+                    .catch((error) => {
+                        console.error("Error borrando datos:", error);
+                        showNotification('Error', 'No se pudo borrar el progreso de la nube.');
+                    });
             }
         }
 
@@ -1334,26 +1364,25 @@
             }
         }
 
-        // Marcar como visitado con actualización dinámica
+        // Marcar como visitado y guardar en Firebase
         function markAsVisited(contentId) {
             globalState.visitedTopics.add(contentId);
             
-            // Marcar como completado si no es cuestionario
             if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
                 !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
                 globalState.completedTopics.add(contentId);
                 const menuItem = document.querySelector(`[data-content="${contentId}"]`);
                 if (menuItem && !menuItem.classList.contains('completed')) {
                     menuItem.classList.add('completed');
-                    // Crear efecto de partículas
                     createAchievementParticles(menuItem);
-                    // Actualizar estadísticas inmediatamente
                     updateDashboardStats(true);
                 }
             }
             
             checkAllTopicsVisited();
-            saveToSessionStorage();
+            
+            // GUARDAR EN FIREBASE con el ID del contenido visitado para registrar el tiempo
+            saveProgressToFirebase(contentId);
         }
 
         // Crear partículas de logro
@@ -1365,130 +1394,76 @@
                 const particle = document.createElement('div');
                 particle.className = 'achievement-particle';
                 particle.innerHTML = '✨';
-                particle.style.left = rect.left + rect.width / 2 + 'px';
-                particle.style.top = rect.top + rect.height / 2 + 'px';
-                particle.style.color = colors[Math.floor(Math.random() * colors.length)];
-                particle.style.fontSize = Math.random() * 10 + 15 + 'px';
+                particle.style.left = (rect.left + rect.width / 2) + 'px';
+                particle.style.top = (rect.top + rect.height / 2) + 'px';
+                
+                const x = (Math.random() - 0.5) * 100;
+                const y = (Math.random() - 0.5) * 100;
+                particle.style.transform = `translate(${x}px, ${y}px)`;
+                
                 document.body.appendChild(particle);
                 
-                setTimeout(() => particle.remove(), 2000);
+                setTimeout(() => {
+                    particle.remove();
+                }, 2000);
             }
         }
 
-        // Verificar si todos los temas fueron visitados
+        // Función para verificar si todos los temas fueron visitados
         function checkAllTopicsVisited() {
-            const nonQuizTopics = ['RCDD1', 'RCDD2', 'RCDD3', 'RCDD4', 'RCDD5', 'RCDD6', 'RCDD7', 'RCDD8'];
-            const allVisited = nonQuizTopics.every(topic => globalState.visitedTopics.has(topic));
+            // Lógica para contar temas teóricos (ejemplo: RCDD1 al RCDD8)
+            // Ajusta este número según la cantidad real de temas teóricos
+            const totalTheoreticalTopics = 8; 
             
-            if (allVisited && !globalState.allTopicsVisited) {
+            let count = 0;
+            for(let i=1; i<=totalTheoreticalTopics; i++) {
+                if(globalState.completedTopics.has(`RCDD${i}`)) {
+                    count++;
+                }
+            }
+
+            if (count >= totalTheoreticalTopics && !globalState.allTopicsVisited) {
                 globalState.allTopicsVisited = true;
                 unlockQuiz(1);
-                showNotification('Cuestionario Desbloqueado', '¡Cuestionario 1 desbloqueado! Ya puedes comenzar tu práctica.');
+                showNotification('¡Logro Desbloqueado!', 'Has completado todos los temas teóricos. ¡Prueba desbloqueada!');
             }
         }
 
-        // Desbloquear cuestionario con animación
         function unlockQuiz(quizNumber) {
             const quizItem = document.querySelector(`[data-quiz="${quizNumber}"]`);
             if (quizItem) {
                 quizItem.classList.remove('locked');
                 quizItem.classList.add('unlocking');
-                setTimeout(() => {
-                    quizItem.classList.remove('unlocking');
-                }, 600);
+                setTimeout(() => quizItem.classList.remove('unlocking'), 600);
             }
         }
 
-        // Actualizar estadísticas del dashboard con animaciones
-        function updateDashboardStats(animate = false) {
-            const totalTopics = 8;
-            const completedTopics = globalState.completedTopics.size;
-            const topicsProgress = Math.round((completedTopics / totalTopics) * 100);
+        function updateEnergyBar() {
+            const totalTopics = 8; // Total de temas lecciones
+            const completedCount = globalState.completedTopics.size;
+            const percentage = Math.min(100, Math.round((completedCount / totalTopics) * 100));
             
-            const totalQuizzes = 3;
-            const passedQuizzes = [globalState.quizScores.quiz1, globalState.quizScores.quiz2, globalState.quizScores.quiz3]
-                .filter(score => score >= 170).length;
-            const quizzesProgress = Math.round((passedQuizzes / totalQuizzes) * 100);
-            
-            const moduleProgress = Math.round((topicsProgress * 0.6) + (quizzesProgress * 0.4));
-            
-            // Actualizar barra de energía
-            const energyFill = document.getElementById('energyFill');
-            const energyPercentage = document.getElementById('energyPercentage');
-            if (energyFill) {
-                energyFill.style.width = `${moduleProgress}%`;
-                if (animate) energyFill.classList.add('animated');
-                setTimeout(() => energyFill.classList.remove('animated'), 1000);
-            }
-            if (energyPercentage) energyPercentage.textContent = `${moduleProgress}%`;
+            document.getElementById('energyFill').style.width = percentage + '%';
+            document.getElementById('energyPercentage').textContent = percentage + '%';
         }
 
-        // Mostrar notificación
         function showNotification(title, message) {
             const notification = document.getElementById('notification');
-            const notificationMessage = document.getElementById('notificationMessage');
-            
-            notification.querySelector('.notification-title').textContent = title;
-            notificationMessage.textContent = message;
+            document.querySelector('.notification-title').textContent = title;
+            document.getElementById('notificationMessage').textContent = message;
             
             notification.classList.add('show');
             
             setTimeout(() => {
                 notification.classList.remove('show');
-            }, 4000);
+            }, 3000);
         }
-
-        // Actualizar barra de energía
-        function updateEnergyBar() {
-            const scores = [
-                globalState.quizScores.quiz1,
-                globalState.quizScores.quiz2,
-                globalState.quizScores.quiz3
-            ];
-            
-            const validScores = scores.filter(s => s > 0);
-            const average = validScores.length > 0 ? 
-                validScores.reduce((a, b) => a + b, 0) / validScores.length : 0;
-            
-            const percentage = Math.round((average / 300) * 100);
-            
-            const energyFill = document.getElementById('energyFill');
-            const energyPercentage = document.getElementById('energyPercentage');
-            if (energyFill) energyFill.style.width = `${percentage}%`;
-            if (energyPercentage) energyPercentage.textContent = `${percentage}%`;
+        
+        function updateDashboardStats(showNotification = false) {
+            // Esta función se puede conectar con otros elementos si existen
+            // Por ahora solo actualiza la barra local
+            updateEnergyBar();
         }
-
-        // Función para ser llamada desde las páginas de cuestionarios
-        window.updateQuizScore = function(quizNumber, score) {
-            globalState.quizScores[`quiz${quizNumber}`] = score;
-            
-            // SOLO DESBLOQUEAR EL SIGUIENTE CUESTIONARIO SI EL PUNTAJE ES >= 170
-            if (score >= 170) {
-                if (quizNumber === 1) {
-                    unlockQuiz(2);
-                    showNotification('Cuestionario 2 Desbloqueado', '¡Puedes continuar al siguiente nivel!');
-                } else if (quizNumber === 2) {
-                    unlockQuiz(3);
-                    showNotification('Cuestionario 3 Desbloqueado', '¡Último nivel desbloqueado!');
-                } else if (quizNumber === 3) {
-                    const finalItem = document.querySelector('[data-final="true"]');
-                    if (finalItem) finalItem.classList.remove('locked');
-                    showNotification('Evaluación Final Desbloqueada', '¡Estás listo para la evaluación final!');
-                }
-            }
-            
-            updateEnergyBar();
-            updateDashboardStats(true);
-            saveToSessionStorage();
-        };
-
-        // Función para ser llamada desde la evaluación final
-        window.updateFinalScore = function(score) {
-            globalState.quizScores.final = score;
-            updateEnergyBar();
-            updateDashboardStats(true);
-            saveToSessionStorage();
-        };
     </script>
 </body>
 </html>
