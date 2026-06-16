@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Análisis de Distractores Comunes</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Scripts de Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
     <style>
         * {
             margin: 0;
@@ -334,20 +339,10 @@
             color: var(--gris-texto);
         }
 
-        /* Animación de desbloqueo */
         @keyframes unlock {
-            0% { 
-                transform: scale(0.8);
-                opacity: 0.5;
-            }
-            50% { 
-                transform: scale(1.1);
-                opacity: 0.8;
-            }
-            100% { 
-                transform: scale(1);
-                opacity: 1;
-            }
+            0% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
         }
 
         .menu-item.unlocking {
@@ -606,7 +601,7 @@
             background: linear-gradient(135deg, var(--dorado-claro), rgba(212, 175, 55, 0.2));
             border-radius: 12px;
             border-left: 5px solid var(--dorado);
-            display: none; /* Se muestra con JS */
+            display: none;
         }
 
         .explanation-box.show {
@@ -615,14 +610,8 @@
         }
 
         @keyframes fadeInUp {
-            from { 
-                opacity: 0; 
-                transform: translateY(20px); 
-            }
-            to { 
-                opacity: 1; 
-                transform: translateY(0); 
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .explanation-box h4 {
@@ -719,14 +708,8 @@
         }
 
         @keyframes slideUp {
-            from { 
-                opacity: 0; 
-                transform: translateY(30px); 
-            }
-            to { 
-                opacity: 1; 
-                transform: translateY(0); 
-            }
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .close-modal {
@@ -1117,7 +1100,34 @@
     </div>
 
     <script>
-        // Estado global compartido entre páginas
+        // 1. CONFIGURACIÓN DE FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            authDomain: "skopia-aa786.firebaseapp.com",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Generar o recuperar ID de Usuario único (Misma lógica que RCDD1)
+        function getUserId() {
+            let userId = localStorage.getItem('skopia_user_id');
+            if (!userId) {
+                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('skopia_user_id', userId);
+            }
+            return userId;
+        }
+
+        const userId = getUserId();
+
+        // Estado global
         const globalState = {
             completedTopics: new Set(),
             visitedTopics: new Set(),
@@ -1172,57 +1182,144 @@
 
         let currentQuestion = null;
 
-        // Función para guardar en sessionStorage
-        function saveToSessionStorage() {
-            sessionStorage.setItem('module1Progress', JSON.stringify({
-                completedTopics: Array.from(globalState.completedTopics),
-                visitedTopics: Array.from(globalState.visitedTopics),
-                quizScores: globalState.quizScores,
-                allTopicsVisited: globalState.allTopicsVisited
-            }));
+        // 2. GUARDAR EN FIREBASE
+        function saveProgressToFirebase(contentId = null) {
+            const userRef = db.ref(`users/${userId}`);
+            
+            const dataToSave = {
+                progress: {
+                    completedTopics: Array.from(globalState.completedTopics),
+                    visitedTopics: Array.from(globalState.visitedTopics),
+                    quizScores: globalState.quizScores,
+                    allTopicsVisited: globalState.allTopicsVisited,
+                    lastUpdated: Date.now()
+                }
+            };
+
+            if (contentId) {
+                dataToSave.visits = {};
+                dataToSave.visits[contentId] = {
+                    timestamp: firebase.database.ServerValue.timestamp,
+                    lastVisit: new Date().toLocaleString()
+                };
+            }
+
+            userRef.update(dataToSave)
+                .then(() => {
+                    console.log("Progreso guardado en Firebase correctamente");
+                })
+                .catch((error) => {
+                    console.error("Error guardando en Firebase:", error);
+                });
         }
 
-        // Función para cargar desde sessionStorage y aplicar estado visual
-        function loadFromSessionStorage() {
-            const saved = sessionStorage.getItem('module1Progress');
-            if (saved) {
-                const progress = JSON.parse(saved);
-                globalState.completedTopics = new Set(progress.completedTopics || []);
-                globalState.visitedTopics = new Set(progress.visited || []);
-                globalState.quizScores = progress.quizScores || { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
-                globalState.allTopicsVisited = progress.allTopicsVisited || false;
-                
-                // APLICAR LAS CLASES CSS A LOS ELEMENTOS VISITADOS
-                globalState.completedTopics.forEach(topicId => {
-                    const menuItem = document.querySelector(`[data-content="${topicId}"]`);
-                    if (menuItem) {
-                        menuItem.classList.add('completed');
+        // 3. CARGAR DESDE FIREBASE
+        function loadProgressFromFirebase() {
+            const userRef = db.ref(`users/${userId}/progress`);
+            
+            userRef.once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    globalState.completedTopics = new Set(data.completedTopics || []);
+                    globalState.visitedTopics = new Set(data.visitedTopics || []);
+                    globalState.quizScores = data.quizScores || { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
+                    globalState.allTopicsVisited = data.allTopicsVisited || false;
+                    
+                    globalState.completedTopics.forEach(topicId => {
+                        const menuItem = document.querySelector(`[data-content="${topicId}"]`);
+                        if (menuItem) {
+                            menuItem.classList.add('completed');
+                        }
+                    });
+                    
+                    if (globalState.allTopicsVisited) {
+                        unlockQuiz(1);
+                    }
+                    
+                    updateEnergyBar();
+                    updateDashboardStats();
+                } else {
+                    console.log("No hay datos previos para este usuario en Firebase.");
+                }
+            }).catch((error) => {
+                console.error("Error cargando de Firebase:", error);
+            });
+        }
+
+        // Función para generar el ejercicio interactivo
+        function generateNewExercise() {
+            const container = document.getElementById('exercise-container');
+            
+            // Seleccionar una pregunta aleatoria
+            const randomIndex = Math.floor(Math.random() * questionPool.length);
+            currentQuestion = questionPool[randomIndex];
+            
+            // Mezclar respuestas (correcta + distractores)
+            const allOptions = [currentQuestion.correctAnswer, ...currentQuestion.distractors];
+            // Función simple para mezclar array
+            for (let i = allOptions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [allOptions[i], allOptions[j]] = [allOptions[j], allOptions[i]];
+            }
+
+            // Crear HTML
+            let html = `
+                <div class="question-text">${currentQuestion.question}</div>
+                <div class="options-grid">
+            `;
+            
+            allOptions.forEach(opt => {
+                html += `<button class="option-button" onclick="checkAnswer(this, '${opt}')">${opt}</button>`;
+            });
+            
+            html += `</div>
+                <div class="explanation-box" id="explanationBox">
+                    <h4><i class="fas fa-lightbulb"></i> Explicación</h4>
+                    <p>${currentQuestion.explanation}</p>
+                </div>
+                <button class="next-question-btn" onclick="generateNewExercise()" style="display:none;" id="nextBtn">
+                    Siguiente Pregunta <i class="fas fa-arrow-right"></i>
+                </button>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        // Verificar respuesta
+        window.checkAnswer = function(btn, selectedValue) {
+            // Convertir a string para comparación segura
+            const selectedStr = String(selectedValue);
+            const correctStr = String(currentQuestion.correctAnswer);
+            
+            // Deshabilitar botones
+            const buttons = document.querySelectorAll('.option-button');
+            buttons.forEach(b => b.disabled = true);
+            
+            if (selectedStr === correctStr) {
+                btn.classList.add('correct');
+            } else {
+                btn.classList.add('incorrect');
+                // Resaltar la correcta
+                buttons.forEach(b => {
+                    if (String(b.textContent).trim() === correctStr) {
+                        b.classList.add('correct');
                     }
                 });
-                
-                // SOLO DESBLOQUEAR CUESTIONARIO 1 SI TODOS LOS TEMAS FUERON VISITADOS
-                if (globalState.allTopicsVisited) {
-                    unlockQuiz(1);
-                }
-                
-                // NO DESBLOQUEAR LOS DEMÁS CUESTIONARIOS AUTOMÁTICAMENTE
-                // Solo se desbloquearán cuando se completen los anteriores con >= 170
-                
-                // Actualizar barra de energía
-                updateEnergyBar();
-                updateDashboardStats();
             }
-        }
+            
+            // Mostrar explicación
+            document.getElementById('explanationBox').classList.add('show');
+            document.getElementById('nextBtn').style.display = 'block';
+        };
 
         // Inicialización
         document.addEventListener('DOMContentLoaded', function() {
             setupEventListeners();
-            loadFromSessionStorage();
+            loadProgressFromFirebase();
             highlightCurrentPage();
             setupSidebarToggle();
-            generateNewExercise(); // Generar el primer ejercicio
+            generateNewExercise();
             
-            // MARCAR LA PÁGINA ACTUAL COMO VISITADA AL CARGAR
             const currentPage = window.location.pathname.split('/').pop();
             const currentPageElement = document.querySelector(`[href="${currentPage}"]`);
             if (currentPageElement) {
@@ -1236,7 +1333,6 @@
 
         // Configurar event listeners
         function setupEventListeners() {
-            // Menu items - Prevenir navegación si está bloqueado
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.addEventListener('click', function(e) {
                     const isQuiz = this.dataset.quiz;
@@ -1252,22 +1348,17 @@
                         return false;
                     }
                     
-                    // Marcar como visitado ANTES de navegar
                     const contentId = this.dataset.content;
                     if (contentId) {
-                        // Solo marcar como visitado si no es cuestionario
                         if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
                             !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
                             markAsVisited(contentId);
                         }
                     }
-                    
-                    // Permitir navegación normal
                     return true;
                 });
             });
 
-            // Modal
             document.getElementById('cheatSheetBtn').addEventListener('click', function() {
                 document.getElementById('cheatSheetModal').classList.add('active');
             });
@@ -1283,7 +1374,6 @@
             });
         }
 
-        // Configurar el botón de toggle para la barra lateral
         function setupSidebarToggle() {
             const sidebarToggle = document.getElementById('sidebarToggle');
             const sidebar = document.getElementById('sidebar');
@@ -1293,7 +1383,6 @@
                 sidebar.classList.toggle('hidden');
                 contentArea.classList.toggle('expanded');
                 
-                // Cambiar el ícono del botón
                 const icon = this.querySelector('i');
                 if (sidebar.classList.contains('hidden')) {
                     icon.classList.remove('fa-bars');
@@ -1305,42 +1394,38 @@
             });
         }
 
-        // Botón de reinicio
         function resetProgress() {
-            if (confirm('¿Estás seguro de que deseas reiniciar todo tu progreso? Esta acción no se puede deshacer.')) {
-                // Limpiar estado global
+            if (confirm('¿Estás seguro de que deseas reiniciar todo tu progreso en la nube? Esta acción no se puede deshacer.')) {
                 globalState.completedTopics.clear();
                 globalState.visitedTopics.clear();
                 globalState.quizScores = { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
                 globalState.allTopicsVisited = false;
                 
-                // Limpiar estado visual
                 document.querySelectorAll('.menu-item.completed').forEach(item => {
                     item.classList.remove('completed');
                 });
                 
-                // Bloquear todos los cuestionarios
                 document.querySelectorAll('[data-quiz]').forEach(item => {
                     item.classList.add('locked');
                 });
                 
-                // Bloquear evaluación final
                 document.querySelectorAll('[data-final="true"]').forEach(item => {
                     item.classList.add('locked');
                 });
                 
-                // Actualizar barras de progreso con animación
                 updateEnergyBar();
                 updateDashboardStats(true);
                 
-                // Limpiar sessionStorage
-                sessionStorage.removeItem('module1Progress');
-                
-                showNotification('Progreso Reiniciado', 'Todo tu progreso ha sido eliminado correctamente.');
+                db.ref(`users/${userId}`).remove()
+                    .then(() => {
+                        showNotification('Progreso Reiniciado', 'Tus datos han sido eliminados de la base de datos.');
+                    })
+                    .catch((error) => {
+                        console.error("Error borrando datos:", error);
+                    });
             }
         }
 
-        // Resaltar página actual
         function highlightCurrentPage() {
             const currentPage = window.location.pathname.split('/').pop();
             const menuItem = document.querySelector(`[href="${currentPage}"]`);
@@ -1349,29 +1434,26 @@
             }
         }
 
-        // Marcar como visitado con actualización dinámica
         function markAsVisited(contentId) {
             globalState.visitedTopics.add(contentId);
             
-            // Marcar como completado si no es cuestionario
             if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
                 !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
                 globalState.completedTopics.add(contentId);
                 const menuItem = document.querySelector(`[data-content="${contentId}"]`);
                 if (menuItem && !menuItem.classList.contains('completed')) {
                     menuItem.classList.add('completed');
-                    // Crear efecto de partículas
                     createAchievementParticles(menuItem);
-                    // Actualizar estadísticas inmediatamente
                     updateDashboardStats(true);
                 }
             }
             
             checkAllTopicsVisited();
-            saveToSessionStorage();
+            
+            // GUARDAR EN FIREBASE
+            saveProgressToFirebase(contentId);
         }
 
-        // Crear partículas de logro
         function createAchievementParticles(element) {
             const rect = element.getBoundingClientRect();
             const colors = ['#d4af37', '#f4e4bc', '#2ecc71'];
@@ -1380,184 +1462,71 @@
                 const particle = document.createElement('div');
                 particle.className = 'achievement-particle';
                 particle.innerHTML = '✨';
-                particle.style.left = rect.left + rect.width / 2 + 'px';
-                particle.style.top = rect.top + rect.height / 2 + 'px';
-                particle.style.color = colors[Math.floor(Math.random() * colors.length)];
-                particle.style.fontSize = Math.random() * 10 + 15 + 'px';
+                particle.style.left = (rect.left + rect.width / 2) + 'px';
+                particle.style.top = (rect.top + rect.height / 2) + 'px';
+                
+                const x = (Math.random() - 0.5) * 100;
+                const y = (Math.random() - 0.5) * 100;
+                particle.style.transform = `translate(${x}px, ${y}px)`;
+                
                 document.body.appendChild(particle);
                 
-                setTimeout(() => particle.remove(), 2000);
+                setTimeout(() => {
+                    particle.remove();
+                }, 2000);
             }
         }
 
-        // Verificar si todos los temas fueron visitados
         function checkAllTopicsVisited() {
-            const nonQuizTopics = ['RCDD1', 'RCDD2', 'RCDD3', 'RCDD4', 'RCDD5', 'RCDD6', 'RCDD7', 'RCDD8'];
-            const allVisited = nonQuizTopics.every(topic => globalState.visitedTopics.has(topic));
+            const totalTheoreticalTopics = 8; 
             
-            if (allVisited && !globalState.allTopicsVisited) {
+            let count = 0;
+            for(let i=1; i<=totalTheoreticalTopics; i++) {
+                if(globalState.completedTopics.has(`RCDD${i}`)) {
+                    count++;
+                }
+            }
+
+            if (count >= totalTheoreticalTopics && !globalState.allTopicsVisited) {
                 globalState.allTopicsVisited = true;
                 unlockQuiz(1);
-                showNotification('Cuestionario Desbloqueado', '¡Cuestionario 1 desbloqueado! Ya puedes comenzar tu práctica.');
+                showNotification('¡Logro Desbloqueado!', 'Has completado todos los temas teóricos. ¡Prueba desbloqueada!');
             }
         }
 
-        // Desbloquear cuestionario con animación
         function unlockQuiz(quizNumber) {
             const quizItem = document.querySelector(`[data-quiz="${quizNumber}"]`);
             if (quizItem) {
                 quizItem.classList.remove('locked');
                 quizItem.classList.add('unlocking');
-                setTimeout(() => {
-                    quizItem.classList.remove('unlocking');
-                }, 600);
+                setTimeout(() => quizItem.classList.remove('unlocking'), 600);
             }
         }
 
-        // Actualizar estadísticas del dashboard con animaciones
-        function updateDashboardStats(animate = false) {
-            const totalTopics = 8;
-            const completedTopics = globalState.completedTopics.size;
-            const topicsProgress = Math.round((completedTopics / totalTopics) * 100);
+        function updateEnergyBar() {
+            const totalTopics = 8; 
+            const completedCount = globalState.completedTopics.size;
+            const percentage = Math.min(100, Math.round((completedCount / totalTopics) * 100));
             
-            const totalQuizzes = 3;
-            const passedQuizzes = [globalState.quizScores.quiz1, globalState.quizScores.quiz2, globalState.quizScores.quiz3]
-                .filter(score => score >= 170).length;
-            const quizzesProgress = Math.round((passedQuizzes / totalQuizzes) * 100);
-            
-            const moduleProgress = Math.round((topicsProgress * 0.6) + (quizzesProgress * 0.4));
-            
-            // Actualizar barra de energía
-            const energyFill = document.getElementById('energyFill');
-            const energyPercentage = document.getElementById('energyPercentage');
-            if (energyFill) {
-                energyFill.style.width = `${moduleProgress}%`;
-                if (animate) energyFill.classList.add('animated');
-                setTimeout(() => energyFill.classList.remove('animated'), 1000);
-            }
-            if (energyPercentage) energyPercentage.textContent = `${moduleProgress}%`;
+            document.getElementById('energyFill').style.width = percentage + '%';
+            document.getElementById('energyPercentage').textContent = percentage + '%';
         }
 
-        // Mostrar notificación
         function showNotification(title, message) {
             const notification = document.getElementById('notification');
-            const notificationMessage = document.getElementById('notificationMessage');
-            
-            notification.querySelector('.notification-title').textContent = title;
-            notificationMessage.textContent = message;
+            document.querySelector('.notification-title').textContent = title;
+            document.getElementById('notificationMessage').textContent = message;
             
             notification.classList.add('show');
             
             setTimeout(() => {
                 notification.classList.remove('show');
-            }, 4000);
+            }, 3000);
         }
-
-        // Actualizar barra de energía
-        function updateEnergyBar() {
-            const scores = [
-                globalState.quizScores.quiz1,
-                globalState.quizScores.quiz2,
-                globalState.quizScores.quiz3
-            ];
-            
-            const validScores = scores.filter(s => s > 0);
-            const average = validScores.length > 0 ? 
-                validScores.reduce((a, b) => a + b, 0) / validScores.length : 0;
-            
-            const percentage = Math.round((average / 300) * 100);
-            
-            const energyFill = document.getElementById('energyFill');
-            const energyPercentage = document.getElementById('energyPercentage');
-            if (energyFill) energyFill.style.width = `${percentage}%`;
-            if (energyPercentage) energyPercentage.textContent = `${percentage}%`;
-        }
-
-        // --- Lógica del Ejercicio Interactivo ---
-        function generateNewExercise() {
-            // 1. Seleccionar una pregunta aleatoria
-            const randomIndex = Math.floor(Math.random() * questionPool.length);
-            currentQuestion = questionPool[randomIndex];
-
-            // 2. Preparar las opciones (respuesta correcta + distractores)
-            const options = [currentQuestion.correctAnswer, ...currentQuestion.distractors];
-            // Mezclar las opciones para que la correcta no siempre esté en la misma posición
-            options.sort(() => Math.random() - 0.5);
-
-            // 3. Generar el HTML e inyectarlo en el contenedor
-            const container = document.getElementById('exercise-container');
-            container.innerHTML = `
-                <div class="question-text">${currentQuestion.question}</div>
-                <div class="options-grid">
-                    ${options.map(option => `<button class="option-button" onclick="checkAnswer(this, '${option}')">${option}</button>`).join('')}
-                </div>
-                <div id="explanation" class="explanation-box">
-                    <h4>Explicación:</h4>
-                    <p>${currentQuestion.explanation}</p>
-                </div>
-                <button id="nextBtn" class="next-question-btn" style="display: none;" onclick="generateNewExercise()">
-                    <i class="fas fa-redo"></i> Siguiente Pregunta
-                </button>
-            `;
-        }
-
-        function checkAnswer(buttonElement, selectedValue) {
-            // Deshabilitar todos los botones para evitar más clics
-            const allButtons = document.querySelectorAll('.option-button');
-            allButtons.forEach(btn => btn.disabled = true);
-
-            const isCorrect = selectedValue == currentQuestion.correctAnswer;
-            
-            if (isCorrect) {
-                buttonElement.classList.add('correct');
-                showNotification('¡Correcto!', 'Has identificado la respuesta correcta.');
-            } else {
-                buttonElement.classList.add('incorrect');
-                // Resaltar la respuesta correcta
-                allButtons.forEach(btn => {
-                    if (btn.textContent == currentQuestion.correctAnswer) {
-                        btn.classList.add('correct');
-                    }
-                });
-                showNotification('Incorrecto', 'Revisa la explicación para entender por qué.');
-            }
-
-            // Mostrar la explicación y el botón de siguiente
-            document.getElementById('explanation').classList.add('show');
-            document.getElementById('nextBtn').style.display = 'block';
-        }
-
-        // Función para ser llamada desde las páginas de cuestionarios
-        window.updateQuizScore = function(quizNumber, score) {
-            globalState.quizScores[`quiz${quizNumber}`] = score;
-            
-            // SOLO DESBLOQUEAR EL SIGUIENTE CUESTIONARIO SI EL PUNTAJE ES >= 170
-            if (score >= 170) {
-                if (quizNumber === 1) {
-                    unlockQuiz(2);
-                    showNotification('Cuestionario 2 Desbloqueado', '¡Puedes continuar al siguiente nivel!');
-                } else if (quizNumber === 2) {
-                    unlockQuiz(3);
-                    showNotification('Cuestionario 3 Desbloqueado', '¡Último nivel desbloqueado!');
-                } else if (quizNumber === 3) {
-                    const finalItem = document.querySelector('[data-final="true"]');
-                    if (finalItem) finalItem.classList.remove('locked');
-                    showNotification('Evaluación Final Desbloqueada', '¡Estás listo para la evaluación final!');
-                }
-            }
-            
+        
+        function updateDashboardStats(showNotification = false) {
             updateEnergyBar();
-            updateDashboardStats(true);
-            saveToSessionStorage();
-        };
-
-        // Función para ser llamada desde la evaluación final
-        window.updateFinalScore = function(score) {
-            globalState.quizScores.final = score;
-            updateEnergyBar();
-            updateDashboardStats(true);
-            saveToSessionStorage();
-        };
+        }
     </script>
 </body>
 </html>
