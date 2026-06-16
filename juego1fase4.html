@@ -915,39 +915,45 @@
             function closeAllPanels() { document.querySelectorAll('.panel-box').forEach(p => p.classList.remove('active')); }
 
             // --- FIREBASE HELPERS ---
-            async function saveGameCompletionToFirebase(userId, time, won) {
-                if (!db || !ref || !update) return;
-                try {
-                    const gameRef = ref(db, `users/${userId}/gameStates/juego1_fase4`);
-                    const statsRef = ref(db, `users/${userId}/stats`);
-                    
-                    // Obtener estado anterior para verificar repeticiones
-                    const snapshot = await get(gameRef);
-                    if (snapshot.exists()) {
-                        isReplay = true; // Marcar como repetición si ya existía
-                    }
+         // =====================================================
+// FUNCIIÓN CORREGIDA - Guardar progreso en Firebase
+// =====================================================
+async function saveGameCompletionToFirebase(userId, time, won) {
+    if (!db || !ref || !update || !get) return;
+    try {
+        const gameRef = ref(db, `users/${userId}/gameStates/juego1_fase4`);
+        const statsRef = ref(db, `users/${userId}/stats`);
 
-                    // Guardar estado específico del juego
-                    await set(gameRef, {
-                        completed: true,
-                        bestTime: time,
-                        lastPlayed: Date.now()
-                    });
+        // Verificar si ya existía (para saber si es repetición)
+        const snapshot = await get(gameRef);
+        if (snapshot.exists()) {
+            isReplay = true;
+        }
 
-                    // Actualizar contadores globales
-                    const updates = {};
-                    if (won) {
-                        updates['gamesWon'] = increment(1); 
-                        // Guardar flag para el Dashboard
-                        updates['hasCompletedGame1'] = true; 
-                    }
-                    await update(statsRef, updates);
-                    
-                    console.log("Progreso guardado en Firebase");
-                } catch (error) {
-                    console.error("Error guardando progreso en Firebase:", error);
-                }
-            }
+        // Guardar estado del juego
+        await set(gameRef, {
+            completed: true,
+            bestTime: time,
+            lastPlayed: Date.now()
+        });
+
+        // Si ganó, marcar como completado y sumar gamesWon
+        if (won) {
+            const statsSnapshot = await get(statsRef);
+            const currentStats = statsSnapshot.val() || {};
+            const updates = {
+                gamesWon: (currentStats.gamesWon || 0) + 1,
+                hasCompletedGame1: true    // ← ESTE FLAG es el que lee el LC
+            };
+            await update(statsRef, updates);
+            console.log("✅ Juego marcado como completado en Firebase");
+        }
+
+        console.log("Progreso guardado en Firebase correctamente");
+    } catch (error) {
+        console.error("Error guardando progreso en Firebase:", error);
+    }
+}
 
             // --- EVENT LISTENERS FOR MISSION SYSTEM ---
             window.addEventListener('userReady', (e) => { 
