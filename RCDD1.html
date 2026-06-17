@@ -283,7 +283,7 @@
             width: 100%;
         }
 
-        .menu-item:hover {
+        .menu-item:hover:not(.locked) {
             background: rgba(212, 175, 55, 0.1);
             transform: translateX(8px);
             color: var(--verde-oscuro);
@@ -298,27 +298,7 @@
             box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
         }
 
-        .menu-item.completed {
-            position: relative;
-            background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(46, 204, 113, 0.05));
-        }
-
-        .menu-item.completed::after {
-            content: '\f00c';
-            font-family: 'Font Awesome 6 Free';
-            font-weight: 900;
-            color: var(--dorado);
-            margin-left: auto;
-            font-size: 1rem;
-            animation: checkmark 0.3s ease;
-        }
-
-        @keyframes checkmark {
-            0% { transform: scale(0) rotate(-45deg); }
-            50% { transform: scale(1.2) rotate(10deg); }
-            100% { transform: scale(1) rotate(0deg); }
-        }
-
+        /* Estilo para ítems bloqueados */
         .menu-item.locked {
             opacity: 0.5;
             cursor: not-allowed;
@@ -331,6 +311,9 @@
             font-weight: 900;
             margin-right: 0.5rem;
             color: var(--gris-texto);
+            width: auto;
+            background: none;
+            opacity: 1;
         }
 
         /* Animación de desbloqueo */
@@ -792,29 +775,6 @@
             opacity: 0.9;
         }
 
-        /* Efecto de partículas para logros */
-        .achievement-particle {
-            position: fixed;
-            pointer-events: none;
-            animation: floatUp 2s ease-out forwards;
-            z-index: 9999;
-        }
-
-        @keyframes floatUp {
-            0% {
-                opacity: 1;
-                transform: translateY(0) scale(0);
-            }
-            50% {
-                opacity: 1;
-                transform: translateY(-20px) scale(1);
-            }
-            100% {
-                opacity: 0;
-                transform: translateY(-60px) scale(0.5);
-            }
-        }
-
         /* Responsive */
         @media (max-width: 768px) {
             .main-container {
@@ -931,12 +891,15 @@
 
                 <div class="menu-section">
                     <h3><i class="fas fa-tasks"></i> Entrenamiento de Práctica</h3>
-                    <a href="RCDD9.html" class="menu-item locked" data-content="RCDD9" data-quiz="1">
+                    <!-- Cuestionario 1: Desbloqueado por defecto -->
+                    <a href="RCDD9.html" class="menu-item" data-content="RCDD9" data-quiz="1">
                         Cuestionario 1: Precisión y Signos (Nivel Básico)
                     </a>
+                    <!-- Cuestionario 2: Bloqueado hasta Q1 >= 150 -->
                     <a href="RCDD10.html" class="menu-item locked" data-content="RCDD10" data-quiz="2">
                         Cuestionario 2: Problemas de Contexto Real (Nivel Intermedio)
                     </a>
+                    <!-- Cuestionario 3: Bloqueado hasta Total >= 180 -->
                     <a href="RCDD11.html" class="menu-item locked" data-content="RCDD11" data-quiz="3">
                         Cuestionario 3: Desafío Saber Pro (Nivel Avanzado)
                     </a>
@@ -954,6 +917,7 @@
 
                 <div class="menu-section">
                     <h3><i class="fas fa-flag-checkered"></i> Cierre de Módulo</h3>
+                    <!-- Cierre: Bloqueado hasta Total >= 180 -->
                     <a href="RCDD12.html" class="menu-item locked" data-content="RCDD12" data-final="true">
                         Evaluación de salida
                     </a>
@@ -1115,7 +1079,7 @@
         </div>
     </div>
 
-    <!-- Script Principal: BLINDADO -->
+    <!-- Script Principal: LOGICA ACTUALIZADA -->
     <script type="module">
         // ==========================================
         // 1. FIREBASE SETUP
@@ -1137,9 +1101,8 @@
         const db = getDatabase(app);
 
         // ==========================================
-        // 2. GESTIÓN DE USUARIO (ROBUSTA)
+        // 2. GESTIÓN DE USUARIO
         // ==========================================
-        // Estrategia: Usar localStorage y sessionStorage en conjunto.
         let userId = localStorage.getItem('skopia_uid') || sessionStorage.getItem('skopia_uid');
         
         if (!userId) {
@@ -1148,305 +1111,94 @@
             sessionStorage.setItem('skopia_uid', userId);
             console.log("✨ Nuevo Usuario Creado:", userId);
         } else {
-            // Sincronizar ambos storages por si acaso
             localStorage.setItem('skopia_uid', userId);
             sessionStorage.setItem('skopia_uid', userId);
             console.log("🔄 Usuario Recuperado:", userId);
         }
 
-        // Referencias
-        const userProgressRef = ref(db, 'users/' + userId + '/module1/topics');
-        const requiredTopicsForQuiz1 = ['RCDD1', 'RCDD2', 'RCDD3', 'RCDD4', 'RCDD5', 'RCDD6', 'RCDD7', 'RCDD8'];
+        // ==========================================
+        // 3. REFERENCIAS FIREBASE (PUNTAJES)
+        // ==========================================
+        // Ahora escuchamos los puntajes de los cuestionarios
+        const scoresRef = ref(db, 'users/' + userId + '/module1/scores');
 
         // ==========================================
-        // 3. ESTADO GLOBAL
+        // 4. LÓGICA DE DESBLOQUEO POR PUNTAJE
         // ==========================================
-        const globalState = {
-            completedTopics: new Set(),
-            visitedTopics: new Set(),
-            quizScores: { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 },
-            allTopicsVisited: false
-        };
-
-        // ==========================================
-        // 4. FUNCIONES DE SINCRONIZACIÓN (LA CLAVE)
-        // ==========================================
-
-        // Cargar desde SessionStorage (MUY RÁPIDO) para evitar parpadeos
-        function loadFromSessionStorage() {
-            const saved = sessionStorage.getItem('skopia_topics_cache');
-            if (saved) {
-                try {
-                    const data = JSON.parse(saved);
-                    data.topics.forEach(id => {
-                        globalState.completedTopics.add(id);
-                        const item = document.querySelector(`[data-content="${id}"]`);
-                        if (item) item.classList.add('completed');
-                    });
-                    updateEnergyBar();
-                } catch (e) {
-                    console.error("Error cargando cache:", e);
-                }
-            }
-        }
-
-        // Guardar en SessionStorage (Para sincronización entre pestañas instantánea)
-        function saveToSessionStorage(topicsSet) {
-            const data = {
-                topics: Array.from(topicsSet),
-                timestamp: Date.now()
-            };
-            sessionStorage.setItem('skopia_topics_cache', JSON.stringify(data));
-        }
-
-        // Actualizar UI basada en el estado actual (Set)
-        function syncUI() {
-            document.querySelectorAll('.menu-item').forEach(item => {
-                const id = item.dataset.content;
-                if (globalState.completedTopics.has(id)) {
-                    item.classList.add('completed');
-                } else {
-                    item.classList.remove('completed');
-                }
-            });
-            updateEnergyBar();
-        }
-
-        // ==========================================
-        // 5. FIREBASE LISTENER (FUENTE DE VERDAD)
-        // ==========================================
-        onValue(userProgressRef, (snapshot) => {
+        onValue(scoresRef, (snapshot) => {
             const data = snapshot.val();
-            console.log("📥 Datos crudos de Firebase:", data);
-            
-            globalState.completedTopics.clear();
-            globalState.visitedTopics.clear();
+            console.log("📊 Puntajes recibidos:", data);
 
-            if (data) {
-                Object.keys(data).forEach(topicId => {
-                    globalState.completedTopics.add(topicId);
-                    globalState.visitedTopics.add(topicId);
-                });
+            // Obtener puntajes o 0 si no existen
+            const q1Score = data && data.quiz1 ? data.quiz1 : 0;
+            const q2Score = data && data.quiz2 ? data.quiz2 : 0;
+            // Calculamos el total acumulado (Q1 + Q2)
+            const totalScore = q1Score + q2Score;
+
+            // --- REGLA 1: Cuestionario 1 ---
+            // Siempre desbloqueado por defecto (ya no tiene clase 'locked' en HTML)
+            // Pero nos aseguramos de que si estuviera bloqueado por error, se abra.
+            const q1Link = document.querySelector('[data-content="RCDD9"]');
+            if(q1Link && q1Link.classList.contains('locked')) {
+                q1Link.classList.remove('locked');
             }
 
-            // 1. Actualizar UI visual
-            syncUI();
-
-            // 2. Guardar en SessionStorage para que otras pestañas lo vean YA
-            saveToSessionStorage(globalState.completedTopics);
-
-            // 3. Verificar Desbloqueo
-            const visitedCount = requiredTopicsForQuiz1.filter(id => globalState.completedTopics.has(id)).length;
-            if (visitedCount === requiredTopicsForQuiz1.length) {
-                unlockQuiz(1);
-                globalState.allTopicsVisited = true;
+            // --- REGLA 2: Cuestionario 2 ---
+            // Desbloquear si Q1 >= 150
+            const q2Link = document.querySelector('[data-content="RCDD10"]');
+            if (q1Score >= 150) {
+                q2Link.classList.remove('locked');
+                q2Link.classList.add('unlocking'); // Animación
+                setTimeout(() => q2Link.classList.remove('unlocking'), 600);
             } else {
-                globalState.allTopicsVisited = false;
+                q2Link.classList.add('locked');
             }
+
+            // --- REGLA 3: Cuestionario 3 y Cierre de Módulo ---
+            // Desbloquear si Total >= 180
+            const q3Link = document.querySelector('[data-content="RCDD11"]');
+            const finalLink = document.querySelector('[data-content="RCDD12"]');
+
+            if (totalScore >= 180) {
+                q3Link.classList.remove('locked');
+                finalLink.classList.remove('locked');
+                
+                // Animación sutil una sola vez
+                if(!q3Link.dataset.unlocked) {
+                    q3Link.classList.add('unlocking');
+                    finalLink.classList.add('unlocking');
+                    q3Link.dataset.unlocked = "true";
+                    finalLink.dataset.unlocked = "true";
+                    showNotification('¡Nivel Avanzado Desbloqueado!', 'Has alcanzado el puntaje necesario.');
+                }
+            } else {
+                q3Link.classList.add('locked');
+                finalLink.classList.add('locked');
+            }
+
+            // Actualizar Barra de Energía
+            updateEnergyBar(totalScore);
         });
 
         // ==========================================
-        // 6. SINCRONIZACIÓN ENTRE PESTAÑAS (TRUCO FINAL)
+        // 5. FUNCIONES DE UI
         // ==========================================
-        // Cuando SessionStorage cambia en otra pestaña, esta pestaña se entera
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'skopia_topics_cache' && e.newValue) {
-                try {
-                    const data = JSON.parse(e.newValue);
-                    globalState.completedTopics = new Set(data.topics);
-                    syncUI(); // Actualizar visualmente inmediatamente
-                } catch (err) {
-                    console.error("Error sincronizando pestañas:", err);
-                }
-            }
-        });
-
-        // ==========================================
-        // 7. FUNCIONES PÚBLICAS
-        // ==========================================
-        window.markTopicInFirebase = function(topicId) {
-            console.log(`📝 Marcando ${topicId} como visitado...`);
+        
+        function updateEnergyBar(score) {
+            // Meta es 180 puntos para el 100%
+            const goal = 180;
+            let percentage = Math.min((score / goal) * 100, 100);
             
-            // 1. Actualizar Firebase (Permanente)
-            set(ref(db, 'users/' + userId + '/module1/topics/' + topicId), true);
-
-            // 2. Actualizar Estado Local (Inmediato)
-            globalState.completedTopics.add(topicId);
-            globalState.visitedTopics.add(topicId);
+            const energyFill = document.getElementById('energyFill');
+            const energyText = document.getElementById('energyPercentage');
             
-            // 3. Guardar en SessionStorage (Disparar evento 'storage' en otras pestañas)
-            saveToSessionStorage(globalState.completedTopics);
+            energyFill.style.width = percentage + '%';
+            energyText.textContent = Math.floor(score) + ' / ' + goal + ' pts';
 
-            // 4. UI visual instantánea
-            syncUI();
-        };
-
-        window.clearFirebaseProgress = function() {
-            remove(ref(db, 'users/' + userId + '/module1'));
-            localStorage.removeItem('skopia_topics_cache');
-            sessionStorage.removeItem('skopia_topics_cache');
-        };
-
-        // ==========================================
-        // 8. INICIALIZACIÓN Y EVENTOS
-        // ==========================================
-        document.addEventListener('DOMContentLoaded', function() {
-            // Cargar caché local INMEDIATAMENTO para que los checks aparezcan al instante
-            loadFromSessionStorage();
-            
-            setupEventListeners();
-            highlightCurrentPage();
-            setupSidebarToggle();
-            
-            // Marcar RCDD1 como visitado
-            const currentPage = window.location.pathname.split('/').pop();
-            const currentPageElement = document.querySelector(`[href="${currentPage}"]`);
-            if (currentPageElement) {
-                const contentId = currentPageElement.dataset.content;
-                if (contentId && !contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
-                    !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
-                    
-                    // Llamada principal a Firebase
-                    window.markTopicInFirebase(contentId);
-                    
-                    // Efecto visual
-                    if (!currentPageElement.classList.contains('completed')) {
-                        currentPageElement.classList.add('completed');
-                        createAchievementParticles(currentPageElement);
-                    }
-                }
-            }
-        });
-
-        function setupEventListeners() {
-            document.querySelectorAll('.menu-item').forEach(item => {
-                item.addEventListener('click', function(e) {
-                    const isQuiz = this.dataset.quiz;
-                    const isFinal = this.dataset.final;
-                    
-                    if (this.classList.contains('locked')) {
-                        e.preventDefault();
-                        const msg = isQuiz 
-                            ? `Completa los requisitos previos para desbloquear el Cuestionario ${isQuiz}.` 
-                            : 'Completa todos los cuestionarios primero.';
-                        showNotification(isQuiz ? 'Cuestionario Bloqueado' : 'Evaluación Bloqueada', msg);
-                        return false;
-                    }
-                    
-                    // La navegación es automática, pero marcamos como visitado por seguridad
-                    const contentId = this.dataset.content;
-                    if (contentId) {
-                        if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
-                            !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
-                            window.markTopicInFirebase(contentId);
-                        }
-                    }
-                    return true;
-                });
-            });
-
-            const modal = document.getElementById('cheatSheetModal');
-            document.getElementById('cheatSheetBtn').addEventListener('click', () => modal.classList.add('active'));
-            document.getElementById('closeModal').addEventListener('click', () => modal.classList.remove('active'));
-            modal.addEventListener('click', (e) => { if(e.target === modal) modal.classList.remove('active'); });
-
-            document.getElementById('playVideo').addEventListener('click', function() {
-                const videoContainer = document.getElementById('videoContainer');
-                const videoIframe = document.createElement('iframe');
-                videoIframe.width = '560';
-                videoIframe.height = '315';
-                videoIframe.src = 'https://www.youtube.com/embed/kt_mckSKmOk?si=R_8Crx5I1GJF81Jc&autoplay=1';
-                videoIframe.title = 'YouTube video player';
-                videoIframe.frameBorder = '0';
-                videoIframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
-                videoIframe.referrerpolicy = 'strict-origin-when-cross-origin';
-                videoIframe.allowFullscreen = true;
-                
-                videoContainer.innerHTML = '';
-                videoContainer.appendChild(videoIframe);
-                showNotification('Video', 'El video comenzará a reproducirse.');
-            });
-        }
-
-        function setupSidebarToggle() {
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const sidebar = document.getElementById('sidebar');
-            const contentArea = document.getElementById('contentArea');
-            
-            sidebarToggle.addEventListener('click', function() {
-                sidebar.classList.toggle('hidden');
-                contentArea.classList.toggle('expanded');
-                
-                const icon = this.querySelector('i');
-                if (sidebar.classList.contains('hidden')) {
-                    icon.classList.remove('fa-bars');
-                    icon.classList.add('fa-chevron-right');
-                } else {
-                    icon.classList.remove('fa-chevron-right');
-                    icon.classList.add('fa-bars');
-                }
-            });
-        }
-
-        window.resetProgress = function() {
-            if (confirm('¿Estás seguro de reiniciar todo tu progreso?')) {
-                window.clearFirebaseProgress();
-                document.querySelectorAll('.menu-item.completed').forEach(item => item.classList.remove('completed'));
-                document.querySelectorAll('[data-quiz], [data-final="true"]').forEach(item => item.classList.add('locked'));
-                
-                globalState.completedTopics.clear();
-                globalState.visitedTopics.clear();
-                globalState.allTopicsVisited = false;
-                
-                updateEnergyBar();
-                updateDashboardStats(true);
-                showNotification('Reiniciado', 'Progreso eliminado.');
-            }
-        };
-
-        function highlightCurrentPage() {
-            const currentPage = window.location.pathname.split('/').pop();
-            const menuItem = document.querySelector(`[href="${currentPage}"]`);
-            if (menuItem) menuItem.classList.add('active');
-        }
-
-        function unlockQuiz(quizNumber) {
-            const quizItem = document.querySelector(`[data-quiz="${quizNumber}"]`);
-            if (quizItem && quizItem.classList.contains('locked')) {
-                quizItem.classList.remove('locked');
-                quizItem.classList.add('unlocking');
-                showNotification('¡Desbloqueado!', `Cuestionario ${quizNumber} disponible.`);
-                setTimeout(() => quizItem.classList.remove('unlocking'), 600);
-            }
-        }
-
-        function updateEnergyBar() {
-            const total = requiredTopicsForQuiz1.length;
-            const count = requiredTopicsForQuiz1.filter(id => globalState.completedTopics.has(id)).length;
-            const percentage = Math.round((count / total) * 100);
-            
-            const fill = document.getElementById('energyFill');
-            const text = document.getElementById('energyPercentage');
-            
-            if(fill) fill.style.width = percentage + '%';
-            if(text) text.textContent = percentage + '%';
-        }
-
-        function updateDashboardStats() {}
-
-        function createAchievementParticles(element) {
-            const rect = element.getBoundingClientRect();
-            const colors = ['#d4af37', '#f4e4bc', '#2ecc71'];
-            for (let i = 0; i < 8; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'achievement-particle';
-                particle.innerHTML = '✨';
-                particle.style.left = (rect.left + rect.width / 2) + 'px';
-                particle.style.top = (rect.top + rect.height / 2) + 'px';
-                particle.style.fontSize = (Math.random() * 20 + 10) + 'px';
-                particle.style.color = colors[Math.floor(Math.random() * colors.length)];
-                document.body.appendChild(particle);
-                setTimeout(() => particle.remove(), 2000);
+            if(percentage >= 100) {
+                energyFill.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
+            } else {
+                energyFill.style.background = 'linear-gradient(90deg, var(--dorado), #f4e4bc)';
             }
         }
 
@@ -1455,11 +1207,89 @@
             const titleEl = notification.querySelector('.notification-title');
             const msgEl = document.getElementById('notificationMessage');
             
-            if(notification && titleEl && msgEl) {
-                titleEl.textContent = title;
-                msgEl.textContent = message;
-                notification.classList.add('show');
-                setTimeout(() => notification.classList.remove('show'), 4000);
+            titleEl.textContent = title;
+            msgEl.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+
+        window.resetProgress = function() {
+            if(confirm("¿Estás seguro de borrar tus puntajes? Esto volverá a bloquear los cuestionarios avanzados.")) {
+                // Borramos los puntajes
+                remove(ref(db, 'users/' + userId + '/module1/scores'));
+                // Recargamos para limpiar UI
+                location.reload();
+            }
+        };
+
+        // ==========================================
+        // 6. EVENTOS GENERALES (UI Original)
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', function() {
+            highlightCurrentPage();
+            setupSidebarToggle();
+            setupModal();
+            setupVideoPlayer();
+        });
+
+        function setupSidebarToggle() {
+            const toggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            if(toggle && sidebar) {
+                toggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('hidden');
+                });
+            }
+        }
+
+        function setupModal() {
+            const btn = document.getElementById('cheatSheetBtn');
+            const modal = document.getElementById('cheatSheetModal');
+            const close = document.getElementById('closeModal');
+
+            if(btn) btn.addEventListener('click', () => modal.classList.add('active'));
+            if(close) close.addEventListener('click', () => modal.classList.remove('active'));
+            
+            if(modal) {
+                modal.addEventListener('click', (e) => {
+                    if(e.target === modal) modal.classList.remove('active');
+                });
+            }
+        }
+
+        function setupVideoPlayer() {
+            const btn = document.getElementById('playVideo');
+            const container = document.getElementById('videoContainer');
+            
+            if(btn && container) {
+                btn.addEventListener('click', function() {
+                    // Reemplazar el placeholder con el iframe de YouTube
+                    const videoIframe = document.createElement('iframe');
+                    videoIframe.width = '560';
+                    videoIframe.height = '315';
+                    // ID del video de ejemplo (puedes cambiarlo)
+                    videoIframe.src = 'https://www.youtube.com/embed/kt_mckSKmOk?si=R_8Crx5I1GJF81Jc&autoplay=1';
+                    videoIframe.title = 'YouTube video player';
+                    videoIframe.frameBorder = '0';
+                    videoIframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+                    videoIframe.referrerpolicy = 'strict-origin-when-cross-origin';
+                    videoIframe.allowFullscreen = true;
+                    
+                    container.innerHTML = '';
+                    container.appendChild(videoIframe);
+                });
+            }
+        }
+
+        function highlightCurrentPage() {
+            const path = window.location.pathname.split('/').pop();
+            const activeLink = document.querySelector(`[href="${path}"]`);
+            if(activeLink) {
+                document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+                activeLink.classList.add('active');
             }
         }
     </script>
