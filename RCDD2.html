@@ -284,7 +284,7 @@
             width: 100%;
         }
 
-        .menu-item:hover {
+        .menu-item:hover:not(.locked) {
             background: rgba(212, 175, 55, 0.1);
             transform: translateX(8px);
             color: var(--verde-oscuro);
@@ -299,27 +299,7 @@
             box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
         }
 
-        .menu-item.completed {
-            position: relative;
-            background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(46, 204, 113, 0.05));
-        }
-
-        .menu-item.completed::after {
-            content: '\f00c';
-            font-family: 'Font Awesome 6 Free';
-            font-weight: 900;
-            color: var(--dorado);
-            margin-left: auto;
-            font-size: 1rem;
-            animation: checkmark 0.3s ease;
-        }
-
-        @keyframes checkmark {
-            0% { transform: scale(0) rotate(-45deg); }
-            50% { transform: scale(1.2) rotate(10deg); }
-            100% { transform: scale(1) rotate(0deg); }
-        }
-
+        /* Estilo para ítems bloqueados */
         .menu-item.locked {
             opacity: 0.5;
             cursor: not-allowed;
@@ -332,6 +312,9 @@
             font-weight: 900;
             margin-right: 0.5rem;
             color: var(--gris-texto);
+            width: auto;
+            background: none;
+            opacity: 1;
         }
 
         /* Animación de desbloqueo */
@@ -354,7 +337,7 @@
             animation: unlock 0.6s ease;
         }
 
-        /* Barra de Energía Moderna */
+        /* Barra de Puntaje (Antes Energía) */
         .energy-bar-container {
             margin-top: 1.5rem;
             padding: 1rem;
@@ -606,7 +589,7 @@
             background: linear-gradient(135deg, var(--dorado-claro), rgba(212, 175, 55, 0.2));
             border-radius: 12px;
             border-left: 5px solid var(--dorado);
-            display: none; /* Se muestra con JS */
+            display: none;
         }
 
         .explanation-box.show {
@@ -847,29 +830,6 @@
             opacity: 0.9;
         }
 
-        /* Efecto de partículas para logros */
-        .achievement-particle {
-            position: fixed;
-            pointer-events: none;
-            animation: floatUp 2s ease-out forwards;
-            z-index: 9999;
-        }
-
-        @keyframes floatUp {
-            0% {
-                opacity: 1;
-                transform: translateY(0) scale(0);
-            }
-            50% {
-                opacity: 1;
-                transform: translateY(-20px) scale(1);
-            }
-            100% {
-                opacity: 0;
-                transform: translateY(-60px) scale(0.5);
-            }
-        }
-
         /* Responsive */
         @media (max-width: 768px) {
             .main-container {
@@ -986,20 +946,24 @@
 
                 <div class="menu-section">
                     <h3><i class="fas fa-tasks"></i> Entrenamiento de Práctica</h3>
-                    <a href="RCDD9.html" class="menu-item locked" data-content="RCDD9" data-quiz="1">
+                    <!-- Cuestionario 1: DESBLOQUEADO -->
+                    <a href="RCDD9.html" class="menu-item" data-content="RCDD9" data-quiz="1">
                         Cuestionario 1: Precisión y Signos (Nivel Básico)
                     </a>
+                    <!-- Cuestionario 2: BLOQUEADO INICIALMENTE -->
                     <a href="RCDD10.html" class="menu-item locked" data-content="RCDD10" data-quiz="2">
                         Cuestionario 2: Problemas de Contexto Real (Nivel Intermedio)
                     </a>
+                    <!-- Cuestionario 3: BLOQUEADO INICIALMENTE -->
                     <a href="RCDD11.html" class="menu-item locked" data-content="RCDD11" data-quiz="3">
                         Cuestionario 3: Desafío Saber Pro (Nivel Avanzado)
                     </a>
                     
+                    <!-- Barra de Puntaje -->
                     <div class="energy-bar-container">
                         <div class="energy-label">
-                            <span><i class="fas fa-fire"></i> Nivel de Energía</span>
-                            <span class="progress-indicator" id="energyPercentage">0%</span>
+                            <span><i class="fas fa-chart-line"></i> Puntaje Acumulado</span>
+                            <span class="progress-indicator" id="energyPercentage">0 / 180 pts</span>
                         </div>
                         <div class="energy-bar">
                             <div class="energy-fill" id="energyFill"></div>
@@ -1009,6 +973,7 @@
 
                 <div class="menu-section">
                     <h3><i class="fas fa-flag-checkered"></i> Cierre de Módulo</h3>
+                    <!-- Cierre: BLOQUEADO INICIALMENTE -->
                     <a href="RCDD12.html" class="menu-item locked" data-content="RCDD12" data-final="true">
                         Evaluación de salida
                     </a>
@@ -1064,7 +1029,7 @@
                 <section id="interactive-exercise">
                     <h2><i class="fas fa-dumbbell"></i> Ponte a Prueba</h2>
                     <div id="exercise-container">
-                        <!-- El contenido se generará dinámicamente con JavaScript -->
+                        <p style="text-align: center; color: var(--gris-texto);">Cargando ejercicio...</p>
                     </div>
                 </section>
             </main>
@@ -1139,7 +1104,7 @@
         </div>
     </div>
 
-    <!-- Script Integrado: Lógica Robusta + Ejercicios RCDD2 -->
+    <!-- Script Integrado: Lógica Robusta de Desbloqueo -->
     <script type="module">
         // ==========================================
         // 1. FIREBASE SETUP
@@ -1161,7 +1126,7 @@
         const db = getDatabase(app);
 
         // ==========================================
-        // 2. GESTIÓN DE USUARIO (ROBUSTA)
+        // 2. GESTIÓN DE USUARIO
         // ==========================================
         let userId = localStorage.getItem('skopia_uid') || sessionStorage.getItem('skopia_uid');
         
@@ -1169,131 +1134,162 @@
             userId = 'user_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
             localStorage.setItem('skopia_uid', userId);
             sessionStorage.setItem('skopia_uid', userId);
-            console.log("✨ Nuevo Usuario Creado (RCDD2):", userId);
+            console.log("✨ Nuevo Usuario Creado:", userId);
         } else {
             localStorage.setItem('skopia_uid', userId);
             sessionStorage.setItem('skopia_uid', userId);
-            console.log("🔄 Usuario Recuperado (RCDD2):", userId);
+            console.log("🔄 Usuario Recuperado:", userId);
         }
 
-        const userProgressRef = ref(db, 'users/' + userId + '/module1/topics');
-        const requiredTopicsForQuiz1 = ['RCDD1', 'RCDD2', 'RCDD3', 'RCDD4', 'RCDD5', 'RCDD6', 'RCDD7', 'RCDD8'];
+        // ==========================================
+        // 3. REFERENCIAS FIREBASE (PUNTAJES)
+        // ==========================================
+        const scoresRef = ref(db, 'users/' + userId + '/module1/scores');
 
         // ==========================================
-        // 3. ESTADO GLOBAL
+        // 4. LÓGICA DE DESBLOQUEO POR PUNTAJE
         // ==========================================
-        const globalState = {
-            completedTopics: new Set(),
-            visitedTopics: new Set(),
-            quizScores: { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 },
-            allTopicsVisited: false
-        };
+        onValue(scoresRef, (snapshot) => {
+            const data = snapshot.val();
+            console.log("📊 Puntajes recibidos:", data);
 
-        // ==========================================
-        // 4. FUNCIONES DE SINCRONIZACIÓN
-        // ==========================================
+            const q1Score = data && data.quiz1 ? data.quiz1 : 0;
+            const q2Score = data && data.quiz2 ? data.quiz2 : 0;
+            const totalScore = q1Score + q2Score;
 
-        function loadFromSessionStorage() {
-            const saved = sessionStorage.getItem('skopia_topics_cache');
-            if (saved) {
-                try {
-                    const data = JSON.parse(saved);
-                    data.topics.forEach(id => {
-                        globalState.completedTopics.add(id);
-                        const item = document.querySelector(`[data-content="${id}"]`);
-                        if (item) item.classList.add('completed');
-                    });
-                    updateEnergyBar();
-                } catch (e) {
-                    console.error("Error cache:", e);
+            // --- REGLA 1: Cuestionario 1 ---
+            const q1Link = document.querySelector('[data-content="RCDD9"]');
+            if(q1Link && q1Link.classList.contains('locked')) {
+                q1Link.classList.remove('locked');
+            }
+
+            // --- REGLA 2: Cuestionario 2 (Q1 >= 150) ---
+            const q2Link = document.querySelector('[data-content="RCDD10"]');
+            if (q1Score >= 150) {
+                q2Link.classList.remove('locked');
+                if(!q2Link.classList.contains('unlocking')) {
+                    q2Link.classList.add('unlocking');
+                    setTimeout(() => q2Link.classList.remove('unlocking'), 600);
                 }
+            } else {
+                q2Link.classList.add('locked');
+            }
+
+            // --- REGLA 3: Cuestionario 3 y Cierre (Total >= 180) ---
+            const q3Link = document.querySelector('[data-content="RCDD11"]');
+            const finalLink = document.querySelector('[data-content="RCDD12"]');
+
+            if (totalScore >= 180) {
+                q3Link.classList.remove('locked');
+                finalLink.classList.remove('locked');
+                
+                if(!q3Link.dataset.unlocked) {
+                    q3Link.classList.add('unlocking');
+                    finalLink.classList.add('unlocking');
+                    q3Link.dataset.unlocked = "true";
+                    finalLink.dataset.unlocked = "true";
+                    showNotification('¡Nivel Avanzado Desbloqueado!', 'Has alcanzado el puntaje necesario.');
+                }
+            } else {
+                q3Link.classList.add('locked');
+                finalLink.classList.add('locked');
+            }
+
+            // Actualizar Barra de Puntaje
+            updateEnergyBar(totalScore);
+        });
+
+        // ==========================================
+        // 5. FUNCIONES DE UI
+        // ==========================================
+        
+        function updateEnergyBar(score) {
+            const goal = 180;
+            let percentage = Math.min((score / goal) * 100, 100);
+            
+            const energyFill = document.getElementById('energyFill');
+            const energyText = document.getElementById('energyPercentage');
+            
+            energyFill.style.width = percentage + '%';
+            energyText.textContent = Math.floor(score) + ' / ' + goal + ' pts';
+
+            if(percentage >= 100) {
+                energyFill.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
+            } else {
+                energyFill.style.background = 'linear-gradient(90deg, var(--dorado), #f4e4bc)';
             }
         }
 
-        function saveToSessionStorage(topicsSet) {
-            const data = {
-                topics: Array.from(topicsSet),
-                timestamp: Date.now()
-            };
-            sessionStorage.setItem('skopia_topics_cache', JSON.stringify(data));
-        }
-
-        function syncUI() {
-            document.querySelectorAll('.menu-item').forEach(item => {
-                const id = item.dataset.content;
-                if (globalState.completedTopics.has(id)) {
-                    item.classList.add('completed');
-                } else {
-                    item.classList.remove('completed');
-                }
-            });
-            updateEnergyBar();
-        }
-
-        // ==========================================
-        // 5. FIREBASE LISTENER
-        // ==========================================
-        onValue(userProgressRef, (snapshot) => {
-            const data = snapshot.val();
+        function showNotification(title, message) {
+            const notification = document.getElementById('notification');
+            const titleEl = notification.querySelector('.notification-title');
+            const msgEl = document.getElementById('notificationMessage');
             
-            globalState.completedTopics.clear();
-            globalState.visitedTopics.clear();
+            titleEl.textContent = title;
+            msgEl.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
 
-            if (data) {
-                Object.keys(data).forEach(topicId => {
-                    globalState.completedTopics.add(topicId);
-                    globalState.visitedTopics.add(topicId);
+        window.resetProgress = function() {
+            if(confirm("¿Estás seguro de borrar tus puntajes?")) {
+                remove(ref(db, 'users/' + userId + '/module1/scores'));
+                location.reload();
+            }
+        };
+
+        // ==========================================
+        // 6. EVENTOS GENERALES (UI Original)
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', function() {
+            highlightCurrentPage();
+            setupSidebarToggle();
+            setupModal();
+            initExercise(); // Iniciar ejercicio
+        });
+
+        function setupSidebarToggle() {
+            const toggle = document.getElementById('sidebarToggle');
+            const sidebar = document.getElementById('sidebar');
+            if(toggle && sidebar) {
+                toggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('hidden');
                 });
             }
+        }
 
-            syncUI();
-            saveToSessionStorage(globalState.completedTopics);
+        function setupModal() {
+            const btn = document.getElementById('cheatSheetBtn');
+            const modal = document.getElementById('cheatSheetModal');
+            const close = document.getElementById('closeModal');
 
-            const visitedCount = requiredTopicsForQuiz1.filter(id => globalState.completedTopics.has(id)).length;
-            if (visitedCount === requiredTopicsForQuiz1.length) {
-                unlockQuiz(1);
-                globalState.allTopicsVisited = true;
-            } else {
-                globalState.allTopicsVisited = false;
+            if(btn) btn.addEventListener('click', () => modal.classList.add('active'));
+            if(close) close.addEventListener('click', () => modal.classList.remove('active'));
+            
+            if(modal) {
+                modal.addEventListener('click', (e) => {
+                    if(e.target === modal) modal.classList.remove('active');
+                });
             }
-        });
+        }
 
-        // ==========================================
-        // 6. SINCRONIZACIÓN PESTAÑAS
-        // ==========================================
-        window.addEventListener('storage', (e) => {
-            if (e.key === 'skopia_topics_cache' && e.newValue) {
-                try {
-                    const data = JSON.parse(e.newValue);
-                    globalState.completedTopics = new Set(data.topics);
-                    syncUI();
-                } catch (err) {
-                    console.error("Error sync:", err);
-                }
+        function highlightCurrentPage() {
+            const path = window.location.pathname.split('/').pop();
+            const activeLink = document.querySelector(`[href="${path}"]`);
+            if(activeLink) {
+                document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
+                activeLink.classList.add('active');
             }
-        });
+        }
 
         // ==========================================
-        // 7. FUNCIONES PÚBLICAS
+        // 7. LÓGICA DE EJERCICIOS (ESPECÍFICO RCDD2)
         // ==========================================
-        window.markTopicInFirebase = function(topicId) {
-            set(ref(db, 'users/' + userId + '/module1/topics/' + topicId), true);
-            globalState.completedTopics.add(topicId);
-            globalState.visitedTopics.add(topicId);
-            saveToSessionStorage(globalState.completedTopics);
-            syncUI();
-        };
-
-        window.clearFirebaseProgress = function() {
-            remove(ref(db, 'users/' + userId + '/module1'));
-            localStorage.removeItem('skopia_topics_cache');
-            sessionStorage.removeItem('skopia_topics_cache');
-        };
-
-        // ==========================================
-        // 8. LÓGICA DE EJERCICIOS (ESPECÍFICO RCDD2)
-        // ==========================================
-         const questionPool = [
+        
+        const questionPool = [
             {
 question: "Una pequeña empresa de confecciones compra un lote de 120 metros de tela por un valor total de $1.200.000. Para optimizar el material, se decide cortar toda la tela en piezas uniformes de 3 metros cada una. Si el costo de mano de obra por cada corte realizado es de $5.000, ¿cuál es el costo total de la mano de obra para cortar todo el lote de tela?",
 correctAnswer: 195000,
@@ -1511,213 +1507,70 @@ distractors: [240000, 12000, 152],
 explanation: "Paso 1: Calcular la producción total teórica de la jornada multiplicando las horas trabajadas por la cuota asignada por hora: $8 \times 20 = 160$ cajas embotelladas. Paso 2: Determinar la cantidad de cajas aceptadas restando las piezas defectuosas que fueron descartadas: $160 - 8 = 152$ cajas aptas. Paso 3: Calcular el valor total del bono multiplicando las cajas aceptadas por el pago estipulado para cada una de ellas: $152 \times 1500 = 228000$. El operario ganará $228.000."
 }
         ];
-        let currentQuestion = null;
 
-        window.generateNewExerciseUI = function() {
-            generateNewExercise();
-        };
+        let currentQuestionIndex = 0;
 
-        window.checkAnswer = function(btn, selectedValue) {
-            const buttons = document.querySelectorAll('.option-button');
-            buttons.forEach(b => b.disabled = true);
-            const isCorrect = String(selectedValue) === String(currentQuestion.correctAnswer);
+        function initExercise() {
+            loadQuestion(currentQuestionIndex);
+        }
 
-            if (isCorrect) {
-                btn.classList.add('correct');
-                showNotification('¡Correcto!', 'Has identificado la respuesta adecuada.');
-            } else {
-                btn.classList.add('incorrect');
-                buttons.forEach(b => {
-                    if (String(b.textContent.trim()) === String(currentQuestion.correctAnswer)) {
-                        b.classList.add('correct');
-                    }
-                });
-                showNotification('Incorrecto', 'Revisa el análisis para entender el error.');
+        function loadQuestion(index) {
+            const container = document.getElementById('exercise-container');
+            if(!container) return;
+            
+            const question = questionPool[index];
+            if(!question) {
+                container.innerHTML = '<h3 style="text-align:center; color:var(--verde-oscuro)">¡Has completado todos los ejercicios de esta sección!</h3>';
+                return;
             }
 
-            document.getElementById('explanationBox').classList.add('show');
-            document.getElementById('nextBtn').style.display = 'block';
-        };
-
-        function generateNewExercise() {
-            const container = document.getElementById('exercise-container');
-            const randomIndex = Math.floor(Math.random() * questionPool.length);
-            currentQuestion = questionPool[randomIndex];
-            const allOptions = [...currentQuestion.distractors, currentQuestion.correctAnswer];
-            allOptions.sort(() => Math.random() - 0.5);
+            // Crear opciones mezcladas
+            const options = [...question.distractors, question.correctAnswer];
+            options.sort(() => Math.random() - 0.5);
 
             let html = `
-                <div class="question-text">${currentQuestion.question}</div>
+                <div class="question-text">${index + 1}. ${question.question}</div>
                 <div class="options-grid">
-                    ${allOptions.map(opt => `
-                        <button class="option-button" onclick="window.checkAnswer(this, ${JSON.stringify(opt).replace(/"/g, '&quot;')})">
-                            ${opt}
-                        </button>
-                    `).join('')}
-                </div>
-                <div class="explanation-box" id="explanationBox">
-                    <h4><i class="fas fa-lightbulb"></i> Análisis:</h4>
-                    <p>${currentQuestion.explanation}</p>
-                </div>
-                <button class="next-question-btn" id="nextBtn" onclick="window.generateNewExerciseUI()" style="display:none">
-                    Siguiente Pregunta <i class="fas fa-arrow-right"></i>
-                </button>
             `;
+
+            options.forEach(opt => {
+                html += `<button class="option-button" onclick="checkAnswer(this, '${opt}', '${question.correctAnswer}')">${opt}</button>`;
+            });
+
+            html += `</div>
+                <div class="explanation-box" id="explanation-${index}">
+                    <h4><i class="fas fa-lightbulb"></i> Explicación:</h4>
+                    <p>${question.explanation}</p>
+                </div>
+                <button class="next-question-btn" id="nextBtn-${index}" style="display:none;" onclick="nextQuestion()">Siguiente Pregunta</button>
+            `;
+
             container.innerHTML = html;
         }
 
-        // ==========================================
-        // 9. INICIALIZACIÓN
-        // ==========================================
-        document.addEventListener('DOMContentLoaded', function() {
-            // Cargar caché inmediato
-            loadFromSessionStorage();
-            
-            setupEventListeners();
-            highlightCurrentPage();
-            setupSidebarToggle();
-            generateNewExercise(); // Cargar ejercicio inicial
+        // Hacer la función global para que onclick funcione
+        window.checkAnswer = function(btn, selected, correct) {
+            const buttons = document.querySelectorAll('.option-button');
+            buttons.forEach(b => b.disabled = true);
 
-            // Marcar RCDD2 como visitado
-            const currentPage = window.location.pathname.split('/').pop();
-            const currentPageElement = document.querySelector(`[href="${currentPage}"]`);
-            
-            if (currentPageElement) {
-                const contentId = currentPageElement.dataset.content;
-                if (contentId && !contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
-                    !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
-                    
-                    window.markTopicInFirebase(contentId);
-                    
-                    if (!currentPageElement.classList.contains('completed')) {
-                        currentPageElement.classList.add('completed');
-                        createAchievementParticles(currentPageElement);
-                    }
-                }
-            }
-        });
-
-        function setupEventListeners() {
-            document.querySelectorAll('.menu-item').forEach(item => {
-                item.addEventListener('click', function(e) {
-                    const isQuiz = this.dataset.quiz;
-                    const isFinal = this.dataset.final;
-                    
-                    if (this.classList.contains('locked')) {
-                        e.preventDefault();
-                        const msg = isQuiz 
-                            ? `Completa los requisitos previos para el Cuestionario ${isQuiz}.` 
-                            : 'Completa todos los cuestionarios primero.';
-                        showNotification(isQuiz ? 'Cuestionario Bloqueado' : 'Evaluación Bloqueada', msg);
-                        return false;
-                    }
-                    
-                    const contentId = this.dataset.content;
-                    if (contentId) {
-                        if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
-                            !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
-                            window.markTopicInFirebase(contentId);
-                        }
-                    }
-                    return true;
+            if(String(selected) === String(correct)) {
+                btn.classList.add('correct');
+            } else {
+                btn.classList.add('incorrect');
+                // Mostrar cuál era la correcta
+                buttons.forEach(b => {
+                    if(String(b.textContent) === String(correct)) b.classList.add('correct');
                 });
-            });
-
-            const modal = document.getElementById('cheatSheetModal');
-            document.getElementById('cheatSheetBtn').addEventListener('click', () => modal.classList.add('active'));
-            document.getElementById('closeModal').addEventListener('click', () => modal.classList.remove('active'));
-            modal.addEventListener('click', (e) => { if(e.target === modal) modal.classList.remove('active'); });
-        }
-
-        function setupSidebarToggle() {
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const sidebar = document.getElementById('sidebar');
-            const contentArea = document.getElementById('contentArea');
-            
-            sidebarToggle.addEventListener('click', function() {
-                sidebar.classList.toggle('hidden');
-                contentArea.classList.toggle('expanded');
-                
-                const icon = this.querySelector('i');
-                if (sidebar.classList.contains('hidden')) {
-                    icon.classList.remove('fa-bars');
-                    icon.classList.add('fa-chevron-right');
-                } else {
-                    icon.classList.remove('fa-chevron-right');
-                    icon.classList.add('fa-bars');
-                }
-            });
-        }
-
-        window.resetProgress = function() {
-            if (confirm('¿Estás seguro de reiniciar todo tu progreso?')) {
-                window.clearFirebaseProgress();
-                document.querySelectorAll('.menu-item.completed').forEach(item => item.classList.remove('completed'));
-                document.querySelectorAll('[data-quiz], [data-final="true"]').forEach(item => item.classList.add('locked'));
-                
-                globalState.completedTopics.clear();
-                globalState.visitedTopics.clear();
-                globalState.allTopicsVisited = false;
-                
-                updateEnergyBar();
-                updateDashboardStats(true);
-                showNotification('Reiniciado', 'Progreso eliminado.');
             }
+
+            document.getElementById(`explanation-${currentQuestionIndex}`).classList.add('show');
+            document.getElementById(`nextBtn-${currentQuestionIndex}`).style.display = 'block';
         };
 
-        function highlightCurrentPage() {
-            const currentPage = window.location.pathname.split('/').pop();
-            const menuItem = document.querySelector(`[href="${currentPage}"]`);
-            if (menuItem) menuItem.classList.add('active');
-        }
-
-        function unlockQuiz(quizNumber) {
-            const quizItem = document.querySelector(`[data-quiz="${quizNumber}"]`);
-            if (quizItem && quizItem.classList.contains('locked')) {
-                quizItem.classList.remove('locked');
-                quizItem.classList.add('unlocking');
-                showNotification('¡Desbloqueado!', `Cuestionario ${quizNumber} disponible.`);
-                setTimeout(() => quizItem.classList.remove('unlocking'), 600);
-            }
-        }
-
-        function updateEnergyBar() {
-            const total = requiredTopicsForQuiz1.length;
-            const count = requiredTopicsForQuiz1.filter(id => globalState.completedTopics.has(id)).length;
-            const percentage = Math.round((count / total) * 100);
-            document.getElementById('energyFill').style.width = percentage + '%';
-            document.getElementById('energyPercentage').textContent = percentage + '%';
-        }
-
-        function updateDashboardStats() {}
-
-        function createAchievementParticles(element) {
-            const rect = element.getBoundingClientRect();
-            const colors = ['#d4af37', '#f4e4bc', '#2ecc71'];
-            for (let i = 0; i < 8; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'achievement-particle';
-                particle.innerHTML = '✨';
-                particle.style.left = (rect.left + rect.width / 2) + 'px';
-                particle.style.top = (rect.top + rect.height / 2) + 'px';
-                particle.style.fontSize = (Math.random() * 20 + 10) + 'px';
-                particle.style.color = colors[Math.floor(Math.random() * colors.length)];
-                document.body.appendChild(particle);
-                setTimeout(() => particle.remove(), 2000);
-            }
-        }
-
-        function showNotification(title, message) {
-            const notification = document.getElementById('notification');
-            const titleEl = notification.querySelector('.notification-title');
-            const msgEl = document.getElementById('notificationMessage');
-            
-            titleEl.textContent = title;
-            msgEl.textContent = message;
-            
-            notification.classList.add('show');
-            setTimeout(() => notification.classList.remove('show'), 4000);
-        }
+        window.nextQuestion = function() {
+            currentQuestionIndex++;
+            loadQuestion(currentQuestionIndex);
+        };
     </script>
 </body>
 </html>
