@@ -1232,7 +1232,7 @@
         <i class="fas fa-lightbulb"></i>
     </div>
 
-    <!-- Script Integrado: Firebase + Lógica RCDD3 -->
+    <!-- Script Integrado: Firebase Robusto + Lógica RCDD3 -->
     <script type="module">
         // 1. Importaciones Firebase
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -1252,11 +1252,18 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // 3. ID de Usuario
-        let userId = localStorage.getItem('skopia_user_id');
+        // 3. ID de Usuario (Robusto)
+        let userId = localStorage.getItem('skopia_uid') || sessionStorage.getItem('skopia_uid');
+        
         if (!userId) {
-            userId = 'user_' + Date.now();
-            localStorage.setItem('skopia_user_id', userId);
+            userId = 'user_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+            localStorage.setItem('skopia_uid', userId);
+            sessionStorage.setItem('skopia_uid', userId);
+            console.log("✨ Nuevo Usuario (RCDD3):", userId);
+        } else {
+            localStorage.setItem('skopia_uid', userId);
+            sessionStorage.setItem('skopia_uid', userId);
+            console.log("🔄 Usuario Recuperado (RCDD3):", userId);
         }
 
         const userProgressRef = ref(db, 'users/' + userId + '/module1/topics');
@@ -1271,7 +1278,7 @@
         };
 
         // 5. Lógica de Ejercicios RCDD3
-        const exerciseLevels = {
+         const exerciseLevels = {
             basic: [
                 {
                     question: "Una empresa multinacional de tecnología reporta sus resultados trimestrales consolidados. Durante el primer trimestre, obtuvo ingresos por $45.000.000 pero incurrió en costos operativos de $32.000.000 y gastos de investigación y desarrollo por $8.500.000. En el segundo trimestre, los ingresos aumentaron a $52.000.000, los costos operativos se redujeron a $28.000.000 pero los gastos de I&D se incrementaron a $11.200.000. ¿Cuál es el resultado neto consolidado de la empresa después de dos trimestres?",
@@ -1797,11 +1804,38 @@
         // 6. Firebase y UI Sync
         window.markTopicInFirebase = function(topicId) {
             set(ref(db, 'users/' + userId + '/module1/topics/' + topicId), true);
+            globalState.completedTopics.add(topicId);
+            globalState.visitedTopics.add(topicId);
+            saveToSessionStorage(globalState.completedTopics);
+            syncUI();
         };
 
         window.clearFirebaseProgress = function() {
             remove(ref(db, 'users/' + userId + '/module1'));
+            localStorage.removeItem('skopia_topics_cache');
+            sessionStorage.removeItem('skopia_topics_cache');
         };
+
+        function saveToSessionStorage(topicsSet) {
+            const data = {
+                topics: Array.from(topicsSet),
+                timestamp: Date.now()
+            };
+            sessionStorage.setItem('skopia_topics_cache', JSON.stringify(data));
+        }
+
+        function syncUI() {
+            document.querySelectorAll('.menu-item').forEach(item => {
+                const id = item.dataset.content;
+                if (globalState.completedTopics.has(id)) {
+                    item.classList.add('completed');
+                } else {
+                    item.classList.remove('completed');
+                }
+            });
+            updateEnergyBar();
+            updateDashboardStats();
+        }
 
         onValue(userProgressRef, (snapshot) => {
             const data = snapshot.val();
@@ -1815,14 +1849,8 @@
                 });
             }
 
-            document.querySelectorAll('.menu-item').forEach(item => {
-                const id = item.dataset.content;
-                if (globalState.completedTopics.has(id)) {
-                    item.classList.add('completed');
-                } else {
-                    item.classList.remove('completed');
-                }
-            });
+            syncUI();
+            saveToSessionStorage(globalState.completedTopics);
 
             const visitedCount = requiredTopicsForQuiz1.filter(id => globalState.completedTopics.has(id)).length;
             if (visitedCount === requiredTopicsForQuiz1.length) {
@@ -1831,16 +1859,6 @@
             } else {
                 globalState.allTopicsVisited = false;
             }
-
-            updateEnergyBar();
-            updateDashboardStats();
-
-            sessionStorage.setItem('module1Progress', JSON.stringify({
-                completedTopics: Array.from(globalState.completedTopics),
-                visitedTopics: Array.from(globalState.visitedTopics),
-                quizScores: globalState.quizScores,
-                allTopicsVisited: globalState.allTopicsVisited
-            }));
         });
 
         // 7. Inicialización
@@ -1895,8 +1913,8 @@
             const modal = document.getElementById('cheatSheetModal');
             if(document.getElementById('cheatSheetBtn')) {
                  document.getElementById('cheatSheetBtn').addEventListener('click', () => {
-                     // Lógica modal si existiera, por ahora es placeholder visual
-                     showNotification('Info', 'Aquí iría la hoja de trucos.');
+                     // Placeholder para lógica modal si existiera
+                     console.log("Botón flotante presionado");
                  });
             }
         }
@@ -1922,7 +1940,7 @@
         }
 
         window.resetProgress = function() {
-            if (confirm('¿Estás seguro de que deseas reiniciar todo tu progreso?')) {
+            if (confirm('¿Estás seguro de reiniciar todo tu progreso?')) {
                 window.clearFirebaseProgress();
                 document.querySelectorAll('.menu-item.completed').forEach(item => item.classList.remove('completed'));
                 document.querySelectorAll('[data-quiz], [data-final="true"]').forEach(item => item.classList.add('locked'));
@@ -1933,7 +1951,6 @@
                 
                 updateEnergyBar();
                 updateDashboardStats(true);
-                sessionStorage.removeItem('module1Progress');
                 showNotification('Progreso Reiniciado', 'Se ha eliminado el progreso correctamente.');
             }
         };
@@ -1981,7 +1998,7 @@
         }
 
         function showNotification(title, message) {
-            // Crear notificación al vuelo si no existe estructura HTML fija para ella en este archivo
+            // Crear notificación al vuelo
             const div = document.createElement('div');
             div.style.position = 'fixed';
             div.style.top = '20px';
