@@ -1349,11 +1349,10 @@
             sessionStorage.setItem('skopia_uid', userId);
         }
 
-        // Solo referencia a puntajes (Eliminada lógica de temas/checks)
         const scoresRef = ref(db, 'users/' + userId + '/module1/scores');
 
-        // Lógica de Ejercicios ICFES
-         const exerciseLevels = {
+        // --- LÓGICA DE EJERCICIOS (Restaurada y Corregida) ---
+       const exerciseLevels = {
             basic: [
                 {
                     question: "Una empresa multinacional de tecnología reporta sus resultados trimestrales consolidados. Durante el primer trimestre, obtuvo ingresos por $45.000.000 pero incurrió en costos operativos de $32.000.000 y gastos de investigación y desarrollo por $8.500.000. En el segundo trimestre, los ingresos aumentaron a $52.000.000, los costos operativos se redujeron a $28.000.000 pero los gastos de I&D se incrementaron a $11.200.000. ¿Cuál es el resultado neto consolidado de la empresa después de dos trimestres?",
@@ -1839,19 +1838,22 @@
             const userAnswer = parseInt(document.getElementById('userAnswer').value);
             const feedbackDiv = document.getElementById('feedback');
             
+            // Seguridad: Si no hay ejercicio cargado, no hacer nada
             if (!currentExercise) return;
+
+            // CORRECCIÓN CRÍTICA: Forzar la visualización del div
+            feedbackDiv.style.display = 'block';
 
             if (userAnswer === currentExercise.answer) {
                 streak++;
-                feedbackDiv.className = 'exercise-feedback correct show';
+                feedbackDiv.className = 'exercise-feedback correct';
                 feedbackDiv.innerHTML = `<i class="fas fa-check-circle"></i> <strong>¡Correcto!</strong><br>${currentExercise.explanation}`;
-                updateStreak();
             } else {
                 streak = 0;
-                feedbackDiv.className = 'exercise-feedback incorrect show';
+                feedbackDiv.className = 'exercise-feedback incorrect';
                 feedbackDiv.innerHTML = `<i class="fas fa-times-circle"></i> <strong>Incorrecto.</strong><br>La respuesta correcta es: ${currentExercise.answer}.<br><em>${currentExercise.explanation}</em>`;
-                updateStreak();
             }
+            updateStreak();
         };
 
         window.newExercise = function() {
@@ -1861,15 +1863,19 @@
 
             document.getElementById('exerciseQuestion').innerText = currentExercise.question;
             document.getElementById('userAnswer').value = '';
-            document.getElementById('feedback').style.display = 'none';
+            
+            const feedbackDiv = document.getElementById('feedback');
+            feedbackDiv.style.display = 'none'; // Ocultar al cargar nuevo
+            
             document.getElementById('exerciseCounter').innerText = `Nivel: Básico`;
         };
 
         function updateStreak() {
-            document.getElementById('streakIndicator').innerText = `Racha: ${streak} correctos seguidos`;
+            const streakEl = document.getElementById('streakIndicator');
+            if(streakEl) streakEl.innerText = `Racha: ${streak} correctos seguidos`;
         }
 
-        // Lógica de Desbloqueo y Puntaje (Igual que Distractores)
+        // --- LÓGICA DE DESBLOQUEO Y PUNTAJE ---
         onValue(scoresRef, (snapshot) => {
             const data = snapshot.val();
 
@@ -1877,38 +1883,40 @@
             const q2Score = data && data.quiz2 ? data.quiz2 : 0;
             const totalScore = q1Score + q2Score;
 
-            // Cuestionario 1: Ya está desbloqueado en HTML (sin clase locked)
-            
             // Cuestionario 2 (Q1 >= 150)
             const q2Link = document.querySelector('[data-content="RCDD10"]');
-            if (q1Score >= 150) {
-                q2Link.classList.remove('locked');
-                if(!q2Link.classList.contains('unlocking')) {
-                    q2Link.classList.add('unlocking');
-                    setTimeout(() => q2Link.classList.remove('unlocking'), 600);
+            if (q2Link) {
+                if (q1Score >= 150) {
+                    q2Link.classList.remove('locked');
+                    if(!q2Link.classList.contains('unlocking')) {
+                        q2Link.classList.add('unlocking');
+                        setTimeout(() => q2Link.classList.remove('unlocking'), 600);
+                    }
+                } else {
+                    q2Link.classList.add('locked');
                 }
-            } else {
-                q2Link.classList.add('locked');
             }
 
             // Cuestionario 3 y Cierre (Total >= 180)
             const q3Link = document.querySelector('[data-content="RCDD11"]');
             const finalLink = document.querySelector('[data-content="RCDD12"]');
 
-            if (totalScore >= 180) {
-                q3Link.classList.remove('locked');
-                finalLink.classList.remove('locked');
-                
-                if(!q3Link.dataset.unlocked) {
-                    q3Link.classList.add('unlocking');
-                    finalLink.classList.add('unlocking');
-                    q3Link.dataset.unlocked = "true";
-                    finalLink.dataset.unlocked = "true";
-                    showNotification('¡Nivel Avanzado Desbloqueado!', 'Has alcanzado el puntaje necesario.');
+            if (q3Link && finalLink) {
+                if (totalScore >= 180) {
+                    q3Link.classList.remove('locked');
+                    finalLink.classList.remove('locked');
+                    
+                    if(!q3Link.dataset.unlocked) {
+                        q3Link.classList.add('unlocking');
+                        finalLink.classList.add('unlocking');
+                        q3Link.dataset.unlocked = "true";
+                        finalLink.dataset.unlocked = "true";
+                        showNotification('¡Nivel Avanzado Desbloqueado!', 'Has alcanzado el puntaje necesario.');
+                    }
+                } else {
+                    q3Link.classList.add('locked');
+                    finalLink.classList.add('locked');
                 }
-            } else {
-                q3Link.classList.add('locked');
-                finalLink.classList.add('locked');
             }
 
             updateScoreBar(totalScore);
@@ -1921,12 +1929,12 @@
             const scoreFill = document.getElementById('scoreFill');
             const scoreText = document.getElementById('scoreText');
             
-            scoreFill.style.width = percentage + '%';
-            scoreText.textContent = Math.floor(score) + ' / ' + goal + ' pts';
+            if(scoreFill) scoreFill.style.width = percentage + '%';
+            if(scoreText) scoreText.textContent = Math.floor(score) + ' / ' + goal + ' pts';
 
-            if(percentage >= 100) {
+            if(percentage >= 100 && scoreFill) {
                 scoreFill.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
-            } else {
+            } else if (scoreFill) {
                 scoreFill.style.background = 'linear-gradient(90deg, var(--dorado), #f4e4bc)';
             }
         }
@@ -1951,12 +1959,12 @@
             }
         };
 
-        // UI Eventos
+        // --- INICIALIZACIÓN ---
         document.addEventListener('DOMContentLoaded', function() {
             highlightCurrentPage();
             setupSidebarToggle();
             setupModal();
-            window.newExercise();
+            window.newExercise(); // Cargar primer ejercicio
         });
 
         function highlightCurrentPage() {
