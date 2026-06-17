@@ -878,6 +878,25 @@
                 display: flex;
             }
         }
+
+        /* Barra de depuración */
+        #debug-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #1a1a1a;
+            color: white;
+            padding: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 99999;
+            text-align: center;
+            display: none; /* Oculto por defecto, se muestra si hay error */
+        }
+        #debug-bar.visible {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -1172,8 +1191,7 @@
                         <i class="fas fa-plus-circle"></i>
                         <h4>DISFRUTA</h4>
                         <p><div style="width: 100%;"><div style="position: relative; padding-bottom: 56.25%; padding-top: 0; height: 0;"><iframe title="Quiz Bomba" frameborder="0" width="1200" height="675" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="https://view.genially.com/6983bce1b81d3b496f6a1227" type="text/html" allowscriptaccess="always" allowfullscreen="true" scrolling="yes" allownetworking="all"></iframe> </div> </div></p>
-                    </div>
-                </section>
+                    </section>
 
                 <!-- Consejos -->
                 <section class="tips-section">
@@ -1252,14 +1270,14 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // 3. ID de Usuario (Robusto)
+        // 3. Gestión de Usuario (Robusto)
         let userId = localStorage.getItem('skopia_uid') || sessionStorage.getItem('skopia_uid');
         
         if (!userId) {
             userId = 'user_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
             localStorage.setItem('skopia_uid', userId);
             sessionStorage.setItem('skopia_uid', userId);
-            console.log("✨ Nuevo Usuario (RCDD3):", userId);
+            console.log("✨ Nuevo Usuario Creado (RCDD3):", userId);
         } else {
             localStorage.setItem('skopia_uid', userId);
             sessionStorage.setItem('skopia_uid', userId);
@@ -1293,7 +1311,7 @@
                 {
                     question: "Un buzo comienza su inmersión a 5 metros bajo el nivel del mar. Desciende 12 metros más, luego sube 8 metros para recuperar un objeto, y finalmente desciende 15 metros más para alcanzar el fondo. ¿A qué profundidad final se encuentra el buco?",
                     answer: -24,
-                    explanation: "Inicio: -5m. Descenso: -5 - 12 = -17m. Subida: -17 + 8 = -9m. Descenso final: -9 - 15 = -24m. Profundidad: 24 metros bajo el nivel del mar (-24m)."
+                    explanation: "Inicio: -5m. Descenso: -5 -12 = -17m. Subida: -17 + 8 = -9m. Descenso: -9 - 15 = -24m. Profundidad: 24 metros bajo el nivel del mar (-24m)."
                 }
             ],
             intermediate: [
@@ -1416,6 +1434,18 @@
             }
         });
 
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'skopia_topics_cache' && e.newValue) {
+                try {
+                    const data = JSON.parse(e.newValue);
+                    globalState.completedTopics = new Set(data.topics);
+                    syncUI();
+                } catch (err) {
+                    console.error("Error sync:", err);
+                }
+            }
+        });
+
         // 7. Inicialización
         document.addEventListener('DOMContentLoaded', function() {
             setupEventListeners();
@@ -1461,6 +1491,14 @@
                         showNotification(isQuiz ? 'Cuestionario Bloqueado' : 'Evaluación Bloqueada', msg);
                         return false;
                     }
+                    
+                    const contentId = this.dataset.content;
+                    if (contentId) {
+                        if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
+                            !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
+                            window.markTopicInFirebase(contentId);
+                        }
+                    }
                     return true;
                 });
             });
@@ -1468,9 +1506,12 @@
             const modal = document.getElementById('cheatSheetModal');
             if(document.getElementById('cheatSheetBtn')) {
                  document.getElementById('cheatSheetBtn').addEventListener('click', () => {
-                     // Placeholder para lógica modal si existiera
-                     console.log("Botón flotante presionado");
+                     document.getElementById('cheatSheetModal').classList.add('active');
                  });
+                 document.getElementById('closeModal').addEventListener('click', () => {
+                     document.getElementById('cheatSheetModal').classList.remove('active');
+                 });
+                 document.getElementById('cheatSheetModal').addEventListener('click', (e) => { if(e.target === modal) modal.classList.remove('active'); });
             }
         }
 
@@ -1506,9 +1547,9 @@
                 
                 updateEnergyBar();
                 updateDashboardStats(true);
-                showNotification('Progreso Reiniciado', 'Se ha eliminado el progreso correctamente.');
+                showNotification('Reiniciado', 'Se ha eliminado el progreso correctamente.');
             }
-        };
+        }
 
         function highlightCurrentPage() {
             const currentPage = window.location.pathname.split('/').pop();
@@ -1521,7 +1562,7 @@
             if (quizItem && quizItem.classList.contains('locked')) {
                 quizItem.classList.remove('locked');
                 quizItem.classList.add('unlocking');
-                showNotification('¡Desbloqueado!', `El Cuestionario ${quizNumber} está disponible.`);
+                showNotification('¡Desbloqueado!', `Cuestionario ${quizNumber} disponible.`);
                 setTimeout(() => quizItem.classList.remove('unlocking'), 600);
             }
         }
@@ -1553,21 +1594,16 @@
         }
 
         function showNotification(title, message) {
-            // Crear notificación al vuelo
-            const div = document.createElement('div');
-            div.style.position = 'fixed';
-            div.style.top = '20px';
-            div.style.right = '20px';
-            div.style.background = 'var(--dorado)';
-            div.style.color = 'var(--verde-oscuro)';
-            div.style.padding = '1rem';
-            div.style.borderRadius = '12px';
-            div.style.zIndex = '10000';
-            div.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
-            div.style.fontWeight = '600';
-            div.innerHTML = `<strong>${title}</strong><br>${message}`;
-            document.body.appendChild(div);
-            setTimeout(() => div.remove(), 3000);
+            const notification = document.getElementById('notification');
+            const titleEl = notification.querySelector('.notification-title');
+            const msgEl = document.getElementById('notificationMessage');
+            
+            if(notification && titleEl && msgEl) {
+                titleEl.textContent = title;
+                msgEl.textContent = message;
+                notification.classList.add('show');
+                setTimeout(() => notification.classList.remove('show'), 4000);
+            }
         }
     </script>
 </body>
