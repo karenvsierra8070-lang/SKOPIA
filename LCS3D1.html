@@ -420,9 +420,10 @@ const G1_DATA = [
 ];
 
 let g1Idx = 0, g1Score = 0, g1Dropped = false, g1DroppedIdx = -1, g1ClickedIdx = -1;
+let g1Questions = [];
 
 function renderG1() {
-    const q = G1_DATA[g1Idx];
+    const q = g1Questions[g1Idx];
     document.getElementById('score-g1').textContent = g1Score;
     document.getElementById('g1-sentence').innerHTML = q.sentence;
     
@@ -458,7 +459,6 @@ function renderG1() {
             document.querySelectorAll('#options-1 .drag-item').forEach(d => d.classList.remove('selected'));
             this.classList.add('selected');
             g1ClickedIdx = opt.origIdx;
-            // Auto-drop al hacer clic
             placeInDropZone(opt.origIdx, q);
         });
 
@@ -497,9 +497,10 @@ function placeInDropZone(idx, q) {
 
 function nextGame1() {
     g1Idx++;
-    if (g1Idx >= G1_DATA.length) {
+    if (g1Idx >= g1Questions.length) {
         if (g1Score >= 3) {
             hideSection('game1-section');
+            g2Questions = shuffle(G2_DATA).slice(0, 5);
             g2Idx = 0; g2Score = 0;
             showSection('game2-section');
             renderG2();
@@ -551,9 +552,10 @@ const G2_DATA = [
 ];
 
 let g2Idx = 0, g2Score = 0, g2Answered = false;
+let g2Questions = [];
 
 function renderG2() {
-    const q = G2_DATA[g2Idx];
+    const q = g2Questions[g2Idx];
     g2Answered = false;
     document.getElementById('score-g2').textContent = g2Score;
     document.getElementById('g2-original').innerHTML = '<strong>Original:</strong> ' + q.original;
@@ -585,9 +587,10 @@ function renderG2() {
 
 function nextGame2() {
     g2Idx++;
-    if (g2Idx >= G2_DATA.length) {
+    if (g2Idx >= g2Questions.length) {
         if (g2Score >= 3) {
             hideSection('game2-section');
+            g3Questions = shuffle(G3_DATA).slice(0, 5);
             g3Idx = 0; g3Score = 0;
             showSection('game3-section');
             renderG3();
@@ -634,9 +637,10 @@ const G3_DATA = [
 ];
 
 let g3Idx = 0, g3Score = 0, g3Answered = false;
+let g3Questions = [];
 
 function renderG3() {
-    const q = G3_DATA[g3Idx];
+    const q = g3Questions[g3Idx];
     g3Answered = false;
     document.getElementById('score-g3').textContent = g3Score;
 
@@ -655,7 +659,7 @@ function renderG3() {
 function answerG3(userSaid) {
     if (g3Answered) return;
     g3Answered = true;
-    const q = G3_DATA[g3Idx];
+    const q = g3Questions[g3Idx];
     const isCorrect = userSaid === q.isMechanical;
 
     document.getElementById('vf-true').className = 'vf-btn' + (q.isMechanical === true ? ' correct' : (userSaid === true && !isCorrect ? ' incorrect' : ''));
@@ -671,7 +675,7 @@ function answerG3(userSaid) {
 
 function nextGame3() {
     g3Idx++;
-    if (g3Idx >= G3_DATA.length) {
+    if (g3Idx >= g3Questions.length) {
         if (g3Score >= 3) {
             hideSection('game3-section');
             loadQuiz();
@@ -704,18 +708,28 @@ function showGameFail(sectionId, gameId, score) {
 }
 
 function retryGame(gameId) {
-    if (gameId === 'g1') { g1Idx = 0; g1Score = 0; }
-    else if (gameId === 'g2') { g2Idx = 0; g2Score = 0; }
-    else { g3Idx = 0; g3Score = 0; }
-    // Restaurar HTML de la sección
-    restoreGameHTML(gameId);
+    if (gameId === 'g1') {
+        g1Questions = shuffle(G1_DATA).slice(0, 5);
+        g1Idx = 0; g1Score = 0;
+    }
+    else if (gameId === 'g2') {
+        g2Questions = shuffle(G2_DATA).slice(0, 5);
+        g2Idx = 0; g2Score = 0;
+    }
+    else {
+        g3Questions = shuffle(G3_DATA).slice(0, 5);
+        g3Idx = 0; g3Score = 0;
+    }
+    // CORRECCIÓN 1: usar mapa de IDs correctos (game1-section, game2-section, game3-section)
+    const sectionMap = { g1: 'game1-section', g2: 'game2-section', g3: 'game3-section' };
+    restoreGameHTML(gameId, sectionMap[gameId]);
     if (gameId === 'g1') renderG1();
     else if (gameId === 'g2') renderG2();
     else renderG3();
 }
 
-function restoreGameHTML(gameId) {
-    const sec = document.getElementById(gameId + '-section');
+function restoreGameHTML(gameId, sectionId) {
+    const sec = document.getElementById(sectionId);
     if (gameId === 'g1') {
         sec.querySelector('.body-content').innerHTML =
             '<div class="progress-stats">Progreso: <span id="score-g1">0</span>/5 (Mínimo 3 para aprobar)</div>' +
@@ -756,7 +770,6 @@ async function loadQuiz() {
         const resp = await fetch('preguntas1.json');
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         const allQ = await resp.json();
-        // Filtrar SOLO las que tienen AMBOS tags: "P1" Y "parafraseo"
         const filtered = allQ.filter(q =>
             Array.isArray(q.tags) &&
             q.tags.includes('P1') &&
@@ -772,7 +785,8 @@ async function loadQuiz() {
         }
     } catch (e) {
         console.warn('Error cargando preguntas1.json:', e.message);
-        quizData = FALLBACK_QUIZ;
+        // CORRECCIÓN 3 parcial: también hacer shuffle+slice del fallback
+        quizData = shuffle(FALLBACK_QUIZ).slice(0, 10);
     }
 
     quizIdx = 0;
@@ -840,181 +854,154 @@ const FALLBACK_QUIZ = [
     },
     {
         pregunta: 'Cual opcion completa correctamente: "El parafraseo mecanico se caracteriza por ______, mientras que el sintetico se caracteriza por ______."',
-        opciones: ['cambiar el orden de las ideas / usar sinonimos exclusivamente', 'reemplazar palabras por sinonimos manteniendo la estructura / condensar el texto conservando la esencia', 'reformular la idea con palabras distintas / cambiar la voz grammatical', 'agregar ejemplos al texto / eliminar toda la informacion secundaria'],
+        opciones: ['cambiar el orden de las ideas / usar sinonimos exclusivamente', 'sustituir palabras por sinonimos / condensar la informacion', 'reformular completamente el texto / agregar informacion nueva', 'mantener el mismo vocabulario / cambiar la estructura'],
         respuestaCorrecta: 1,
-        explicacion: 'Mecanico = sinonimos + misma estructura. Sintetico = condensar manteniendo esencia.',
-        truco: 'Mecanico = cambiar ropa. Sintetico = hacer resumen.'
+        explicacion: 'El mecanico sustituye por sinonimos; el sintetico condensa (resume) la informacion manteniendo la idea principal.',
+        truco: 'Mecanico = sinonimos. Sintetico = resumir. Conceptual = reformular. Estructural = cambiar orden/voz.'
     },
     {
-        pregunta: '"La pandemia genero una crisis economica sin precedentes en la region." Cual es un parafraseo mecanico correcto?',
-        opciones: ['Nunca antes la region habia sufrido una crisis economica como la que causo la pandemia.', 'La emergencia sanitaria provo una situacion economica inedita en el territorio.', 'La crisis economica regional sin precedentes fue generada por la pandemia.', 'La pandemia fue la causa de que la economia cayera como nunca en esta zona.'],
+        pregunta: '"La tecnologia ha transformado la manera en que nos comunicamos." Cual es un parafraseo mecanico correcto?',
+        opciones: ['La forma de comunicarnos ha cambiado drasticamente gracias a los avances tecnologicos.', 'La tecnologia ha modificado la forma en que nos comunicamos.', 'Nos comunicamos diferente ahora por culpa de la tecnologia.', 'La comunicacion humana nunca sera la misma despues de la tecnologia.'],
         respuestaCorrecta: 1,
-        explicacion: 'La opcion B usa sinonimos directos manteniendo sujeto-verbo-objeto. La A altera el orden. La C usa pasiva. La D es conceptual.',
-        truco: 'pandemia→emergencia sanitaria, genero→provoco, crisis→situacion, sin precedentes→inedita, region→territorio.'
+        explicacion: 'La opcion B solo reemplaza "transformado" por "modificado", manteniendo exactamente la misma estructura.',
+        truco: 'Si solo cambias 1-2 palabras por sinonimos y todo lo demas queda igual, es mecanico.'
     }
 ];
 
+// ====== RENDER QUIZ ======
 function renderQuiz() {
-    if (quizIdx >= quizData.length) { showResults(); return; }
-    quizAnswered = false;
     const q = quizData[quizIdx];
+    quizAnswered = false;
     const letters = ['A', 'B', 'C', 'D'];
     const total = quizData.length;
 
-    let html = '<div class="progress-stats">Pregunta ' + (quizIdx + 1) + '/' + total + ' &mdash; Aciertos: <span id="score-qz">' + quizScore + '</span></div>';
-
-    if (q.pregunta.length > 200) {
-        html += '<div class="text-passage">' + q.pregunta + '</div>';
-    } else {
-        html += '<p class="question-text">' + q.pregunta + '</p>';
-    }
-
-    html += '<div class="quiz-options" id="qz-options">';
+    let html = '<div class="progress-stats">Pregunta ' + (quizIdx + 1) + ' de ' + total + ' &nbsp;|&nbsp; Aciertos: <span id="score-quiz">' + quizScore + '</span>/' + total + '</div>';
+    html += '<div class="question-text">' + q.pregunta + '</div>';
+    html += '<div class="quiz-options" id="quiz-options">';
     q.opciones.forEach((opt, i) => {
-        if (i < 4) {
-            html += '<div class="quiz-option" onclick="selectQuizOption(this,' + i + ')"><span class="option-letter">' + letters[i] + '</span><span>' + opt + '</span></div>';
-        }
+        html += '<div class="quiz-option" data-idx="' + i + '" onclick="answerQuiz(' + i + ')">' +
+            '<div class="option-letter">' + letters[i] + '</div>' +
+            '<div>' + opt + '</div>' +
+            '</div>';
     });
     html += '</div>';
-    html += '<div class="quiz-feedback" id="qz-feedback" style="display:none;"></div>';
-    html += '<div style="margin-top:20px;text-align:center;"><button class="btn btn-success" id="next-qz" style="display:none;" onclick="nextQuiz()">Siguiente <i class="fas fa-arrow-right"></i></button></div>';
+    html += '<div class="quiz-feedback" id="quiz-feedback" style="display:none;"></div>';
+    html += '<div style="margin-top:20px; text-align:center;"><button class="btn btn-success" id="next-quiz" style="display:none;" onclick="nextQuiz()">Siguiente <i class="fas fa-arrow-right"></i></button></div>';
 
     document.getElementById('quiz-body').innerHTML = html;
 }
 
-function selectQuizOption(el, idx) {
+function answerQuiz(idx) {
     if (quizAnswered) return;
     quizAnswered = true;
     const q = quizData[quizIdx];
-    const correctIdx = q.respuestaCorrecta;
-    const isCorrect = idx === correctIdx;
+    const isCorrect = idx === q.respuestaCorrecta;
 
-    document.querySelectorAll('#qz-options .quiz-option').forEach((opt, i) => {
+    const options = document.querySelectorAll('#quiz-options .quiz-option');
+    options.forEach((opt, i) => {
         opt.style.pointerEvents = 'none';
-        if (i === correctIdx) opt.classList.add('correct');
+        if (i === q.respuestaCorrecta) opt.classList.add('correct');
         if (i === idx && !isCorrect) opt.classList.add('incorrect');
     });
 
-    if (isCorrect) { quizScore++; playSound('correct'); }
-    else { playSound('wrong'); }
-
-    const fb = document.getElementById('qz-feedback');
+    const fb = document.getElementById('quiz-feedback');
     fb.style.display = '';
     fb.className = 'quiz-feedback ' + (isCorrect ? 'success' : 'error');
-    let fbHtml = '<h4>' + (isCorrect ? 'Correcto' : 'Incorrecto') + '</h4>';
-    if (q.explicacion) fbHtml += '<p>' + q.explicacion + '</p>';
-    if (q.truco) fbHtml += '<div class="truco"><i class="fas fa-lightbulb"></i> ' + q.truco + '</div>';
+    let fbHtml = '<h4>' + (isCorrect ? '<i class="fas fa-check-circle" style="color:var(--color-correcto);"></i> Correcto' : '<i class="fas fa-times-circle" style="color:var(--color-incorrecto);"></i> Incorrecto') + '</h4>';
+    fbHtml += '<p>' + q.explicacion + '</p>';
+    if (q.truco) fbHtml += '<div class="truco"><i class="fas fa-lightbulb"></i> <strong>Truco:</strong> ' + q.truco + '</div>';
     fb.innerHTML = fbHtml;
 
-    document.getElementById('next-qz').style.display = '';
+    if (isCorrect) {
+        quizScore++;
+        document.getElementById('score-quiz').textContent = quizScore;
+        playSound('correct');
+    } else {
+        playSound('wrong');
+    }
+
+    document.getElementById('next-quiz').style.display = '';
 }
 
 function nextQuiz() {
     quizIdx++;
+    if (quizIdx >= quizData.length) {
+        showResults();
+        return;
+    }
     renderQuiz();
 }
 
-// ====== RESULTADOS Y GUARDADO EN FIREBASE ======
+// ====== RESULTADOS ======
 function showResults() {
     hideSection('quiz-section');
     showSection('results-section');
-
-    const totalCorrect = g1Score + g2Score + g3Score + quizScore;
-    const totalQuestions = G1_DATA.length + G2_DATA.length + G3_DATA.length + quizData.length;
-    const finalScore = Math.round((totalCorrect / totalQuestions) * 300);
-    const passed = finalScore >= 180;
-
+    // CORRECCIÓN 3: cálculo estricto = aciertos × 30
+    const finalScore = quizScore * 30;
     document.getElementById('final-score').textContent = finalScore;
 
-    const header = document.querySelector('#results-section .header-gradient');
-    header.style.background = passed ? 'linear-gradient(135deg, var(--color-correcto), #388e3c)' : 'linear-gradient(135deg, var(--color-incorrecto), #c62828)';
-
-    document.getElementById('final-msg').textContent = passed ?
-        'Felicidades, aprobaste el modulo de Parafraseo Mecanico.' :
-        'No alcanzaste el puntaje minimo (180 pts). Puedes reintentar.';
-
-    // Guardar el score para usarlo en saveAndLeave
-    window._finalScore = finalScore;
-    window._passed = passed;
-    window._totalCorrect = totalCorrect;
-    window._totalQuestions = totalQuestions;
-}
-
-async function saveAndLeave() {
-    const btn = document.querySelector('#results-section .btn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-
-    const uid = window.currentUser ? window.currentUser.uid : null;
-    if (!uid) { alert('No hay usuario activo'); btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Guardar y Salir'; return; }
-
-    const finalScore = window._finalScore || 0;
-    const passed = window._passed || false;
-
-    try {
-        // Leer intentos previos
-        const existingRef = window.ref(window.db, 'users/' + uid + '/lcs3_progress/techniques/LCS3D1');
-        const existingSnap = await window.get(existingRef);
-        const existing = existingSnap.exists() ? existingSnap.val() : {};
-        const newAttempts = (existing.attempts || 0) + 1;
-
-        // Guardar en Firebase
-        await window.set(existingRef, {
-            completed: passed,
-            score: finalScore,
-            attempts: newAttempts,
-            g1: g1Score,
-            g2: g2Score,
-            g3: g3Score,
-            quiz: quizScore,
-            totalCorrect: window._totalCorrect || 0,
-            totalQuestions: window._totalQuestions || 25,
-            updatedAt: Date.now()
-        });
-
-        // Actualizar localStorage para que LCS3D.html lo lea de inmediato
-        try {
-            const lsRaw = localStorage.getItem('skopia_lcs3_progress');
-            const lsData = lsRaw ? JSON.parse(lsRaw) : { techniques: {} };
-            if (!lsData.techniques) lsData.techniques = {};
-            lsData.techniques.LCS3D1 = {
-                completed: passed,
-                score: finalScore,
-                attempts: newAttempts,
-                updatedAt: Date.now()
-            };
-            localStorage.setItem('skopia_lcs3_progress', JSON.stringify(lsData));
-        } catch(e) {}
-
-        window.location.href = 'LCS3D.html';
-    } catch (error) {
-        console.error('Error guardando:', error);
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-save"></i> Reintentar Guardar';
-        alert('Error al guardar. Intenta de nuevo.');
+    const headerGrad = document.querySelector('#results-section .header-gradient');
+    let msg = '';
+    if (quizScore === quizData.length) {
+        msg = 'Perfecto. Obtuviste la maxima puntuacion posible.';
+        headerGrad.style.background = 'var(--color-correcto)';
+    } else if (quizScore >= 7) {
+        msg = 'Excelente rendimiento. Dominas el parafraseo mecanico.';
+        headerGrad.style.background = 'var(--color-correcto)';
+    } else if (quizScore >= 5) {
+        msg = 'Buen trabajo, pero aun puedes mejorar. Repasa los conceptos.';
+        headerGrad.style.background = 'var(--color-dorado)';
+    } else {
+        msg = 'Necesitas repasar este tema. Vuelve a estudiar la teoria y practica de nuevo.';
+        headerGrad.style.background = 'var(--color-incorrecto)';
     }
+    document.getElementById('final-msg').textContent = msg + ' (' + quizScore + '/' + quizData.length + ' aciertos)';
 }
 
 // ====== INICIO ======
 function startJourney() {
     hideSection('intro-section');
+    // CORRECCIÓN 2: seleccionar 5 aleatorias del pool
+    g1Questions = shuffle(G1_DATA).slice(0, 5);
     g1Idx = 0; g1Score = 0;
     showSection('game1-section');
     renderG1();
 }
 
-// Dropdown usuario
-document.getElementById('user-avatar').addEventListener('click', function(e) {
-    e.stopPropagation();
+// ====== GUARDAR Y SALIR ======
+async function saveAndLeave() {
+    const finalScore = quizScore * 30;
+    if (window.currentUser) {
+        try {
+            const userRef = window.ref(window.db, 'users/' + window.currentUser.uid + '/progress/LCS3D1');
+            await window.set(userRef, {
+                score: finalScore,
+                correct: quizScore,
+                total: quizData.length,
+                completed: true,
+                timestamp: Date.now()
+            });
+        } catch (e) {
+            console.warn('Error guardando progreso:', e);
+        }
+    }
+    window.location.href = 'LCS3D.html';
+}
+
+// ====== USER MENU ======
+document.getElementById('user-avatar').addEventListener('click', function() {
     document.getElementById('user-dropdown').classList.toggle('active');
 });
 document.addEventListener('click', function(e) {
-    if (!e.target.closest('.user-menu')) document.getElementById('user-dropdown').classList.remove('active');
+    if (!e.target.closest('.user-menu')) {
+        document.getElementById('user-dropdown').classList.remove('active');
+    }
 });
 document.getElementById('logout-btn').addEventListener('click', function(e) {
     e.preventDefault();
     if (window.auth) window.signOut(window.auth);
 });
 </script>
+
 </body>
 </html>
