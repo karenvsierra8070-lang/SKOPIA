@@ -1,0 +1,1402 @@
+  <!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domina el Parafraseo - Skópia</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@400;500;700&family=Orbitron:wght@700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+        import { getDatabase, ref, get, set, onValue, push, update } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            authDomain: "skopia-aa786.firebaseapp.com",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        window.auth = auth;
+        window.db = db;
+        window.ref = ref;
+        window.get = get;
+        window.set = set;
+        window.onValue = onValue;
+        window.push = push;
+        window.update = update;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            window.currentUser = user;
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
+    <style>
+        :root {
+            --color-crema: #fdfbf5;
+            --color-oliva-claro: #bec092;
+            --color-oliva-medio: #5a6133;
+            --color-oliva-oscuro: #272b00;
+            --color-sombra: rgba(39, 43, 0, 0.1);
+            --color-dorado: #ffd700;
+            --color-plata: #c0c0c0;
+            --color-bronce: #cd7f32;
+            --color-correcto: #4caf50;
+            --color-incorrecto: #f44336;
+            --color-acento: #d4a373;
+            --color-acento-oscuro: #bc6c25;
+            --float-color: var(--color-oliva-oscuro);
+            --float-color-hover: var(--color-oliva-medio);
+
+            --color-mecanico: #2d6a4f;
+            --color-mecanico-light: #52b788;
+            --color-estructural: #bc6c25;
+            --color-estructural-light: #dda15e;
+            --color-conceptual: #7b2d8b;
+            --color-conceptual-light: #b56dd6;
+            --color-sintetico: #c1121f;
+            --color-sintetico-light: #e76f51;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--color-crema) 0%, #f5efe5 50%, #e8e4d9 100%);
+            color: var(--color-oliva-oscuro);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image:
+                radial-gradient(circle at 20% 80%, rgba(212, 163, 115, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(90, 97, 51, 0.06) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Navbar */
+        .navbar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 15px 40px;
+            background-color: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px var(--color-sombra);
+            position: relative;
+            z-index: 1000;
+        }
+        .hamburger { width: 30px; height: 25px; position: relative; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; }
+        .hamburger span { display: block; height: 4px; width: 100%; background-color: var(--color-oliva-oscuro); border-radius: 2px; transition: all 0.3s ease-in-out; }
+        .user-dropdown { position: absolute; top: 70px; right: 40px; background-color: white; border-radius: 8px; box-shadow: 0 4px 20px var(--color-sombra); overflow: hidden; opacity: 0; visibility: hidden; transform: translateY(-10px); transition: opacity 0.3s, transform 0.3s, visibility 0.3s; z-index: 1000; }
+        .user-dropdown.active { opacity: 1; visibility: visible; transform: translateY(0); }
+        .user-dropdown a { display: block; padding: 15px 25px; text-decoration: none; color: var(--color-oliva-oscuro); font-weight: 500; transition: background-color 0.2s; }
+        .user-dropdown a:hover { background-color: var(--color-crema); }
+        .user-dropdown hr { border: none; border-top: 1px solid #eee; margin: 0; }
+
+        /* Hero Section */
+        .hero-section {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, var(--color-oliva-medio) 0%, var(--color-oliva-oscuro) 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1.5" fill="rgba(255,255,255,0.08)"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.5;
+        }
+        .hero-content { position: relative; z-index: 1; }
+        .hero-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: inline-block;
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-10px) rotate(5deg); } }
+        .hero-title { font-family: 'Patrick Hand', cursive; font-size: 2.8rem; margin-bottom: 15px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .hero-subtitle { font-size: 1.2rem; opacity: 0.9; max-width: 650px; margin: 0 auto; line-height: 1.6; }
+
+        /* Progress Overview */
+        .progress-overview {
+            background: white;
+            padding: 25px 40px;
+            box-shadow: 0 4px 15px var(--color-sombra);
+            position: relative;
+            z-index: 10;
+        }
+        .progress-container { max-width: 900px; margin: 0 auto; }
+        .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .progress-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--color-oliva-oscuro); }
+        .progress-percentage { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; color: var(--color-acento); }
+        .main-progress-bar { height: 16px; background: var(--color-crema); border-radius: 20px; overflow: hidden; position: relative; }
+        .main-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--color-oliva-medio), var(--color-acento));
+            border-radius: 20px;
+            transition: width 0.8s ease;
+            position: relative;
+        }
+        .main-progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 50px;
+            padding: 25px;
+            background: rgba(255,255,255,0.8);
+            backdrop-filter: blur(10px);
+            flex-wrap: wrap;
+            border-bottom: 1px solid rgba(90, 97, 51, 0.1);
+        }
+        .stat-item { text-align: center; }
+        .stat-number { font-family: 'Orbitron', sans-serif; font-size: 2.2rem; font-weight: 700; color: var(--color-oliva-medio); }
+        .stat-label { font-size: 0.9rem; color: var(--color-oliva-oscuro); margin-top: 5px; font-weight: 500; }
+
+        /* Main Content */
+        .main-content { flex-grow: 1; padding: 40px 20px; position: relative; z-index: 1; }
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        .section-header { text-align: center; margin-bottom: 40px; }
+        .section-title { font-family: 'Patrick Hand', cursive; font-size: 2.2rem; color: var(--color-oliva-oscuro); margin-bottom: 10px; }
+        .section-description { font-size: 1.1rem; color: var(--color-oliva-medio); max-width: 700px; margin: 0 auto; line-height: 1.6; }
+
+        /* Techniques Grid */
+        .techniques-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        /* Technique Card */
+        .technique-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px var(--color-sombra);
+            transition: all 0.4s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        .technique-card:hover { transform: translateY(-10px) scale(1.02); box-shadow: 0 20px 50px rgba(39, 43, 0, 0.15); }
+        .technique-card.locked { opacity: 0.7; cursor: not-allowed; }
+        .technique-card.locked:hover { transform: translateY(-5px); }
+        .technique-card.completed { border: 3px solid var(--color-correcto); }
+
+        .card-header {
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+            animation: pulse 3s ease-in-out infinite;
+        }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.1); opacity: 0.3; } }
+
+        .card-header.mecanico { background: linear-gradient(135deg, #2d6a4f, #52b788); }
+        .card-header.estructural { background: linear-gradient(135deg, #bc6c25, #dda15e); }
+        .card-header.conceptual { background: linear-gradient(135deg, #7b2d8b, #b56dd6); }
+        .card-header.sintetico { background: linear-gradient(135deg, #c1121f, #e76f51); }
+
+        .card-icon { font-size: 3.5rem; color: white; z-index: 1; position: relative; }
+
+        .card-badge {
+            position: absolute;
+            top: 15px; right: 15px;
+            background: var(--color-dorado);
+            color: var(--color-oliva-oscuro);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            z-index: 2;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .card-badge.completed-badge { background: var(--color-correcto); color: white; }
+        .card-badge.locked-badge { background: var(--color-incorrecto); color: white; }
+
+        .lock-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        .lock-overlay i { font-size: 4rem; color: white; opacity: 0.9; }
+
+        .card-body { padding: 25px; }
+        .card-type {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.85rem;
+            color: var(--color-acento);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .card-title { font-family: 'Patrick Hand', cursive; font-size: 1.6rem; color: var(--color-oliva-oscuro); margin-bottom: 10px; }
+        .card-description { font-size: 0.95rem; color: var(--color-oliva-medio); margin-bottom: 20px; line-height: 1.6; }
+
+        .card-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--color-crema);
+            border-radius: 12px;
+        }
+        .card-stat { text-align: center; }
+        .card-stat-value { font-family: 'Orbitron', sans-serif; font-size: 1.2rem; color: var(--color-oliva-oscuro); }
+        .card-stat-label { font-size: 0.75rem; color: var(--color-oliva-medio); }
+
+        .progress-bar { height: 10px; background: var(--color-oliva-claro); border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
+        .progress-fill { height: 100%; border-radius: 10px; transition: width 0.5s ease; }
+        .progress-fill.mecanico { background: linear-gradient(90deg, #2d6a4f, #52b788); }
+        .progress-fill.estructural { background: linear-gradient(90deg, #bc6c25, #dda15e); }
+        .progress-fill.conceptual { background: linear-gradient(90deg, #7b2d8b, #b56dd6); }
+        .progress-fill.sintetico { background: linear-gradient(90deg, #c1121f, #e76f51); }
+
+        .card-footer { display: flex; justify-content: space-between; align-items: center; }
+
+        .start-btn {
+            background: var(--color-oliva-oscuro);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .start-btn:hover { background: var(--color-oliva-medio); transform: scale(1.05); }
+        .start-btn.locked-btn { background: #999; cursor: not-allowed; }
+        .start-btn.locked-btn:hover { transform: none; background: #999; }
+        .start-btn.completed-btn { background: linear-gradient(135deg, var(--color-correcto), #388e3c); }
+
+        .difficulty { display: flex; gap: 4px; }
+        .difficulty-star { color: var(--color-oliva-claro); font-size: 1rem; }
+        .difficulty-star.filled { color: var(--color-dorado); }
+
+        .unlock-requirement {
+            background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(244, 67, 54, 0.05));
+            border-left: 4px solid var(--color-incorrecto);
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: var(--color-oliva-oscuro);
+        }
+        .unlock-requirement i { color: var(--color-incorrecto); margin-right: 8px; }
+        .unlock-requirement .required-score { font-weight: 700; color: var(--color-incorrecto); }
+
+        /* Floating Icons */
+        .floating-icons { position: fixed; right: 20px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 12px; z-index: 2000; }
+        .floating-icons button {
+            background: var(--float-color);
+            color: white;
+            width: 54px; height: 54px;
+            border-radius: 50%;
+            border: none;
+            font-size: 20px;
+            display: grid;
+            place-items: center;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+            cursor: pointer;
+            transition: transform .15s ease, background .15s ease;
+        }
+        .floating-icons button:hover { transform: scale(1.08); background: var(--float-color-hover); }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            right: 20px; bottom: 20px;
+            background: #fff;
+            border-left: 6px solid var(--color-oliva-medio);
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+            z-index: 3000;
+            display: none;
+            font-size: 1rem;
+            max-width: 380px;
+        }
+        .toast.show { display: block; animation: slideInRight 0.3s ease; }
+        .toast.error { border-left-color: var(--color-incorrecto); }
+        .toast.success { border-left-color: var(--color-correcto); }
+        .toast.warning { border-left-color: var(--color-acento); }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Close Button */
+        .close-btn {
+            position: fixed;
+            top: 20px; left: 20px;
+            background: var(--color-oliva-oscuro);
+            color: white;
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            border: none;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            z-index: 1001;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .close-btn:hover { transform: scale(1.1); background-color: var(--color-oliva-medio); }
+
+        /* Achievement Banner */
+        .achievement-banner {
+            display: none;
+            background: linear-gradient(135deg, var(--color-dorado), #f39c12);
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 16px;
+            color: var(--color-oliva-oscuro);
+            animation: fadeIn 0.5s ease;
+        }
+        .achievement-banner.visible { display: block; }
+        .achievement-banner h3 { font-family: 'Patrick Hand', cursive; font-size: 1.8rem; margin-bottom: 5px; }
+        .achievement-banner p { font-size: 1rem; }
+
+        /* Modal de Completado */
+        .completion-modal {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 5000;
+        }
+        .completion-modal.visible { display: flex; animation: fadeIn 0.3s ease; }
+        .completion-content {
+            background: white;
+            border-radius: 24px;
+            padding: 50px 40px;
+            text-align: center;
+            max-width: 480px;
+            width: 90%;
+            animation: scaleIn 0.5s ease;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        @keyframes scaleIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .completion-icon {
+            width: 100px; height: 100px;
+            background: linear-gradient(135deg, var(--color-correcto), #388e3c);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 25px;
+            animation: bounce 0.6s ease infinite;
+        }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .completion-icon i { font-size: 3rem; color: white; }
+        .completion-title { font-family: 'Patrick Hand', cursive; font-size: 2.2rem; color: var(--color-oliva-oscuro); margin-bottom: 15px; }
+        .completion-text { color: var(--color-oliva-medio); font-size: 1.1rem; margin-bottom: 30px; line-height: 1.6; }
+        .completion-buttons { display: flex; flex-direction: column; gap: 14px; }
+        .completion-btn-primary {
+            background: linear-gradient(135deg, var(--color-oliva-medio), var(--color-oliva-oscuro));
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Space Grotesk', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .completion-btn-primary:hover { transform: scale(1.05); box-shadow: 0 8px 25px rgba(39, 43, 0, 0.3); }
+        .completion-btn-secondary {
+            background: transparent;
+            color: var(--color-oliva-medio);
+            border: 2px solid var(--color-oliva-claro);
+            padding: 13px 40px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Space Grotesk', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .completion-btn-secondary:hover { border-color: var(--color-oliva-medio); color: var(--color-oliva-oscuro); background: var(--color-crema); transform: scale(1.03); }
+        .confetti {
+            position: absolute;
+            width: 10px; height: 10px;
+            border-radius: 2px;
+            animation: confettiFall 3s ease-out forwards;
+            pointer-events: none;
+        }
+        @keyframes confettiFall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Panel Boxes */
+        .panel-box {
+            position: fixed;
+            right: 90px; top: 50%;
+            transform: translateY(-50%);
+            width: 400px;
+            max-height: 75vh;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+            overflow: auto;
+            padding: 24px;
+            z-index: 2100;
+            display: none;
+        }
+        .panel-box.active { display: block; animation: slideInPanel 0.3s ease; }
+        @keyframes slideInPanel {
+            from { opacity: 0; transform: translateY(-50%) translateX(30px); }
+            to { opacity: 1; transform: translateY(-50%) translateX(0); }
+        }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .panel-header h3 { margin: 0; font-family: 'Patrick Hand', cursive; font-size: 1.6rem; color: var(--color-oliva-oscuro); }
+        .close-panel { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--color-oliva-medio); }
+
+        .mission-row {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: #fffaf0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .mission-row.completed { opacity: 0.6; text-decoration: line-through; background: #f0fff4; }
+
+        .info { font-family: 'Roboto', sans-serif; color: var(--color-oliva-oscuro); font-size: 1rem; margin-bottom: 12px; }
+
+        /* Sync Indicator */
+        .sync-indicator {
+            position: fixed;
+            top: 80px; right: 20px;
+            background: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--color-oliva-medio);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 1000;
+        }
+        .sync-indicator.visible { display: flex; align-items: center; gap: 8px; }
+        .sync-indicator i { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-title { font-size: 2rem; }
+            .techniques-grid { grid-template-columns: 1fr; gap: 20px; }
+            .stats-bar { gap: 25px; }
+            .stat-number { font-size: 1.6rem; }
+            .panel-box { right: 10px; width: 92%; top: 55%; transform: translateY(-55%); }
+            .floating-icons { right: 10px; }
+            .completion-content { padding: 30px 20px; }
+            .completion-title { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="hamburger" id="hamburger-menu"><span></span><span></span><span></span></div>
+        <div class="user-dropdown" id="user-dropdown">
+            <a href="cuenta.html">Mi Cuenta</a>
+            <a href="configuracion.html">Configuracion</a>
+            <a href="notificaciones.html">Notificaciones</a>
+            <hr>
+            <a href="index.html" id="logout-btn">Cerrar Sesion</a>
+        </div>
+    </nav>
+
+    <!-- Boton de reversa hacia LCS3.html -->
+    <button class="close-btn" id="close-btn" title="Volver a LCS3">&times;</button>
+
+    <section class="hero-section">
+        <div class="hero-content">
+            <div class="hero-icon">
+                <i class="fas fa-random"></i>
+            </div>
+            <h1 class="hero-title">Domina el Parafraseo</h1>
+            <p class="hero-subtitle">Aprende las 4 estrategias de parafraseo que el ICFES evalua en Saber Pro: desde el cambio de palabras hasta la sintesis total del texto</p>
+        </div>
+    </section>
+
+    <div class="progress-overview">
+        <div class="progress-container">
+            <div class="progress-header">
+                <span class="progress-title">Progreso General del Modulo</span>
+                <span class="progress-percentage" id="overall-progress">0%</span>
+            </div>
+            <div class="main-progress-bar">
+                <div class="main-progress-fill" id="main-progress-fill" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-number" id="completed-count">0/4</div>
+            <div class="stat-label">Fases Dominadas</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" id="average-score">0</div>
+            <div class="stat-label">Puntaje Promedio</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" id="total-attempts">0</div>
+            <div class="stat-label">Intentos Totales</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" id="mastery-level">Novato</div>
+            <div class="stat-label">Nivel de Maestria</div>
+        </div>
+    </div>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="achievement-banner" id="achievement-banner">
+                <h3>Felicitaciones! Has dominado todas las fases de parafraseo!</h3>
+                <p>Eres un experto en Parafraseo. Sigue practicando para mantener tu nivel.</p>
+            </div>
+
+            <div class="section-header">
+                <h2 class="section-title">Las 4 Fases del Parafraseo</h2>
+                <p class="section-description">Completa cada cuestionario para dominar cada tipo de parafraseo. Desbloquea la siguiente fase alcanzando al menos 180 puntos.</p>
+            </div>
+
+            <div class="techniques-grid" id="techniques-grid">
+                <!-- Las tarjetas se generaran dinamicamente -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de Completado con 2 botones -->
+    <div class="completion-modal" id="completion-modal">
+        <div class="completion-content" id="completion-content">
+            <div class="completion-icon">
+                <i class="fas fa-trophy"></i>
+            </div>
+            <h2 class="completion-title">Modulo Completado</h2>
+            <p class="completion-text">Has completado las 4 fases de Parafraseo. Puedes volver a intentar cualquier fase para mejorar tu puntaje o continuar al dashboard.</p>
+            <div class="completion-buttons">
+                <button class="completion-btn-primary" id="btn-continue">
+                    <i class="fas fa-arrow-right"></i> Continuar
+                </button>
+                <button class="completion-btn-secondary" id="btn-retry">
+                    <i class="fas fa-redo"></i> Volver a intentar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="floating-icons" aria-hidden="false">
+        <button id="btn-misiones" title="Misiones"><i class="fas fa-bullseye"></i></button>
+        <button id="btn-nivel" title="Nivel actual"><i class="fas fa-star"></i></button>
+        <button id="btn-progreso" title="Progreso"><i class="fas fa-chart-line"></i></button>
+    </div>
+
+    <div class="sync-indicator" id="sync-indicator">
+        <i class="fas fa-sync-alt"></i>
+        <span>Sincronizando...</span>
+    </div>
+
+    <!-- Panels -->
+    <div class="panel-box" id="panel-misiones" aria-hidden="true">
+        <div class="panel-header">
+            <h3>Misiones</h3>
+            <button class="close-panel" data-close="misiones">&times;</button>
+        </div>
+        <div id="misiones-content"></div>
+    </div>
+
+    <div class="panel-box" id="panel-nivel" aria-hidden="true">
+        <div class="panel-header">
+            <h3>Tu Nivel</h3>
+            <button class="close-panel" data-close="nivel">&times;</button>
+        </div>
+        <div id="nivel-content"></div>
+    </div>
+
+    <div class="panel-box" id="panel-progreso" aria-hidden="true">
+        <div class="panel-header">
+            <h3>Progreso</h3>
+            <button class="close-panel" data-close="progreso">&times;</button>
+        </div>
+        <div id="progreso-content"></div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("DOM Cargado. Inicializando Dashboard Parafraseo (LCS3D)...");
+
+        const MIN_SCORE_TO_UNLOCK = 180;
+
+        const techniquesConfig = {
+            'LCS3D1': {
+                id: 1,
+                type: 'mecanico',
+                title: 'Parafraseo Mecanico',
+                subtitle: 'Cambio de palabras por sinonimos',
+                description: 'Aprende a identificar cuando se reemplazan palabras clave por sinonimos sin alterar la estructura ni el sentido original del texto.',
+                icon: 'fas fa-exchange-alt',
+                colorClass: 'mecanico',
+                questions: 10,
+                time: '15 min',
+                difficulty: 1,
+                locked: false,
+                requires: null,
+                requiresScore: 0,
+                file: 'LCS3D1.html',
+                functionName: 'Sustituye palabras por sinonimos manteniendo la estructura'
+            },
+            'LCS3D2': {
+                id: 2,
+                type: 'estructural',
+                title: 'Parafraseo Estructural',
+                subtitle: 'Cambio en la estructura de las oraciones',
+                description: 'Identifica cuando se modifican las estructuras gramaticales: voz activa a pasiva, cambiar el orden de las clausulas, o reorganizar la sintaxis.',
+                icon: 'fas fa-cubes',
+                colorClass: 'estructural',
+                questions: 10,
+                time: '18 min',
+                difficulty: 2,
+                locked: true,
+                requires: 'LCS3D1',
+                requiresScore: MIN_SCORE_TO_UNLOCK,
+                file: 'LCS3D2.html',
+                functionName: 'Modifica la estructura gramatical sin cambiar el significado'
+            },
+            'LCS3D3': {
+                id: 3,
+                type: 'conceptual',
+                title: 'Parafraseo Conceptual',
+                subtitle: 'Reformulacion de la idea central',
+                description: 'Reconoce cuando se expresa la misma idea con palabras completamente diferentes, capturando el concepto profundo del texto original.',
+                icon: 'fas fa-brain',
+                colorClass: 'conceptual',
+                questions: 10,
+                time: '20 min',
+                difficulty: 2,
+                locked: true,
+                requires: 'LCS3D2',
+                requiresScore: MIN_SCORE_TO_UNLOCK,
+                file: 'LCS3D3.html',
+                functionName: 'Reformula la idea central con palabras diferentes'
+            },
+            'LCS3D4': {
+                id: 4,
+                type: 'sintetico',
+                title: 'Parafraseo Sintetico',
+                subtitle: 'Condensacion del contenido',
+                description: 'Detecta cuando se condensa el texto original en una version mas breve que conserva la esencia, eliminando lo accesorio y quedandose con lo esencial.',
+                icon: 'fas fa-compress-arrows-alt',
+                colorClass: 'sintetico',
+                questions: 10,
+                time: '22 min',
+                difficulty: 3,
+                locked: true,
+                requires: 'LCS3D3',
+                requiresScore: MIN_SCORE_TO_UNLOCK,
+                file: 'LCS3D4.html',
+                functionName: 'Condensa el texto conservando unicamente la esencia'
+            }
+        };
+
+        // Elementos DOM
+        const hamburgerMenu = document.getElementById('hamburger-menu');
+        const userDropdown = document.getElementById('user-dropdown');
+        const logoutBtn = document.getElementById('logout-btn');
+        const closeBtn = document.getElementById('close-btn');
+        const toast = document.getElementById('toast');
+        const techniquesGrid = document.getElementById('techniques-grid');
+        const syncIndicator = document.getElementById('sync-indicator');
+        const completionModal = document.getElementById('completion-modal');
+        const btnContinue = document.getElementById('btn-continue');
+        const btnRetry = document.getElementById('btn-retry');
+
+        let currentUserId = null;
+
+        // ============================================
+        // FUNCIONES DE FIREBASE
+        // ============================================
+
+        async function loadProgressFromFirebase(userId) {
+            showSyncIndicator(true);
+            try {
+                const dbRef = window.ref(window.db, `users/${userId}/lcs3_progress`);
+                const snapshot = await window.get(dbRef);
+
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    localStorage.setItem('skopia_lcs3_progress', JSON.stringify(data));
+                    return data;
+                }
+            } catch (error) {
+                console.error("Error cargando progreso de parafraseo:", error);
+            } finally {
+                showSyncIndicator(false);
+            }
+            return null;
+        }
+
+        // Guardar estado completado en lc_progress
+        async function markLCS3AsCompletedInLCProgress(userId, averageScore) {
+            try {
+                const dbRef = window.ref(window.db, `users/${userId}/lc_progress/lcs3f`);
+                await window.set(dbRef, {
+                    completed: true,
+                    score: averageScore,
+                    completedAt: Date.now(),
+                    fromSubmodules: true
+                });
+                console.log("LCS3 (Parafraseo) marcado como completado en lc_progress");
+            } catch (error) {
+                console.error("Error guardando completado en lc_progress:", error);
+            }
+        }
+
+        // Guardar progreso individual de una fase
+        async function savePhaseProgressToFirebase(userId, phaseId, phaseData) {
+            showSyncIndicator(true);
+            try {
+                const dbRef = window.ref(window.db, `users/${userId}/lcs3_progress/techniques/${phaseId}`);
+                await window.set(dbRef, phaseData);
+                console.log(`Progreso de ${phaseId} guardado en Firebase`);
+            } catch (error) {
+                console.error(`Error guardando progreso de ${phaseId}:`, error);
+            } finally {
+                showSyncIndicator(false);
+            }
+        }
+
+        // Guardar todo el progreso completo
+        async function saveFullProgressToFirebase(userId, fullData) {
+            showSyncIndicator(true);
+            try {
+                const dbRef = window.ref(window.db, `users/${userId}/lcs3_progress`);
+                await window.set(dbRef, fullData);
+                console.log("Progreso completo de LCS3 guardado en Firebase");
+            } catch (error) {
+                console.error("Error guardando progreso completo:", error);
+            } finally {
+                showSyncIndicator(false);
+            }
+        }
+
+        function showSyncIndicator(show) {
+            syncIndicator.classList.toggle('visible', show);
+        }
+
+        // ============================================
+        // LOGICA DE DATOS
+        // ============================================
+
+        function getLocalProgress() {
+            const data = localStorage.getItem('skopia_lcs3_progress');
+            if (!data) return { techniques: {}, stats: { completedCount: 0, totalScore: 0, attempts: 0 } };
+            try {
+                return JSON.parse(data);
+            } catch (e) {
+                return { techniques: {}, stats: { completedCount: 0, totalScore: 0, attempts: 0 } };
+            }
+        }
+
+        function saveLocalProgress(progress) {
+            localStorage.setItem('skopia_lcs3_progress', JSON.stringify(progress));
+        }
+
+        function findTechData(progress, techId) {
+            if (!progress.techniques) return null;
+            if (progress.techniques[techId]) return progress.techniques[techId];
+            if (progress.techniques[techId + '.html']) return progress.techniques[techId + '.html'];
+            return null;
+        }
+
+        function isTechniqueUnlocked(techId) {
+            const config = techniquesConfig[techId];
+            if (!config || !config.locked) return true;
+
+            if (config.requires) {
+                const progress = getLocalProgress();
+                const requiredProgress = findTechData(progress, config.requires);
+
+                if (requiredProgress && requiredProgress.completed && requiredProgress.score >= config.requiresScore) {
+                    return true;
+                }
+                return false;
+            }
+            return true;
+        }
+
+        function checkIfAllCompleted() {
+            const progress = getLocalProgress();
+            const techniques = ['LCS3D1', 'LCS3D2', 'LCS3D3', 'LCS3D4'];
+
+            for (const tech of techniques) {
+                const techData = findTechData(progress, tech);
+                if (!techData || !techData.completed || (techData.score || 0) < MIN_SCORE_TO_UNLOCK) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function calculateAverageScore() {
+            const progress = getLocalProgress();
+            const techniques = ['LCS3D1', 'LCS3D2', 'LCS3D3', 'LCS3D4'];
+            let totalScore = 0;
+            let count = 0;
+
+            for (const tech of techniques) {
+                const techData = findTechData(progress, tech);
+                if (techData && techData.score) {
+                    totalScore += techData.score;
+                    count++;
+                }
+            }
+
+            return count > 0 ? Math.round(totalScore / count) : 0;
+        }
+
+        function getMasteryLevel(avgScore) {
+            if (avgScore >= 250) return 'Maestro';
+            if (avgScore >= 220) return 'Experto';
+            if (avgScore >= 180) return 'Avanzado';
+            if (avgScore >= 140) return 'Intermedio';
+            if (avgScore >= 100) return 'Principiante';
+            return 'Novato';
+        }
+
+        // ============================================
+        // MODAL DE COMPLETADO
+        // ============================================
+
+        function showCompletionModal() {
+            const averageScore = calculateAverageScore();
+
+            // Guardar en Firebase que LCS3 esta completado
+            if (currentUserId) {
+                markLCS3AsCompletedInLCProgress(currentUserId, averageScore);
+            }
+
+            // Mostrar el modal
+            completionModal.classList.add('visible');
+
+            // Crear confetti
+            createConfetti();
+        }
+
+        function hideCompletionModal() {
+            completionModal.classList.remove('visible');
+            // Limpiar confetti
+            const confettiPieces = completionModal.querySelectorAll('.confetti');
+            confettiPieces.forEach(c => c.remove());
+        }
+
+        function createConfetti() {
+            const colors = ['#ffd700', '#4caf50', '#ff9e6d', '#2d6a4f', '#bc6c25', '#7b2d8b', '#c1121f', '#52b788'];
+            const content = document.getElementById('completion-content');
+
+            for (let i = 0; i < 60; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
+                confetti.style.width = (6 + Math.random() * 8) + 'px';
+                confetti.style.height = (6 + Math.random() * 8) + 'px';
+                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                content.appendChild(confetti);
+
+                setTimeout(() => confetti.remove(), 5000);
+            }
+        }
+
+        // ============================================
+        // RENDERIZADO
+        // ============================================
+
+        function renderTechniqueCards() {
+            techniquesGrid.innerHTML = '';
+            const progress = getLocalProgress();
+            let completedCount = 0;
+
+            Object.entries(techniquesConfig).forEach(([techId, config]) => {
+                const isUnlocked = isTechniqueUnlocked(techId);
+                const techProgress = findTechData(progress, techId);
+
+                const isCompleted = techProgress?.completed && techProgress?.score >= MIN_SCORE_TO_UNLOCK;
+                if (isCompleted) completedCount++;
+
+                let progressPercent = 0;
+                let scoreDisplay = '--';
+
+                if (techProgress) {
+                    if (techProgress.completed || techProgress.score) {
+                        progressPercent = 100;
+                        scoreDisplay = techProgress.score || 0;
+                    } else if (techProgress.currentQuestion > 0) {
+                        progressPercent = (techProgress.currentQuestion / config.questions) * 100;
+                    }
+                }
+
+                const stars = Array(3).fill(0).map((_, i) =>
+                    `<span class="difficulty-star ${i < config.difficulty ? 'filled' : ''}">&#9733;</span>`
+                ).join('');
+
+                let buttonText = 'Comenzar';
+                let buttonIcon = '<i class="fas fa-play"></i>';
+                let buttonClass = '';
+
+                if (!isUnlocked) {
+                    buttonText = 'Bloqueado';
+                    buttonIcon = '<i class="fas fa-lock"></i>';
+                    buttonClass = 'locked-btn';
+                } else if (isCompleted) {
+                    buttonText = 'Reintentar';
+                    buttonIcon = '<i class="fas fa-redo"></i>';
+                    buttonClass = 'completed-btn';
+                } else if (progressPercent > 0) {
+                    buttonText = 'Continuar';
+                }
+
+                let badgeHtml = '';
+                if (!isUnlocked) badgeHtml = `<div class="card-badge locked-badge"><i class="fas fa-lock"></i> Bloqueado</div>`;
+                else if (isCompleted) badgeHtml = `<div class="card-badge completed-badge"><i class="fas fa-check"></i> Dominado</div>`;
+
+                let lockOverlay = !isUnlocked ? `<div class="lock-overlay"><i class="fas fa-lock"></i></div>` : '';
+
+                let requirementHtml = '';
+                if (!isUnlocked && config.requires) {
+                    const reqConfig = techniquesConfig[config.requires];
+                    const reqProgress = findTechData(progress, config.requires);
+                    const reqScore = reqProgress?.score || 0;
+                    requirementHtml = `
+                        <div class="unlock-requirement">
+                            <i class="fas fa-info-circle"></i>
+                            Completa <strong>${reqConfig.title}</strong> con al menos
+                            <span class="required-score">${config.requiresScore} pts</span>
+                            ${reqScore > 0 ? ` (tienes ${reqScore} pts)` : ''}
+                        </div>`;
+                }
+
+                const card = document.createElement('div');
+                card.className = `technique-card ${!isUnlocked ? 'locked' : ''} ${isCompleted ? 'completed' : ''}`;
+                card.innerHTML = `
+                    <div class="card-header ${config.colorClass}">
+                        <div class="card-icon"><i class="${config.icon}"></i></div>
+                        ${badgeHtml}
+                        ${lockOverlay}
+                    </div>
+                    <div class="card-body">
+                        <div class="card-type">${config.subtitle}</div>
+                        <h3 class="card-title">${config.title}</h3>
+                        <p class="card-description">${config.description}</p>
+                        ${requirementHtml}
+                        <div class="card-stats">
+                            <div class="card-stat">
+                                <div class="card-stat-value">${config.questions}</div>
+                                <div class="card-stat-label">Preguntas</div>
+                            </div>
+                            <div class="card-stat">
+                                <div class="card-stat-value">${config.time}</div>
+                                <div class="card-stat-label">Duracion</div>
+                            </div>
+                            <div class="card-stat">
+                                <div class="card-stat-value">${scoreDisplay}</div>
+                                <div class="card-stat-label">Puntaje</div>
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${config.colorClass}" style="width: ${progressPercent}%"></div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="difficulty">${stars}</div>
+                            <button class="start-btn ${buttonClass}" data-id="${techId}" ${!isUnlocked ? 'disabled' : ''}>
+                                ${buttonText} ${buttonIcon}
+                            </button>
+                        </div>
+                    </div>`;
+
+                techniquesGrid.appendChild(card);
+            });
+
+            // Event listeners para botones de las tarjetas
+            document.querySelectorAll('.start-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const techId = btn.dataset.id;
+                    if (techId) handleTechniqueStart(techId);
+                });
+            });
+
+            // Actualizar estadisticas
+            updateStats(completedCount);
+
+            // Mostrar banner de logro si todo esta completado
+            const achievementBanner = document.getElementById('achievement-banner');
+            achievementBanner.classList.toggle('visible', completedCount === 4);
+        }
+
+        function updateStats(completedCount) {
+            const progress = getLocalProgress();
+            const techniques = ['LCS3D1', 'LCS3D2', 'LCS3D3', 'LCS3D4'];
+
+            let totalScore = 0;
+            let scoreCount = 0;
+            let totalAttempts = 0;
+
+            techniques.forEach(tech => {
+                const techData = findTechData(progress, tech);
+                if (techData) {
+                    if (techData.score) {
+                        totalScore += techData.score;
+                        scoreCount++;
+                    }
+                    totalAttempts += techData.attempts || 0;
+                }
+            });
+
+            const avgScore = scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0;
+            const overallPercent = Math.round((completedCount / 4) * 100);
+
+            document.getElementById('completed-count').textContent = `${completedCount}/4`;
+            document.getElementById('average-score').textContent = avgScore;
+            document.getElementById('total-attempts').textContent = totalAttempts;
+            document.getElementById('mastery-level').textContent = getMasteryLevel(avgScore);
+            document.getElementById('overall-progress').textContent = overallPercent + '%';
+            document.getElementById('main-progress-fill').style.width = overallPercent + '%';
+        }
+
+        // ============================================
+        // ACCIONES
+        // ============================================
+
+        function handleTechniqueStart(techId) {
+            const config = techniquesConfig[techId];
+            if (!config) return;
+
+            if (!isTechniqueUnlocked(techId)) {
+                showToast('Debes completar la fase anterior con al menos ' + MIN_SCORE_TO_UNLOCK + ' puntos.', 'warning');
+                return;
+            }
+
+            console.log(`Iniciando fase: ${techId} -> ${config.file}`);
+            window.location.href = config.file;
+        }
+
+        // ============================================
+        // PANELES LATERALES
+        // ============================================
+
+        function closeAllPanels() {
+            document.querySelectorAll('.panel-box').forEach(p => p.classList.remove('active'));
+        }
+
+        function showMisiones() {
+            closeAllPanels();
+            const panel = document.getElementById('panel-misiones');
+            const content = document.getElementById('misiones-content');
+            const progress = getLocalProgress();
+
+            const misiones = [
+                { id: 'LCS3D1', text: 'Completa Parafraseo Mecanico', target: MIN_SCORE_TO_UNLOCK },
+                { id: 'LCS3D2', text: 'Completa Parafraseo Estructural', target: MIN_SCORE_TO_UNLOCK },
+                { id: 'LCS3D3', text: 'Completa Parafraseo Conceptual', target: MIN_SCORE_TO_UNLOCK },
+                { id: 'LCS3D4', text: 'Completa Parafraseo Sintetico', target: MIN_SCORE_TO_UNLOCK },
+                { id: 'all_250', text: 'Obtén 250+ puntos promedio', target: 250 }
+            ];
+
+            let html = '';
+            misiones.forEach(m => {
+                let completed = false;
+                if (m.id === 'all_250') {
+                    completed = calculateAverageScore() >= 250;
+                } else {
+                    const td = findTechData(progress, m.id);
+                    completed = td?.completed && td?.score >= m.target;
+                }
+                html += `<div class="mission-row ${completed ? 'completed' : ''}">
+                    <span><i class="fas ${completed ? 'fa-check-circle' : 'fa-circle'}" style="color: ${completed ? 'var(--color-correcto)' : 'var(--color-oliva-claro)'}; margin-right: 10px;"></i>${m.text}</span>
+                    ${completed ? '<i class="fas fa-trophy" style="color: var(--color-dorado);"></i>' : ''}
+                </div>`;
+            });
+
+            content.innerHTML = html;
+            panel.classList.add('active');
+        }
+
+        function showNivel() {
+            closeAllPanels();
+            const panel = document.getElementById('panel-nivel');
+            const content = document.getElementById('nivel-content');
+            const avg = calculateAverageScore();
+            const level = getMasteryLevel(avg);
+
+            const levels = [
+                { name: 'Novato', min: 0, icon: 'fa-seedling' },
+                { name: 'Principiante', min: 100, icon: 'fa-leaf' },
+                { name: 'Intermedio', min: 140, icon: 'fa-tree' },
+                { name: 'Avanzado', min: 180, icon: 'fa-mountain' },
+                { name: 'Experto', min: 220, icon: 'fa-crown' },
+                { name: 'Maestro', min: 250, icon: 'fa-gem' }
+            ];
+
+            let html = `<div style="text-align: center; margin-bottom: 20px;">
+                <i class="fas ${levels.find(l => l.name === level)?.icon || 'fa-seedling'}" style="font-size: 3rem; color: var(--color-dorado); margin-bottom: 10px;"></i>
+                <h4 style="font-family: 'Patrick Hand', cursive; font-size: 1.5rem;">${level}</h4>
+                <p style="color: var(--color-oliva-medio);">Puntaje promedio: <strong>${avg}</strong></p>
+            </div>
+            <div style="border-top: 1px solid #eee; padding-top: 15px;">`;
+
+            levels.forEach(l => {
+                const isActive = l.name === level;
+                html += `<div style="display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 8px; margin-bottom: 6px; ${isActive ? 'background: var(--color-crema); font-weight: 700;' : 'opacity: 0.6;'}">
+                    <i class="fas ${l.icon}" style="width: 24px; text-align: center;"></i>
+                    <span>${l.name}</span>
+                    <span style="margin-left: auto; font-size: 0.85rem;">${l.min}+ pts</span>
+                </div>`;
+            });
+
+            html += '</div>';
+            content.innerHTML = html;
+            panel.classList.add('active');
+        }
+
+        function showProgreso() {
+            closeAllPanels();
+            const panel = document.getElementById('panel-progreso');
+            const content = document.getElementById('progreso-content');
+            const progress = getLocalProgress();
+
+            let html = '';
+            Object.entries(techniquesConfig).forEach(([techId, config]) => {
+                const td = findTechData(progress, techId);
+                const score = td?.score || 0;
+                const isComplete = td?.completed && score >= MIN_SCORE_TO_UNLOCK;
+                const percent = Math.min((score / 300) * 100, 100);
+
+                html += `<div style="margin-bottom: 18px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-weight: 600; font-size: 0.95rem;">${config.title}</span>
+                        <span style="font-family: 'Orbitron', sans-serif; font-size: 0.9rem; color: ${isComplete ? 'var(--color-correcto)' : 'var(--color-oliva-medio)'};">${score} pts</span>
+                    </div>
+                    <div class="progress-bar" style="margin-bottom: 0;">
+                        <div class="progress-fill ${config.colorClass}" style="width: ${percent}%"></div>
+                    </div>
+                    ${!isComplete && score > 0 ? `<div style="font-size: 0.8rem; color: var(--color-incorrecto); margin-top: 4px;">Te faltan ${MIN_SCORE_TO_UNLOCK - score} pts para desbloquear la siguiente fase</div>` : ''}
+                    ${isComplete ? `<div style="font-size: 0.8rem; color: var(--color-correcto); margin-top: 4px;"><i class="fas fa-check"></i> Fase dominada</div>` : ''}
+                </div>`;
+            });
+
+            content.innerHTML = html;
+            panel.classList.add('active');
+        }
+
+        // ============================================
+        // TOAST
+        // ============================================
+
+        let toastTimeout = null;
+        function showToast(message, type = '') {
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toast.textContent = message;
+            toast.className = 'toast show ' + type;
+            toastTimeout = setTimeout(() => {
+                toast.className = 'toast';
+            }, 3500);
+        }
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+
+        // Hamburger menu
+        hamburgerMenu.addEventListener('click', () => {
+            userDropdown.classList.toggle('active');
+        });
+
+        // Cerrar dropdown al hacer click fuera
+        document.addEventListener('click', (e) => {
+            if (!hamburgerMenu.contains(e.target) && !userDropdown.contains(e.target)) {
+                userDropdown.classList.remove('active');
+            }
+        });
+
+        // Cerrar sesion
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (window.signOut) {
+                window.signOut(window.auth).then(() => {
+                    window.location.href = 'index.html';
+                }).catch(err => {
+                    console.error("Error al cerrar sesion:", err);
+                });
+            }
+        });
+
+        // Boton de reversa -> LCS3.html
+        closeBtn.addEventListener('click', () => {
+            window.location.href = 'LCS3.html';
+        });
+
+        // Boton continuar del modal -> LCDASHBOARD.html
+        btnContinue.addEventListener('click', () => {
+            hideCompletionModal();
+            window.location.href = 'LCDASHBOARD.html';
+        });
+
+        // Boton volver a intentar del modal -> cierra modal, se queda en la pagina
+        btnRetry.addEventListener('click', () => {
+            hideCompletionModal();
+            // No reinicia nada, el usuario puede seguir perfeccionando
+            renderTechniqueCards();
+            showToast('Puedes volver a intentar cualquier fase para mejorar tu puntaje.', 'success');
+        });
+
+        // Cerrar modal al hacer click fuera del contenido
+        completionModal.addEventListener('click', (e) => {
+            if (e.target === completionModal) {
+                hideCompletionModal();
+            }
+        });
+
+        // Botones flotantes
+        document.getElementById('btn-misiones').addEventListener('click', showMisiones);
+        document.getElementById('btn-nivel').addEventListener('click', showNivel);
+        document.getElementById('btn-progreso').addEventListener('click', showProgreso);
+
+        // Cerrar paneles
+        document.querySelectorAll('.close-panel').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const panelId = btn.dataset.close;
+                document.getElementById(`panel-${panelId}`).classList.remove('active');
+            });
+        });
+
+        // Cerrar paneles al hacer click fuera
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.panel-box') && !e.target.closest('.floating-icons button')) {
+                closeAllPanels();
+            }
+        });
+
+        // ============================================
+        // INICIALIZACION
+        // ============================================
+
+        window.addEventListener('userReady', async (e) => {
+            const user = e.detail.user;
+            currentUserId = user.uid;
+            console.log("Usuario listo:", currentUserId);
+
+            // Cargar progreso desde Firebase
+            await loadProgressFromFirebase(currentUserId);
+
+            // Renderizar tarjetas
+            renderTechniqueCards();
+
+            // Verificar si todo esta completado para mostrar modal
+            if (checkIfAllCompleted()) {
+                // Pequeno retraso para que el usuario vea la pagina primero
+                setTimeout(() => {
+                    showCompletionModal();
+                }, 800);
+            }
+        });
+
+        // Si el usuario ya esta cargado (caso raro)
+        if (window.currentUser) {
+            currentUserId = window.currentUser.uid;
+            loadProgressFromFirebase(currentUserId).then(() => {
+                renderTechniqueCards();
+                if (checkIfAllCompleted()) {
+                    setTimeout(() => showCompletionModal(), 800);
+                }
+            });
+        }
+    });
+    </script>
+</body>
+</html>
