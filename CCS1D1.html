@@ -534,10 +534,18 @@ function showFail(sectionId, gameName, score, total) {
 function retryGame(sectionId) {
     const failEl = document.getElementById(sectionId + '-fail');
     if (failEl) failEl.remove();
-    if (sectionId === 'game1-section') { showSection(sectionId); renderG1(); }
-    else if (sectionId === 'game2-section') { g2Idx = 0; g2Score = 0; showSection(sectionId); renderG2(); }
+    if (sectionId === 'game1-section') {
+        showSection(sectionId);
+        renderG1();
+    } else if (sectionId === 'game2-section') {
+        g2Idx = 0;
+        g2Score = 0;
+        g2Questions = shuffle(G2_DATA).slice(0, 8); 
+        showSection(sectionId);
+        renderG2();
+    }
 }
-
+    
 function backToTheory() {
     document.querySelectorAll('[id$="-fail"]').forEach(el => el.remove());
     ['game1-section','game2-section','quiz-section','results-section'].forEach(hideSection);
@@ -1202,15 +1210,33 @@ async function loadQuiz() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
+        console.log('[QUIZ] Intentando cargar preguntas10.json...');
         const resp = await fetch('preguntas10.json');
+        console.log('[QUIZ] Status HTTP:', resp.status, resp.ok);
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         const allQ = await resp.json();
+        console.log('[QUIZ] Total preguntas en JSON:', allQ.length);
+        
+        // Mostrar los tags de las primeras 3 preguntas para diagnosticar
+        allQ.slice(0, 3).forEach((q, i) => {
+            console.log('[QUIZ] Pregunta ' + i + ' tags:', q.tags);
+        });
+
         const filtered = allQ.filter(q => Array.isArray(q.tags) && q.tags.includes('conceptos') && q.tags.includes('CC'));
-        if (filtered.length >= 10) quizData = shuffle(filtered).slice(0, 10);
-        else if (filtered.length > 0) { quizData = shuffle(filtered); console.warn('Solo ' + filtered.length + ' preguntas con tags conceptos+CC'); }
-        else throw new Error('Sin preguntas con ambos tags');
+        console.log('[QUIZ] Preguntas con tags "conceptos" Y "CC":', filtered.length);
+
+        if (filtered.length >= 10) {
+            quizData = shuffle(filtered).slice(0, 10);
+            console.log('[QUIZ] Se seleccionaron 10 preguntas del JSON.');
+        } else if (filtered.length > 0) {
+            quizData = shuffle(filtered);
+            console.warn('[QUIZ] Solo se encontraron ' + filtered.length + ' preguntas, se usan todas.');
+        } else {
+            throw new Error('0 preguntas con tags "conceptos" Y "CC"');
+        }
     } catch (e) {
-        console.warn('Error cargando JSON:', e.message, '→ Usando fallback.');
+        console.error('[QUIZ] ERROR:', e.message);
+        console.warn('[QUIZ] Usando preguntas de respaldo (FALLBACK_QUIZ).');
         quizData = shuffle(FALLBACK_QUIZ).slice(0, 10);
     }
 
