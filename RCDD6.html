@@ -1519,7 +1519,7 @@
 
                 <div class="menu-section">
                     <h3><i class="fas fa-tasks"></i> Entrenamiento de Práctica</h3>
-                    <a href="RCDD9.html" class="menu-item locked" data-content="RCDD9" data-quiz="1">
+                    <a href="RCDD9.html" class="menu-item" data-content="RCDD9" data-quiz="1">
                         Cuestionario 1: Precisión y Signos (Nivel Básico)
                     </a>
                     <a href="RCDD10.html" class="menu-item locked" data-content="RCDD10" data-quiz="2">
@@ -1963,19 +1963,98 @@
         </div>
     </div>
 
-    <script>
-        // Estado global compartido entre páginas
-        const globalState = {
-            completedTopics: new Set(),
-            visitedTopics: new Set(),
-            quizScores: {
-                quiz1: 0,
-                quiz2: 0,
-                quiz3: 0,
-                final: 0
-            },
-            allTopicsVisited: false
+       <!-- Script de Desbloqueo por Puntaje (Firebase) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            authDomain: "skopia-aa786.firebaseapp.com",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
         };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let userId = localStorage.getItem('skopia_uid') || sessionStorage.getItem('skopia_uid');
+        if (!userId) {
+            userId = 'user_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+            localStorage.setItem('skopia_uid', userId);
+            sessionStorage.setItem('skopia_uid', userId);
+        }
+
+        const scoresRef = ref(db, 'users/' + userId + '/module1/scores');
+
+        onValue(scoresRef, (snapshot) => {
+            const data = snapshot.val();
+            const q1Score = data && data.quiz1 ? data.quiz1 : 0;
+            const q2Score = data && data.quiz2 ? data.quiz2 : 0;
+            const totalScore = q1Score + q2Score;
+
+            // Cuestionario 1 siempre desbloqueado
+            const q1Link = document.querySelector('[data-content="RCDD9"]');
+            if (q1Link && q1Link.classList.contains('locked')) {
+                q1Link.classList.remove('locked');
+            }
+
+            // Cuestionario 2: desbloquear si Q1 >= 150
+            const q2Link = document.querySelector('[data-content="RCDD10"]');
+            if (q1Score >= 150) {
+                q2Link.classList.remove('locked');
+                q2Link.classList.add('unlocking');
+                setTimeout(() => q2Link.classList.remove('unlocking'), 600);
+            } else {
+                q2Link.classList.add('locked');
+            }
+
+            // Actualizar indicador visual de requerimiento
+            const reqQ2Info = document.getElementById('reqQ2Info');
+            if (reqQ2Info) {
+                if (q1Score >= 150) {
+                    reqQ2Info.classList.add('unlocked');
+                    reqQ2Info.innerHTML = '<i class="fas fa-unlock" style="color: #2ecc71;"></i> <span>¡Desbloqueado!</span>';
+                } else {
+                    const reqQ2Score = document.getElementById('reqQ2Score');
+                    if (reqQ2Score) reqQ2Score.textContent = '(' + q1Score + ' / 150)';
+                }
+            }
+
+            // Cuestionario 3 y Cierre: desbloquear si Total >= 180
+            const q3Link = document.querySelector('[data-content="RCDD11"]');
+            const finalLink = document.querySelector('[data-content="RCDD12"]');
+
+            if (totalScore >= 180) {
+                q3Link.classList.remove('locked');
+                finalLink.classList.remove('locked');
+                if (!q3Link.dataset.unlocked) {
+                    q3Link.classList.add('unlocking');
+                    finalLink.classList.add('unlocking');
+                    q3Link.dataset.unlocked = "true";
+                    finalLink.dataset.unlocked = "true";
+                }
+            } else {
+                q3Link.classList.add('locked');
+                finalLink.classList.add('locked');
+            }
+
+            // Actualizar barra de puntaje
+            const scoreFill = document.getElementById('scoreFill');
+            const scoreText = document.getElementById('scoreText');
+            if (scoreFill && scoreText) {
+                const goal = 180;
+                let pct = Math.min((totalScore / goal) * 100, 100);
+                scoreFill.style.width = pct + '%';
+                scoreText.textContent = totalScore + ' / ' + goal + ' pts';
+                if (pct >= 100) {
+                    scoreFill.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
+                }
+            }
+        });
 
         // Base de datos para la herramienta de práctica
         const practiceData = {
@@ -2114,97 +2193,8 @@
             });
         }
 
-        // Función para guardar en sessionStorage
-        function saveToSessionStorage() {
-            sessionStorage.setItem('module1Progress', JSON.stringify({
-                completedTopics: Array.from(globalState.completedTopics),
-                visitedTopics: Array.from(globalState.visitedTopics),
-                quizScores: globalState.quizScores,
-                allTopicsVisited: globalState.allTopicsVisited
-            }));
-        }
+    
 
-        // Función para cargar desde sessionStorage
-        function loadFromSessionStorage() {
-            const saved = sessionStorage.getItem('module1Progress');
-            if (saved) {
-                const progress = JSON.parse(saved);
-                globalState.completedTopics = new Set(progress.completedTopics || []);
-                globalState.visitedTopics = new Set(progress.visited || []);
-                globalState.quizScores = progress.quizScores || { quiz1: 0, quiz2: 0, quiz3: 0, final: 0 };
-                globalState.allTopicsVisited = progress.allTopicsVisited || false;
-                
-                // APLICAR LAS CLASES CSS A LOS ELEMENTOS VISITADOS
-                globalState.completedTopics.forEach(topicId => {
-                    const menuItem = document.querySelector(`[ data-content="${topicId}"]`);
-                    if (menuItem) {
-                        menuItem.classList.add('completed');
-                    }
-                });
-                
-                // SOLO DESBLOQUEAR CUESTIONARIO 1 SI TODOS LOS TEMAS FUERON VISITADOS
-                if (globalState.allTopicsVisited) {
-                    unlockQuiz(1);
-                }
-                
-                // Actualizar barra de energía
-                updateEnergyBar();
-                updateDashboardStats();
-            }
-        }
-
-        // Inicialización
-        document.addEventListener('DOMContentLoaded', function() {
-            setupEventListeners();
-            loadFromSessionStorage();
-            highlightCurrentPage();
-            setupSidebarToggle();
-            setPracticeLevel(1);
-            
-            // MARCAR LA PÁGINA ACTUAL COMO VISITADA AL CARGAR
-            const currentPage = window.location.pathname.split('/').pop();
-            const currentPageElement = document.querySelector(`[href="${currentPage}"]`);
-            if (currentPageElement) {
-                const contentId = currentPageElement.dataset.content;
-                if (contentId && !contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
-                    !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
-                    markAsVisited(contentId);
-                }
-            }
-        });
-
-        // Configurar event listeners
-        function setupEventListeners() {
-            // Menu items
-            document.querySelectorAll('.menu-item').forEach(item => {
-                item.addEventListener('click', function(e) {
-                    const isQuiz = this.dataset.quiz;
-                    const isFinal = this.dataset.final;
-                    
-                    if (this.classList.contains('locked')) {
-                        e.preventDefault();
-                        if (isQuiz) {
-                            showNotification('Cuestionario Bloqueado', `Completa los requisitos previos para desbloquear el Cuestionario ${isQuiz}.`);
-                        } else if (isFinal) {
-                            showNotification('Evaluación Bloqueada', 'Completa todos los cuestionarios primero para desbloquear la evaluación final.');
-                        }
-                        return false;
-                    }
-                    
-                    // Marcar como visitado ANTES de navegar
-                    const contentId = this.dataset.content;
-                    if (contentId) {
-                        // Solo marcar como visitado si no es cuestionario
-                        if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
-                            !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
-                            markAsVisited(contentId);
-                        }
-                    }
-                    
-                    // Permitir navegación normal
-                    return true;
-                });
-            });
 
             // Modal
             document.getElementById('cheatSheetBtn').addEventListener('click', function() {
@@ -2321,105 +2311,7 @@
                     item.classList.remove('completed');
                 });
                 
-                // Bloquear todos los cuestionarios
-                document.querySelectorAll('[data-quiz]').forEach(item => {
-                    item.classList.add('locked');
-                });
-                
-                // Bloquear evaluación final
-                document.querySelectorAll('[data-final="true"]').forEach(item => {
-                    item.classList.add('locked');
-                });
-                
-                // Actualizar barras de progreso con animación
-                updateEnergyBar();
-                updateDashboardStats(true);
-                
-                // Limpiar sessionStorage
-                sessionStorage.removeItem('module1Progress');
-                
-                showNotification('Progreso Reiniciado', 'Todo tu progreso ha sido eliminado correctamente.');
-            }
-        }
-
-        // Resaltar página actual
-        function highlightCurrentPage() {
-            const currentPage = window.location.pathname.split('/').pop();
-            const menuItem = document.querySelector(`[href="${currentPage}"]`);
-            if (menuItem) {
-                menuItem.classList.add('active');
-            }
-        }
-
-        // Marcar como visitado con actualización dinámica
-        function markAsVisited(contentId) {
-            globalState.visitedTopics.add(contentId);
-            
-            // Marcar como completado si no es cuestionario
-            if (!contentId.includes('RCDD9') && !contentId.includes('RCDD10') && 
-                !contentId.includes('RCDD11') && !contentId.includes('RCDD12')) {
-                globalState.completedTopics.add(contentId);
-                const menuItem = document.querySelector(`[data-content="${contentId}"]`);
-                if (menuItem && !menuItem.classList.contains('completed')) {
-                    menuItem.classList.add('completed');
-                    // Crear efecto de partículas
-                    createAchievementParticles(menuItem);
-                    // Actualizar estadísticas inmediatamente
-                    updateDashboardStats(true);
-                }
-            }
-            
-            checkAllTopicsVisited();
-            saveToSessionStorage();
-        }
-
-        // Crear partículas de logro
-        function createAchievementParticles(element) {
-            const rect = element.getBoundingClientRect();
-            const colors = ['#d4af37', '#f4e4bc', '#2ecc71'];
-            
-            for (let i = 0; i < 8; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'achievement-particle';
-                particle.innerHTML = '✨';
-                particle.style.left = rect.left + rect.width / 2 + 'px';
-                particle.style.top = rect.top + rect.height / 2 + 'px';
-                particle.style.color = colors[Math.floor(Math.random() * colors.length)];
-                particle.style.fontSize = Math.random() * 10 + 15 + 'px';
-                particle.style.position = 'fixed';
-                particle.style.pointerEvents = 'none';
-                particle.style.animation = 'floatUp 2s ease-out forwards';
-                particle.style.zIndex = '9999';
-                document.body.appendChild(particle);
-                
-                setTimeout(() => particle.remove(), 2000);
-            }
-        }
-
-        // Verificar si todos los temas fueron visitados
-        function checkAllTopicsVisited() {
-            const nonQuizTopics = ['RCDD1', 'RCDD2', 'RCDD3', 'RCDD4', 'RCDD5', 'RCDD6', 'RCDD7', 'RCDD8'];
-            const allVisited = nonQuizTopics.every(topic => globalState.visitedTopics.has(topic));
-            
-            if (allVisited && !globalState.allTopicsVisited) {
-                globalState.allTopicsVisited = true;
-                unlockQuiz(1);
-                showNotification('Cuestionario Desbloqueado', '¡Cuestionario 1 desbloqueado! Ya puedes comenzar tu práctica.');
-            }
-        }
-
-        // Desbloquear cuestionario con animación
-        function unlockQuiz(quizNumber) {
-            const quizItem = document.querySelector(`[data-quiz="${quizNumber}"]`);
-            if (quizItem) {
-                quizItem.classList.remove('locked');
-                quizItem.classList.add('unlocking');
-                setTimeout(() => {
-                    quizItem.classList.remove('unlocking');
-                }, 600);
-            }
-        }
-
+           
         // Actualizar estadísticas del dashboard
         function updateDashboardStats(animate = false) {
             const totalTopics = 8;
