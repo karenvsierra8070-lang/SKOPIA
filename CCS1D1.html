@@ -290,7 +290,7 @@
 <nav class="top-nav">
     <div class="nav-left">
         <div class="logo"><i class="fas fa-balance-scale"></i> Skópia</div>
-        <a href="CCS1D.html" class="back-btn"><i class="fas fa-arrow-left"></i> Volver</a>
+        <a href="CCDASHBOARD.html" class="back-btn"><i class="fas fa-arrow-left"></i> Volver</a>
     </div>
     <div class="nav-right">
         <div class="user-menu">
@@ -1326,20 +1326,45 @@ async function saveAndLeave() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
-const total = 300;
-    const pct = Math.round((quizScore / total) * 100);
+    const score = quizScore;
 
     try {
-        if (window.currentUser && window.ref && window.set && window.db) {
-            await window.set(window.ref(window.db, 'users/' + window.currentUser.uid + '/progreso/CCS1D1'), {
-                completado: true, puntuacion: quizScore, total: total, porcentaje: pct,
-                juego1: g1CorrectCount, juego1Errores: g1WrongCount,
-                juego2: g2Score, fecha: new Date().toISOString()
-            });
-        }
-    } catch (e) { console.error('Error guardando:', e); }
+        if (window.currentUser && window.ref && window.set && window.get && window.db) {
+            const uid = window.currentUser.uid;
+            const progressRef = window.ref(window.db, 'users/' + uid + '/ccs1_progress');
 
-    setTimeout(() => { window.location.href = 'CCS1D.html'; }, 800);
+            let progressData = { techniques: {}, stats: { completedCount: 0, totalScore: 0, attempts: 0 } };
+            try {
+                const snap = await window.get(progressRef);
+                if (snap.exists()) progressData = snap.val();
+            } catch(e) { console.warn('No había progreso anterior:', e.message); }
+
+            if (!progressData.techniques) progressData.techniques = {};
+            if (!progressData.stats) progressData.stats = { completedCount: 0, totalScore: 0, attempts: 0 };
+
+            progressData.techniques['CCS1D1'] = {
+                completed: true,
+                score: score,
+                juego1: g1CorrectCount,
+                juego1Errores: g1WrongCount,
+                juego2: g2Score,
+                fecha: new Date().toISOString()
+            };
+
+            progressData.stats.attempts = (progressData.stats.attempts || 0) + 1;
+
+            await window.set(progressRef, progressData);
+            console.log('Progreso guardado en ccs1_progress. Puntaje:', score + '/300');
+        } else {
+            console.warn('No hay usuario o Firebase no disponible.');
+        }
+    } catch (e) {
+        console.error('Error guardando progreso:', e);
+    }
+
+    setTimeout(() => {
+        window.location.href = 'CCDASHBOARD.html';
+    }, 800);
 }
 
 // ====== MENÚ DE USUARIO ======
