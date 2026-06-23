@@ -304,7 +304,7 @@
                 </div>
                 <div class="menu-section">
                     <h3><i class="fas fa-tasks"></i> Entrenamiento de Practica</h3>
-                    <a href="RCDD9.html" class="menu-item locked" data-content="RCDD9" data-quiz="1">Cuestionario 1: Precision y Signos (Nivel Basico)</a>
+                    <a href="RCDD9.html" class="menu-item" data-content="RCDD9" data-quiz="1">Cuestionario 1: Precision y Signos (Nivel Basico)</a>
                     <a href="RCDD10.html" class="menu-item locked" data-content="RCDD10" data-quiz="2">Cuestionario 2: Problemas de Contexto Real (Nivel Intermedio)</a>
                     <a href="RCDD11.html" class="menu-item locked" data-content="RCDD11" data-quiz="3">Cuestionario 3: Desafio Saber Pro (Nivel Avanzado)</a>
                     <div class="energy-bar-container">
@@ -663,41 +663,191 @@
         </div>
     </div>
 
-    <script>
-        /* ===== ESTADO GLOBAL ===== */
-        let currentLevel = 'basico';
-        let currentProblem = null;
-        let score = { correct: 0, total: 0, streak: 0, maxStreak: 0 };
-        let hintUsed = false;
-        let answered = false;
+      <!-- Script de Desbloqueo por Puntaje (Firebase) -->
 
-        /* ===== SIDEBAR TOGGLE ===== */
-        const sidebarToggle = document.getElementById('sidebarToggle');
-        const sidebar = document.getElementById('sidebar');
-        const contentArea = document.getElementById('contentArea');
+    <script type="module">
 
-        sidebarToggle.addEventListener('click', function() {
-            sidebar.classList.toggle('hidden');
-            contentArea.classList.toggle('expanded');
-            const icon = this.querySelector('i');
-            if (sidebar.classList.contains('hidden')) {
-                icon.className = 'fas fa-bars';
-            } else {
-                icon.className = 'fas fa-times';
-            }
-        });
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 
-        /* ===== PROGRESO Y BARRA DE ENERGIA ===== */
-        function loadProgress() {
-            const saved = localStorage.getItem('rcdd_progress');
-            if (saved) {
-                try { return JSON.parse(saved); } catch(e) { /* fallback */ }
-            }
-            // Estado por defecto: RCDD1-6 completados, estamos en RCDD7
-            return {
-                energy: 50
-            };
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+
+
+        const firebaseConfig = {
+
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+
+            authDomain: "skopia-aa786.firebaseapp.com",
+
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
+
+            projectId: "skopia-aa786",
+
+            storageBucket: "skopia-aa786.firebasestorage.app",
+
+            messagingSenderId: "719823055099",
+
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+
+        };
+
+
+
+        const app = initializeApp(firebaseConfig);
+
+        const db = getDatabase(app);
+
+
+
+        let userId = localStorage.getItem('skopia_uid') || sessionStorage.getItem('skopia_uid');
+
+        if (!userId) {
+
+            userId = 'user_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+
+            localStorage.setItem('skopia_uid', userId);
+
+            sessionStorage.setItem('skopia_uid', userId);
+
         }
+
+
+
+        const scoresRef = ref(db, 'users/' + userId + '/module1/scores');
+
+
+
+        onValue(scoresRef, (snapshot) => {
+
+            const data = snapshot.val();
+
+            const q1Score = data && data.quiz1 ? data.quiz1 : 0;
+
+            const q2Score = data && data.quiz2 ? data.quiz2 : 0;
+
+            const totalScore = q1Score + q2Score;
+
+
+
+            // Cuestionario 1 siempre desbloqueado
+
+            const q1Link = document.querySelector('[data-content="RCDD9"]');
+
+            if (q1Link && q1Link.classList.contains('locked')) {
+
+                q1Link.classList.remove('locked');
+
+            }
+
+
+
+            // Cuestionario 2: desbloquear si Q1 >= 150
+
+            const q2Link = document.querySelector('[data-content="RCDD10"]');
+
+            if (q1Score >= 150) {
+
+                q2Link.classList.remove('locked');
+
+                q2Link.classList.add('unlocking');
+
+                setTimeout(() => q2Link.classList.remove('unlocking'), 600);
+
+            } else {
+
+                q2Link.classList.add('locked');
+
+            }
+
+
+
+            // Actualizar indicador visual de requerimiento
+
+            const reqQ2Info = document.getElementById('reqQ2Info');
+
+            if (reqQ2Info) {
+
+                if (q1Score >= 150) {
+
+                    reqQ2Info.classList.add('unlocked');
+
+                    reqQ2Info.innerHTML = '<i class="fas fa-unlock" style="color: #2ecc71;"></i> <span>¡Desbloqueado!</span>';
+
+                } else {
+
+                    const reqQ2Score = document.getElementById('reqQ2Score');
+
+                    if (reqQ2Score) reqQ2Score.textContent = '(' + q1Score + ' / 150)';
+
+                }
+
+            }
+
+
+
+            // Cuestionario 3 y Cierre: desbloquear si Total >= 180
+
+            const q3Link = document.querySelector('[data-content="RCDD11"]');
+
+            const finalLink = document.querySelector('[data-content="RCDD12"]');
+
+
+
+            if (totalScore >= 180) {
+
+                q3Link.classList.remove('locked');
+
+                finalLink.classList.remove('locked');
+
+                if (!q3Link.dataset.unlocked) {
+
+                    q3Link.classList.add('unlocking');
+
+                    finalLink.classList.add('unlocking');
+
+                    q3Link.dataset.unlocked = "true";
+
+                    finalLink.dataset.unlocked = "true";
+
+                }
+
+            } else {
+
+                q3Link.classList.add('locked');
+
+                finalLink.classList.add('locked');
+
+            }
+
+
+
+            // Actualizar barra de puntaje
+
+            const scoreFill = document.getElementById('scoreFill');
+
+            const scoreText = document.getElementById('scoreText');
+
+            if (scoreFill && scoreText) {
+
+                const goal = 180;
+
+                let pct = Math.min((totalScore / goal) * 100, 100);
+
+                scoreFill.style.width = pct + '%';
+
+                scoreText.textContent = totalScore + ' / ' + goal + ' pts';
+
+                if (pct >= 100) {
+
+                    scoreFill.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
+
+                }
+
+            }
+
+        });
+        
+      
 
         function applyProgress() {
             const progress = loadProgress();
