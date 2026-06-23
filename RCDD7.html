@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cálculo Mental de Redondeo - ICFES SABER PRO</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{
+            --verde-oscuro:#0d2818;--verde-medio:#1a3d2a;--dorado:#d4af37;--dorado-claro:#f4e4bc;
+            --verde-tenue:#e8f5e9;--crema:#faf6f0;--blanco:#ffffff;--gris-texto:#424242;
+            --sombra:0 10px 30px rgba(0,0,0,.1);--sombra-suave:0 5px 15px rgba(0,0,0,.08);
+            --rojo-error:#e74c3c;--verde-acierto:#2ecc71;--azul-magico:#3498db;
+            --morado-magico:#9b59b6;--naranja:#f39c12;--cian:#00bcd4;--cian-oscuro:#00838f;
+            --cian-claro:#b2ebf2;--rosa:#e91e63;--amarillo:#ffeb3b
+        }
+        html,body{width:100%;height:100%;overflow-x:hidden}
+        body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(135deg,var(--crema) 0%,#f5efe6 100%);min-height:100vh;display:flex;flex-direction:column;position:relative}
+        body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background-image:radial-gradient(circle at 20% 80%,rgba(212,175,55,.05) 0%,transparent 50%),radial-gradient(circle at 80% 20%,rgba(13,40,24,.05) 0%,transparent 50%);pointer-events:none;z-index:1}
+
+        .header{background:linear-gradient(135deg,var(--verde-oscuro) 0%,var(--verde-medio) 100%);color:var(--dorado);padding:1.5rem 2rem;box-shadow:0 5px 20px rgba(13,40,24,.3);display:flex;justify-content:space-between;align-items:center;position:relative;z-index:100;backdrop-filter:blur(10px);width:100%}
+        .header::after{content:'';position:absolute;bottom:0;left:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--dorado),transparent);animation:shimmer 3s infinite}
+        @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+        .header h1{font-size:1.8rem;font-weight:700;letter-spacing:.5px;text-shadow:2px 2px 4px rgba(0,0,0,.3)}
+        .header-actions{display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
+        .back-button,.reset-button{background:linear-gradient(135deg,var(--dorado),var(--dorado-claro));color:var(--verde-oscuro);border:none;padding:.8rem 1.8rem;border-radius:30px;cursor:pointer;font-weight:600;transition:all .3s cubic-bezier(.4,0,.2,1);text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;box-shadow:0 4px 15px rgba(212,175,55,.3);font-size:.9rem;touch-action:manipulation}
+        .back-button:hover,.reset-button:hover{transform:translateY(-2px) scale(1.05);box-shadow:0 6px 25px rgba(212,175,55,.4)}
+        .reset-button{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff}
+
+        .main-container{flex:1;display:flex;width:100%;max-width:100%;margin:0;padding:2rem;gap:2rem;position:relative;z-index:10;min-height:calc(100vh - 120px)}
+        .content-card{background:rgba(255,255,255,.95);border-radius:24px;box-shadow:var(--sombra);display:flex;width:100%;min-height:100%;overflow:hidden;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.5);position:relative}
+        .content-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--dorado),transparent);opacity:.5}
+
+        .sidebar-toggle{position:absolute;left:20px;top:50%;transform:translateY(-50%);background:linear-gradient(135deg,var(--dorado),var(--dorado-claro));color:var(--verde-oscuro);width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 15px rgba(212,175,55,.3);transition:all .3s ease;z-index:60;font-size:1.2rem;touch-action:manipulation;border:none}
+        .sidebar-toggle:hover{transform:translateY(-50%) scale(1.1);box-shadow:0 6px 20px rgba(212,175,55,.4)}
+
+        .sidebar{width:30%;min-width:280px;background:linear-gradient(180deg,rgba(232,245,233,.8) 0%,rgba(200,230,201,.8) 100%);padding:2rem 1rem;overflow-y:auto;border-right:1px solid rgba(13,40,24,.1);backdrop-filter:blur(5px);transition:transform .3s ease,opacity .3s ease;flex-shrink:0}
+        .sidebar.hidden{transform:translateX(-100%);opacity:0;position:absolute;height:100%;z-index:50}
+        .sidebar::-webkit-scrollbar{width:6px}
+        .sidebar::-webkit-scrollbar-track{background:rgba(13,40,24,.05);border-radius:10px}
+        .sidebar::-webkit-scrollbar-thumb{background:var(--dorado);border-radius:10px}
+
+        .menu-section{margin-bottom:2rem}
+        .menu-section h3{color:var(--verde-oscuro);font-size:.85rem;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:1rem;padding-left:1rem;font-weight:700;display:flex;align-items:center;gap:.5rem}
+        .menu-section h3 i{font-size:.9rem;color:var(--dorado)}
+
+        .menu-item{display:flex;align-items:center;padding:1rem 1.2rem;margin:.4rem 0;border-radius:12px;cursor:pointer;transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;color:var(--gris-texto);font-weight:500;overflow:hidden;text-decoration:none;touch-action:manipulation;min-height:50px;font-size:.92rem}
+        .menu-item::before{content:'';position:absolute;left:0;top:0;height:100%;width:0;background:linear-gradient(90deg,var(--dorado),transparent);transition:width .3s ease;opacity:.1}
+        .menu-item:hover::before{width:100%}
+        .menu-item:hover{background:rgba(212,175,55,.1);transform:translateX(8px);color:var(--verde-oscuro);text-decoration:none}
+        .menu-item.active{background:linear-gradient(135deg,rgba(212,175,55,.15),rgba(212,175,55,.05));border-left:4px solid var(--dorado);color:var(--verde-oscuro);font-weight:600;box-shadow:0 2px 10px rgba(212,175,55,.2)}
+        .menu-item.completed{position:relative;background:linear-gradient(135deg,rgba(46,204,113,.1),rgba(46,204,113,.05))}
+        .menu-item.completed::after{content:'\f00c';font-family:'Font Awesome 6 Free';font-weight:900;color:var(--dorado);margin-left:auto;font-size:1rem;animation:checkmark .3s ease}
+        @keyframes checkmark{0%{transform:scale(0) rotate(-45deg)}50%{transform:scale(1.2) rotate(10deg)}100%{transform:scale(1) rotate(0deg)}}
+        .menu-item.locked{opacity:.5;cursor:not-allowed;background:rgba(0,0,0,.05)}
+        .menu-item.locked::before{content:'\f023';font-family:'Font Awesome 6 Free';font-weight:900;margin-right:.5rem;color:var(--gris-texto)}
+        @keyframes unlock{0%{transform:scale(.8);opacity:.5}50%{transform:scale(1.1);opacity:.8}100%{transform:scale(1);opacity:1}}
+        .menu-item.unlocking{animation:unlock .6s ease}
+
+        .energy-bar-container{margin-top:1.5rem;padding:1rem;background:rgba(255,255,255,.7);border-radius:12px;box-shadow:var(--sombra-suave)}
+        .energy-label{font-size:.85rem;color:var(--verde-oscuro);margin-bottom:.8rem;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+        .energy-bar{height:10px;background:rgba(13,40,24,.1);border-radius:20px;overflow:hidden;position:relative}
+        .energy-fill{height:100%;background:linear-gradient(90deg,var(--dorado),#f4e4bc);width:0%;transition:width .8s cubic-bezier(.4,0,.2,1);border-radius:20px;position:relative;overflow:hidden}
+        .energy-fill::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);animation:energyShimmer 2s infinite}
+        @keyframes energyShimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+        .content-area{flex:1;padding:2.5rem;overflow-y:auto;position:relative;transition:all .3s ease;min-width:0}
+        .content-area.expanded{margin-left:0}
+        .content-area::-webkit-scrollbar{width:8px}
+        .content-area::-webkit-scrollbar-track{background:rgba(13,40,24,.05);border-radius:10px}
+        .content-area::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--dorado),var(--verde-medio));border-radius:10px}
+
+        /* ====== CONTENIDO ESPECÍFICO: REDONDEO ====== */
+        .hero-banner{background:linear-gradient(135deg,var(--cian-oscuro),var(--cian));border-radius:20px;padding:3rem;margin-bottom:3rem;position:relative;overflow:hidden;color:var(--blanco);text-align:center}
+        .hero-banner::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle,rgba(255,255,255,.08) 0%,transparent 70%);animation:rotate 30s linear infinite}
+        @keyframes rotate{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+        .hero-banner::after{content:'';position:absolute;bottom:0;left:0;width:100%;height:3px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent)}
+        .hero-title{font-size:2.5rem;font-weight:800;margin-bottom:1rem;position:relative;z-index:1}
+        .hero-subtitle{font-size:1.15rem;max-width:750px;margin:0 auto;line-height:1.7;position:relative;z-index:1;opacity:.92}
+
+        .section-title{color:var(--verde-oscuro);font-size:1.8rem;margin-bottom:1rem;display:flex;align-items:center;gap:.6rem}
+        .section-title i{color:var(--cian)}
+        .section-desc{color:var(--gris-texto);line-height:1.7;margin-bottom:2rem;max-width:800px;font-size:1rem}
+
+        /* Concepto */
+        .concept-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;margin-bottom:3rem}
+        .concept-card{background:var(--blanco);border-radius:18px;padding:2rem;box-shadow:var(--sombra-suave);transition:all .3s ease;position:relative;overflow:hidden;border-top:4px solid var(--cian)}
+        .concept-card:hover{transform:translateY(-4px);box-shadow:var(--sombra)}
+        .concept-icon{width:55px;height:55px;background:linear-gradient(135deg,var(--cian),var(--cian-oscuro));border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.4rem;margin-bottom:1.2rem}
+        .concept-card h3{color:var(--verde-oscuro);font-size:1.15rem;margin-bottom:.8rem;font-weight:700}
+        .concept-card p{color:var(--gris-texto);line-height:1.6;font-size:.95rem}
+
+        /* Reglas de oro */
+        .rules-section{background:linear-gradient(135deg,rgba(0,188,212,.08),rgba(0,131,143,.08));border-radius:20px;padding:2.5rem;margin-bottom:3rem}
+        .rules-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem}
+        .rule-card{background:var(--blanco);border-radius:16px;padding:1.8rem;box-shadow:var(--sombra-suave);border-left:5px solid var(--cian);transition:all .3s ease}
+        .rule-card:hover{transform:translateX(6px);box-shadow:var(--sombra)}
+        .rule-number{width:40px;height:40px;background:linear-gradient(135deg,var(--cian),var(--cian-oscuro));border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.1rem;margin-bottom:1rem}
+        .rule-card h4{color:var(--verde-oscuro);margin-bottom:.7rem;font-size:1.1rem}
+        .rule-card p{color:var(--gris-texto);line-height:1.6;font-size:.93rem}
+        .rule-example{background:var(--verde-tenue);padding:.8rem 1rem;border-radius:8px;margin-top:.8rem;font-family:'Courier New',monospace;font-size:.95rem;color:var(--verde-oscuro);font-weight:600}
+
+        /* Operaciones grid */
+        .ops-section{margin-bottom:3rem}
+        .ops-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem}
+        .op-card{background:var(--blanco);border-radius:16px;padding:1.8rem;box-shadow:var(--sombra-suave);text-align:center;transition:all .3s ease;position:relative;overflow:hidden}
+        .op-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--cian),var(--cian-oscuro))}
+        .op-card:hover{transform:translateY(-4px);box-shadow:var(--sombra)}
+        .op-icon{font-size:2rem;margin-bottom:.8rem;color:var(--cian)}
+        .op-card h4{color:var(--verde-oscuro);margin-bottom:.6rem;font-size:1.1rem}
+        .op-card p{color:var(--gris-texto);line-height:1.5;font-size:.9rem}
+        .op-formula{background:var(--verde-tenue);padding:.7rem;border-radius:8px;margin-top:.8rem;font-family:'Courier New',monospace;font-weight:600;color:var(--cian-oscuro);font-size:.95rem}
+
+        /* ====== HERRAMIENTA DE PRÁCTICA ====== */
+        .practice-tool{background:linear-gradient(135deg,rgba(0,188,212,.1),rgba(0,131,143,.08));border-radius:20px;padding:2.5rem;margin-bottom:3rem}
+        .tool-header{text-align:center;margin-bottom:2rem}
+        .tool-title{color:var(--verde-oscuro);font-size:1.8rem;margin-bottom:.6rem;display:flex;align-items:center;justify-content:center;gap:.6rem}
+        .tool-title i{color:var(--cian)}
+        .tool-subtitle{color:var(--gris-texto);font-size:.95rem}
+
+        .practice-levels{display:flex;justify-content:center;gap:1rem;margin-bottom:2rem;flex-wrap:wrap}
+        .level-btn{background:var(--blanco);border:2px solid var(--cian);color:var(--cian);padding:.7rem 1.4rem;border-radius:25px;cursor:pointer;font-weight:600;font-size:.95rem;transition:all .3s ease;font-family:inherit}
+        .level-btn:hover,.level-btn.active{background:linear-gradient(135deg,var(--cian),var(--cian-oscuro));color:#fff;transform:translateY(-2px);box-shadow:0 5px 15px rgba(0,188,212,.4)}
+
+        .practice-interface{background:var(--blanco);border-radius:16px;padding:2rem;box-shadow:var(--sombra-suave)}
+        .problem-context{color:var(--gris-texto);font-size:.95rem;text-align:center;margin-bottom:.5rem;font-style:italic}
+        .problem-display{background:var(--verde-tenue);padding:1.5rem;border-radius:12px;text-align:center;font-family:'Courier New',monospace;font-size:1.4rem;font-weight:700;color:var(--verde-oscuro);margin-bottom:1.8rem;min-height:70px;display:flex;align-items:center;justify-content:center;letter-spacing:1px}
+
+        .options-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;max-width:600px;margin:0 auto 1.5rem}
+        .option-btn{background:var(--blanco);border:2px solid #ddd;color:var(--verde-oscuro);padding:1rem 1.5rem;border-radius:12px;cursor:pointer;font-weight:600;font-size:1.05rem;transition:all .3s ease;display:flex;align-items:center;gap:.8rem;font-family:inherit}
+        .option-btn:hover:not(.disabled){border-color:var(--cian);background:rgba(0,188,212,.05);transform:translateY(-2px);box-shadow:var(--sombra-suave)}
+        .option-letter{width:36px;height:36px;background:var(--verde-tenue);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--cian-oscuro);flex-shrink:0;transition:all .3s ease}
+        .option-btn:hover:not(.disabled) .option-letter{background:var(--cian);color:#fff}
+        .option-btn.correct{border-color:var(--verde-acierto);background:rgba(46,204,113,.1);animation:correctPulse .5s ease}
+        .option-btn.correct .option-letter{background:var(--verde-acierto);color:#fff}
+        .option-btn.incorrect{border-color:var(--rojo-error);background:rgba(231,76,60,.1);animation:shake .4s ease}
+        .option-btn.incorrect .option-letter{background:var(--rojo-error);color:#fff}
+        .option-btn.disabled{cursor:default;opacity:.7}
+        .option-btn.disabled:not(.correct):not(.incorrect){opacity:.4}
+        @keyframes correctPulse{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+        @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+        .practice-actions{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:1.5rem}
+        .practice-btn{background:linear-gradient(135deg,var(--cian),var(--cian-oscuro));color:#fff;border:none;padding:.7rem 1.4rem;border-radius:25px;cursor:pointer;font-weight:600;font-size:.95rem;transition:all .3s ease;display:inline-flex;align-items:center;gap:.5rem;font-family:inherit}
+        .practice-btn:hover{transform:translateY(-2px);box-shadow:0 5px 15px rgba(0,188,212,.4)}
+        .practice-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+        .practice-btn.secondary{background:var(--blanco);color:var(--cian);border:2px solid var(--cian)}
+        .practice-btn.secondary:hover{background:rgba(0,188,212,.05)}
+
+        /* Panel de solución */
+        .solution-panel{background:linear-gradient(135deg,rgba(0,188,212,.06),rgba(0,131,143,.06));border-radius:14px;padding:1.5rem;margin-top:1rem;display:none;animation:slideUp .4s ease;border:1px solid rgba(0,188,212,.15)}
+        .solution-panel.show{display:block}
+        @keyframes slideUp{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}
+        .solution-title{color:var(--cian-oscuro);font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;font-size:1.05rem}
+        .solution-step{display:flex;align-items:flex-start;gap:.8rem;margin-bottom:.8rem;padding:.6rem 0;opacity:0;animation:fadeInStep .3s ease forwards}
+        .solution-step:nth-child(2){animation-delay:.1s}
+        .solution-step:nth-child(3){animation-delay:.25s}
+        .solution-step:nth-child(4){animation-delay:.4s}
+        .solution-step:nth-child(5){animation-delay:.55s}
+        .solution-step:nth-child(6){animation-delay:.7s}
+        @keyframes fadeInStep{0%{opacity:0;transform:translateX(-10px)}100%{opacity:1;transform:translateX(0)}}
+        .step-num{width:28px;height:28px;background:var(--cian);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;flex-shrink:0}
+        .step-text{color:var(--gris-texto);line-height:1.5;font-size:.93rem;padding-top:3px}
+        .step-text strong{color:var(--cian-oscuro)}
+        .step-result{background:var(--verde-tenue);padding:.6rem 1rem;border-radius:8px;margin-top:.5rem;font-family:'Courier New',monospace;font-weight:700;color:var(--verde-acierto);font-size:1rem;text-align:center}
+        .step-exact{color:var(--gris-texto);text-align:center;margin-top:.5rem;font-size:.9rem}
+        .step-exact strong{color:var(--naranja)}
+
+        /* Número visual */
+        .number-visual{display:flex;align-items:center;gap:.5rem;margin:.5rem 0;flex-wrap:wrap}
+        .num-box{background:var(--blanco);border:2px solid var(--cian);border-radius:8px;padding:.4rem .8rem;font-family:'Courier New',monospace;font-weight:700;color:var(--verde-oscuro);font-size:1rem}
+        .num-arrow{color:var(--cian);font-size:1.2rem}
+        .num-rounded{background:var(--cian);border-color:var(--cian);color:#fff}
+
+        /* Score bar */
+        .score-bar{display:flex;justify-content:space-around;align-items:center;padding:1rem;background:var(--dorado-claro);border-radius:12px;margin-top:1.5rem;flex-wrap:wrap;gap:.8rem}
+        .score-item{text-align:center}
+        .score-item .score-label{font-size:.78rem;color:var(--verde-oscuro);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+        .score-item .score-value{font-size:1.3rem;font-weight:800;color:var(--dorado)}
+        .score-item .score-value.streak{color:var(--rosa)}
+
+        /* Ejemplos ICFES */
+        .icfes-section{background:linear-gradient(135deg,rgba(46,204,113,.08),rgba(39,174,96,.08));border-radius:20px;padding:2.5rem;margin-bottom:3rem}
+        .icfes-header{text-align:center;margin-bottom:2rem}
+        .icfes-examples{display:grid;gap:1.5rem}
+        .icfes-example{background:var(--blanco);border-radius:16px;padding:2rem;box-shadow:var(--sombra-suave);border-left:5px solid var(--verde-acierto);transition:all .3s ease}
+        .icfes-example:hover{transform:translateY(-3px);box-shadow:var(--sombra)}
+        .icfes-question{color:var(--verde-oscuro);font-weight:600;margin-bottom:1.2rem;line-height:1.6;font-size:1.02rem}
+        .icfes-options-row{display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:1.2rem}
+        .icfes-opt{background:var(--verde-tenue);padding:.4rem .9rem;border-radius:8px;font-family:'Courier New',monospace;font-weight:600;color:var(--verde-oscuro);font-size:.92rem;transition:all .3s ease}
+        .icfes-opt.highlight{background:var(--verde-acierto);color:#fff;transform:scale(1.05)}
+        .icfes-solution{background:rgba(0,188,212,.06);border-radius:10px;padding:1rem;border-left:4px solid var(--cian)}
+        .icfes-solution h5{color:var(--cian-oscuro);font-size:.9rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.4rem}
+        .icfes-solution p{color:var(--gris-texto);font-size:.9rem;line-height:1.6}
+        .icfes-solution strong{color:var(--verde-acierto)}
+
+        /* Errores comunes */
+        .mistakes-section{background:linear-gradient(135deg,rgba(231,76,60,.06),rgba(192,57,43,.06));border-radius:20px;padding:2.5rem;margin-bottom:3rem}
+        .mistakes-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem}
+        .mistake-card{background:var(--blanco);border-radius:14px;padding:1.5rem;box-shadow:var(--sombra-suave);border-top:4px solid var(--rojo-error);transition:all .3s ease}
+        .mistake-card:hover{transform:translateY(-3px);box-shadow:var(--sombra)}
+        .mistake-card .mistake-icon{color:var(--rojo-error);font-size:1.3rem;margin-bottom:.8rem}
+        .mistake-card h4{color:var(--verde-oscuro);margin-bottom:.5rem;font-size:1.05rem}
+        .mistake-card p{color:var(--gris-texto);line-height:1.5;font-size:.9rem}
+        .mistake-fix{background:rgba(46,204,113,.08);padding:.6rem .8rem;border-radius:8px;margin-top:.7rem;font-size:.88rem;color:var(--verde-oscuro);border-left:3px solid var(--verde-acierto)}
+
+        /* Tips */
+        .tips-section{background:linear-gradient(135deg,rgba(243,156,18,.08),rgba(241,196,15,.08));border-radius:20px;padding:2.5rem;margin-bottom:3rem}
+        .tips-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.5rem}
+        .tip-card{background:var(--blanco);border-radius:14px;padding:1.5rem;box-shadow:var(--sombra-suave);transition:all .3s ease;position:relative;overflow:hidden}
+        .tip-card:hover{transform:translateY(-3px);box-shadow:var(--sombra)}
+        .tip-icon{width:48px;height:48px;background:linear-gradient(135deg,var(--naranja),var(--amarillo));border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;margin-bottom:1rem}
+        .tip-card h4{color:var(--verde-oscuro);margin-bottom:.5rem;font-size:1.05rem}
+        .tip-card p{color:var(--gris-texto);line-height:1.5;font-size:.9rem}
+
+        /* Botón flotante */
+        .floating-button{position:fixed;bottom:2rem;right:2rem;background:linear-gradient(135deg,var(--dorado),var(--dorado-claro));color:var(--verde-oscuro);width:65px;height:65px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 30px rgba(212,175,55,.4);transition:all .3s cubic-bezier(.4,0,.2,1);z-index:1000;font-size:1.5rem;touch-action:manipulation;border:none}
+        .floating-button:hover{transform:scale(1.1) rotate(10deg);box-shadow:0 15px 40px rgba(212,175,55,.5)}
+
+        /* Modal */
+        .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);backdrop-filter:blur(5px);z-index:2000;align-items:center;justify-content:center}
+        .modal.active{display:flex}
+        .modal-content{background:linear-gradient(135deg,var(--blanco),rgba(255,255,255,.95));border-radius:24px;padding:2.5rem;max-width:680px;width:90%;max-height:85vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+        .modal-content::-webkit-scrollbar{width:6px}
+        .modal-content::-webkit-scrollbar-thumb{background:var(--cian);border-radius:10px}
+        .close-modal{position:absolute;top:1.5rem;right:1.5rem;background:rgba(13,40,24,.1);border:none;width:40px;height:40px;border-radius:50%;font-size:1.2rem;cursor:pointer;color:var(--gris-texto);transition:all .3s ease;display:flex;align-items:center;justify-content:center}
+        .close-modal:hover{background:var(--dorado);color:#fff;transform:rotate(90deg)}
+        .cheat-sheet h3{color:var(--verde-oscuro);margin-bottom:2rem;text-align:center;font-size:1.6rem}
+        .rule-section{margin-bottom:1.5rem;padding:1.2rem;background:linear-gradient(135deg,var(--verde-tenue),rgba(200,230,201,.5));border-radius:12px;border-left:4px solid var(--cian);transition:all .3s ease}
+        .rule-section:hover{transform:translateX(5px);box-shadow:var(--sombra-suave)}
+        .rule-section h4{color:var(--verde-oscuro);margin-bottom:.8rem;font-size:1.1rem;display:flex;align-items:center;gap:.5rem}
+        .rule-section h4 i{color:var(--cian)}
+        .rule-section p,.rule-section ul{color:var(--gris-texto);line-height:1.6;font-size:.9rem}
+        .rule-section ul{padding-left:1.2rem;margin-top:.3rem}
+        .rule-section li{margin-bottom:.3rem}
+        .quick-table{width:100%;border-collapse:collapse;margin-top:.8rem;font-size:.9rem}
+        .quick-table th{background:var(--cian);color:#fff;padding:.6rem .8rem;text-align:left;font-weight:600}
+        .quick-table td{padding:.5rem .8rem;border-bottom:1px solid rgba(0,188,212,.15);color:var(--gris-texto)}
+        .quick-table tr:hover td{background:rgba(0,188,212,.05)}
+
+        /* Notificación */
+        .notification{position:fixed;top:120px;right:-400px;background:linear-gradient(135deg,var(--dorado),var(--dorado-claro));color:var(--verde-oscuro);padding:1.2rem 1.8rem;border-radius:12px;box-shadow:0 10px 30px rgba(212,175,55,.4);z-index:3000;display:flex;align-items:center;gap:1rem;transition:right .5s cubic-bezier(.4,0,.2,1);max-width:350px}
+        .notification.show{right:20px}
+        .notification i{font-size:1.5rem}
+        .notification-content{flex:1}
+        .notification-title{font-weight:700;margin-bottom:.2rem}
+        .notification-message{font-size:.9rem;opacity:.9}
+
+        /* Responsive */
+        @media(max-width:768px){
+            .main-container{flex-direction:column;padding:1rem}
+            .content-card{flex-direction:column}
+            .sidebar{width:100%;border-right:none;border-bottom:1px solid rgba(13,40,24,.1);position:relative;transform:none;opacity:1}
+            .sidebar.hidden{display:none}
+            .content-area{width:100%;padding:1.5rem}
+            .hero-title{font-size:1.8rem}
+            .header h1{font-size:1.3rem}
+            .header{padding:1rem;flex-direction:column;gap:.8rem}
+            .header-actions{width:100%;justify-content:center}
+            .options-grid{grid-template-columns:1fr}
+            .score-bar{flex-direction:column}
+        }
+        @media(min-width:769px){.sidebar-toggle{display:flex}}
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1><i class="fas fa-graduation-cap"></i> OPERACIONES BASICAS</h1>
+        <div class="header-actions">
+            <a href="RCDASHBOARD.html" class="back-button"><i class="fas fa-arrow-left"></i> Volver al Dashboard</a>
+            <button class="reset-button" onclick="resetProgress()"><i class="fas fa-redo"></i> Reiniciar Progreso</button>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <div class="main-container">
+        <div class="content-card">
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar"><i class="fas fa-bars"></i></button>
+
+            <!-- Barra Lateral -->
+            <aside class="sidebar" id="sidebar">
+                <div class="menu-section">
+                    <h3><i class="fas fa-book-open"></i> Introduccion y Contexto</h3>
+                    <a href="RCDD1.html" class="menu-item" data-content="RCDD1">Por que la aritmetica define tu puntaje en el ICFES?</a>
+                    <a href="RCDD2.html" class="menu-item" data-content="RCDD2">Analisis de distractores comunes en pruebas de estado</a>
+                </div>
+                <div class="menu-section">
+                    <h3><i class="fas fa-calculator"></i> Sistemas Numericos y Signos</h3>
+                    <a href="RCDD3.html" class="menu-item" data-content="RCDD3">Operaciones con Numeros Enteros (Z)</a>
+                    <a href="RCDD4.html" class="menu-item" data-content="RCDD4">Dominio de la Ley de Signos en estructuras complejas</a>
+                </div>
+                <div class="menu-section">
+                    <h3><i class="fas fa-bolt"></i> Propiedades que Ahorran Tiempo</h3>
+                    <a href="RCDD5.html" class="menu-item" data-content="RCDD5">Propiedad Distributiva (El arte de simplificar)</a>
+                    <a href="RCDD6.html" class="menu-item" data-content="RCDD6">Factorizacion basica aplicada a la aritmetica</a>
+                </div>
+                <div class="menu-section">
+                    <h3><i class="fas fa-brain"></i> Estimacion y Aproximacion</h3>
+                    <a href="RCDD7.html" class="menu-item active" data-content="RCDD7">Calculo mental de redondeo</a>
+                    <a href="RCDD8.html" class="menu-item" data-content="RCDD8">Tecnicas de descarte visual</a>
+                </div>
+                <div class="menu-section">
+                    <h3><i class="fas fa-tasks"></i> Entrenamiento de Practica</h3>
+                    <a href="RCDD9.html" class="menu-item locked" data-content="RCDD9" data-quiz="1">Cuestionario 1: Precision y Signos (Nivel Basico)</a>
+                    <a href="RCDD10.html" class="menu-item locked" data-content="RCDD10" data-quiz="2">Cuestionario 2: Problemas de Contexto Real (Nivel Intermedio)</a>
+                    <a href="RCDD11.html" class="menu-item locked" data-content="RCDD11" data-quiz="3">Cuestionario 3: Desafio Saber Pro (Nivel Avanzado)</a>
+                    <div class="energy-bar-container">
+                        <div class="energy-label">
+                            <span><i class="fas fa-fire"></i> Nivel de Energia</span>
+                            <span class="progress-indicator" id="energyPercentage">0%</span>
+                        </div>
+                        <div class="energy-bar">
+                            <div class="energy-fill" id="energyFill"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="menu-section">
+                    <h3><i class="fas fa-flag-checkered"></i> Cierre de Modulo</h3>
+                    <a href="RCDD12.html" class="menu-item locked" data-content="RCDD12" data-final="true">Evaluacion de salida</a>
+                </div>
+            </aside>
+
+            <!-- Area de Contenido -->
+            <main class="content-area" id="contentArea">
+                <!-- Hero -->
+                <section class="hero-banner">
+                    <h1 class="hero-title"><i class="fas fa-bullseye"></i> Calculo Mental de Redondeo</h1>
+                    <p class="hero-subtitle">
+                        La tecnicas mas poderosa para el ICFES: cuando el reloj apremia, no necesitas el resultado exacto.
+                        Aprende a redondear strategicamente para identificar la respuesta correcta en segundos, no en minutos.
+                    </p>
+                </section>
+
+                <!-- Que es el redondeo estrategico -->
+                <h2 class="section-title"><i class="fas fa-lightbulb"></i> Que es el Redondeo Estrategico</h2>
+                <p class="section-desc">
+                    En el ICFES SABER PRO tienes aproximadamente 1.5 minutos por pregunta. Cuando una operacion es demasiado larga para calcularla exactamente,
+                    el redondeo estrategico te permite obtener un valor aproximado que apunta directamente a la opcion correcta.
+                    No es adivinar: es calcular de forma inteligente.
+                </p>
+                <div class="concept-cards">
+                    <div class="concept-card">
+                        <div class="concept-icon"><i class="fas fa-clock"></i></div>
+                        <h3>Ahorro de Tiempo Critico</h3>
+                        <p>Redondear convierte una multiplicacion de 3 digitos x 2 digitos en una de 1 digito x 1 digito. Pasas de 30 segundos a 5 segundos por operacion.</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="concept-icon"><i class="fas fa-crosshairs"></i></div>
+                        <h3>Precision Suficiente</h3>
+                        <p>Las opciones del ICFES estan separadas por al menos un 10-15%. Un redondeo bien hecho te da un margen de error menor al 5%, suficiente para distinguir la correcta.</p>
+                    </div>
+                    <div class="concept-card">
+                        <div class="concept-icon"><i class="fas fa-shield-alt"></i></div>
+                        <h3>Reduccion de Errores</h3>
+                        <p>Menos digitos manipulados = menos probabilidad de error aritmetico. Un error en el tercer digito de una multiplicacion larga te cuesta la pregunta entera.</p>
+                    </div>
+                </div>
+
+                <!-- 3 Reglas de Oro -->
+                <section class="rules-section">
+                    <h2 class="section-title" style="justify-content:center"><i class="fas fa-crown"></i> Las 3 Reglas de Oro del Redondeo ICFES</h2>
+                    <div class="rules-grid">
+                        <div class="rule-card">
+                            <div class="rule-number">1</div>
+                            <h4>Redondea al nivel que las opciones te exijan</h4>
+                            <p>Si las opciones difieren en las centenas, redondea a centenas. Si difieren en decenas de mil, redondea a decenas de mil. No redondees mas de lo necesario.</p>
+                            <div class="rule-example">Opciones: 4,200 / 4,800 / 5,300 / 5,900<br>Difieren en centenas → redondea a centenas</div>
+                        </div>
+                        <div class="rule-card">
+                            <div class="rule-number">2</div>
+                            <h4>Conoce la direccion de tu error</h4>
+                            <p>Si redondeas ambos numeros hacia arriba, tu estimado sera MAYOR que el real. Si uno arriba y otro abajo, los errores se compensan parcialmente.</p>
+                            <div class="rule-example">487 → 500 (sube) × 23 → 20 (baja)<br>Errores se compensan: estimado cercano al real</div>
+                        </div>
+                        <div class="rule-card">
+                            <div class="rule-number">3</div>
+                            <h4>Elige "divisores amigables" al dividir</h4>
+                            <p>Al redondear para una division, redondea el divisor a un numero que dividas facilmente: 2, 5, 10, 25, 50, 100. El dividendo redondealo generosamente.</p>
+                            <div class="rule-example">4,872 ÷ 48 → 5,000 ÷ 50 = 100<br>(50 es divisor amigable)</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Redondeo por operacion -->
+                <section class="ops-section">
+                    <h2 class="section-title"><i class="fas fa-cogs"></i> Como Redondear Segun la Operacion</h2>
+                    <p class="section-desc">Cada operacion tiene su propia estrategia de redondeo. Conocerlas te hace mas rapido y preciso.</p>
+                    <div class="ops-grid">
+                        <div class="op-card">
+                            <div class="op-icon"><i class="fas fa-plus-circle"></i></div>
+                            <h4>Suma</h4>
+                            <p>Redondea cada termino al mismo nivel. Los errores se suman pero son pequenos individualmente.</p>
+                            <div class="op-formula">3,487 + 2,156 ≈ 3,500 + 2,200 = 5,700</div>
+                        </div>
+                        <div class="op-card">
+                            <div class="op-icon"><i class="fas fa-minus-circle"></i></div>
+                            <h4>Resta</h4>
+                            <p>Redondea el minuendo hacia arriba y el sustraendo hacia abajo (o viceversa) para que los errores se compensen.</p>
+                            <div class="op-formula">2,847 - 1,293 ≈ 3,000 - 1,300 = 1,700</div>
+                        </div>
+                        <div class="op-card">
+                            <div class="op-icon"><i class="fas fa-times-circle"></i></div>
+                            <h4>Multiplicacion</h4>
+                            <p>Redondea cada factor al nivel necesario. Si ambos se redondean en direcciones opuestas, los errores se compensan.</p>
+                            <div class="op-formula">192 × 31 ≈ 200 × 30 = 6,000</div>
+                        </div>
+                        <div class="op-card">
+                            <div class="op-icon"><i class="fas fa-divide"></i></div>
+                            <h4>Division</h4>
+                            <p>Redondea el divisor a un "numero amigable" (2, 5, 10, 25, 50, 100). El dividendo al mismo orden de magnitud.</p>
+                            <div class="op-formula">4,872 ÷ 48 ≈ 5,000 ÷ 50 = 100</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Herramienta de Practica Interactiva -->
+                <section class="practice-tool">
+                    <div class="tool-header">
+                        <h2 class="tool-title"><i class="fas fa-dumbbell"></i> Arena de Practica: Redondeo ICFES</h2>
+                        <p class="tool-subtitle">Usa el redondeo para seleccionar la respuesta correcta. No calcules el valor exacto: estima y elige.</p>
+                    </div>
+                    <div class="practice-levels">
+                        <button class="level-btn active" data-level="basico" onclick="setLevel('basico')"><i class="fas fa-seedling"></i> Basico</button>
+                        <button class="level-btn" data-level="intermedio" onclick="setLevel('intermedio')"><i class="fas fa-fire"></i> Intermedio</button>
+                        <button class="level-btn" data-level="avanzado" onclick="setLevel('avanzado')"><i class="fas fa-meteor"></i> Avanzado</button>
+                    </div>
+                    <div class="practice-interface">
+                        <p class="problem-context" id="problemContext"></p>
+                        <div class="problem-display" id="problemDisplay">Cargando problema...</div>
+                        <div class="options-grid" id="optionsGrid"></div>
+                        <div class="practice-actions">
+                            <button class="practice-btn secondary" id="hintBtn" onclick="showHint()"><i class="fas fa-lightbulb"></i> Pista</button>
+                            <button class="practice-btn" id="nextBtn" onclick="nextProblem()" disabled><i class="fas fa-arrow-right"></i> Siguiente</button>
+                        </div>
+                        <div class="solution-panel" id="solutionPanel"></div>
+                        <div class="score-bar">
+                            <div class="score-item">
+                                <div class="score-label">Aciertos</div>
+                                <div class="score-value" id="scoreCorrect">0</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-label">Intentos</div>
+                                <div class="score-value" id="scoreTotal">0</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-label">Racha</div>
+                                <div class="score-value streak" id="scoreStreak">0</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-label">Porcentaje</div>
+                                <div class="score-value" id="scorePercent">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Ejemplos ICFES -->
+                <section class="icfes-section">
+                    <div class="icfes-header">
+                        <h2 class="section-title" style="justify-content:center"><i class="fas fa-clipboard-check"></i> Ejemplos Resueltos Estilo ICFES</h2>
+                        <p class="section-desc" style="margin:0 auto">Estos son problemas reales con la misma estructura que encontraras en el examen. Observa como el redondeo te lleva directo a la respuesta.</p>
+                    </div>
+                    <div class="icfes-examples">
+                        <div class="icfes-example">
+                            <div class="icfes-question">1. Una fabrica produce 192 unidades diarias de un producto. Si opera 31 dias al mes, aproximadamente cuantas unidades produce al mes?</div>
+                            <div class="icfes-options-row">
+                                <span class="icfes-opt">A) 5,200</span>
+                                <span class="icfes-opt highlight">B) 5,952</span>
+                                <span class="icfes-opt">C) 6,800</span>
+                                <span class="icfes-opt">D) 7,100</span>
+                            </div>
+                            <div class="icfes-solution">
+                                <h5><i class="fas fa-brain"></i> Solucion por redondeo:</h5>
+                                <p>Redondeamos 192 → <strong>200</strong> (centena mas cercana) y 31 → <strong>30</strong> (decena mas cercana).<br>
+                                Calculamos: 200 × 30 = <strong>6,000</strong>.<br>
+                                El estimado 6,000 esta mas cerca de <strong>B) 5,952</strong> (diferencia: 48) que de A) 5,200 (diff: 800) o C) 6,800 (diff: 800).<br>
+                                <strong>Respuesta: B</strong></p>
+                            </div>
+                        </div>
+                        <div class="icfes-example">
+                            <div class="icfes-question">2. Tres poblados tienen 3.487, 2.156 y 1.892 habitantes respectivamente. Cual es el total aproximado de habitantes?</div>
+                            <div class="icfes-options-row">
+                                <span class="icfes-opt">A) 6,800</span>
+                                <span class="icfes-opt">B) 7,200</span>
+                                <span class="icfes-opt highlight">C) 7,535</span>
+                                <span class="icfes-opt">D) 8,100</span>
+                            </div>
+                            <div class="icfes-solution">
+                                <h5><i class="fas fa-brain"></i> Solucion por redondeo:</h5>
+                                <p>Redondeamos: 3.487 → <strong>3.500</strong>, 2.156 → <strong>2.200</strong>, 1.892 → <strong>1.900</strong>.<br>
+                                Sumamos: 3.500 + 2.200 + 1.900 = <strong>7.600</strong>.<br>
+                                El estimado 7.600 esta mas cerca de <strong>C) 7.535</strong> (diff: 65) que de B) 7.200 (diff: 400).<br>
+                                <strong>Respuesta: C</strong></p>
+                            </div>
+                        </div>
+                        <div class="icfes-example">
+                            <div class="icfes-question">3. Se deben repartir 4.872 caramelos equitativamente entre 48 ninos. Cuantos caramelos le toca a cada uno?</div>
+                            <div class="icfes-options-row">
+                                <span class="icfes-opt">A) 85</span>
+                                <span class="icfes-opt">B) 98</span>
+                                <span class="icfes-opt highlight">C) 102</span>
+                                <span class="icfes-opt">D) 115</span>
+                            </div>
+                            <div class="icfes-solution">
+                                <h5><i class="fas fa-brain"></i> Solucion por redondeo:</h5>
+                                <p>Redondeamos 4.872 → <strong>5.000</strong> y 48 → <strong>50</strong> (divisor amigable).<br>
+                                Dividimos: 5.000 ÷ 50 = <strong>100</strong>.<br>
+                                El estimado 100 esta mas cerca de <strong>C) 102</strong> (diff: 2) que de B) 98 (diff: 2)... empate tecnico, pero redondeamos 48 hacia arriba, asi que el resultado real sera ligeramente menor que 100. Recalculamos mas fino: 4.900 ÷ 50 = 98. Hmm, usemos 4.850 ÷ 48 ≈ 101. <strong>Respuesta: C</strong></p>
+                            </div>
+                        </div>
+                        <div class="icfes-example">
+                            <div class="icfes-question">4. Un almacen tenia 2.847 unidades en stock. Vendieron 1.293. Cuantas unidades quedan?</div>
+                            <div class="icfes-options-row">
+                                <span class="icfes-opt">A) 1,200</span>
+                                <span class="icfes-opt highlight">B) 1,554</span>
+                                <span class="icfes-opt">C) 1,800</span>
+                                <span class="icfes-opt">D) 2,100</span>
+                            </div>
+                            <div class="icfes-solution">
+                                <h5><i class="fas fa-brain"></i> Solucion por redondeo:</h5>
+                                <p>Redondeamos 2.847 → <strong>3.000</strong> (arriba) y 1.293 → <strong>1.300</strong> (arriba). Ambos subieron, asi que el resultado estimado sera menor al real.<br>
+                                Restamos: 3.000 - 1.300 = <strong>1.700</strong>.<br>
+                                Como ambos redondeamos hacia arriba, el real sera mayor que 1.700. <strong>B) 1.554</strong> es menor... Recalculo: 2.847 → 2.800 (abajo), 1.293 → 1.300 (arriba). 2.800 - 1.300 = <strong>1.500</strong>. Real > 1.500. Mas cerca de B) 1.554. <strong>Respuesta: B</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Errores Comunes -->
+                <section class="mistakes-section">
+                    <h2 class="section-title"><i class="fas fa-exclamation-triangle" style="color:var(--rojo-error)"></i> Errores Comunes al Redondear</h2>
+                    <p class="section-desc">Evita estas trampas que hacen que el redondeo te lleve a la respuesta equivocada.</p>
+                    <div class="mistakes-grid">
+                        <div class="mistake-card">
+                            <div class="mistake-icon"><i class="fas fa-times-circle"></i></div>
+                            <h4>Redondear demasiado agresivo</h4>
+                            <p>Redondear 487 a 1.000 pierde toda la precision. El resultado sera tan alejado que no te servira para elegir entre opciones cercanas.</p>
+                            <div class="mistake-fix"><i class="fas fa-check"></i> Solucion: Redondea al minimo nivel que las opciones te permitan distinguir.</div>
+                        </div>
+                        <div class="mistake-card">
+                            <div class="mistake-icon"><i class="fas fa-times-circle"></i></div>
+                            <h4>Ignorar la direccion del error</h4>
+                            <p>Si redondeas ambos factores hacia arriba en una multiplicacion, tu estimado sera mayor que el real. Si no lo cuentas, eligiras la opcion de arriba.</p>
+                            <div class="mistake-fix"><i class="fas fa-check"></i> Solucion: Siempre preguntate "mi estimado es mayor o menor que el real?"</div>
+                        </div>
+                        <div class="mistake-card">
+                            <div class="mistake-icon"><i class="fas fa-times-circle"></i></div>
+                            <h4>Redondear el divisor en la direccion equivocada</h4>
+                            <p>En una division, redondear el divisor hacia arriba reduce el cociente y viceversa. Un error ahi te manda a la opcion contigua.</p>
+                            <div class="mistake-fix"><i class="fas fa-check"></i> Solucion: Redondea el divisor a un "numero amigable" y nota si subio o bajo.</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tips -->
+                <section class="tips-section">
+                    <h2 class="section-title"><i class="fas fa-star" style="color:var(--naranja)"></i> Consejos Finales para el Examen</h2>
+                    <div class="tips-grid">
+                        <div class="tip-card">
+                            <div class="tip-icon"><i class="fas fa-stopwatch"></i></div>
+                            <h4>Primero mira las opciones</h4>
+                            <p>Antes de calcular, observa las opciones. La separacion entre ellas te dice cuanto puedes redondear. Si estan muy juntas, redondea menos.</p>
+                        </div>
+                        <div class="tip-card">
+                            <div class="tip-icon"><i class="fas fa-balance-scale"></i></div>
+                            <h4>Usa dos redondeos si es necesario</h4>
+                            <p>Si el primer redondeo te deja entre dos opciones, haz un segundo redondeo mas fino para desempatar. Solo toma 5 segundos extra.</p>
+                        </div>
+                        <div class="tip-card">
+                            <div class="tip-icon"><i class="fas fa-ban"></i></div>
+                            <h4>No redondees si puedes calcular</h4>
+                            <p>Si la operacion es simple (ej: 25 × 4), calcula exacto. El redondeo es para cuando la operacion completa toma mas de 15 segundos.</p>
+                        </div>
+                        <div class="tip-card">
+                            <div class="tip-icon"><i class="fas fa-hand-point-right"></i></div>
+                            <h4>Combina con descarte visual</h4>
+                            <p>Usa el redondeo para eliminar 2-3 opciones, luego usa descarte visual (par/impar, magnitud, ultimo digito) para elegir la final.</p>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Boton Flotante -->
+    <button class="floating-button" onclick="openModal()" aria-label="Hoja de referencia"><i class="fas fa-file-alt"></i></button>
+
+    <!-- Modal -->
+    <div class="modal" id="cheatModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            <div class="cheat-sheet">
+                <h3><i class="fas fa-file-alt" style="color:var(--cian)"></i> Hoja de Referencia Rapida</h3>
+
+                <div class="rule-section">
+                    <h4><i class="fas fa-ruler-horizontal"></i> Regla General de Redondeo</h4>
+                    <ul>
+                        <li>Si el digito siguiente es <strong>5 o mayor</strong>, sube.</li>
+                        <li>Si el digito siguiente es <strong>4 o menor</strong>, baja.</li>
+                        <li>Ejemplo: 487 → el 8 es ≥ 5, entonces 487 → 500 (a centenas)</li>
+                    </ul>
+                </div>
+
+                <div class="rule-section">
+                    <h4><i class="fas fa-table"></i> Tabla de Redondeo Rapido</h4>
+                    <table class="quick-table">
+                        <thead><tr><th>Numero</th><th>A decenas</th><th>A centenas</th><th>A miles</th></tr></thead>
+                        <tbody>
+                            <tr><td>4,872</td><td>4,870</td><td>4,900</td><td>5,000</td></tr>
+                            <tr><td>1,293</td><td>1,290</td><td>1,300</td><td>1,000</td></tr>
+                            <tr><td>3,456</td><td>3,460</td><td>3,500</td><td>3,000</td></tr>
+                            <tr><td>7,849</td><td>7,850</td><td>7,800</td><td>8,000</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="rule-section">
+                    <h4><i class="fas fa-divide"></i> Divisores Amigables</h4>
+                    <p>Al redondear para dividir, lleva el divisor a uno de estos valores:</p>
+                    <ul>
+                        <li><strong>2, 4, 5, 8, 10, 20, 25, 50, 100, 125, 250, 500</strong></li>
+                        <li>Ejemplo: 48 → 50, 23 → 25, 97 → 100</li>
+                        <li>Estos numeros se dividen mentalmente sin esfuerzo</li>
+                    </ul>
+                </div>
+
+                <div class="rule-section">
+                    <h4><i class="fas fa-compass"></i> Direccion del Error</h4>
+                    <table class="quick-table">
+                        <thead><tr><th>Operacion</th><th>Ambos redondean UP</th><th>Ambos redondean DOWN</th><th>Mixto</th></tr></thead>
+                        <tbody>
+                            <tr><td>Suma</td><td>Estimado > Real</td><td>Estimado < Real</td><td>Se compensa</td></tr>
+                            <tr><td>Resta</td><td>Incertidumbre</td><td>Incertidumbre</td><td>Depende</td></tr>
+                            <tr><td>Multiplicacion</td><td>Estimado >> Real</td><td>Estimado << Real</td><td>Se compensa</td></tr>
+                            <tr><td>Division</td><td>Cociente <?</td><td>Cociente >?</td><td>Depende</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="rule-section">
+                    <h4><i class="fas fa-bolt"></i> Atajos Mentales Complementarios</h4>
+                    <ul>
+                        <li><strong>× 50</strong> = multiplicar por 100 y dividir entre 2</li>
+                        <li><strong>× 25</strong> = multiplicar por 100 y dividir entre 4</li>
+                        <li><strong>÷ 50</strong> = multiplicar por 2 y dividir entre 100</li>
+                        <li><strong>÷ 25</strong> = multiplicar por 4 y dividir entre 100</li>
+                        <li><strong>× 11</strong> = duplicar cada digito y sumar con el vecino</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notificacion -->
+    <div class="notification" id="notification">
+        <i class="fas fa-bell"></i>
+        <div class="notification-content">
+            <div class="notification-title" id="notifTitle">Notificacion</div>
+            <div class="notification-message" id="notifMessage">Mensaje</div>
+        </div>
+    </div>
+
+    <script>
+        /* ===== ESTADO GLOBAL ===== */
+        let currentLevel = 'basico';
+        let currentProblem = null;
+        let score = { correct: 0, total: 0, streak: 0, maxStreak: 0 };
+        let hintUsed = false;
+        let answered = false;
+
+        /* ===== SIDEBAR TOGGLE ===== */
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const contentArea = document.getElementById('contentArea');
+
+        sidebarToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('hidden');
+            contentArea.classList.toggle('expanded');
+            const icon = this.querySelector('i');
+            if (sidebar.classList.contains('hidden')) {
+                icon.className = 'fas fa-bars';
+            } else {
+                icon.className = 'fas fa-times';
+            }
+        });
+
+        /* ===== PROGRESO Y BARRA DE ENERGIA ===== */
+        function loadProgress() {
+            const saved = localStorage.getItem('rcdd_progress');
+            if (saved) {
+                try { return JSON.parse(saved); } catch(e) { /* fallback */ }
+            }
+            // Estado por defecto: RCDD1-6 completados, estamos en RCDD7
+            return {
+                energy: 50
+            };
+        }
+
+        function applyProgress() {
+            const progress = loadProgress();
+            const items = document.querySelectorAll('.menu-item');
+            items.forEach(item => {
+                const id = item.getAttribute('data-content');
+                if (progress.completed && progress.completed.includes(id)) {
+                    item.classList.add('completed');
+                    item.classList.remove('locked');
+                }
+            });
+            // Marcar pagina actual como activa
+            const activeItem = document.querySelector('.menu-item[data-content="RCDD7"]');
+            if (activeItem) {
+                activeItem.classList.add('active');
+            }
+            // Barra de energia
+            const energyFill = document.getElementById('energyFill');
+            const energyPct = document.getElementById('energyPercentage');
+            if (energyFill && energyPct) {
+                setTimeout(() => {
+                    energyFill.style.width = progress.energy + '%';
+                    energyPct.textContent = progress.energy + '%';
+                }, 300);
+            }
+        }
+
+        function saveProgress() {
+            const progress = loadProgress();
+            if (!progress.completed) progress.completed = [];
+            if (!progress.completed.includes('RCDD7')) {
+                progress.completed.push('RCDD7');
+                progress.energy = Math.min(100, Math.round((progress.completed.length / 12) * 100));
+                localStorage.setItem('rcdd_progress', JSON.stringify(progress));
+            }
+        }
+
+        function resetProgress() {
+            if (confirm('Estas seguro de reiniciar todo tu progreso? Esta accion no se puede deshacer.')) {
+                localStorage.removeItem('rcdd_progress');
+                location.reload();
+            }
+        }
+
+        /* ===== NOTIFICACIONES ===== */
+        function showNotification(title, message) {
+            const notif = document.getElementById('notification');
+            document.getElementById('notifTitle').textContent = title;
+            document.getElementById('notifMessage').textContent = message;
+            notif.classList.add('show');
+            setTimeout(() => notif.classList.remove('show'), 3500);
+        }
+
+        /* ===== MODAL ===== */
+        function openModal() { document.getElementById('cheatModal').classList.add('active'); }
+        function closeModal() { document.getElementById('cheatModal').classList.remove('active'); }
+        document.getElementById('cheatModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        /* ===== UTILIDADES MATEMATICAS ===== */
+        function randInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function formatNum(n) {
+            return n.toLocaleString('es-ES');
+        }
+
+        // Genera un numero cercano a un valor redondo
+        function nearRound(min, max, step) {
+            const minM = Math.ceil(min / step);
+            const maxM = Math.floor(max / step);
+            if (minM > maxM) return min;
+            const m = randInt(minM, maxM);
+            const base = m * step;
+            const maxOff = Math.max(1, Math.floor(step * 0.4));
+            const offset = randInt(1, maxOff);
+            const val = base + (Math.random() > 0.5 ? offset : -offset);
+            return Math.max(min, Math.min(max, val));
+        }
+
+        function roundTo(n, step) {
+            return Math.round(n / step) * step;
+        }
+
+        /* ===== GENERADOR DE PROBLEMAS ===== */
+        function generateProblem(level) {
+            const types = level === 'basico' ? ['mult','add'] :
+                          level === 'intermedio' ? ['mult','add','div'] :
+                          ['mult','add','div','sub'];
+            const type = types[randInt(0, types.length - 1)];
+
+            let problem;
+            let attempts = 0;
+            do {
+                switch(type) {
+                    case 'mult': problem = genMultiplication(level); break;
+                    case 'add': problem = genAddition(level); break;
+                    case 'div': problem = genDivision(level); break;
+                    case 'sub': problem = genSubtraction(level); break;
+                }
+                attempts++;
+            } while (!verifyProblem(problem) && attempts < 50);
+
+            return problem;
+        }
+
+        function genMultiplication(level) {
+            let a, b, rA, rB, roundStepA, roundStepB;
+            const contexts = [
+                'una fabrica produce {a} unidades por dia. En {b} dias, cuantas unidades produce?',
+                'un producto cuesta ${a} y se compran {b} unidades. Cual es el total?',
+                'un vehiculo recorre {a} km por hora. En {b} horas, cuantos km recorre?',
+                'un restaurante atiende {a} personas por turno. En {b} turnos, cuantas personas atiende?',
+                'se siembran {a} arboles por hectarea. En {b} hectareas, cuantos arboles se siembran?'
+            ];
+
+            if (level === 'basico') {
+                a = nearRound(21, 99, 10);
+                b = randInt(3, 9);
+                roundStepA = 10; roundStepB = 1;
+            } else if (level === 'intermedio') {
+                a = nearRound(101, 999, 50);
+                b = randInt(4, 12);
+                roundStepA = 50; roundStepB = 1;
+            } else {
+                a = nearRound(1001, 4999, 100);
+                b = randInt(5, 15);
+                roundStepA = 100; roundStepB = 5;
+            }
+            rA = roundTo(a, roundStepA);
+            rB = roundTo(b, roundStepB);
+            if (rB === 0) rB = b;
+            const exact = a * b;
+            const estimated = rA * rB;
+            const ctx = contexts[randInt(0, contexts.length - 1)].replace('{a}', formatNum(a)).replace('{b}', b);
+
+            return {
+                context: ctx,
+                expression: formatNum(a) + ' \u00D7 ' + b,
+                exact, estimated,
+                steps: buildMultSteps(a, b, rA, rB, roundStepA, roundStepB),
+                options: generateOptions(exact, estimated, level),
+                roundStepLabel: roundStepA >= 100 ? 'centenas' : roundStepA >= 10 ? 'decenas' : 'unidades'
+            };
+        }
+
+        function buildMultSteps(a, b, rA, rB, stepA, stepB) {
+            const steps = [];
+            const labelA = stepA >= 100 ? 'centena' : stepA >= 10 ? 'decena' : 'unidad';
+            steps.push('Redondeamos ' + formatNum(a) + ' a la ' + labelA + ' mas cercana: <strong>' + formatNum(rA) + '</strong>');
+            if (rB !== b) {
+                const labelB = stepB >= 10 ? 'decena' : 'unidad';
+                steps.push('Aproximamos ' + b + ' a la ' + labelB + ' mas cercana: <strong>' + rB + '</strong>');
+            } else {
+                steps.push(b + ' se mantiene igual: <strong>' + b + '</strong>');
+            }
+            steps.push('Multiplicamos: <strong>' + formatNum(rA) + ' \u00D7 ' + rB + ' = ' + formatNum(rA * rB) + '</strong>');
+            return steps;
+        }
+
+        function genAddition(level) {
+            const contexts = [
+                'Tres tiendas vendieron {a}, {b} y {c} unidades. Cual es el total?',
+                'Un municipio suma {a}, {b} y {c} habitantes en tres corregimientos. Cual es el total?',
+                'Se recaudaron {a}, {b} y {c} pesos en tres eventos. Cuanto se recaudo en total?'
+            ];
+            let a, b, c, rA, rB, rC, step;
+            if (level === 'basico') {
+                a = nearRound(101, 499, 10); b = nearRound(101, 499, 10); c = nearRound(101, 499, 10);
+                step = 10;
+            } else if (level === 'intermedio') {
+                a = nearRound(1001, 4999, 100); b = nearRound(1001, 4999, 100); c = nearRound(1001, 4999, 100);
+                step = 100;
+            } else {
+                a = nearRound(5001, 14999, 100); b = nearRound(5001, 14999, 100); c = nearRound(5001, 14999, 100);
+                step = 100;
+            }
+            rA = roundTo(a, step); rB = roundTo(b, step); rC = roundTo(c, step);
+            const exact = a + b + c;
+            const estimated = rA + rB + rC;
+            const ctx = contexts[randInt(0, contexts.length - 1)]
+                .replace('{a}', formatNum(a)).replace('{b}', formatNum(b)).replace('{c}', formatNum(c));
+            const label = step >= 100 ? 'centena' : 'decena';
+
+            return {
+                context: ctx,
+                expression: formatNum(a) + ' + ' + formatNum(b) + ' + ' + formatNum(c),
+                exact, estimated,
+                steps: [
+                    'Redondeamos a la ' + label + ' mas cercana:',
+                    formatNum(a) + ' \u2192 <strong>' + formatNum(rA) + '</strong>',
+                    formatNum(b) + ' \u2192 <strong>' + formatNum(rB) + '</strong>',
+                    formatNum(c) + ' \u2192 <strong>' + formatNum(rC) + '</strong>',
+                    'Sumamos: <strong>' + formatNum(rA) + ' + ' + formatNum(rB) + ' + ' + formatNum(rC) + ' = ' + formatNum(estimated) + '</strong>'
+                ],
+                options: generateOptions(exact, estimated, level),
+                roundStepLabel: label + 's'
+            };
+        }
+
+        function genDivision(level) {
+            const friendlyDivisors = [2,4,5,8,10,20,25,50];
+            let divisor, dividend, rDivisor, rDividend, stepD;
+            if (level === 'intermedio') {
+                divisor = friendlyDivisors[randInt(3, friendlyDivisors.length - 1)]; // 10+
+                dividend = nearRound(divisor * 50, divisor * 200, divisor * 2);
+                rDivisor = divisor;
+                rDividend = roundTo(dividend, divisor > 20 ? 100 : 50);
+                stepD = divisor > 20 ? 100 : 50;
+            } else {
+                divisor = friendlyDivisors[randInt(4, friendlyDivisors.length - 1)]; // 20+
+                dividend = nearRound(divisor * 80, divisor * 300, divisor * 2);
+                rDivisor = divisor;
+                rDividend = roundTo(dividend, 100);
+                stepD = 100;
+            }
+            // Asegurar que el divisor original no sea ya amigable
+            let origDivisor = divisor + (Math.random() > 0.5 ? randInt(1,3) : -randInt(1,3));
+            if (origDivisor <= 0) origDivisor = divisor + randInt(1,3);
+            const exact = Math.round(dividend / origDivisor);
+            const estimated = Math.round(rDividend / rDivisor);
+
+            return {
+                context: 'Se deben repartir ' + formatNum(dividend) + ' elementos entre ' + origDivisor + ' grupos. Cuantos le toca a cada grupo?',
+                expression: formatNum(dividend) + ' \u00F7 ' + origDivisor,
+                exact, estimated,
+                steps: [
+                    'Redondeamos ' + formatNum(dividend) + ' \u2192 <strong>' + formatNum(rDividend) + '</strong>',
+                    'Redondeamos ' + origDivisor + ' \u2192 <strong>' + rDivisor + '</strong> (divisor amigable)',
+                    'Dividimos: <strong>' + formatNum(rDividend) + ' \u00F7 ' + rDivisor + ' = ' + formatNum(estimated) + '</strong>'
+                ],
+                options: generateOptions(exact, estimated, level),
+                roundStepLabel: 'divisor amigable'
+            };
+        }
+
+        function genSubtraction(level) {
+            const contexts = [
+                'Un almacen tenia {a} unidades. Vendieron {b}. Cuantas quedan?',
+                'Un presupuesto era de ${a}. Se gastaron ${b}. Cuanto queda?',
+                'La poblacion era de {a} habitantes. Emigraron {b}. Cuantos quedan?'
+            ];
+            let a, b, rA, rB, step;
+            if (level === 'avanzado') {
+                step = 100;
+                a = nearRound(3001, 9999, step);
+                b = nearRound(1001, a - 500, step);
+            } else {
+                step = 50;
+                a = nearRound(1001, 4999, step);
+                b = nearRound(201, a - 200, step);
+            }
+            if (b >= a) b = Math.floor(a * 0.4);
+            rA = roundTo(a, step);
+            rB = roundTo(b, step);
+            const exact = a - b;
+            const estimated = rA - rB;
+            const ctx = contexts[randInt(0, contexts.length - 1)]
+                .replace('{a}', formatNum(a)).replace('{b}', formatNum(b));
+            const label = step >= 100 ? 'centena' : 'decena';
+
+            return {
+                context: ctx,
+                expression: formatNum(a) + ' - ' + formatNum(b),
+                exact, estimated,
+                steps: [
+                    'Redondeamos ' + formatNum(a) + ' \u2192 <strong>' + formatNum(rA) + '</strong>',
+                    'Redondeamos ' + formatNum(b) + ' \u2192 <strong>' + formatNum(rB) + '</strong>',
+                    'Restamos: <strong>' + formatNum(rA) + ' - ' + formatNum(rB) + ' = ' + formatNum(estimated) + '</strong>'
+                ],
+                options: generateOptions(exact, estimated, level),
+                roundStepLabel: label + 's'
+            };
+        }
+
+        /* ===== GENERADOR DE OPCIONES ===== */
+        function generateOptions(correct, estimated, level) {
+            const options = [{ value: correct, isCorrect: true }];
+            const absCorrect = Math.abs(correct);
+            const spread = level === 'basico' ? Math.max(absCorrect * 0.12, 80) :
+                           level === 'intermedio' ? Math.max(absCorrect * 0.10, 400) :
+                           Math.max(absCorrect * 0.08, 1500);
+
+            const offsets = [-spread * 1.6, spread * 0.7, spread * 2.0];
+            for (const off of offsets) {
+                let d = Math.round(correct + off);
+                if (d === correct) d += Math.round(spread * 0.5);
+                if (d < 0) d = Math.round(Math.abs(off) * 0.5);
+                while (options.some(o => o.value === d)) {
+                    d += Math.round(spread * 0.25) * (Math.random() > 0.5 ? 1 : -1);
+                }
+                options.push({ value: d, isCorrect: false });
+            }
+
+            options.sort((a, b) => a.value - b.value);
+            return options.map((opt, i) => ({
+                ...opt,
+                letter: 'ABCD'[i]
+            }));
+        }
+
+        /* ===== VERIFICACION: el estimado debe apuntar a la correcta ===== */
+        function verifyProblem(problem) {
+            if (!problem || !problem.options) return false;
+            let minDist = Infinity;
+            let closestIdx = -1;
+            for (let i = 0; i < problem.options.length; i++) {
+                const dist = Math.abs(problem.options[i].value - problem.estimated);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestIdx = i;
+                }
+            }
+            // La opcion correcta debe ser la mas cercana al estimado
+            // O al menos estar entre las 2 mas cercanas (tolerancia para casos dificiles)
+            if (problem.options[closestIdx].isCorrect) return true;
+            // Verificar segunda mas cercana
+            let secondDist = Infinity, secondIdx = -1;
+            for (let i = 0; i < problem.options.length; i++) {
+                if (i === closestIdx) continue;
+                const dist = Math.abs(problem.options[i].value - problem.estimated);
+                if (dist < secondDist) { secondDist = dist; secondIdx = i; }
+            }
+            return problem.options[secondIdx] && problem.options[secondIdx].isCorrect;
+        }
+
+        /* ===== RENDERIZADO DE PROBLEMA ===== */
+        function renderProblem(problem) {
+            document.getElementById('problemContext').textContent = problem.context;
+            document.getElementById('problemDisplay').textContent = problem.expression;
+
+            const grid = document.getElementById('optionsGrid');
+            grid.innerHTML = '';
+            problem.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerHTML = '<span class="option-letter">' + opt.letter + '</span><span>' + formatNum(opt.value) + '</span>';
+                btn.setAttribute('data-letter', opt.letter);
+                btn.setAttribute('data-correct', opt.isCorrect);
+                btn.addEventListener('click', function() { handleAnswer(this, problem); });
+                grid.appendChild(btn);
+            });
+
+            document.getElementById('solutionPanel').classList.remove('show');
+            document.getElementById('solutionPanel').innerHTML = '';
+            document.getElementById('hintBtn').disabled = false;
+            document.getElementById('nextBtn').disabled = true;
+            hintUsed = false;
+            answered = false;
+        }
+
+        /* ===== MANEJO DE RESPUESTA ===== */
+        function handleAnswer(btn, problem) {
+            if (answered) return;
+            answered = true;
+
+            const isCorrect = btn.getAttribute('data-correct') === 'true';
+            score.total++;
+
+            // Deshabilitar todas las opciones
+            const allBtns = document.querySelectorAll('.option-btn');
+            allBtns.forEach(b => b.classList.add('disabled'));
+
+            if (isCorrect) {
+                btn.classList.add('correct');
+                score.correct++;
+                score.streak++;
+                if (score.streak > score.maxStreak) score.maxStreak = score.streak;
+                showNotification('Correcto', score.streak > 1 ? 'Racha de ' + score.streak + ' aciertos' : 'Buena estimacion');
+            } else {
+                btn.classList.add('incorrect');
+                score.streak = 0;
+                // Mostrar la correcta
+                allBtns.forEach(b => {
+                    if (b.getAttribute('data-correct') === 'true') b.classList.add('correct');
+                });
+                showNotification('Incorrecto', 'La respuesta correcta era ' + formatNum(problem.exact));
+            }
+
+            updateScore();
+            showSolution(problem, isCorrect);
+            document.getElementById('nextBtn').disabled = false;
+            document.getElementById('hintBtn').disabled = true;
+
+            // Guardar progreso al acertar
+            if (isCorrect) saveProgress();
+        }
+
+        /* ===== MOSTRAR SOLUCION ===== */
+        function showSolution(problem, isCorrect) {
+            const panel = document.getElementById('solutionPanel');
+            let html = '<div class="solution-title"><i class="fas fa-walking"></i> Solucion paso a paso</div>';
+
+            problem.steps.forEach((step, i) => {
+                html += '<div class="solution-step"><span class="step-num">' + (i+1) + '</span><span class="step-text">' + step + '</span></div>';
+            });
+
+            html += '<div class="step-result">Estimado: ' + formatNum(problem.estimated) + '</div>';
+            html += '<div class="step-exact">Valor exacto: <strong>' + formatNum(problem.exact) + '</strong> (diferencia: ' + formatNum(Math.abs(problem.exact - problem.estimated)) + ')</div>';
+
+            if (!isCorrect) {
+                html += '<div style="text-align:center;margin-top:.8rem;color:var(--rojo-error);font-weight:600;font-size:.9rem;"><i class="fas fa-info-circle"></i> Tu estimado debia estar mas cerca de ' + formatNum(problem.exact) + '. Revisa la direccion de tus errores de redondeo.</div>';
+            }
+
+            panel.innerHTML = html;
+            panel.classList.add('show');
+        }
+
+        /* ===== PISTA ===== */
+        function showHint() {
+            if (!currentProblem || answered) return;
+            hintUsed = true;
+            const firstStep = currentProblem.steps[0];
+            showNotification('Pista', firstStep.replace(/<[^>]*>/g, ''));
+            document.getElementById('hintBtn').disabled = true;
+        }
+
+        /* ===== SIGUIENTE PROBLEMA ===== */
+        function nextProblem() {
+            currentProblem = generateProblem(currentLevel);
+            renderProblem(currentProblem);
+        }
+
+        /* ===== NIVEL ===== */
+        function setLevel(level) {
+            currentLevel = level;
+            document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('.level-btn[data-level="' + level + '"]').classList.add('active');
+            nextProblem();
+        }
+
+        /* ===== ACTUALIZAR MARCADOR ===== */
+        function updateScore() {
+            document.getElementById('scoreCorrect').textContent = score.correct;
+            document.getElementById('scoreTotal').textContent = score.total;
+            document.getElementById('scoreStreak').textContent = score.streak;
+            const pct = score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0;
+            document.getElementById('scorePercent').textContent = pct + '%';
+        }
+
+        /* ===== INICIALIZACION ===== */
+        document.addEventListener('DOMContentLoaded', function() {
+            applyProgress();
+            currentProblem = generateProblem(currentLevel);
+            renderProblem(currentProblem);
+
+            // Notificacion de bienvenida
+            setTimeout(() => {
+                showNotification('Bienvenido', 'Usa el redondeo para encontrar la respuesta correcta sin calcular el valor exacto.');
+            }, 800);
+        });
+
+        /* ===== TECLADO ===== */
+        document.addEventListener('keydown', function(e) {
+            if (answered) {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nextProblem(); }
+                return;
+            }
+            const keyMap = { 'a': 0, 'b': 1, 'c': 2, 'd': 3, '1': 0, '2': 1, '3': 2, '4': 3 };
+            const idx = keyMap[e.key.toLowerCase()];
+            if (idx !== undefined) {
+                const btns = document.querySelectorAll('.option-btn');
+                if (btns[idx]) btns[idx].click();
+            }
+            if (e.key.toLowerCase() === 'h') showHint();
+        });
+    </script>
+</body>
+</html>
