@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tecnicas de Descarte Visual - ICFES SABER PRO</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{
+            --verde-oscuro:#0d2818;--verde-medio:#1a3d2a;--dorado:#d4af37;--dorado-claro:#f4e4bc;
+            --verde-tenue:#e8f5e9;--crema:#faf6f0;--blanco:#ffffff;--gris-texto:#424242;
+            --sombra:0 10px 30px rgba(0,0,0,.1);--sombra-suave:0 5px 15px rgba(0,0,0,.08);
+            --rojo-error:#e74c3c;--verde-acierto:#2ecc71;--azul-magico:#3498db;
+            --morado-magico:#9b59b6;--naranja:#f39c12;--cian:#00bcd4;
+            --rosa:#e91e63;--amarillo:#ffeb3b;
+            --naranja-oscuro:#e67e22;--naranja-claro:#fdebd0;
+            --verde-oscuro-accent:#1b5e20;
+        }
+        html,body{width:100%;height:100%;overflow-x:hidden}
+        body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(135deg,var(--crema) 0%,#f5efe6 100%);min-height:100vh;display:flex;flex-direction:column;position:relative}
+        body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background-image:radial-gradient(circle at 20% 80%,rgba(212,175,55,.05) 0%,transparent 50%),radial-gradient(circle at 80% 20%,rgba(13,40,24,.05) 0%,transparent 50%);pointer-events:none;z-index:1}
+
+        .header{background:linear-gradient(135deg,var(--verde-oscuro) 0%,var(--verde-medio) 100%);color:var(--dorado);padding:1.5rem 2rem;box-shadow:0 5px 20px rgba(13,40,24,.3);display:flex;justify-content:space-between;align-items:center;position:relative;z-index:100;backdrop-filter:blur(10px);width:100%}
+        .header::after{content:'';position:absolute;bottom:0;left:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--dorado),transparent);animation:shimmer 3s infinite}
+        @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+        .header h1{font-size:1.8rem;font-weight:700;letter-spacing:.5px;text-shadow:2px 2px 4px rgba(0,0,0,.3)}
+        .header-actions{display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
+        .back-button,.reset-button{background:linear-gradient(135deg,var(--dorado),var(--dorado-claro));color:var(--verde-oscuro);border:none;padding:.8rem 1.8rem;border-radius:30px;cursor:pointer;font-weight:600;transition:all .3s cubic-bezier(.4,0,.2,1);text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;box-shadow:0 4px 15px rgba(212,175,55,.3);font-size:.9rem;touch-action:manipulation}
+        .back-button:hover,.reset-button:hover{transform:translateY(-2px) scale(1.05);box-shadow:0 6px 25px rgba(212,175,55,.4)}
+        .reset-button{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff}
+
+        .main-container{flex:1;display:flex;width:100%;max-width:100%;margin:0;padding:2rem;gap:2rem;position:relative;z-index:10;min-height:calc(100vh - 120px)}
+        .content-card{background:rgba(255,255,255,.95);border-radius:24px;box-shadow:var(--sombra);display:flex;width:100%;min-height:100%;overflow:hidden;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.5);position:relative}
+        .content-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--dorado),transparent);opacity:.5}
+
+        .sidebar-toggle{position:absolute;left:20px;top:50%;transform:translateY(-50%);background:linear-gradient(135deg,var(--dorado),var(--dorado-claro));color:var(--verde-oscuro);width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 15px rgba(212,175,55,.3);transition:all .3s ease;z-index:60;font-size:1.2rem;touch-action:manipulation;border:none}
+        .sidebar-toggle:hover{transform:translateY(-50%) scale(1.1);box-shadow:0 6px 20px rgba(212,175,55,.4)}
+
+        .sidebar{width:30%;min-width:280px;background:linear-gradient(180deg,rgba(232,245,233,.8) 0%,rgba(200,230,201,.8) 100%);padding:2rem 1rem;overflow-y:auto;border-right:1px solid rgba(13,40,24,.1);backdrop-filter:blur(5px);transition:transform .3s ease,opacity .3s ease;flex-shrink:0}
+        .sidebar.hidden{transform:translateX(-100%);opacity:0;position:absolute;height:100%;z-index:50}
+        .sidebar::-webkit-scrollbar{width:6px}
+        .sidebar::-webkit-scrollbar-track{background:rgba(13,40,24,.05);border-radius:10px}
+        .sidebar::-webkit-scrollbar-thumb{background:var(--dorado);border-radius:10px}
+
+        .menu-section{margin-bottom:2rem}
+        .menu-section h3{color:var(--verde-oscuro);font-size:.85rem;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:1rem;padding-left:1rem;font-weight:700;display:flex;align-items:center;gap:.5rem}
+        .menu-section h3 i{font-size:.9rem;color:var(--dorado)}
+
+        .menu-item{display:flex;align-items:center;padding:1rem 1.2rem;margin:.4rem 0;border-radius:12px;cursor:pointer;transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;color:var(--gris-texto);font-weight:500;overflow:hidden;text-decoration:none;touch-action:manipulation;min-height:50px;font-size:.92rem}
+        .menu-item::before{content:'';position:absolute;left:0;top:0;height:100%;width:0;background:linear-gradient(90deg,var(--dorado),transparent);transition:width .3s ease;opacity:.1}
+        .menu-item:hover::before{width:100%}
+        .menu-item:hover{background:rgba(212,175,55,.1);transform:translateX(8px);color:var(--verde-oscuro);text-decoration:none}
+        .menu-item.active{background:linear-gradient(135deg,rgba(212,175,55,.15),rgba(212,175,55,.05));border-left:4px solid var(--dorado);color:var(--verde-oscuro);font-weight:600;box-shadow:0 2px 10px rgba(212,175,55,.2)}
+        .menu-item.completed{position:relative;background:linear-gradient(135deg,rgba(46,204,113,.1),rgba(46,204,113,.05))}
+        .menu-item.completed::after{content:'\f00c';font-family:'Font Awesome 6 Free';font-weight:900;color:var(--dorado);margin-left:auto;font-size:1rem;animation:checkmark .3s ease}
+        @keyframes checkmark{0%{transform:scale(0) rotate(-45deg)}50%{transform:scale(1.2) rotate(10deg)}100%{transform:scale(1) rotate(0deg)}}
+        .menu-item.locked{opacity:.5;cursor:not-allowed;background:rgba(0,0,0,.05)}
+        .menu-item.locked::before{content:'\f023';font-family:'Font Awesome 6 Free';font-weight:900;margin-right:.5rem;color:var(--gris-texto)}
+        @keyframes unlock{0%{transform:scale(.8);opacity:.5}50%{transform:scale(1.1);opacity:.8}100%{transform:scale(1);opacity:1}}
+        .menu-item.unlocking{animation:unlock .6s ease}
+
+        .energy-bar-container{margin-top:1.5rem;padding:1rem;background:rgba(255,255,255,.7);border-radius:12px;box-shadow:var(--sombra-suave)}
+        .energy-label{font-size:.85rem;color:var(--verde-oscuro);margin-bottom:.8rem;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+        .energy-bar{height:10px;background:rgba(13,40,24,.1);border-radius:20px;overflow:hidden;position:relative}
+        .energy-fill{height:100%;background:linear-gradient(90deg,var(--dorado),#f4e4bc);width:0%;transition:width .8s cubic-bezier(.4,0,.2,1);border-radius:20px;position:relative;overflow:hidden}
+        .energy-fill::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);animation:energyShimmer 2s infinite}
+        @keyframes energyShimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+        /* Barra de puntaje Firebase */
+        .score-bar-container{margin-top:1rem;padding:1rem;background:rgba(255,255,255,.7);border-radius:12px;box-shadow:var(--sombra-suave)}
+        .score-bar-label{font-size:.82rem;color:var(--verde-oscuro);margin-bottom:.6rem;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+        .score-bar{height:10px;background:rgba(13,40,24,.1);border-radius:20px;overflow:hidden}
+        .score-bar-fill{height:100%;background:linear-gradient(90deg,var(--naranja),var(--dorado));width:0%;transition:width .8s cubic-bezier(.4,0,.2,1);border-radius:20px;position:relative;overflow:hidden}
+        .score-bar-fill::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);animation:energyShimmer 2s infinite}
+
+        /* Requisito de desbloqueo */
+        .req-info{font-size:.78rem;color:var(--gris-texto);padding:.3rem 1rem .5rem;display:flex;align-items:center;gap:.4rem;font-style:italic}
+        .req-info.unlocked{color:var(--verde-acierto);font-style:normal;font-weight:600}
+        .req-info i{font-size:.75rem}
+
+        .content-area{flex:1;padding:2.5rem;overflow-y:auto;position:relative;transition:all .3s ease;min-width:0}
+        .content-area.expanded{margin-left:0}
+        .content-area::-webkit-scrollbar{width:8px}
+        .content-area::-webkit-scrollbar-track{background:rgba(13,40,24,.05);border-radius:10px}
+        .content-area::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--dorado),var(--verde-medio));border-radius:10px}
+
+        /* ===== CONTENIDO: DESCARTE VISUAL ===== */
+        .hero-banner{background:linear-gradient(135deg,var(--naranja-oscuro),var(--naranja));border-radius:20px;padding:3rem;margin-bottom:3rem;position:relative;overflow:hidden;color:var(--blanco);text-align:center}
+        .hero-banner::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle,rgba(255,255,255,.08) 0%,transparent 70%);animation:rotate 30s linear infinite}
+        @keyframes rotate{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+        .hero-banner::after{content:'';position:absolute;bottom:0;left:0;width:100%;height:3px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent)}
+        .hero-title{font-size:2.4rem;font-weight:800;margin-bottom:1rem;position:relative;z-index:1}
+        .hero-subtitle{font-size:1.12rem;max-width:780px;margin:0 auto;line-height:1.7;position:relative;z-index:1;opacity:.93}
+
+        .section-title{color:var(--verde-oscuro);font-size:1.8rem;margin-bottom:1rem;display:flex;align-items:center;gap:.6rem}
+        .section-title i{color:var(--naranja)}
+        .section-desc{color:var(--gris-texto);line-height:1.7;margin-bottom:2rem;max-width:850px;font-size:1rem}
+
+        /* Fases */
+        .phases-intro{background:linear-gradient(135deg,rgba(243,156,18,.08),rgba(230,126,34,.08));border-radius:16px;padding:1.8rem 2rem;margin-bottom:3rem;border-left:5px solid var(--naranja)}
+        .phases-intro h3{color:var(--verde-oscuro);margin-bottom:.8rem;font-size:1.15rem;display:flex;align-items:center;gap:.5rem}
+        .phases-intro h3 i{color:var(--naranja)}
+        .phases-intro p{color:var(--gris-texto);line-height:1.7;font-size:.95rem}
+        .phase-flow{display:flex;gap:.5rem;margin-top:1.2rem;align-items:center;flex-wrap:wrap}
+        .phase-chip{background:var(--blanco);border:2px solid var(--naranja);color:var(--naranja-oscuro);padding:.5rem 1.2rem;border-radius:25px;font-weight:600;font-size:.88rem;display:flex;align-items:center;gap:.4rem}
+        .phase-chip i{font-size:.8rem}
+        .phase-arrow{color:var(--naranja);font-size:1.2rem;font-weight:700}
+        .phase-chip.active-phase{background:linear-gradient(135deg,var(--naranja),var(--naranja-oscuro));color:#fff;border-color:transparent}
+
+        /* Tarjetas de tecnica */
+        .techniques-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.8rem;margin-bottom:3rem}
+        .tech-card{background:var(--blanco);border-radius:18px;padding:2rem;box-shadow:var(--sombra-suave);transition:all .3s ease;position:relative;overflow:hidden;border-top:4px solid var(--naranja)}
+        .tech-card:hover{transform:translateY(-5px);box-shadow:var(--sombra)}
+        .tech-card-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.2rem}
+        .tech-icon{width:55px;height:55px;background:linear-gradient(135deg,var(--naranja),var(--naranja-oscuro));border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.4rem;flex-shrink:0}
+        .tech-card-header h3{color:var(--verde-oscuro);font-size:1.1rem;font-weight:700;line-height:1.3}
+        .tech-card p{color:var(--gris-texto);line-height:1.6;font-size:.93rem;margin-bottom:1rem}
+        .tech-example{background:var(--naranja-claro);border-radius:10px;padding:1rem;margin-bottom:.8rem}
+        .tech-example-label{font-size:.78rem;color:var(--naranja-oscuro);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem}
+        .tech-example-problem{font-family:'Courier New',monospace;font-size:.95rem;color:var(--verde-oscuro);font-weight:600;margin-bottom:.5rem}
+        .tech-example-discard{font-size:.88rem;color:var(--rojo-error);line-height:1.5}
+        .tech-example-discard i{margin-right:.3rem}
+        .tech-example-keep{font-size:.88rem;color:var(--verde-acierto);line-height:1.5}
+        .tech-example-keep i{margin-right:.3rem}
+        .tech-speed{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--naranja-oscuro);font-weight:600;background:rgba(243,156,18,.1);padding:.3rem .7rem;border-radius:20px}
+        .tech-speed i{font-size:.7rem}
+
+        /* Seccion de combinacion */
+        .combo-section{background:linear-gradient(135deg,rgba(231,76,60,.06),rgba(192,57,43,.06));border-radius:20px;padding:2.5rem;margin-bottom:3rem}
+        .combo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem}
+        .combo-card{background:var(--blanco);border-radius:14px;padding:1.5rem;box-shadow:var(--sombra-suave);border-left:5px solid var(--rosa);transition:all .3s ease}
+        .combo-card:hover{transform:translateY(-3px);box-shadow:var(--sombra)}
+        .combo-card h4{color:var(--verde-oscuro);margin-bottom:.7rem;font-size:1.05rem;display:flex;align-items:center;gap:.5rem}
+        .combo-card h4 i{color:var(--rosa);font-size:.9rem}
+        .combo-card p{color:var(--gris-texto);line-height:1.6;font-size:.9rem}
+        .combo-demo{background:var(--verde-tenue);border-radius:8px;padding:.8rem;margin-top:.8rem;font-size:.88rem;color:var(--verde-oscuro);line-height:1.6}
+        .combo-demo strong{color:var(--naranja-oscuro)}
+
+        /* ===== ARENA INTERACTIVA ===== */
+        .practice-tool{background:linear-gradient(135deg,rgba(243,156,18,.08),rgba(230,126,34,.06));border-radius:20px;padding:2.5rem;margin-bottom:3rem}
+        .tool-header{text-align:center;margin-bottom:2rem}
+        .tool-title{color:var(--verde-oscuro);font-size:1.8rem;margin-bottom:.6rem;display:flex;align-items:center;justify-content:center;gap:.6rem}
+        .tool-title i{color:var(--naranja)}
+        .tool-subtitle{color:var(--gris-texto);font-size:.95rem}
+
+        .practice-levels{display:flex;justify-content:center;gap:1rem;margin-bottom:2rem;flex-wrap:wrap}
+        .level-btn{background:var(--blanco);border:2px solid var(--naranja);color:var(--naranja);padding:.7rem 1.4rem;border-radius:25px;cursor:pointer;font-weight:600;font-size:.95rem;transition:all .3s ease;font-family:inherit}
+        .level-btn:hover,.level-btn.active{background:linear-gradient(135deg,var(--naranja),var(--naranja-oscuro));color:#fff;transform:translateY(-2px);box-shadow:0 5px 15px rgba(243,156,18,.4)}
+
+        .practice-interface{background:var(--blanco);border-radius:16px;padding:2rem;box-shadow:var(--sombra-suave)}
+        .problem-context{color:var(--gris-texto);font-size:.95rem;text-align:center;margin-bottom:.5rem;font-style:italic;line-height:1.5}
+        .problem-display{background:var(--naranja-claro);padding:1.5rem;border-radius:12px;text-align:center;font-family:'Courier New',monospace;font-size:1.3rem;font-weight:700;color:var(--verde-oscuro);margin-bottom:.5rem;min-height:60px;display:flex;align-items:center;justify-content:center;letter-spacing:.5px}
+        .discard-hint{font-size:.85rem;color:var(--naranja-oscuro);text-align:center;margin-bottom:1.5rem;font-weight:500;min-height:20px}
+
+        .options-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;max-width:650px;margin:0 auto 1.5rem}
+        .option-btn{background:var(--blanco);border:2px solid #ddd;color:var(--verde-oscuro);padding:1rem 1.2rem;border-radius:12px;cursor:pointer;font-weight:600;font-size:1rem;transition:all .3s ease;display:flex;align-items:center;gap:.8rem;font-family:inherit}
+        .option-btn:hover:not(.disabled){border-color:var(--naranja);background:rgba(243,156,18,.05);transform:translateY(-2px);box-shadow:var(--sombra-suave)}
+        .option-letter{width:34px;height:34px;background:var(--naranja-claro);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--naranja-oscuro);flex-shrink:0;transition:all .3s ease}
+        .option-btn:hover:not(.disabled) .option-letter{background:var(--naranja);color:#fff}
+        .option-btn.correct{border-color:var(--verde-acierto);background:rgba(46,204,113,.1);animation:correctPulse .5s ease}
+        .option-btn.correct .option-letter{background:var(--verde-acierto);color:#fff}
+        .option-btn.incorrect{border-color:var(--rojo-error);background:rgba(231,76,60,.1);animation:shake .4s ease}
+        .option-btn.incorrect .option-letter{background:var(--rojo-error);color:#fff}
+        .option-btn.discarded{border-color:#ccc;background:rgba(0,0,0,.03);opacity:.35;pointer-events:none}
+        .option-btn.discarded .option-letter{background:#ccc;color:#999}
+        .option-btn.disabled{cursor:default;opacity:.7}
+        .option-btn.disabled:not(.correct):not(.incorrect):not(.discarded){opacity:.4}
+        @keyframes correctPulse{0%{transform:scale(1)}50%{transform:scale(1.03)}100%{transform:scale(1)}}
+        @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+        .practice-actions{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-bottom:1.5rem}
+        .practice-btn{background:linear-gradient(135deg,var(--naranja),var(--naranja-oscuro));color:#fff;border:none;padding:.7rem 1.4rem;border-radius:25px;cursor:pointer;font-weight:600;font-size:.95rem;transition:all .3s ease;display:inline-flex;align-items:center;gap:.5rem;font-family:inherit}
+        .practice-btn:hover{transform:translateY(-2px);box-shadow:0 5px 15px rgba(243,156,18,.4)}
+        .practice-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+        .practice-btn.secondary{background:var(--blanco);color:var(--naranja);border:2px solid var(--naranja)}
+        .practice-btn.secondary:hover{background:rgba(243,156,18,.05)}
+        .practice-btn.discard-btn{background:linear-gradient(135deg,var(--rojo-error),#c0392b);border:none;color:#fff}
+        .practice-btn.discard-btn:hover{box-shadow:0 5px 15px rgba(231,76,60,.4)}
+
+        /* Panel de analisis */
+        .analysis-panel{background:linear-gradient(135deg,rgba(243,156,18,.06),rgba(230,126,34,.04));border-radius:14px;padding:1.5rem;margin-top:1rem;display:none;animation:slideUp .4s ease;border:1px solid rgba(243,156,18,.12)}
+        .analysis-panel.show{display:block}
+        @keyframes slideUp{0%{opacity:0;transform:translateY(10px)}100%{opacity:1;transform:translateY(0)}}
+        .analysis-title{color:var(--naranja-oscuro);font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;font-size:1.05rem}
+        .analysis-step{display:flex;align-items:flex-start;gap:.8rem;margin-bottom:.7rem;padding:.5rem 0;opacity:0;animation:fadeInStep .3s ease forwards}
+        .analysis-step:nth-child(2){animation-delay:.1s}
+        .analysis-step:nth-child(3){animation-delay:.25s}
+        .analysis-step:nth-child(4){animation-delay:.4s}
+        .analysis-step:nth-child(5){animation-delay:.55s}
+        .analysis-step:nth-child(6){animation-delay:.7s}
+        .analysis-step:nth-child(7){animation-delay:.85s}
+        @keyframes fadeInStep{0%{opacity:0;transform:translateX(-10px)}100%{opacity:1;transform:translateX(0)}}
+        .step-num{width:28px;height:28px;background:var(--naranja);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.8rem;flex-shrink:0}
+        .step-text{color:var(--gris-texto);line-height:1.5;font-size:.9rem;padding-top:3px}
+        .step-text strong{color:var(--naranja-oscuro)}
+        .step-text .discard-mark{color:var(--rojo-error);font-weight:700;text-decoration:line-through}
+        .step-text .keep-mark{color:var(--verde-acierto);font-weight:700}
+        .step-result{background:var(--verde-tenue);padding:.6rem 1rem;border-radius:8px;margin-top:.5rem;font-family:'Courier New',monospace;font-weight:700;color:var(--verde-acierto);font-size:1rem;text-align:center}
+        .step-exact{color:var(--gris-texto);text-align:center;margin-top:.5rem;font-size:.9rem}
+        .step-exact strong{color:var(--naranja-oscuro)}
+
+        .score-bar-bottom{display:flex;justify-content:space-around;align-items:center;padding:1rem;background:var(--dorado-claro);border-radius:12px;margin-top:1.5rem;flex-wrap:wrap;gap:.8rem}
+        .score-item{text-align:center}
+        .score-item .score-label{font-size:.78rem;color:var(--verde-oscuro);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+        .score-item .score-value{font-size:1.3rem;font-weight:800;color:var(--dorado)}
+        .score-item .score-value.streak{color:var(--rosa)}
+        .score-item .score-value.discards{color:var(--naranja-oscuro)}
+
+        /* Ejemplos ICFES */
+        .icfes-section{background:linear-gradient(135deg,rgba(46,204,113,.08),rgba(39,174,96,.08));border-radius:20px;padding:2.5rem;margin-bottom:3rem}
+        .icfes-header{text-align:center;margin-bottom:2rem}
+        .icfes-examples{display:grid;gap:1.5rem}
+        .icfes-example{background:var(--blanco);border-radius:16px;padding:2rem;box-shadow:var(--sombra-suave);border-left:5px solid var(--verde-acierto);transition:all .3s ease}
+        .icfes-example:hover{transform:translateY(-3px);box-shadow:var(--sombra)}
+        .icfes-question{color:var(--verde-oscuro);font-weight:600;margin-bottom:1.2rem;line-height:1.6;font-size:1rem}
+        .icfes-options-row{display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1.2rem}
+        .icfes-opt{background:var(--verde-tenue);padding:.4rem .8rem;border-radius:8px;font-family:'Courier New',monospace;font-weight:600;color:var(--verde-oscuro);font-size:.88rem;transition:all .3s ease;position:relative}
+        .icfes-opt.highlight{background:var(--verde-acierto);color:#fff;transform:scale(1.05)}
+        .icfes-opt.crossed{background:rgba(231,76,60,.1);color:var(--rojo-error);text-decoration:line-through;opacity:.7}
+        .icfes-opt .reason{display:block;font-size:.7rem;font-family:'Inter',sans-serif;font-weight:500;margin-top:.2rem;text-decoration:none;opacity:.8}
+        .icfes-solution{background:rgba(243,156,18,.06);border-radius:10px;padding:1rem;border-left:4px solid var(--naranja)}
+        .icfes-solution h5{color:var(--naranja-oscuro);font-size:.9rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.4rem}
+        .icfes-solution p{color:var(--gris-texto);font-size:.88rem;line-height:1.6}
+        .icfes-solution strong{color:var(--verde-acierto)}
+        .icfes-solution .discard-reason{color:var(--rojo-error);font-weight:600}
+
+        /* Advertencia final */
+        .warning-section{background:linear-gradient(135deg,rgba(231,76,60,.06),rgba(192,57,43,.06));border-radius:20px;padding:2.5rem;margin-bottom:3rem}
+        .warning-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem}
+        .warning-card{background:var(--blanco);border-radius:14px;padding:1.5rem;box-shadow:var(--sombra-suave);border-top:4px solid var(--rojo-error);transition:all .3s ease}
+        .warning-card:hover{transform:translateY(-3px);box-shadow:var(--sombra)}
+        .warning-card .w-icon{color:var(--rojo-error);font-size:1.3rem;margin-bottom:.8rem}
+        .warning-card h4{color:var(--verde-oscuro);margin-bottom:.5rem;font-size:1.05rem}
+        .warning-card p{color:var(--gris-texto);line-height:1.5;font-size:.9rem}
+        .w-fix{background:rgba(46,204,113,.08);padding:.6rem .8rem;border-radius:8px;margin-top:.7rem;font-size:.85rem;color:var(--verde-oscuro);border-left:3px solid var(--verde-acierto)}
+
+        /* Boton flotante */
+        .floating-button{position:fixed;bottom:2rem;right:2rem;background:linear-gradient(135deg,var(--dorado),var(--dorado-claro));color:var(--verde-oscuro);width:65px;height:65px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 30px rgba(212,175,55,.4);transition:all .3s cubic-bezier(.4,0,.2,1);z-index:1000;font-size:1.5rem;touch-action:manipulation;border:none}
+        .floating-button:hover{transform:scale(1.1) rotate(10deg);box-shadow:0 15px 40px rgba(212,175,55,.5)}
+
+        /* Modal */
+        .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);backdrop-filter:blur(5px);z-index:2000;align-items:center;justify-content:center}
+        .modal.active{display:flex}
+        .modal-content{background:linear-gradient(135deg,var(--blanco),rgba(255,255,255,.95));border-radius:24px;padding:2.5rem;max-width:700px;width:90%;max-height:85vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+        .modal-content::-webkit-scrollbar{width:6px}
+        .modal-content::-webkit-scrollbar-thumb{background:var(--naranja);border-radius:10px}
+        .close-modal{position:absolute;top:1.5rem;right:1.5rem;background:rgba(13,40,24,.1);border:none;width:40px;height:40px;border-radius:50%;font-size:1.2rem;cursor:pointer;color:var(--gris-texto);transition:all .3s ease;display:flex;align-items:center;justify-content:center}
+        .close-modal:hover{background:var(--dorado);color:#fff;transform:rotate(90deg)}
+        .cheat-sheet h3{color:var(--verde-oscuro);margin-bottom:2rem;text-align:center;font-size:1.6rem}
+        .rule-section{margin-bottom:1.5rem;padding:1.2rem;background:linear-gradient(135deg,var(--naranja-claro),rgba(253,235,208,.5));border-radius:12px;border-left:4px solid var(--naranja);transition:all .3s ease}
+        .rule-section:hover{transform:translateX(5px);box-shadow:var(--sombra-suave)}
+        .rule-section h4{color:var(--verde-oscuro);margin-bottom:.8rem;font-size:1.05rem;display:flex;align-items:center;gap:.5rem}
+        .rule-section h4 i{color:var(--naranja)}
+        .rule-section p,.rule-section ul{color:var(--gris-texto);line-height:1.6;font-size:.88rem}
+        .rule-section ul{padding-left:1.2rem;margin-top:.3rem}
+        .rule-section li{margin-bottom:.3rem}
+        .quick-table{width:100%;border-collapse:collapse;margin-top:.8rem;font-size:.88rem}
+        .quick-table th{background:var(--naranja);color:#fff;padding:.5rem .7rem;text-align:left;font-weight:600;font-size:.82rem}
+        .quick-table td{padding:.45rem .7rem;border-bottom:1px solid rgba(243,156,18,.12);color:var(--gris-texto);font-size:.85rem}
+        .quick-table tr:hover td{background:rgba(243,156,18,.05)}
+
+        /* Notificacion */
+        .notification{position:fixed;top:120px;right:-400px;background:linear-gradient(135deg,var(--dorado),var(--dorado-claro));color:var(--verde-oscuro);padding:1.2rem 1.8rem;border-radius:12px;box-shadow:0 10px 30px rgba(212,175,55,.4);z-index:3000;display:flex;align-items:center;gap:1rem;transition:right .5s cubic-bezier(.4,0,.2,1);max-width:350px}
+        .notification.show{right:20px}
+        .notification i{font-size:1.5rem}
+        .notification-content{flex:1}
+        .notification-title{font-weight:700;margin-bottom:.2rem}
+        .notification-message{font-size:.9rem;opacity:.9}
+
+        /* Responsive */
+        @media(max-width:768px){
+            .main-container{flex-direction:column;padding:1rem}
+            .content-card{flex-direction:column}
+            .sidebar{width:100%;border-right:none;border-bottom:1px solid rgba(13,40,24,.1);position:relative;transform:none;opacity:1}
+            .sidebar.hidden{display:none}
+            .content-area{width:100%;padding:1.5rem}
+            .hero-title{font-size:1.7rem}
+            .header h1{font-size:1.3rem}
+            .header{padding:1rem;flex-direction:column;gap:.8rem}
+            .header-actions{width:100%;justify-content:center}
+            .options-grid{grid-template-columns:1fr}
+            .score-bar-bottom{flex-direction:column}
+            .techniques-grid{grid-template-columns:1fr}
+            .phase-flow{justify-content:center}
+        }
+        @media(min-width:769px){.sidebar-toggle{display:flex}}
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1><i class="fas fa-graduation-cap"></i> OPERACIONES BASICAS</h1>
+        <div class="header-actions">
+            <a href="RCDASHBOARD.html" class="back-button"><i class="fas fa-arrow-left"></i> Volver al Dashboard</a>
+            <button class="reset-button" onclick="resetProgress()"><i class="fas fa-redo"></i> Reiniciar Progreso</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="content-card">
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar"><i class="fas fa-bars"></i></button>
+
+            <!-- ===== BARRA LATERAL ===== -->
+            <aside class="sidebar" id="sidebar">
+                <div class="menu-section">
+                    <h3><i class="fas fa-book-open"></i> Introduccion y Contexto</h3>
+                    <a href="RCDD1.html" class="menu-item completed" data-content="RCDD1">Por que la aritmetica define tu puntaje en el ICFES?</a>
+                    <a href="RCDD2.html" class="menu-item completed" data-content="RCDD2">Analisis de distractores comunes en pruebas de estado</a>
+                </div>
+                <div class="menu-section">
+                    <h3><i class="fas fa-calculator"></i> Sistemas Numericos y Signos</h3>
+                    <a href="RCDD3.html" class="menu-item completed" data-content="RCDD3">Operaciones con Numeros Enteros (Z)</a>
+                    <a href="RCDD4.html" class="menu-item completed" data-content="RCDD4">Dominio de la Ley de Signos en estructuras complejas</a>
+                </div>
+                <div class="menu-section">
+                    <h3><i class="fas fa-bolt"></i> Propiedades que Ahorran Tiempo</h3>
+                    <a href="RCDD5.html" class="menu-item completed" data-content="RCDD5">Propiedad Distributiva (El arte de simplificar)</a>
+                    <a href="RCDD6.html" class="menu-item completed" data-content="RCDD6">Factorizacion basica aplicada a la aritmetica</a>
+                </div>
+                <div class="menu-section">
+                    <h3><i class="fas fa-brain"></i> Estimacion y Aproximacion</h3>
+                    <a href="RCDD7.html" class="menu-item completed" data-content="RCDD7">Calculo mental de redondeo</a>
+                    <a href="RCDD8.html" class="menu-item active" data-content="RCDD8">Tecnicas de descarte visual</a>
+                </div>
+                <div class="menu-section">
+                    <h3><i class="fas fa-tasks"></i> Entrenamiento de Practica</h3>
+                    <a href="RCDD9.html" class="menu-item" data-content="RCDD9" data-quiz="1">Cuestionario 1: Precision y Signos (Nivel Basico)</a>
+                    <a href="RCDD10.html" class="menu-item locked" data-content="RCDD10" data-quiz="2">Cuestionario 2: Problemas de Contexto Real (Nivel Intermedio)</a>
+                    <div class="req-info" id="reqQ2Info"><i class="fas fa-lock"></i> <span>Requiere Q1 >= 150 pts <span id="reqQ2Score">(0 / 150)</span></span></div>
+                    <a href="RCDD11.html" class="menu-item locked" data-content="RCDD11" data-quiz="3">Cuestionario 3: Desafio Saber Pro (Nivel Avanzado)</a>
+                    <div class="req-info" id="reqQ3Info"><i class="fas fa-lock"></i> <span>Requiere Total >= 180 pts</span></div>
+
+                    <div class="energy-bar-container">
+                        <div class="energy-label">
+                            <span><i class="fas fa-fire"></i> Nivel de Energia</span>
+                            <span class="progress-indicator" id="energyPercentage">58%</span>
+                        </div>
+                        <div class="energy-bar">
+                            <div class="energy-fill" id="energyFill"></div>
+                        </div>
+                    </div>
+                    <div class="score-bar-container">
+                        <div class="score-bar-label">
+                            <span><i class="fas fa-trophy"></i> Puntaje Acumulado</span>
+                            <span id="scoreText">0 / 180 pts</span>
+                        </div>
+                        <div class="score-bar">
+                            <div class="score-bar-fill" id="scoreFill"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="menu-section">
+                    <h3><i class="fas fa-flag-checkered"></i> Cierre de Modulo</h3>
+                    <a href="RCDD12.html" class="menu-item locked" data-content="RCDD12" data-final="true">Evaluacion de salida</a>
+                    <div class="req-info" id="reqFinalInfo"><i class="fas fa-lock"></i> <span>Requiere Total >= 180 pts</span></div>
+                </div>
+            </aside>
+
+            <!-- ===== AREA DE CONTENIDO ===== -->
+            <main class="content-area" id="contentArea">
+                <section class="hero-banner">
+                    <h1 class="hero-title"><i class="fas fa-eye"></i> Tecnicas de Descarte Visual</h1>
+                    <p class="hero-subtitle">
+                        Antes de calcular nada, tus ojos ya pueden eliminar opciones. El descarte visual es la primera linea de ataque:
+                        observa, analiza propiedades de los numeros y elimina sin hacer una sola operacion. En el ICFES, descartar 2 de 4 opciones
+                        ya te da el 50% de probabilidad de acierto.
+                    </p>
+                </section>
+
+                <!-- Flujo de descarte -->
+                <div class="phases-intro">
+                    <h3><i class="fas fa-route"></i> El Flujo de Descarte en el ICFES</h3>
+                    <p>Cada pregunta sigue este orden. Nunca empieces calculando de inmediato. Primero observa, luego elimina, y solo al final calcula lo minimo necesario.</p>
+                    <div class="phase-flow">
+                        <span class="phase-chip"><i class="fas fa-eye"></i> Observar opciones</span>
+                        <span class="phase-arrow">\u2192</span>
+                        <span class="phase-chip"><i class="fas fa-cut"></i> Descartar por propiedad</span>
+                        <span class="phase-arrow">\u2192</span>
+                        <span class="phase-chip"><i class="fas fa-compress-arrows-alt"></i> Quedan 2 opciones</span>
+                        <span class="phase-arrow">\u2192</span>
+                        <span class="phase-chip active-phase"><i class="fas fa-calculator"></i> Calculo minimo</span>
+                        <span class="phase-arrow">\u2192</span>
+                        <span class="phase-chip"><i class="fas fa-check-circle"></i> Respuesta</span>
+                    </div>
+                </div>
+
+                <!-- 6 Tecnicas principales -->
+                <h2 class="section-title"><i class="fas fa-toolbox"></i> Las 6 Tecnicas de Descarte Visual</h2>
+                <p class="section-desc">Cada tecnica detecta una propiedad observable sin calculo. Aplicalas en orden hasta que solo quede una opcion.</p>
+
+                <div class="techniques-grid">
+                    <!-- Tecnica 1: Paridad -->
+                    <div class="tech-card">
+                        <div class="tech-card-header">
+                            <div class="tech-icon"><i class="fas fa-divide"></i></div>
+                            <h3>1. Paridad (Par / Impar)</h3>
+                        </div>
+                        <p>Si todos los operandos son pares, el resultado es par. Si hay al menos un impar en una multiplicacion, el resultado es impar. Esto elimina opciones al instante.</p>
+                        <div class="tech-example">
+                            <div class="tech-example-label">Ejemplo</div>
+                            <div class="tech-example-problem">246 \u00D7 18 = ?</div>
+                            <div class="tech-example-discard"><i class="fas fa-times"></i> Descarto opciones impares: ambas son pares, resultado debe ser par</div>
+                            <div class="tech-example-keep"><i class="fas fa-check"></i> Me quedo solo con opciones pares (elimino 2 de 4 normalmente)</div>
+                        </div>
+                        <span class="tech-speed"><i class="fas fa-bolt"></i> 2 segundos</span>
+                    </div>
+
+                    <!-- Tecnica 2: Ultimo digito -->
+                    <div class="tech-card">
+                        <div class="tech-card-header">
+                            <div class="tech-icon"><i class="fas fa-fingerprint"></i></div>
+                            <h3>2. Ultimo Digito</h3>
+                        </div>
+                        <p>Multiplica solo las unidades: el ultimo digito del resultado esta determinado por los ultimos digitos de los factores. No necesitas calcular todo.</p>
+                        <div class="tech-example">
+                            <div class="tech-example-label">Ejemplo</div>
+                            <div class="tech-example-problem">127 \u00D7 43 = ?</div>
+                            <div class="tech-example-discard"><i class="fas fa-times"></i> Ultimo digito: 7 \u00D7 3 = 21 \u2192 termina en 1. Descarto todo lo que no termine en 1</div>
+                            <div class="tech-example-keep"><i class="fas fa-check"></i> Solo la opcion que termina en 1 puede ser correcta</div>
+                        </div>
+                        <span class="tech-speed"><i class="fas fa-bolt"></i> 3 segundos</span>
+                    </div>
+
+                    <!-- Tecnica 3: Magnitud -->
+                    <div class="tech-card">
+                        <div class="tech-card-header">
+                            <div class="tech-icon"><i class="fas fa-ruler-vertical"></i></div>
+                            <h3>3. Magnitud (Orden de Tamano)</h3>
+                        </div>
+                        <p>Redondea cada numero a 1 solo digito significativo y multiplica. El resultado te da el orden de magnitud correcto. Descarta opciones que estan en otro orden.</p>
+                        <div class="tech-example">
+                            <div class="tech-example-label">Ejemplo</div>
+                            <div class="tech-example-problem">3,487 \u00D7 28 = ?</div>
+                            <div class="tech-example-discard"><i class="fas fa-times"></i> 3,000 \u00D7 30 = 90,000. Descarto opciones menores a 50,000 o mayores a 150,000</div>
+                            <div class="tech-example-keep"><i class="fas fa-check"></i> Solo opciones cercanas a 90,000 sobreviven</div>
+                        </div>
+                        <span class="tech-speed"><i class="fas fa-bolt"></i> 4 segundos</span>
+                    </div>
+
+                    <!-- Tecnica 4: Signo -->
+                    <div class="tech-card">
+                        <div class="tech-card-header">
+                            <div class="tech-icon"><i class="fas fa-plus-minus"></i></div>
+                            <h3>4. Analisis de Signo</h3>
+                        </div>
+                        <p>Cuenta los factores negativos. Par de negativos = positivo. Impar de negativos = negativo. Si hay una suma con negativos, analiza si el resultado puede ser positivo o negativo.</p>
+                        <div class="tech-example">
+                            <div class="tech-example-label">Ejemplo</div>
+                            <div class="tech-example-problem">(-3) \u00D7 (-7) \u00D7 (-2) = ?</div>
+                            <div class="tech-example-discard"><i class="fas fa-times"></i> 3 negativos (impar) = resultado negativo. Descarto todas las opciones positivas</div>
+                            <div class="tech-example-keep"><i class="fas fa-check"></i> Solo quedan opciones negativas</div>
+                        </div>
+                        <span class="tech-speed"><i class="fas fa-bolt"></i> 1 segundo</span>
+                    </div>
+
+                    <!-- Tecnica 5: Divisibilidad -->
+                    <div class="tech-card">
+                        <div class="tech-card-header">
+                            <div class="tech-icon"><i class="fas fa-percentage"></i></div>
+                            <h3>5. Divisibilidad Rapida</h3>
+                        </div>
+                        <p>Si el problema implica una division exacta o un porcentaje, verifica cuales opciones son divisibles por el divisor. Solo las divisibles pueden ser correctas.</p>
+                        <div class="tech-example">
+                            <div class="tech-example-label">Ejemplo</div>
+                            <div class="tech-example-problem">7,848 \u00F7 24 = ?</div>
+                            <div class="tech-example-discard"><i class="fas fa-times"></i> El resultado debe ser divisible por... verifico: cual opcion \u00D7 24 = 7,848?</div>
+                            <div class="tech-example-discard"><i class="fas fa-times"></i> Mejor: 7,848 es par, 24 es par, descarto opciones impares. Tambien: 7+8+4+8=27, divisible por 3, y 24 tambien</div>
+                            <div class="tech-example-keep"><i class="fas fa-check"></i> Combino paridad + divisibilidad por 3 para descartar rapido</div>
+                        </div>
+                        <span class="tech-speed"><i class="fas fa-bolt"></i> 5 segundos</span>
+                    </div>
+
+                    <!-- Tecnica 6: Unidades -->
+                    <div class="tech-card">
+                        <div class="tech-card-header">
+                            <div class="tech-icon"><i class="fas fa-tag"></i></div>
+                            <h3>6. Analisis de Unidades</h3>
+                        </div>
+                        <p>Observa las unidades de las opciones. Si el problema habla de metros y una opcion esta en centimetros, o si pide un porcentaje y una opcion es un valor absoluto, descartala al instante.</p>
+                        <div class="tech-example">
+                            <div class="tech-example-label">Ejemplo</div>
+                            <div class="tech-example-problem">Un terreno de 2.500 m\u00B2 se divide en 25 lotes iguales. Area por lote?</div>
+                            <div class="tech-example-discard"><i class="fas fa-times"></i> Descarto opciones en hectareas, en metros lineales, o valores absurdamente grandes/pequenos</div>
+                            <div class="tech-example-keep"><i class="fas fa-check"></i> Solo opciones en m\u00B2 y de magnitud razonable (alrededor de 100)</div>
+                        </div>
+                        <span class="tech-speed"><i class="fas fa-bolt"></i> 2 segundos</span>
+                    </div>
+                </div>
+
+                <!-- Combinaciones -->
+                <section class="combo-section">
+                    <h2 class="section-title" style="justify-content:center"><i class="fas fa-puzzle-piece" style="color:var(--rosa)"></i> Combinaciones Poderosas</h2>
+                    <p class="section-desc" style="margin:0 auto 2rem">Cuando una tecnica sola no basta, combina dos. Esto es lo que separa a un buen puntaje de un puntaje excelente.</p>
+                    <div class="combo-grid">
+                        <div class="combo-card">
+                            <h4><i class="fas fa-layer-group"></i> Paridad + Ultimo Digito</h4>
+                            <p>Primero descarta por paridad, luego por ultimo digito entre las que quedaron. Normalmente elimina 3 de 4 opciones.</p>
+                            <div class="combo-demo">247 \u00D7 36: paridad impar (7 es impar) \u2192 descarto pares. Ultimo digito: 7\u00D76=42 \u2192 termina en 2. <strong>Queda 1 opcion.</strong></div>
+                        </div>
+                        <div class="combo-card">
+                            <h4><i class="fas fa-layer-group"></i> Magnitud + Signo</h4>
+                            <p>Ideal para problemas con negativos y numeros grandes. El signo elimina la mitad, la magnitud elimina otra parte.</p>
+                            <div class="combo-demo">(-482) \u00D7 31: signo negativo (1 negativo) \u2192 solo negativas. Magnitud: 500\u00D730=15,000 \u2192 <strong>alrededor de -15,000.</strong></div>
+                        </div>
+                        <div class="combo-card">
+                            <h4><i class="fas fa-layer-group"></i> Redondeo + Ultimo Digito</h4>
+                            <p>Redondea para obtener la magnitud, luego usa el ultimo digito para elegir entre las 2 opciones restantes.</p>
+                            <div class="combo-demo">193 \u00D7 27: redondeo 200\u00D730=6,000. Ultimo digito: 3\u00D77=21 \u2192 termina en 1. <strong>6,011 es la unica que cumple ambas.</strong></div>
+                        </div>
+                        <div class="combo-card">
+                            <h4><i class="fas fa-layer-group"></i> Unidades + Divisibilidad</h4>
+                            <p>Para problemas de reparto o porcentajes. Verifica que las unidades tengan sentido y que el numero sea divisible.</p>
+                            <div class="combo-demo">3,750 \u00F7 15 lotes: unidades deben ser m\u00B2. 3,750 termina en 0, 15 divide a cualquier numero terminado en 0 o 5. <strong>Descarto impares y no-multiplos de 5.</strong></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Arena Interactiva -->
+                <section class="practice-tool">
+                    <div class="tool-header">
+                        <h2 class="tool-title"><i class="fas fa-dumbbell"></i> Arena de Descarte Visual</h2>
+                        <p class="tool-subtitle">Haz clic en las opciones que puedas descartar sin calcular. Cuando solo quede una, confirmala. O si ya sabes la respuesta, seleccionala directo.</p>
+                    </div>
+                    <div class="practice-levels">
+                        <button class="level-btn active" data-level="basico" onclick="setLevel('basico')"><i class="fas fa-seedling"></i> Basico</button>
+                        <button class="level-btn" data-level="intermedio" onclick="setLevel('intermedio')"><i class="fas fa-fire"></i> Intermedio</button>
+                        <button class="level-btn" data-level="avanzado" onclick="setLevel('avanzado')"><i class="fas fa-meteor"></i> Avanzado</button>
+                    </div>
+                    <div class="practice-interface">
+                        <p class="problem-context" id="problemContext"></p>
+                        <div class="problem-display" id="problemDisplay">Cargando...</div>
+                        <div class="discard-hint" id="discardHint"></div>
+                        <div class="options-grid" id="optionsGrid"></div>
+                        <div class="practice-actions">
+                            <button class="practice-btn discard-btn" id="discardBtn" onclick="discardSelected()" disabled><i class="fas fa-times"></i> Descartar seleccionadas</button>
+                            <button class="practice-btn secondary" id="hintBtn" onclick="showHint()"><i class="fas fa-lightbulb"></i> Pista</button>
+                            <button class="practice-btn" id="nextBtn" onclick="nextProblem()" disabled><i class="fas fa-arrow-right"></i> Siguiente</button>
+                        </div>
+                        <div class="analysis-panel" id="analysisPanel"></div>
+                        <div class="score-bar-bottom">
+                            <div class="score-item">
+                                <div class="score-label">Aciertos</div>
+                                <div class="score-value" id="scoreCorrect">0</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-label">Intentos</div>
+                                <div class="score-value" id="scoreTotal">0</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-label">Descartes</div>
+                                <div class="score-value discards" id="scoreDiscards">0</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-label">Racha</div>
+                                <div class="score-value streak" id="scoreStreak">0</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-label">Porcentaje</div>
+                                <div class="score-value" id="scorePercent">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Ejemplos ICFES -->
+                <section class="icfes-section">
+                    <div class="icfes-header">
+                        <h2 class="section-title" style="justify-content:center"><i class="fas fa-clipboard-check" style="color:var(--verde-acierto)"></i> Ejemplos Resueltos Estilo ICFES</h2>
+                    </div>
+                    <div class="icfes-examples">
+                        <div class="icfes-example">
+                            <div class="icfes-question">1. Un empresario invierte $247 por unidad de un producto y compra 36 unidades. Cual es el total de la inversion?</div>
+                            <div class="icfes-options-row">
+                                <span class="icfes-opt crossed">A) 8,892<span class="reason">Paridad: deberia ser impar</span></span>
+                                <span class="icfes-opt crossed">B) 8,190<span class="reason">Ultimo digito: no termina en 2</span></span>
+                                <span class="icfes-opt highlight">C) 8,892<span class="reason">Impar \u00D7 par = impar, termina en 2... reevaluo</span></span>
+                                <span class="icfes-opt crossed">D) 9,504<span class="reason">Paridad: deberia ser impar</span></span>
+                            </div>
+                            <div class="icfes-solution">
+                                <h5><i class="fas fa-brain"></i> Analisis:</h5>
+                                <p><strong>Paridad:</strong> 247 es impar, 36 es par. Impar \u00D7 par = impar. Descarto A, D (son pares).<br>
+                                <strong>Ultimo digito:</strong> 7 \u00D7 6 = 42, termina en 2. B termina en 0, descarto.<br>
+                                <strong class="discard-reason">Ojo: 8,892 es par! Hubo error en paridad - 247 es impar pero... impares \u00D7 pares SIEMPRE son pares. Rectifico: descarto los impares.</strong><br>
+                                Correccion: impar \u00D7 par = par. Descarto opciones impares. Quedan pares que terminen en 2: <strong>C) 8,892</strong>.</p>
+                            </div>
+                        </div>
+                        <div class="icfes-example">
+                            <div class="icfes-question">2. Un edificio tiene 24 pisos, cada piso con 38 apartamentos. Se vendieron 412 apartamentos. Cuantos quedan sin vender?</div>
+                            <div class="icfes-options-row">
+                                <span class="icfes-opt crossed">A) 600<span class="reason">Magnitud: total ~900, no puede quedar mas de lo que hay</span></span>
+                                <span class="icfes-opt highlight">B) 500</span>
+                                <span class="icfes-opt crossed">C) 820<span class="reason">Magnitud: casi todos vendidos, no puede quedar tanto</span></span>
+                                <span class="icfes-opt crossed">D) 1,200<span class="reason">Magnitud: excede el total de apartamentos</span></span>
+                            </div>
+                            <div class="icfes-solution">
+                                <h5><i class="fas fa-brain"></i> Analisis:</h5>
+                                <p><strong>Magnitud:</strong> 24 \u00D7 38 \u2248 20 \u00D7 40 = 800 total. Descarto D (1,200 > 800).<br>
+                                <strong>Logica:</strong> Si se vendieron 412 de ~800, quedan ~388. A) 600 es demasiado. C) 820 es casi todo.<br>
+                                <strong>Paridad:</strong> 24 \u00D7 38 = par. Par - 412(par) = par. B) 500 es par. <strong>Respuesta: B) 500</strong>.</p>
+                            </div>
+                        </div>
+                        <div class="icfes-example">
+                            <div class="icfes-question">3. Un producto bajo su precio de $18.500 a $14.800. Cual fue el porcentaje de descuento?</div>
+                            <div class="icfes-options-row">
+                                <span class="icfes-opt crossed">A) 5%<span class="reason">Magnitud: el descuento es de $3.700 sobre $18.500, mucho mas del 5%</span></span>
+                                <span class="icfes-opt highlight">B) 20%</span>
+                                <span class="icfes-opt crossed">C) 45%<span class="reason">Magnitud: 45% de 18.500 seria ~$8.300, pero el descuento es solo $3.700</span></span>
+                                <span class="icfes-opt crossed">D) 80%<span class="reason">Magnitud: absurdo, el precio seguiria siendo muy bajo</span></span>
+                            </div>
+                            <div class="icfes-solution">
+                                <h5><i class="fas fa-brain"></i> Analisis:</h5>
+                                <p><strong>Magnitud:</strong> Descuento = 18.500 - 14.800 = 3.700. Sobre 18.500, eso es ~3.700/18.500.<br>
+                                <strong>Estimacion rapida:</strong> 3.700/18.500 = 37/185 \u2248 37/185. 185/5 = 37. Entonces 37/185 = 1/5 = <strong>20%</strong>.<br>
+                                Descarte por magnitud elimina A, C, D inmediatamente. <strong>Respuesta: B) 20%</strong>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Advertencias -->
+                <section class="warning-section">
+                    <h2 class="section-title"><i class="fas fa-exclamation-triangle" style="color:var(--rojo-error)"></i> Errores Fatales al Descartar</h2>
+                    <p class="section-desc">Un descarte equivocado es peor que no descartar. Evita estas trampas.</p>
+                    <div class="warning-grid">
+                        <div class="warning-card">
+                            <div class="w-icon"><i class="fas fa-times-circle"></i></div>
+                            <h4>Confundir paridad en sumas vs multiplicaciones</h4>
+                            <p>En multiplicacion: impar \u00D7 par = par. En suma: impar + par = impar. Son reglas diferentes y confundirlas te hace descartar la correcta.</p>
+                            <div class="w-fix"><i class="fas fa-check"></i> Memoriza: MULTIPLICAR - solo importa si HAY un impar. SUMAR - importa la CANTIDAD de impares.</div>
+                        </div>
+                        <div class="warning-card">
+                            <div class="w-icon"><i class="fas fa-times-circle"></i></div>
+                            <h4>Descartar por magnitud sin calcular bien</h4>
+                            <p>Redondear 49 a 10 en vez de 50 cambia la magnitud completamente. Si redondeas agresivo, tu estimado de magnitud sera erroneo.</p>
+                            <div class="w-fix"><i class="fas fa-check"></i> Para magnitud, redondea al digito mas significativo, no al mas cercano a 0.</div>
+                        </div>
+                        <div class="warning-card">
+                            <div class="w-icon"><i class="fas fa-times-circle"></i></div>
+                            <h4>Olvidar la regla del signo en multiplicaciones</h4>
+                            <p>La regla es: PAR de negativos = positivo, IMPAR de negativos = negativo. Muchos recuerdan "negativo por negativo es positivo" pero olvidan el caso de 3 o mas factores.</p>
+                            <div class="w-fix"><i class="fas fa-check"></i> Cuenta los negativos con los dedos. Par? Positivo. Impar? Negativo.</div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Boton Flotante -->
+    <button class="floating-button" onclick="openModal()" aria-label="Referencia rapida"><i class="fas fa-file-alt"></i></button>
+
+    <!-- Modal -->
+    <div class="modal" id="cheatModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            <div class="cheat-sheet">
+                <h3><i class="fas fa-file-alt" style="color:var(--naranja)"></i> Referencia Rapida de Descarte Visual</h3>
+
+                <div class="rule-section">
+                    <h4><i class="fas fa-divide"></i> Reglas de Paridad</h4>
+                    <table class="quick-table">
+                        <thead><tr><th>Operacion</th><th>Resultado</th></tr></thead>
+                        <tbody>
+                            <tr><td>Par + Par</td><td>Par</td></tr>
+                            <tr><td>Par + Impar</td><td>Impar</td></tr>
+                            <tr><td>Impar + Impar</td><td>Par</td></tr>
+                            <tr><td>Par \u00D7 Par</td><td>Par</td></tr>
+                            <tr><td>Par \u00D7 Impar</td><td>Par</td></tr>
+                            <tr><td>Impar \u00D7 Impar</td><td>Impar</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="rule-section">
+                    <h4><i class="fas fa-fingerprint"></i> Ultimo Digito en Multiplicacion</h4>
+                    <table class="quick-table">
+                        <thead><tr><th>Unidades</th><th>\u00D7 2</th><th>\u00D7 3</th><th>\u00D7 4</th><th>\u00D7 5</th><th>\u00D7 6</th><th>\u00D7 7</th><th>\u00D7 8</th><th>\u00D7 9</th></tr></thead>
+                        <tbody>
+                            <tr><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td></tr>
+                            <tr><td>2</td><td>4</td><td>6</td><td>8</td><td>0</td><td>2</td><td>4</td><td>6</td><td>8</td></tr>
+                            <tr><td>3</td><td>6</td><td>9</td><td>2</td><td>5</td><td>8</td><td>1</td><td>4</td><td>7</td></tr>
+                            <tr><td>4</td><td>8</td><td>2</td><td>6</td><td>0</td><td>4</td><td>8</td><td>2</td><td>6</td></tr>
+                            <tr><td>5</td><td>0</td><td>5</td><td>0</td><td>5</td><td>0</td><td>5</td><td>0</td><td>5</td></tr>
+                            <tr><td>6</td><td>2</td><td>8</td><td>4</td><td>0</td><td>6</td><td>2</td><td>8</td><td>4</td></tr>
+                            <tr><td>7</td><td>4</td><td>1</td><td>8</td><td>5</td><td>2</td><td>9</td><td>6</td><td>3</td></tr>
+                            <tr><td>8</td><td>6</td><td>4</td><td>2</td><td>0</td><td>8</td><td>6</td><td>4</td><td>2</td></tr>
+                            <tr><td>9</td><td>8</td><td>7</td><td>6</td><td>5</td><td>4</td><td>3</td><td>2</td><td>1</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="rule-section">
+                    <h4><i class="fas fa-percentage"></i> Reglas de Divisibilidad Rapida</h4>
+                    <ul>
+                        <li><strong>2:</strong> Ultimo digito par (0, 2, 4, 6, 8)</li>
+                        <li><strong>3:</strong> Suma de digitos divisible por 3</li>
+                        <li><strong>4:</strong> Ultimos 2 digitos forman numero divisible por 4</li>
+                        <li><strong>5:</strong> Termina en 0 o 5</li>
+                        <li><strong>6:</strong> Cumple regla de 2 Y regla de 3</li>
+                        <li><strong>9:</strong> Suma de digitos divisible por 9</li>
+                        <li><strong>10:</strong> Termina en 0</li>
+                        <li><strong>25:</strong> Ultimos 2 digitos son 00, 25, 50 o 75</li>
+                    </ul>
+                </div>
+
+                <div class="rule-section">
+                    <h4><i class="fas fa-plus-minus"></i> Signo en Multiplicacion</h4>
+                    <table class="quick-table">
+                        <thead><tr><th># Negativos</th><th>Resultado</th></tr></thead>
+                        <tbody>
+                            <tr><td>0 (todos positivos)</td><td>Positivo</td></tr>
+                            <tr><td>1</td><td>Negativo</td></tr>
+                            <tr><td>2</td><td>Positivo</td></tr>
+                            <tr><td>3</td><td>Negativo</td></tr>
+                            <tr><td>4</td><td>Positivo</td></tr>
+                        </tbody>
+                    </table>
+                    <p style="margin-top:.5rem"><strong>Regla mnemonic:</strong> PAR de negativos = Positivo (como "Par-P" se rima).</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notificacion -->
+    <div class="notification" id="notification">
+        <i class="fas fa-bell"></i>
+        <div class="notification-content">
+            <div class="notification-title" id="notifTitle">Notificacion</div>
+            <div class="notification-message" id="notifMessage">Mensaje</div>
+        </div>
+    </div>
+
+    <!-- ===== SCRIPTS ===== -->
+
+    <!-- Script de Desbloqueo por Puntaje (Firebase) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            authDomain: "skopia-aa786.firebaseapp.com",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let userId = localStorage.getItem('skopia_uid') || sessionStorage.getItem('skopia_uid');
+        if (!userId) {
+            userId = 'user_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+            localStorage.setItem('skopia_uid', userId);
+            sessionStorage.setItem('skopia_uid', userId);
+        }
+
+        const scoresRef = ref(db, 'users/' + userId + '/module1/scores');
+
+        onValue(scoresRef, (snapshot) => {
+            const data = snapshot.val();
+            const q1Score = data && data.quiz1 ? data.quiz1 : 0;
+            const q2Score = data && data.quiz2 ? data.quiz2 : 0;
+            const totalScore = q1Score + q2Score;
+
+            // Cuestionario 1 siempre desbloqueado
+            const q1Link = document.querySelector('[data-content="RCDD9"]');
+            if (q1Link && q1Link.classList.contains('locked')) {
+                q1Link.classList.remove('locked');
+            }
+
+            // Cuestionario 2: desbloquear si Q1 >= 150
+            const q2Link = document.querySelector('[data-content="RCDD10"]');
+            if (q1Score >= 150) {
+                q2Link.classList.remove('locked');
+                q2Link.classList.add('unlocking');
+                setTimeout(() => q2Link.classList.remove('unlocking'), 600);
+            } else {
+                q2Link.classList.add('locked');
+            }
+
+            // Actualizar indicador visual de requerimiento Q2
+            const reqQ2Info = document.getElementById('reqQ2Info');
+            if (reqQ2Info) {
+                if (q1Score >= 150) {
+                    reqQ2Info.classList.add('unlocked');
+                    reqQ2Info.innerHTML = '<i class="fas fa-unlock" style="color: #2ecc71;"></i> <span>Desbloqueado!</span>';
+                } else {
+                    const reqQ2Score = document.getElementById('reqQ2Score');
+                    if (reqQ2Score) reqQ2Score.textContent = '(' + q1Score + ' / 150)';
+                }
+            }
+
+            // Cuestionario 3 y Cierre: desbloquear si Total >= 180
+            const q3Link = document.querySelector('[data-content="RCDD11"]');
+            const finalLink = document.querySelector('[data-content="RCDD12"]');
+
+            if (totalScore >= 180) {
+                q3Link.classList.remove('locked');
+                finalLink.classList.remove('locked');
+                if (!q3Link.dataset.unlocked) {
+                    q3Link.classList.add('unlocking');
+                    finalLink.classList.add('unlocking');
+                    q3Link.dataset.unlocked = "true";
+                    finalLink.dataset.unlocked = "true";
+                }
+            } else {
+                q3Link.classList.add('locked');
+                finalLink.classList.add('locked');
+            }
+
+            // Actualizar indicadores Q3 y Final
+            const reqQ3Info = document.getElementById('reqQ3Info');
+            if (reqQ3Info && totalScore >= 180) {
+                reqQ3Info.classList.add('unlocked');
+                reqQ3Info.innerHTML = '<i class="fas fa-unlock" style="color: #2ecc71;"></i> <span>Desbloqueado!</span>';
+            }
+            const reqFinalInfo = document.getElementById('reqFinalInfo');
+            if (reqFinalInfo && totalScore >= 180) {
+                reqFinalInfo.classList.add('unlocked');
+                reqFinalInfo.innerHTML = '<i class="fas fa-unlock" style="color: #2ecc71;"></i> <span>Desbloqueado!</span>';
+            }
+
+            // Actualizar barra de puntaje
+            const scoreFill = document.getElementById('scoreFill');
+            const scoreText = document.getElementById('scoreText');
+            if (scoreFill && scoreText) {
+                const goal = 180;
+                let pct = Math.min((totalScore / goal) * 100, 100);
+                scoreFill.style.width = pct + '%';
+                scoreText.textContent = totalScore + ' / ' + goal + ' pts';
+                if (pct >= 100) {
+                    scoreFill.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
+                }
+            }
+        });
+    </script>
+
+    <!-- Script de Interactividad -->
+    <script>
+        /* ===== ESTADO ===== */
+        let currentLevel = 'basico';
+        let currentProblem = null;
+        let score = { correct: 0, total: 0, streak: 0, maxStreak: 0, discards: 0 };
+        let selectedForDiscard = new Set();
+        let discardedOptions = new Set();
+        let hintUsed = false;
+        let answered = false;
+
+        /* ===== SIDEBAR ===== */
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        sidebarToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('hidden');
+            const icon = this.querySelector('i');
+            icon.className = sidebar.classList.contains('hidden') ? 'fas fa-bars' : 'fas fa-times';
+        });
+
+        /* ===== BARRA DE ENERGIA ===== */
+        setTimeout(function() {
+            const fill = document.getElementById('energyFill');
+            const pct = document.getElementById('energyPercentage');
+            if (fill) fill.style.width = '58%';
+        }, 300);
+
+        /* ===== NOTIFICACIONES ===== */
+        function showNotification(title, message) {
+            const n = document.getElementById('notification');
+            document.getElementById('notifTitle').textContent = title;
+            document.getElementById('notifMessage').textContent = message;
+            n.classList.add('show');
+            setTimeout(() => n.classList.remove('show'), 3500);
+        }
+
+        /* ===== MODAL ===== */
+        function openModal() { document.getElementById('cheatModal').classList.add('active'); }
+        function closeModal() { document.getElementById('cheatModal').classList.remove('active'); }
+        document.getElementById('cheatModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+
+        /* ===== UTILIDADES ===== */
+        function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+        function formatNum(n) { return n.toLocaleString('es-ES'); }
+        function lastDigit(n) { return Math.abs(n) % 10; }
+
+        /* ===== GENERADOR DE PROBLEMAS ===== */
+        function generateProblem(level) {
+            const types = level === 'basico' ? ['parity','lastdigit','sign'] :
+                          level === 'intermedio' ? ['parity','lastdigit','sign','magnitude'] :
+                          ['parity','lastdigit','sign','magnitude','divisibility'];
+            const type = types[randInt(0, types.length - 1)];
+            let problem, attempts = 0;
+            do {
+                switch(type) {
+                    case 'parity': problem = genParity(level); break;
+                    case 'lastdigit': problem = genLastDigit(level); break;
+                    case 'sign': problem = genSign(level); break;
+                    case 'magnitude': problem = genMagnitude(level); break;
+                    case 'divisibility': problem = genDivisibility(level); break;
+                }
+                attempts++;
+            } while (!verifyDiscardProblem(problem) && attempts < 80);
+            return problem;
+        }
+
+        function genParity(level) {
+            const useOdd = Math.random() > 0.5;
+            let a, b, exact;
+            if (level === 'basico') {
+                a = randInt(10, 99); b = randInt(2, 9);
+                if (!useOdd) { if (a % 2 !== 0) a++; if (b % 2 !== 0) b++; }
+                else { if (a % 2 === 0) a++; }
+            } else if (level === 'intermedio') {
+                a = randInt(100, 999); b = randInt(10, 50);
+                if (!useOdd) { if (a % 2 !== 0) a++; if (b % 2 !== 0) b++; }
+                else { if (a % 2 === 0) a++; }
+            } else {
+                a = randInt(100, 999); b = randInt(10, 99); let c = randInt(2, 9);
+                if (!useOdd) { if (a%2!==0) a++; if (b%2!==0) b++; if (c%2!==0) c++; }
+                else { if (a%2===0) a++; if (b%2===0) b++; }
+                exact = a * b * c;
+                const isEven = exact % 2 === 0;
+                const opts = genParityOptions(exact, isEven);
+                return {
+                    context: 'Calcula el resultado de la siguiente operacion:',
+                    expression: formatNum(a) + ' \u00D7 ' + formatNum(b) + ' \u00D7 ' + c,
+                    exact, options: opts,
+                    technique: 'paridad',
+                    hint: useOdd ? 'Hay al menos un numero impar. Cuenta cuantos impares hay para determinar la paridad del resultado.' : 'Todos los numeros son pares. Un producto de pares siempre es par.',
+                    analysis: buildParityAnalysis(a, b, c, exact, isEven)
+                };
+            }
+            exact = a * b;
+            const isEven = exact % 2 === 0;
+            const opts = genParityOptions(exact, isEven);
+            return {
+                context: 'Calcula el resultado de la siguiente operacion:',
+                expression: formatNum(a) + ' \u00D7 ' + b,
+                exact, options: opts,
+                technique: 'paridad',
+                hint: useOdd ? 'Hay un numero impar en la multiplicacion. En una multiplicacion, si hay al menos un impar, el resultado es impar... espera, eso no es correcto. Par \u00D7 Impar = Par. Impar \u00D7 Impar = Impar.' : 'Ambos numeros son pares. El producto de pares siempre es par.',
+                analysis: buildParityAnalysis2(a, b, exact, isEven)
+            };
+        }
+
+        function genParityOptions(correct, isEven) {
+            const opts = [{ value: correct, isCorrect: true }];
+            const range = Math.max(200, Math.abs(correct) * 0.15);
+            const offsets = [-range * 1.5, range * 0.6, range * 1.8];
+            for (const off of offsets) {
+                let d = Math.round(correct + off);
+                if (d === correct) d += Math.round(range * 0.3);
+                if (d < 1) d = Math.round(Math.abs(off) * 0.5) + 1;
+                // Asegurar que al menos 2 opciones tengan paridad opuesta
+                while (opts.filter(o => o.value % 2 === d % 2).length >= 3 && (d % 2) === (correct % 2)) {
+                    d += 1;
+                }
+                while (opts.some(o => o.value === d)) d += Math.round(range * 0.2);
+                opts.push({ value: d, isCorrect: false });
+            }
+            opts.sort((a, b) => a.value - b.value);
+            return opts.map((o, i) => ({ ...o, letter: 'ABCD'[i] }));
+        }
+
+        function buildParityAnalysis2(a, b, exact, isEven) {
+            const aParity = a % 2 === 0 ? 'par' : 'impar';
+            const bParity = b % 2 === 0 ? 'par' : 'impar';
+            const rParity = isEven ? 'par' : 'impar';
+            const steps = [
+                'Identifico paridad: ' + a + ' es <strong>' + aParity + '</strong>, ' + b + ' es <strong>' + bParity + '</strong>',
+                'Regla: ' + aParity + ' \u00D7 ' + bParity + ' = <strong>' + rParity + '</strong>',
+                'Descarto todas las opciones <span class="discard-mark">' + (isEven ? 'impares' : 'pares') + '</span>',
+                'Entre las que quedan, elijo la mas razonable por magnitud'
+            ];
+            return steps;
+        }
+
+        function buildParityAnalysis(a, b, c, exact, isEven) {
+            const aP = a%2===0?'par':'impar', bP = b%2===0?'par':'impar', cP = c%2===0?'par':'impar';
+            const oddCount = (a%2) + (b%2) + (c%2);
+            const rP = isEven ? 'par' : 'impar';
+            return [
+                'Paridad: ' + a + ' (' + aP + '), ' + b + ' (' + bP + '), ' + c + ' (' + cP + ')',
+                'Hay <strong>' + oddCount + ' impar' + (oddCount !== 1 ? 'es' : '') + '</strong>. ' + oddCount + ' es ' + (oddCount%2===0?'par':'impar') + ' \u2192 resultado <strong>' + rP + '</strong>',
+                'Descarto opciones <span class="discard-mark">' + (isEven ? 'impares' : 'pares') + '</span>',
+                'Elijo entre las restantes por magnitud'
+            ];
+        }
+
+        function genLastDigit(level) {
+            let a, b, exact;
+            if (level === 'basico') {
+                a = randInt(11, 99); b = randInt(3, 9);
+            } else if (level === 'intermedio') {
+                a = randInt(101, 499); b = randInt(11, 49);
+            } else {
+                a = randInt(101, 999); b = randInt(21, 99);
+            }
+            exact = a * b;
+            const ld = lastDigit(exact);
+            const opts = genLastDigitOptions(exact, ld);
+            return {
+                context: 'Calcula el resultado de la siguiente multiplicacion:',
+                expression: formatNum(a) + ' \u00D7 ' + formatNum(b),
+                exact, options: opts,
+                technique: 'ultimo digito',
+                hint: 'Multiplica solo las unidades: ' + lastDigit(a) + ' \u00D7 ' + lastDigit(b) + ' = ' + (lastDigit(a)*lastDigit(b)) + '. El ultimo digito del resultado es el ultimo digito de ese producto.',
+                analysis: [
+                    'Ultimo digito de ' + a + ': <strong>' + lastDigit(a) + '</strong>',
+                    'Ultimo digito de ' + b + ': <strong>' + lastDigit(b) + '</strong>',
+                    lastDigit(a) + ' \u00D7 ' + lastDigit(b) + ' = <strong>' + (lastDigit(a)*lastDigit(b)) + '</strong> \u2192 ultimo digito = <strong>' + ld + '</strong>',
+                    'Descarto opciones que NO terminen en <span class="discard-mark">' + ld + '</span>',
+                    'Si queda mas de una, uso magnitud para desempatar'
+                ]
+            };
+        }
+
+        function genLastDigitOptions(correct, correctLD) {
+            const opts = [{ value: correct, isCorrect: true }];
+            const range = Math.max(200, Math.abs(correct) * 0.15);
+            // Generar al menos 2 opciones con ultimo digito diferente
+            const wrongLDs = [];
+            for (let d = 0; d <= 9 && wrongLDs.length < 2; d++) {
+                if (d !== correctLD) wrongLDs.push(d);
+            }
+            wrongLDs.forEach(wd => {
+                let d = Math.round(correct - correctLD + wd);
+                if (d === correct) d += 10;
+                if (d < 1) d += 100;
+                while (opts.some(o => o.value === d)) d += 11;
+                opts.push({ value: d, isCorrect: false });
+            });
+            // Tercera opcion: mismo ultimo digito pero diferente magnitud
+            let d3 = correct + (Math.random() > 0.5 ? 1 : -1) * Math.round(range * 1.2);
+            if (lastDigit(d3) !== correctLD) d3 += (correctLD - lastDigit(d3) + 10) % 10;
+            if (d3 === correct) d3 += 10 * (Math.random() > 0.5 ? 1 : -1);
+            while (opts.some(o => o.value === d3)) d3 += 7;
+            if (d3 < 1) d3 = correct + 100;
+            opts.push({ value: d3, isCorrect: false });
+            opts.sort((a, b) => a.value - b.value);
+            return opts.map((o, i) => ({ ...o, letter: 'ABCD'[i] }));
+        }
+
+        function genSign(level) {
+            const negCount = randInt(1, level === 'avanzado' ? 4 : 3);
+            const totalFactors = Math.max(negCount + 1, randInt(3, level === 'avanzado' ? 5 : 4));
+            const factors = [];
+            for (let i = 0; i < totalFactors; i++) {
+                const absVal = randInt(2, level === 'basico' ? 15 : level === 'intermedio' ? 30 : 50);
+                factors.push(i < negCount ? -absVal : absVal);
+            }
+            // Mezclar
+            for (let i = factors.length - 1; i > 0; i--) {
+                const j = randInt(0, i);
+                [factors[i], factors[j]] = [factors[j], factors[i]];
+            }
+            let exact = factors[0];
+            for (let i = 1; i < factors.length; i++) exact *= factors[i];
+            const isNeg = exact < 0;
+            const absExact = Math.abs(exact);
+            const opts = genSignOptions(absExact, isNeg);
+            return {
+                context: 'Determina el resultado de la siguiente operacion:',
+                expression: factors.map(f => (f < 0 ? '(' + f + ')' : f)).join(' \u00D7 '),
+                exact, options: opts,
+                technique: 'signo',
+                hint: 'Cuenta los numeros negativos: hay ' + negCount + '. ' + negCount + ' es ' + (negCount%2===0?'par':'impar') + '. Par de negativos = positivo, impar = negativo.',
+                analysis: [
+                    'Cuento numeros negativos: hay <strong>' + negCount + '</strong>',
+                    negCount + ' es ' + (negCount%2===0?'par':'impar') + ' \u2192 resultado <strong>' + (isNeg ? 'negativo' : 'positivo') + '</strong>',
+                    'Descarto todas las opciones <span class="discard-mark">' + (isNeg ? 'positivas' : 'negativas') + '</span>',
+                    'Si quedan varias, estimo la magnitud para elegir'
+                ]
+            };
+        }
+
+        function genSignOptions(correctAbs, isNeg) {
+            const opts = [{ value: isNeg ? -correctAbs : correctAbs, isCorrect: true }];
+            const range = Math.max(100, correctAbs * 0.12);
+            // Opcion con signo equivocado
+            opts.push({ value: isNeg ? correctAbs : -correctAbs, isCorrect: false });
+            // Opcion con signo correcto pero magnitud erronea
+            opts.push({ value: (isNeg ? -1 : 1) * Math.round(correctAbs + range * 1.5), isCorrect: false });
+            // Otra con signo equivocado y magnitud erronea
+            opts.push({ value: (isNeg ? 1 : -1) * Math.round(correctAbs * 0.6), isCorrect: false });
+            opts.sort((a, b) => a.value - b.value);
+            return opts.map((o, i) => ({ ...o, letter: 'ABCD'[i] }));
+        }
+
+        function genMagnitude(level) {
+            let a, b, exact;
+            if (level === 'intermedio') {
+                a = randInt(101, 499); b = randInt(11, 49);
+            } else {
+                a = randInt(1001, 4999); b = randInt(21, 99);
+            }
+            exact = a * b;
+            const mag = Math.pow(10, Math.floor(Math.log10(Math.abs(exact))));
+            const opts = genMagnitudeOptions(exact, mag);
+            return {
+                context: 'Sin calcular exactamente, identifica la opcion con el orden de magnitud correcto:',
+                expression: formatNum(a) + ' \u00D7 ' + formatNum(b),
+                exact, options: opts,
+                technique: 'magnitud',
+                hint: 'Redondea ' + a + ' a ' + roundTo1(a) + ' y ' + b + ' a ' + roundTo1(b) + '. Multiplica esos dos numeros para obtener el orden de magnitud.',
+                analysis: [
+                    'Redondeo ' + a + ' \u2192 <strong>' + roundTo1(a) + '</strong>',
+                    'Redondeo ' + b + ' \u2192 <strong>' + roundTo1(b) + '</strong>',
+                    'Magnitud estimada: ' + roundTo1(a) + ' \u00D7 ' + roundTo1(b) + ' = <strong>' + formatNum(roundTo1(a) * roundTo1(b)) + '</strong>',
+                    'Descarto opciones que esten muy lejos de este valor'
+                ]
+            };
+        }
+
+        function roundTo1(n) {
+            const mag = Math.pow(10, Math.floor(Math.log10(Math.abs(n))));
+            return Math.round(n / mag) * mag;
+        }
+
+        function genMagnitudeOptions(correct, mag) {
+            const opts = [{ value: correct, isCorrect: true }];
+            // Una opcion con magnitud 10x menor
+            opts.push({ value: Math.round(correct * 0.1), isCorrect: false });
+            // Una opcion con magnitud 10x mayor
+            opts.push({ value: Math.round(correct * 10), isCorrect: false });
+            // Una opcion con magnitud similar pero valor diferente
+            opts.push({ value: Math.round(correct + mag * (Math.random() > 0.5 ? 3 : -3)), isCorrect: false });
+            opts.sort((a, b) => a.value - b.value);
+            return opts.map((o, i) => ({ ...o, letter: 'ABCD'[i] }));
+        }
+
+        function genDivisibility(level) {
+            const divisors = [2, 3, 4, 5, 6, 9];
+            const div = divisors[randInt(0, divisors.length - 1)];
+            let result;
+            if (level === 'avanzado') {
+                result = randInt(20, 200) * div;
+            } else {
+                result = randInt(10, 100) * div;
+            }
+            const total = result * div;
+            const opts = genDivisibilityOptions(result, div, total);
+            return {
+                context: 'Se reparten ' + formatNum(total) + ' elementos en ' + div + ' grupos iguales. Cuantos elementos hay por grupo?',
+                expression: formatNum(total) + ' \u00F7 ' + div,
+                exact: result, options: opts,
+                technique: 'divisibilidad',
+                hint: 'El resultado debe ser divisible por... verifica la paridad y la suma de digitos de las opciones para descartar.',
+                analysis: [
+                    'El resultado de una division exacta debe tener propiedades consistentes con el dividendo y el divisor',
+                    'Si el divisor es par, el resultado de dividir un par es entero (puede ser par o impar)',
+                    'Verifico paridad y divisibilidad en las opciones para descartar'
+                ]
+            };
+        }
+
+        function genDivisibilityOptions(correct, div, total) {
+            const opts = [{ value: correct, isCorrect: true }];
+            const range = Math.max(20, Math.round(correct * 0.15));
+            const offsets = [-range * 1.5, range * 0.7, range * 2];
+            for (const off of offsets) {
+                let d = Math.round(correct + off);
+                if (d === correct) d += Math.round(range * 0.3);
+                if (d < 1) d = Math.round(Math.abs(off) * 0.5) + 1;
+                while (opts.some(o => o.value === d)) d += Math.round(range * 0.15);
+                opts.push({ value: d, isCorrect: false });
+            }
+            opts.sort((a, b) => a.value - b.value);
+            return opts.map((o, i) => ({ ...o, letter: 'ABCD'[i] }));
+        }
+
+        /* ===== VERIFICACION ===== */
+        function verifyDiscardProblem(problem) {
+            if (!problem || !problem.options || problem.options.length < 4) return false;
+            // Verificar que haya al menos 2 opciones descartables por la tecnica
+            const correct = problem.exact;
+            const opts = problem.options;
+            let discardable = 0;
+            switch(problem.technique) {
+                case 'paridad': {
+                    const isEven = correct % 2 === 0;
+                    opts.forEach(o => { if ((o.value % 2 === 0) !== isEven) discardable++; });
+                    break;
+                }
+                case 'ultimo digito': {
+                    const ld = lastDigit(correct);
+                    opts.forEach(o => { if (lastDigit(o.value) !== ld) discardable++; });
+                    break;
+                }
+                case 'signo': {
+                    const isNeg = correct < 0;
+                    opts.forEach(o => { if ((o.value < 0) !== isNeg) discardable++; });
+                    break;
+                }
+                case 'magnitud': {
+                    const mag = Math.pow(10, Math.floor(Math.log10(Math.abs(correct))));
+                    opts.forEach(o => {
+                        const oMag = Math.pow(10, Math.floor(Math.log10(Math.abs(o.value))));
+                        if (Math.abs(oMag - mag) > mag * 0.5) discardable++;
+                    });
+                    break;
+                }
+                case 'divisibilidad': {
+                    // Al menos deben ser descartables por paridad o magnitud
+                    const isEven = correct % 2 === 0;
+                    opts.forEach(o => { if ((o.value % 2 === 0) !== isEven) discardable++; });
+                    break;
+                }
+            }
+            return discardable >= 2;
+        }
+
+        /* ===== RENDERIZADO ===== */
+        function renderProblem(problem) {
+            document.getElementById('problemContext').textContent = problem.context;
+            document.getElementById('problemDisplay').textContent = problem.expression;
+            document.getElementById('discardHint').textContent = 'Haz clic en las opciones que puedas descartar por ' + problem.technique + ', luego pulsa "Descartar seleccionadas". O selecciona la respuesta correcta directo.';
+
+            const grid = document.getElementById('optionsGrid');
+            grid.innerHTML = '';
+            discardedOptions.clear();
+            selectedForDiscard.clear();
+
+            problem.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerHTML = '<span class="option-letter">' + opt.letter + '</span><span>' + formatNum(opt.value) + '</span>';
+                btn.setAttribute('data-letter', opt.letter);
+                btn.setAttribute('data-correct', opt.isCorrect);
+                btn.addEventListener('click', function() { handleOptionClick(this, problem); });
+                grid.appendChild(btn);
+            });
+
+            document.getElementById('analysisPanel').classList.remove('show');
+            document.getElementById('analysisPanel').innerHTML = '';
+            document.getElementById('discardBtn').disabled = false;
+            document.getElementById('hintBtn').disabled = false;
+            document.getElementById('nextBtn').disabled = true;
+            hintUsed = false;
+            answered = false;
+        }
+
+        function handleOptionClick(btn, problem) {
+            if (answered) return;
+            if (btn.classList.contains('discarded')) return;
+
+            // Si ya hay descartes y hace clic en una no descartada, es la seleccion final
+            if (discardedOptions.size > 0 && !btn.classList.contains('select-for-discard')) {
+                // Confirmar respuesta
+                answerProblem(btn, problem);
+                return;
+            }
+
+            // Toggle seleccion para descarte
+            const letter = btn.getAttribute('data-letter');
+            if (selectedForDiscard.has(letter)) {
+                selectedForDiscard.delete(letter);
+                btn.classList.remove('select-for-discard');
+                btn.style.borderColor = '';
+                btn.style.background = '';
+            } else {
+                selectedForDiscard.add(letter);
+                btn.classList.add('select-for-discard');
+                btn.style.borderColor = 'var(--rojo-error)';
+                btn.style.background = 'rgba(231,76,60,.08)';
+            }
+
+            document.getElementById('discardBtn').disabled = selectedForDiscard.size === 0;
+        }
+
+        function discardSelected() {
+            if (selectedForDiscard.size === 0 || answered) return;
+            const remaining = 4 - discardedOptions.size;
+            if (selectedForDiscard.size >= remaining) {
+                showNotification('Cuidado', 'No puedes descartar todas las opciones. Deja al menos una sin descartar.');
+                return;
+            }
+
+            selectedForDiscard.forEach(letter => {
+                discardedOptions.add(letter);
+                const btn = document.querySelector('[data-letter="' + letter + '"]');
+                if (btn) {
+                    btn.classList.remove('select-for-discard');
+                    btn.classList.add('discarded');
+                    btn.style.borderColor = '';
+                    btn.style.background = '';
+                }
+            });
+            score.discards += selectedForDiscard.size;
+            selectedForDiscard.clear();
+            document.getElementById('discardBtn').disabled = true;
+            document.getElementById('scoreDiscards').textContent = score.discards;
+
+            const remainingAfter = 4 - discardedOptions.size;
+            if (remainingAfter === 1) {
+                document.getElementById('discardHint').textContent = 'Solo queda una opcion. Haz clic en ella para confirmar.';
+                document.getElementById('discardHint').style.color = 'var(--verde-acierto)';
+                document.getElementById('discardHint').style.fontWeight = '700';
+            } else {
+                document.getElementById('discardHint').textContent = remainingAfter + ' opciones restantes. Sigue descartando o selecciona la respuesta correcta.';
+            }
+        }
+
+        function answerProblem(btn, problem) {
+            if (answered) return;
+            answered = true;
+
+            const isCorrect = btn.getAttribute('data-correct') === 'true';
+            score.total++;
+
+            document.querySelectorAll('.option-btn').forEach(b => {
+                if (b.classList.contains('discarded')) return;
+                b.classList.add('disabled');
+            });
+
+            if (isCorrect) {
+                btn.classList.add('correct');
+                score.correct++;
+                score.streak++;
+                if (score.streak > score.maxStreak) score.maxStreak = score.streak;
+                const bonus = discardedOptions.size > 0 ? ' (' + discardedOptions.size + ' descartados)' : '';
+                showNotification('Correcto', 'Buena observacion' + bonus);
+            } else {
+                btn.classList.add('incorrect');
+                score.streak = 0;
+                document.querySelectorAll('.option-btn').forEach(b => {
+                    if (b.getAttribute('data-correct') === 'true' && !b.classList.contains('discarded')) {
+                        b.classList.add('correct');
+                    }
+                });
+                showNotification('Incorrecto', 'La respuesta era ' + formatNum(problem.exact));
+            }
+
+            updateScore();
+            showAnalysis(problem, isCorrect);
+            document.getElementById('nextBtn').disabled = false;
+            document.getElementById('discardBtn').disabled = true;
+            document.getElementById('hintBtn').disabled = true;
+            document.getElementById('discardHint').style.color = '';
+            document.getElementById('discardHint').style.fontWeight = '';
+
+            // Guardar progreso local
+            saveLocalProgress();
+        }
+
+        function showAnalysis(problem, isCorrect) {
+            const panel = document.getElementById('analysisPanel');
+            let html = '<div class="analysis-title"><i class="fas fa-search"></i> Analisis de descarte paso a paso</div>';
+            problem.analysis.forEach((step, i) => {
+                html += '<div class="analysis-step"><span class="step-num">' + (i+1) + '</span><span class="step-text">' + step + '</span></div>';
+            });
+            html += '<div class="step-result">Respuesta correcta: ' + formatNum(problem.exact) + '</div>';
+            if (!isCorrect) {
+                html += '<div style="text-align:center;margin-top:.8rem;color:var(--rojo-error);font-weight:600;font-size:.88rem;"><i class="fas fa-info-circle"></i> Revisa la tecnica de ' + problem.technique + ' para descartar mas rapido la proxima vez.</div>';
+            }
+            panel.innerHTML = html;
+            panel.classList.add('show');
+        }
+
+        function showHint() {
+            if (!currentProblem || answered) return;
+            hintUsed = true;
+            showNotification('Pista', currentProblem.hint);
+            document.getElementById('hintBtn').disabled = true;
+        }
+
+        function nextProblem() {
+            currentProblem = generateProblem(currentLevel);
+            renderProblem(currentProblem);
+        }
+
+        function setLevel(level) {
+            currentLevel = level;
+            document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('.level-btn[data-level="' + level + '"]').classList.add('active');
+            nextProblem();
+        }
+
+        function updateScore() {
+            document.getElementById('scoreCorrect').textContent = score.correct;
+            document.getElementById('scoreTotal').textContent = score.total;
+            document.getElementById('scoreDiscards').textContent = score.discards;
+            document.getElementById('scoreStreak').textContent = score.streak;
+            const pct = score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0;
+            document.getElementById('scorePercent').textContent = pct + '%';
+        }
+
+        /* ===== PROGRESO LOCAL ===== */
+        function saveLocalProgress() {
+            try {
+                const p = JSON.parse(localStorage.getItem('rcdd_progress') || '{}');
+                if (!p.completed) p.completed = [];
+                if (!p.completed.includes('RCDD8')) {
+                    p.completed.push('RCDD8');
+                    localStorage.setItem('rcdd_progress', JSON.stringify(p));
+                }
+            } catch(e) {}
+        }
+
+        function resetProgress() {
+            if (confirm('Estas seguro de reiniciar todo tu progreso? Esta accion no se puede deshacer.')) {
+                localStorage.removeItem('rcdd_progress');
+                location.reload();
+            }
+        }
+
+        /* ===== TECLADO ===== */
+        document.addEventListener('keydown', function(e) {
+            if (answered) {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nextProblem(); }
+                return;
+            }
+            const keyMap = { 'a': 0, 'b': 1, 'c': 2, 'd': 3, '1': 0, '2': 1, '3': 2, '4': 3 };
+            const idx = keyMap[e.key.toLowerCase()];
+            if (idx !== undefined) {
+                const btns = document.querySelectorAll('.option-btn:not(.discarded)');
+                // Buscar por letra
+                const letter = 'ABCD'[idx];
+                const btn = document.querySelector('.option-btn[data-letter="' + letter + '"]:not(.discarded)');
+                if (btn) handleOptionClick(btn, currentProblem);
+            }
+            if (e.key.toLowerCase() === 'h') showHint();
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (!answered && selectedForDiscard.size > 0) {
+                    selectedForDiscard.forEach(letter => {
+                        const btn = document.querySelector('[data-letter="' + letter + '"]');
+                        if (btn) {
+                            btn.classList.remove('select-for-discard');
+                            btn.style.borderColor = '';
+                            btn.style.background = '';
+                        }
+                    });
+                    selectedForDiscard.clear();
+                    document.getElementById('discardBtn').disabled = true;
+                }
+            }
+        });
+
+        /* ===== INIT ===== */
+        document.addEventListener('DOMContentLoaded', function() {
+            currentProblem = generateProblem(currentLevel);
+            renderProblem(currentProblem);
+            setTimeout(() => {
+                showNotification('Bienvenido', 'Descarta opciones sin calcular. Haz clic en las que puedas eliminar, luego confirma la correcta.');
+            }, 800);
+        });
+    </script>
+</body>
+</html>
