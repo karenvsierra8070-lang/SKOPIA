@@ -392,49 +392,90 @@
         window._skopiaUid = userId;
 
         const scoresRef = ref(db, 'users/' + userId + '/module1/scores');
-        onValue(scoresRef, (snapshot) => {
+            onValue(scoresRef, (snapshot) => {
             const data = snapshot.val();
             const q1Score = data && data.quiz1 ? data.quiz1 : 0;
             const q2Score = data && data.quiz2 ? data.quiz2 : 0;
             const totalScore = q1Score + q2Score;
 
+            // Q1 siempre desbloqueado
             const q1Link = document.querySelector('[data-content="RCDD9"]');
             if (q1Link && q1Link.classList.contains('locked')) q1Link.classList.remove('locked');
 
+            // Q2: SOLO se desbloquea si Q1 >= 150
             const q2Link = document.querySelector('[data-content="RCDD10"]');
             if (q1Score >= 150) {
-                q2Link.classList.remove('locked');
-                q2Link.classList.add('unlocking');
-                setTimeout(() => q2Link.classList.remove('unlocking'), 600);
-            } else { q2Link.classList.add('locked'); }
+                if (q2Link.classList.contains('locked')) {
+                    q2Link.classList.remove('locked');
+                    q2Link.classList.add('unlocking');
+                    setTimeout(() => q2Link.classList.remove('unlocking'), 600);
+                }
+            } else {
+                if (!q2Link.classList.contains('locked')) q2Link.classList.add('locked');
+            }
 
+            // Indicador Q2
             const reqQ2Info = document.getElementById('reqQ2Info');
             if (reqQ2Info) {
                 if (q1Score >= 150) {
                     reqQ2Info.classList.add('unlocked');
                     reqQ2Info.innerHTML = '<i class="fas fa-unlock" style="color:#2ecc71"></i> <span>Desbloqueado!</span>';
                 } else {
+                    reqQ2Info.classList.remove('unlocked');
                     const reqQ2Score = document.getElementById('reqQ2Score');
                     if (reqQ2Score) reqQ2Score.textContent = '(' + q1Score + ' / 150)';
+                    else reqQ2Info.innerHTML = '<i class="fas fa-lock"></i> <span>Requiere Q1 >= 150 pts <span id="reqQ2Score">(' + q1Score + ' / 150)</span></span>';
                 }
             }
 
+            // Q3 y Cierre: SOLO se desbloquean si TOTAL (Q1 + Q2) >= 180
+            // Esto significa que DEBEN tener Q1 y Q2 aprobados
             const q3Link = document.querySelector('[data-content="RCDD11"]');
             const finalLink = document.querySelector('[data-content="RCDD12"]');
-            if (totalScore >= 180) {
-                q3Link.classList.remove('locked');
-                finalLink.classList.remove('locked');
-                if (!q3Link.dataset.unlocked) {
-                    q3Link.classList.add('unlocking'); finalLink.classList.add('unlocking');
-                    q3Link.dataset.unlocked = "true"; finalLink.dataset.unlocked = "true";
+
+            if (totalScore >= 180 && q1Score >= 150 && q2Score >= 30) {
+                if (q3Link.classList.contains('locked')) {
+                    q3Link.classList.remove('locked');
+                    q3Link.classList.add('unlocking');
+                    q3Link.dataset.unlocked = "true";
+                    setTimeout(() => q3Link.classList.remove('unlocking'), 600);
                 }
-            } else { q3Link.classList.add('locked'); finalLink.classList.add('locked'); }
+                if (finalLink.classList.contains('locked')) {
+                    finalLink.classList.remove('locked');
+                    finalLink.classList.add('unlocking');
+                    finalLink.dataset.unlocked = "true";
+                    setTimeout(() => finalLink.classList.remove('unlocking'), 600);
+                }
+            } else {
+                if (!q3Link.classList.contains('locked')) q3Link.classList.add('locked');
+                if (!finalLink.classList.contains('locked')) finalLink.classList.add('locked');
+                delete q3Link.dataset.unlocked;
+                delete finalLink.dataset.unlocked;
+            }
 
+            // Indicadores Q3 y Final
             const reqQ3Info = document.getElementById('reqQ3Info');
-            if (reqQ3Info && totalScore >= 180) { reqQ3Info.classList.add('unlocked'); reqQ3Info.innerHTML = '<i class="fas fa-unlock" style="color:#2ecc71"></i> <span>Desbloqueado!</span>'; }
+            if (reqQ3Info) {
+                if (totalScore >= 180 && q1Score >= 150 && q2Score >= 30) {
+                    reqQ3Info.classList.add('unlocked');
+                    reqQ3Info.innerHTML = '<i class="fas fa-unlock" style="color:#2ecc71"></i> <span>Desbloqueado!</span>';
+                } else {
+                    reqQ3Info.classList.remove('unlocked');
+                    reqQ3Info.innerHTML = '<i class="fas fa-lock"></i> <span>Requiere Total >= 180 pts</span>';
+                }
+            }
             const reqFinalInfo = document.getElementById('reqFinalInfo');
-            if (reqFinalInfo && totalScore >= 180) { reqFinalInfo.classList.add('unlocked'); reqFinalInfo.innerHTML = '<i class="fas fa-unlock" style="color:#2ecc71"></i> <span>Desbloqueado!</span>'; }
+            if (reqFinalInfo) {
+                if (totalScore >= 180 && q1Score >= 150 && q2Score >= 30) {
+                    reqFinalInfo.classList.add('unlocked');
+                    reqFinalInfo.innerHTML = '<i class="fas fa-unlock" style="color:#2ecc71"></i> <span>Desbloqueado!</span>';
+                } else {
+                    reqFinalInfo.classList.remove('unlocked');
+                    reqFinalInfo.innerHTML = '<i class="fas fa-lock"></i> <span>Requiere Total >= 180 pts</span>';
+                }
+            }
 
+            // Barra de puntaje
             const scoreFill = document.getElementById('scoreFill');
             const scoreText = document.getElementById('scoreText');
             if (scoreFill && scoreText) {
@@ -442,17 +483,21 @@
                 let pct = Math.min((totalScore / goal) * 100, 100);
                 scoreFill.style.width = pct + '%';
                 scoreText.textContent = totalScore + ' / ' + goal + ' pts';
-                if (pct >= 100) scoreFill.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
+                if (pct >= 100) {
+                    scoreFill.style.background = 'linear-gradient(90deg, #2ecc71, #27ae60)';
+                } else {
+                    scoreFill.style.background = '';
+                }
             }
         });
 
         // Exponer funcion de guardado REAL en Firebase para que el script normal la use
-        window.saveQuiz1ToFirebase = function(scoreValue) {
+               window.saveQuiz1ToFirebase = function(scoreValue) {
             const q1Ref = ref(db, 'users/' + userId + '/module1/scores/quiz1');
             set(q1Ref, scoreValue).then(() => {
-                console.log('Puntaje Q1 guardado en Firebase: ' + scoreValue);
+                console.log('Puntaje Q1 guardado: ' + scoreValue);
             }).catch((error) => {
-                console.error('Error guardando puntaje Q1:', error);
+                console.error('Error guardando Q1:', error);
             });
         };
     </script>
