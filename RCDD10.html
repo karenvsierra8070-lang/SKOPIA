@@ -354,7 +354,7 @@
         }
         window._skopiaUid = userId;
         const scoresRef = ref(db, 'users/' + userId + '/module1/scores');
-              onValue(scoresRef, (snapshot) => {
+                    onValue(scoresRef, (snapshot) => {
             const data = snapshot.val();
             const q1Score = data && data.quiz1 ? data.quiz1 : 0;
             const q2Score = data && data.quiz2 ? data.quiz2 : 0;
@@ -376,7 +376,7 @@
                 if (!q2Link.classList.contains('locked')) q2Link.classList.add('locked');
             }
 
-            // Q3: se desbloquea si Q2 >= 180 (independiente de Q1)
+            // Q3: SOLO se desbloquea si Q2 >= 180
             const q3Link = document.querySelector('[data-content="RCDD11"]');
             if (q2Score >= 180) {
                 if (q3Link.classList.contains('locked')) {
@@ -390,19 +390,11 @@
                 delete q3Link.dataset.unlocked;
             }
 
-            // Evaluacion de salida: se desbloquea si Q3 fue aprobado (Q2 >= 180)
+            // Evaluacion de salida: NUNCA se desbloquea aqui, solo en el Q3
             const finalLink = document.querySelector('[data-content="RCDD12"]');
-            if (q2Score >= 180) {
-                if (finalLink.classList.contains('locked')) {
-                    finalLink.classList.remove('locked');
-                    finalLink.classList.add('unlocking');
-                    finalLink.dataset.unlocked = "true";
-                    setTimeout(() => finalLink.classList.remove('unlocking'), 600);
-                }
-            } else {
-                if (!finalLink.classList.contains('locked')) finalLink.classList.add('locked');
-                delete finalLink.dataset.unlocked;
-            }
+            if (finalLink.classList.contains('unlocked')) finalLink.classList.remove('unlocked');
+            if (!finalLink.classList.contains('locked')) finalLink.classList.add('locked');
+            delete finalLink.dataset.unlocked;
 
             // Indicador Q3
             const reqQ3Info = document.getElementById('reqQ3Info');
@@ -416,19 +408,14 @@
                 }
             }
 
-            // Indicador Evaluacion
+            // Indicador Evaluacion: siempre bloqueado desde Q2
             const reqFinalInfo = document.getElementById('reqFinalInfo');
             if (reqFinalInfo) {
-                if (q2Score >= 180) {
-                    reqFinalInfo.classList.add('unlocked');
-                    reqFinalInfo.innerHTML = '<i class="fas fa-unlock" style="color:#2ecc71"></i> <span>Desbloqueado!</span>';
-                } else {
-                    reqFinalInfo.classList.remove('unlocked');
-                    reqFinalInfo.innerHTML = '<i class="fas fa-lock"></i> <span>Requiere Q2 >= 180 pts</span>';
-                }
+                reqFinalInfo.classList.remove('unlocked');
+                reqFinalInfo.innerHTML = '<i class="fas fa-lock"></i> <span>Requiere completar Q3</span>';
             }
 
-            // Barra de puntaje (muestra el total de Q1+Q2)
+            // Barra de puntaje
             const scoreFill = document.getElementById('scoreFill');
             const scoreText = document.getElementById('scoreText');
             if (scoreFill && scoreText) {
