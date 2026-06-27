@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluacion de Salida - Operaciones Basicas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{
+            --oliva-900:#1a1f16;--oliva-800:#252b1f;--oliva-700:#333a29;
+            --oliva-600:#4a5238;--oliva-500:#5c6648;--oliva-400:#7a8562;--oliva-300:#9ba882;
+            --beige-50:#faf8f0;--beige-100:#f2efe3;--beige-200:#e8e4d4;--beige-300:#d9d4c0;--beige-400:#c4bda5;
+            --dorado:#c9a84c;--dorado-claro:#dfc06e;--dorado-oscuro:#a68832;
+            --exito:#5c8a4a;--error:#a84040;--info:#4a7a9b;
+            --texto:#1a1f16;--texto-claro:#4a5238;
+        }
+        html,body{width:100%;height:100%;overflow-x:hidden}
+        body{font-family:'DM Sans',sans-serif;background:linear-gradient(145deg,var(--beige-100) 0%,#e8e2d2 50%,var(--beige-200) 100%);min-height:100vh;display:flex;flex-direction:column;position:relative;color:var(--texto)}
+        body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(circle at 15% 85%,rgba(201,168,76,.06) 0%,transparent 45%),radial-gradient(circle at 85% 15%,rgba(26,31,22,.06) 0%,transparent 45%);pointer-events:none;z-index:0}
+        body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239ba882' fill-opacity='0.04'%3E%3Cpath d='M20 20.5V18H0v-2h20v-2l2 3.25-2 3.25z'/%3E%3C/g%3E%3C/svg%3E");z-index:0;pointer-events:none}
+        .header{background:linear-gradient(135deg,var(--oliva-900) 0%,var(--oliva-800) 100%);color:var(--beige-50);padding:1.2rem 2rem;box-shadow:0 4px 20px rgba(26,31,22,.4);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:200;width:100%}
+        .header::after{content:'';position:absolute;bottom:0;left:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,var(--dorado),transparent);animation:shimmer 4s infinite linear}
+        @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+        .header h1{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:800;display:flex;align-items:center;gap:.7rem}
+        .header h1 i{color:var(--dorado);font-size:1.3rem}
+        .header h1 span{color:var(--dorado)}
+        .header-actions{display:flex;gap:.8rem;align-items:center;flex-wrap:wrap}
+        .back-btn{background:var(--dorado);color:var(--oliva-900);border:none;padding:.6rem 1.4rem;border-radius:100px;cursor:pointer;font-weight:700;transition:all .3s;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;font-size:.85rem;font-family:inherit}
+        .back-btn:hover{background:var(--dorado-claro);transform:translateY(-2px);box-shadow:0 4px 15px rgba(201,168,76,.4)}
+        .main-wrap{flex:1;display:flex;width:100%;max-width:100%;margin:0;position:relative;z-index:10;min-height:calc(100vh - 70px)}
+        .card-wrap{background:rgba(255,255,255,.92);backdrop-filter:blur(12px);display:flex;width:100%;min-height:100%;overflow:hidden;border:1px solid rgba(201,168,76,.1);position:relative}
+        .card-wrap::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--dorado),transparent);opacity:.4}
+        .sb-toggle{position:absolute;left:16px;top:50%;transform:translateY(-50%);background:var(--dorado);color:var(--oliva-900);width:44px;height:44px;border-radius:50%;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 15px rgba(201,168,76,.3);transition:all .3s;z-index:60;font-size:1.1rem;border:none}
+        .sb-toggle:hover{transform:translateY(-50%) scale(1.1)}
+        .sidebar{width:290px;min-width:260px;background:linear-gradient(180deg,rgba(232,245,233,.6) 0%,rgba(200,230,201,.6) 100%);padding:1.5rem .8rem;overflow-y:auto;border-right:1px solid rgba(26,31,22,.08);backdrop-filter:blur(5px);transition:transform .35s ease,opacity .35s ease;flex-shrink:0}
+        .sidebar.hidden{transform:translateX(-100%);opacity:0;position:absolute;height:100%;z-index:50;pointer-events:none}
+        .sidebar::-webkit-scrollbar{width:5px}
+        .sidebar::-webkit-scrollbar-track{background:rgba(26,31,22,.03);border-radius:10px}
+        .sidebar::-webkit-scrollbar-thumb{background:var(--dorado);border-radius:10px}
+        .ms{margin-bottom:1.5rem}
+        .ms h3{color:var(--oliva-700);font-size:.72rem;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:.7rem;padding-left:.8rem;font-weight:700;display:flex;align-items:center;gap:.4rem}
+        .ms h3 i{font-size:.8rem;color:var(--dorado)}
+        .mi{display:flex;align-items:center;padding:.7rem .9rem;margin:.25rem 0;border-radius:10px;cursor:pointer;transition:all .3s;position:relative;color:var(--texto-claro);font-weight:500;font-size:.82rem;text-decoration:none;overflow:hidden;min-height:42px;line-height:1.3}
+        .mi:hover{background:rgba(201,168,76,.1);transform:translateX(6px);color:var(--texto);text-decoration:none}
+        .mi.active{background:linear-gradient(135deg,rgba(201,168,76,.15),rgba(201,168,76,.05));border-left:3px solid var(--dorado);color:var(--texto);font-weight:700}
+        .mi.completed{position:relative}
+        .mi.completed::after{content:'\f00c';font-family:'Font Awesome 6 Free';font-weight:900;color:var(--dorado);margin-left:auto;font-size:.85rem;padding-left:.5rem}
+        .mi.locked{opacity:.45;cursor:not-allowed}
+        .mi.locked::before{content:'\f023';font-family:'Font Awesome 6 Free';font-weight:900;margin-right:.4rem;color:var(--oliva-500);font-size:.7rem}
+        .mi.unlocking{animation:unlockPulse .6s ease}
+        @keyframes unlockPulse{0%{transform:scale(.95);opacity:.5}50%{transform:scale(1.03);opacity:.9}100%{transform:scale(1);opacity:1}}
+        .req-info{font-size:.72rem;color:var(--oliva-500);padding:.2rem .8rem .4rem;display:flex;align-items:center;gap:.3rem;font-style:italic}
+        .req-info.unlocked{color:var(--exito);font-style:normal;font-weight:600}
+        .req-info i{font-size:.65rem}
+        .score-bar-box{margin-top:1rem;padding:.8rem;background:rgba(255,255,255,.6);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+        .sbar-label{font-size:.75rem;color:var(--oliva-700);margin-bottom:.4rem;font-weight:600;display:flex;justify-content:space-between}
+        .sbar-track{height:8px;background:rgba(26,31,22,.08);border-radius:20px;overflow:hidden}
+        .sbar-fill{height:100%;background:linear-gradient(90deg,var(--dorado),var(--dorado-claro));width:0%;transition:width .8s cubic-bezier(.4,0,.2,1);border-radius:20px}
+        .content{flex:1;padding:2rem 2.5rem;overflow-y:auto;position:relative;min-width:0}
+        .content::-webkit-scrollbar{width:7px}
+        .content::-webkit-scrollbar-track{background:rgba(26,31,22,.03);border-radius:10px}
+        .content::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--dorado),var(--oliva-600));border-radius:10px}
+        .exam-wrap{max-width:820px;margin:0 auto}
+        .ex-start{text-align:center;padding:2.5rem 1.5rem}
+        .ex-icon{width:90px;height:90px;background:linear-gradient(135deg,var(--oliva-900),var(--oliva-700));border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;font-size:2.2rem;color:var(--dorado);box-shadow:0 10px 30px rgba(26,31,22,.25)}
+        .ex-start h2{font-family:'Playfair Display',serif;color:var(--oliva-900);font-size:1.8rem;margin-bottom:.6rem}
+        .ex-start .ex-sub{color:var(--texto-claro);font-size:.95rem;max-width:560px;margin:0 auto 1.8rem;line-height:1.6}
+        .ex-rules{background:linear-gradient(135deg,rgba(232,245,233,.7),rgba(200,230,201,.5));border:1px solid rgba(92,138,74,.15);border-radius:16px;padding:1.5rem;text-align:left;margin-bottom:2rem;max-width:520px;margin-left:auto;margin-right:auto}
+        .ex-rules h3{color:var(--oliva-800);margin-bottom:.8rem;font-size:.95rem;display:flex;align-items:center;gap:.5rem}
+        .ex-rules h3 i{color:var(--dorado)}
+        .ex-rules ul{list-style:none;padding:0}
+        .ex-rules li{padding:.4rem 0;color:var(--texto-claro);display:flex;align-items:flex-start;gap:.6rem;font-size:.88rem;line-height:1.5}
+        .ex-rules li i{color:var(--dorado);margin-top:3px;flex-shrink:0;font-size:.8rem}
+        .start-btn{background:linear-gradient(135deg,var(--oliva-900),var(--oliva-700));color:var(--dorado);border:none;padding:1rem 2.5rem;border-radius:100px;font-size:1.1rem;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 6px 20px rgba(26,31,22,.25);display:inline-flex;align-items:center;gap:.6rem;font-family:inherit}
+        .start-btn:hover{transform:translateY(-3px) scale(1.03);box-shadow:0 10px 30px rgba(26,31,22,.35)}
+        .ex-locked{display:none;text-align:center;padding:2.5rem 1.5rem}
+        .ex-locked.show{display:block}
+        .lock-icon{width:100px;height:100px;background:linear-gradient(135deg,var(--error),#8b3030);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;font-size:2.5rem;color:#fff;box-shadow:0 10px 30px rgba(168,64,64,.3);animation:lockPulse 2s infinite}
+        @keyframes lockPulse{0%,100%{box-shadow:0 10px 30px rgba(168,64,64,.3)}50%{box-shadow:0 15px 45px rgba(168,64,64,.5)}}
+        .ex-locked h2{color:var(--error);font-size:1.6rem;margin-bottom:.8rem;font-family:'Playfair Display',serif}
+        .ex-locked .lock-msg{color:var(--texto-claro);font-size:.95rem;line-height:1.6;margin-bottom:1rem;max-width:460px;margin-left:auto;margin-right:auto}
+        .lock-timer{font-size:2.8rem;font-weight:900;color:var(--oliva-800);margin:1rem 0;font-variant-numeric:tabular-nums;letter-spacing:.05em}
+        .lock-timer-label{font-size:.82rem;color:var(--texto-claro);margin-bottom:1.5rem}
+        .lock-score-box{background:rgba(168,64,64,.06);border:1px solid rgba(168,64,64,.15);border-radius:12px;padding:1rem;max-width:380px;margin:0 auto;display:flex;align-items:center;gap:.8rem}
+        .lock-score-box i{font-size:1.8rem;color:var(--error)}
+        .lock-score-box strong{color:var(--oliva-800);display:block;font-size:1rem}
+        .lock-score-box span{color:var(--texto-claro);font-size:.82rem}
+        .ex-topbar{display:none;background:rgba(255,255,255,.95);border:1px solid rgba(201,168,76,.1);border-radius:14px;padding:1rem 1.3rem;box-shadow:0 4px 15px rgba(0,0,0,.06);margin-bottom:1.5rem;position:sticky;top:0;z-index:50;gap:1rem;align-items:center;flex-wrap:wrap;backdrop-filter:blur(10px)}
+        .ex-topbar.show{display:flex}
+        .timer-box{display:flex;align-items:center;gap:.5rem;font-size:1.1rem;font-weight:700;color:var(--oliva-800);font-variant-numeric:tabular-nums}
+        .timer-box i{color:var(--dorado);font-size:1rem}
+        .timer-box.warning{color:var(--dorado-oscuro)}
+        .timer-box.danger{color:var(--error);animation:blink 1s infinite}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+        .prog-mini{flex:1;min-width:80px;height:5px;background:rgba(26,31,22,.08);border-radius:10px;overflow:hidden}
+        .prog-mini-fill{height:100%;background:linear-gradient(90deg,var(--dorado),var(--exito));border-radius:10px;transition:width .5s;width:0%}
+        .prog-text{font-size:.82rem;color:var(--texto-claro);font-weight:600;white-space:nowrap}
+        .prog-text span{color:var(--oliva-800)}
+        .topbar-r{margin-left:auto;display:flex;align-items:center;gap:.8rem}
+        .pts-live{background:linear-gradient(135deg,rgba(201,168,76,.15),rgba(201,168,76,.05));border:1px solid rgba(201,168,76,.2);padding:.4rem .9rem;border-radius:100px;font-weight:700;color:var(--dorado-oscuro);font-size:.88rem}
+        .ex-questions{display:none}.ex-questions.show{display:block}
+        .q-card{background:#fff;border-radius:16px;padding:1.5rem;box-shadow:0 2px 10px rgba(0,0,0,.05);margin-bottom:1.2rem;transition:all .3s;border-left:4px solid transparent}
+        .q-card.current{border-left-color:var(--dorado);box-shadow:0 4px 20px rgba(0,0,0,.08)}
+        .q-card.q-correct{border-left-color:var(--exito)}
+        .q-card.q-incorrect{border-left-color:var(--error)}
+        .q-num{display:inline-flex;align-items:center;gap:.3rem;background:rgba(26,31,22,.05);padding:.25rem .7rem;border-radius:100px;font-size:.72rem;font-weight:700;color:var(--oliva-700);margin-bottom:.7rem}
+        .q-topic{display:inline-block;font-size:.65rem;background:rgba(74,122,155,.1);color:var(--info);padding:.15rem .5rem;border-radius:8px;font-weight:600;margin-left:.4rem}
+        .q-text{color:var(--oliva-900);font-size:.98rem;line-height:1.7;margin-bottom:1.2rem;font-weight:500}
+        .opts{display:flex;flex-direction:column;gap:.5rem}
+        .opt{display:flex;align-items:flex-start;gap:.7rem;padding:.8rem 1rem;border:2px solid var(--beige-200);border-radius:10px;cursor:pointer;transition:all .3s;font-size:.9rem;color:var(--texto-claro);line-height:1.5}
+        .opt:hover:not(.dis){border-color:var(--dorado);background:rgba(201,168,76,.04);transform:translateX(3px)}
+        .opt-ltr{width:28px;height:28px;background:rgba(26,31,22,.06);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--oliva-700);font-size:.78rem;flex-shrink:0;transition:all .3s}
+        .opt:hover:not(.dis) .opt-ltr{background:var(--dorado);color:#fff}
+        .opt.sel{border-color:var(--info);background:rgba(74,122,155,.04)}
+        .opt.sel .opt-ltr{background:var(--info);color:#fff}
+        .opt.ok{border-color:var(--exito)!important;background:rgba(92,138,74,.06)!important}
+        .opt.ok .opt-ltr{background:var(--exito)!important;color:#fff!important}
+        .opt.fail{border-color:var(--error)!important;background:rgba(168,64,64,.05)!important}
+        .opt.fail .opt-ltr{background:var(--error)!important;color:#fff!important}
+        .opt.dis{cursor:default;opacity:.55}
+        .opt.dis:not(.ok):not(.fail){opacity:.35}
+        .fb-box{display:none;margin-top:1rem;padding:1rem;border-radius:10px;animation:slideU .35s ease}
+        .fb-box.show{display:block}
+        @keyframes slideU{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
+        .fb-box.fb-ok{background:rgba(92,138,74,.08);border-left:3px solid var(--exito)}
+        .fb-box.fb-fail{background:rgba(168,64,64,.06);border-left:3px solid var(--error)}
+        .fb-head{display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem;font-weight:700;font-size:.9rem}
+        .fb-box.fb-ok .fb-head{color:var(--exito)}
+        .fb-box.fb-fail .fb-head{color:var(--error)}
+        .fb-text{color:var(--texto-claro);line-height:1.5;font-size:.85rem}
+        .fb-pts{display:inline-flex;align-items:center;gap:.3rem;font-weight:700;font-size:.82rem;margin-top:.4rem;padding:.2rem .6rem;border-radius:100px}
+        .fb-box.fb-ok .fb-pts{background:rgba(92,138,74,.12);color:var(--exito)}
+        .fb-box.fb-fail .fb-pts{background:rgba(168,64,64,.08);color:var(--error)}
+        .ex-nav{display:none;justify-content:space-between;align-items:center;margin-top:1.5rem;padding:1.2rem 0;border-top:2px solid rgba(26,31,22,.05)}
+        .ex-nav.show{display:flex}
+        .nbtn{padding:.7rem 1.3rem;border-radius:100px;font-weight:600;font-size:.88rem;cursor:pointer;transition:all .3s;display:inline-flex;align-items:center;gap:.4rem;font-family:inherit;border:none}
+        .nbtn.prev{background:#fff;color:var(--oliva-800);border:2px solid var(--dorado)}
+        .nbtn.prev:hover{background:rgba(201,168,76,.08)}
+        .nbtn.prev:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
+        .nbtn.next{background:var(--dorado);color:var(--oliva-900);box-shadow:0 3px 12px rgba(201,168,76,.3)}
+        .nbtn.next:hover{background:var(--dorado-claro);transform:translateY(-2px)}
+        .nbtn.fin{background:linear-gradient(135deg,var(--oliva-900),var(--oliva-700));color:var(--dorado);box-shadow:0 3px 12px rgba(26,31,22,.25)}
+        .nbtn.fin:hover{transform:translateY(-2px)}
+        .qmap{display:none;flex-wrap:wrap;gap:.4rem;justify-content:center;margin-top:1.2rem}
+        .qmap.show{display:flex}
+        .qdot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;cursor:pointer;transition:all .3s;border:2px solid transparent;background:rgba(26,31,22,.05);color:var(--texto-claro)}
+        .qdot:hover{transform:scale(1.1)}
+        .qdot.act{background:var(--dorado);color:var(--oliva-900);border-color:var(--dorado-claro);box-shadow:0 2px 8px rgba(201,168,76,.3)}
+        .qdot.answered{background:var(--info);color:#fff}
+        .qdot.q-ok{background:var(--exito);color:#fff}
+        .qdot.q-fail{background:var(--error);color:#fff}
+        .ex-results{display:none;text-align:center;padding:2rem}
+        .ex-results.show{display:block}
+        .res-circle{width:160px;height:160px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto 1.5rem;position:relative}
+        .res-circle.pass{background:linear-gradient(135deg,rgba(92,138,74,.12),rgba(92,138,74,.06));border:4px solid var(--exito)}
+        .res-circle.fail{background:linear-gradient(135deg,rgba(168,64,64,.1),rgba(168,64,64,.05));border:4px solid var(--error)}
+        .res-score{font-family:'Playfair Display',serif;font-size:2.8rem;font-weight:900;line-height:1}
+        .res-circle.pass .res-score{color:var(--exito)}
+        .res-circle.fail .res-score{color:var(--error)}
+        .res-max{font-size:.8rem;color:var(--texto-claro);font-weight:500}
+        .res-badge{position:absolute;top:-10px;right:-10px;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3rem;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+        .res-circle.pass .res-badge{background:var(--exito);color:#fff}
+        .res-circle.fail .res-badge{background:var(--error);color:#fff}
+        .res-title{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:800;margin-bottom:.4rem}
+        .res-circle.pass~.res-title{color:var(--exito)}
+        .res-circle.fail~.res-title{color:var(--error)}
+        .res-sub{color:var(--texto-claro);font-size:.95rem;margin-bottom:1.5rem;max-width:460px;margin-left:auto;margin-right:auto;line-height:1.6}
+        .res-stats{display:flex;justify-content:center;gap:2rem;margin-bottom:1.5rem;flex-wrap:wrap}
+        .rs{text-align:center}
+        .rs-val{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:800;color:var(--oliva-800)}
+        .rs-lbl{font-size:.72rem;color:var(--texto-claro);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+        .res-actions{display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;margin-top:1.2rem}
+        .rbtn{padding:.9rem 1.8rem;border-radius:100px;font-weight:700;font-size:.92rem;cursor:pointer;transition:all .3s;display:inline-flex;align-items:center;gap:.5rem;font-family:inherit;border:none;text-decoration:none}
+        .rbtn.sec{background:#fff;color:var(--oliva-800);border:2px solid var(--dorado)}
+        .rbtn.sec:hover{background:rgba(201,168,76,.08)}
+        .rbtn.pri{background:var(--dorado);color:var(--oliva-900);box-shadow:0 4px 15px rgba(201,168,76,.3)}
+        .rbtn.pri:hover{background:var(--dorado-claro);transform:translateY(-2px)}
+        .unlock-msg{background:linear-gradient(135deg,rgba(92,138,74,.08),rgba(92,138,74,.04));border:2px solid var(--exito);border-radius:14px;padding:1.2rem 1.5rem;margin:1.5rem 0;max-width:460px;margin-left:auto;margin-right:auto}
+        .unlock-msg i{font-size:1.8rem;color:var(--exito);margin-bottom:.4rem;display:block}
+        .unlock-msg h4{color:var(--exito);font-size:1.05rem;margin-bottom:.2rem}
+        .unlock-msg p{color:var(--texto-claro);font-size:.88rem}
+        .toast-wrap{position:fixed;top:80px;right:1rem;z-index:8000;display:flex;flex-direction:column;gap:.4rem}
+        .toast{background:var(--oliva-800);border:1px solid rgba(201,168,76,.2);border-radius:10px;padding:.7rem 1rem;font-size:.78rem;color:var(--beige-200);display:flex;align-items:center;gap:.4rem;animation:toastIn .4s ease,toastOut .4s ease 2.6s forwards;box-shadow:0 8px 25px rgba(0,0,0,.35);max-width:300px}
+        .toast.t-ok{border-color:rgba(92,138,74,.4)}.toast.t-ok i{color:var(--exito)}
+        .toast.t-err{border-color:rgba(168,64,64,.4)}.toast.t-err i{color:var(--error)}
+        .toast.t-info{border-color:rgba(201,168,76,.3)}.toast.t-info i{color:var(--dorado)}
+        @keyframes toastIn{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes toastOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(30px)}}
+        .confetti{position:fixed;pointer-events:none;z-index:9999;border-radius:2px}
+        @media(max-width:768px){
+            .main-wrap{flex-direction:column}.card-wrap{flex-direction:column}
+            .sidebar{width:100%;min-width:0;border-right:none;border-bottom:1px solid rgba(26,31,22,.08);position:relative;transform:none;opacity:1}
+            .sidebar.hidden{display:none}.content{padding:1.2rem}
+            .header{padding:.8rem 1rem;flex-direction:column;gap:.5rem}.header h1{font-size:1.2rem}
+            .header-actions{width:100%;justify-content:center}
+            .ex-topbar{flex-direction:column;gap:.6rem}.topbar-r{margin-left:0;width:100%;justify-content:space-between}
+            .res-stats{gap:1rem}.lock-timer{font-size:2.2rem}
+        }
+        @media(min-width:769px){.sb-toggle{display:flex}}
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1><i class="fas fa-graduation-cap"></i> OPERACIONES <span>BASICAS</span></h1>
+        <div class="header-actions">
+            <a href="RCDASHBOARD.html" class="back-btn"><i class="fas fa-arrow-left"></i> Volver al Dashboard</a>
+        </div>
+    </header>
+    <div class="main-wrap">
+        <div class="card-wrap">
+            <button class="sb-toggle" id="sbToggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
+            <aside class="sidebar" id="sidebar">
+                <div class="ms">
+                    <h3><i class="fas fa-book-open"></i> Introduccion y Contexto</h3>
+                    <a href="RCDD1.html" class="mi completed">Por que la aritmetica define tu puntaje</a>
+                    <a href="RCDD2.html" class="mi completed">Analisis de distractores comunes</a>
+                </div>
+                <div class="ms">
+                    <h3><i class="fas fa-calculator"></i> Sistemas Numericos y Signos</h3>
+                    <a href="RCDD3.html" class="mi completed">Operaciones con Numeros Enteros</a>
+                    <a href="RCDD4.html" class="mi completed">Ley de Signos en estructuras complejas</a>
+                </div>
+                <div class="ms">
+                    <h3><i class="fas fa-bolt"></i> Propiedades que Ahorran Tiempo</h3>
+                    <a href="RCDD5.html" class="mi completed">Propiedad Distributiva</a>
+                    <a href="RCDD6.html" class="mi completed">Factorizacion basica aplicada</a>
+                </div>
+                <div class="ms">
+                    <h3><i class="fas fa-brain"></i> Estimacion y Aproximacion</h3>
+                    <a href="RCDD7.html" class="mi completed">Calculo mental de redondeo</a>
+                    <a href="RCDD8.html" class="mi completed">Tecnicas de descarte visual</a>
+                </div>
+                <div class="ms">
+                    <h3><i class="fas fa-tasks"></i> Entrenamiento de Practica</h3>
+                    <a href="RCDD9.html" class="mi completed">Cuestionario 1: Precision y Signos</a>
+                    <a href="RCDD10.html" class="mi completed">Cuestionario 2: Problemas de Contexto</a>
+                    <a href="RCDD11.html" class="mi completed">Cuestionario 3: Desafio Saber Pro</a>
+                    <div class="req-info unlocked"><i class="fas fa-unlock" style="color:var(--exito)"></i> <span>Completado</span></div>
+                </div>
+                <div class="ms">
+                    <h3><i class="fas fa-flag-checkered"></i> Cierre de Modulo</h3>
+                    <a href="#" class="mi active" onclick="return false">Evaluacion de Salida</a>
+                    <div class="req-info" id="reqEvalInfo"><i class="fas fa-lock"></i> <span>Requiere 180 pts para desbloquear Jerarquia</span></div>
+                    <div class="score-bar-box">
+                        <div class="sbar-label"><span><i class="fas fa-trophy"></i> Puntaje Pieza 1</span><span id="sideScoreTxt">0 / 180 pts</span></div>
+                        <div class="sbar-track"><div class="sbar-fill" id="sideScoreFill"></div></div>
+                    </div>
+                </div>
+            </aside>
+            <main class="content" id="contentArea">
+                <div class="exam-wrap">
+                    <div class="ex-start" id="exStart">
+                        <div class="ex-icon"><i class="fas fa-award"></i></div>
+                        <h2>Evaluacion de Salida</h2>
+                        <p class="ex-sub">Examen final de Operaciones Basicas. Demuestra que dominas la ley de signos, las operaciones combinadas, la distributiva, la factorizacion y el calculo mental antes de avanzar a Jerarquia.</p>
+                        <div class="ex-rules">
+                            <h3><i class="fas fa-list-check"></i> Reglas del Examen</h3>
+                            <ul>
+                                <li><i class="fas fa-clock"></i> Tienes <strong>65 minutos</strong> para 35 preguntas</li>
+                                <li><i class="fas fa-star"></i> Cada correcta vale <strong>9 puntos</strong> (maximo 300)</li>
+                                <li><i class="fas fa-check-circle"></i> Necesitas <strong>180 puntos</strong> para desbloquear <strong>Jerarquia</strong></li>
+                                <li><i class="fas fa-ban"></i> Si no apruebas, espera <strong>4 horas</strong> para reintentar</li>
+                                <li><i class="fas fa-shuffle"></i> Las preguntas se seleccionan aleatoriamente</li>
+                                <li><i class="fas fa-comment-dots"></i> Retroalimentacion inmediata por cada pregunta</li>
+                            </ul>
+                        </div>
+                        <button class="start-btn" id="startBtn" onclick="window._startExam()"><i class="fas fa-play"></i> Comenzar Examen</button>
+                    </div>
+                    <div class="ex-locked" id="exLocked">
+                        <div class="lock-icon"><i class="fas fa-lock"></i></div>
+                        <h2>Examen Bloqueado</h2>
+                        <p class="lock-msg">No alcanzaste el puntaje minimo para desbloquear Jerarquia. Debes esperar antes de intentar nuevamente.</p>
+                        <div class="lock-timer" id="lockTimer">04:00:00</div>
+                        <div class="lock-timer-label">Tiempo restante de espera</div>
+                        <div class="lock-score-box">
+                            <i class="fas fa-chart-bar"></i>
+                            <div>
+                                <strong id="lockScoreTxt">0 / 300 pts</strong>
+                                <span>Necesitas 180 puntos para desbloquear Jerarquia</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ex-topbar" id="exTopbar">
+                        <div class="timer-box" id="timerBox"><i class="fas fa-clock"></i> <span id="timerTxt">65:00</span></div>
+                        <div class="prog-mini"><div class="prog-mini-fill" id="progMini"></div></div>
+                        <div class="prog-text">Pregunta <span id="curQ">1</span>/35</div>
+                        <div class="topbar-r">
+                            <div class="pts-live"><i class="fas fa-star"></i> <span id="livePts">0</span> pts</div>
+                        </div>
+                    </div>
+                    <div class="ex-questions" id="exQuestions"></div>
+                    <div class="qmap" id="qmap"></div>
+                    <div class="ex-nav" id="exNav">
+                        <button class="nbtn prev" id="prevBtn" onclick="window._prevQ()" disabled><i class="fas fa-arrow-left"></i> Anterior</button>
+                        <button class="nbtn next" id="nextBtn" onclick="window._nextQ()">Siguiente <i class="fas fa-arrow-right"></i></button>
+                        <button class="nbtn fin" id="finBtn" onclick="window._finishExam()" style="display:none"><i class="fas fa-flag-checkered"></i> Terminar</button>
+                    </div>
+                    <div class="ex-results" id="exResults"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <div class="toast-wrap" id="toastWrap"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            authDomain: "skopia-aa786.firebaseapp.com",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
+            projectId: "skopia-aa786",
+            storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099",
+            appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let userId = localStorage.getItem('skopia_uid') || sessionStorage.getItem('skopia_uid');
+        if (!userId) {
+            userId = 'user_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+            localStorage.setItem('skopia_uid', userId);
+        }
+        window._skopiaUid = userId;
+
+        /* =============================================
+           BANCO DE PREGUNTAS - OPERACIONES BASICAS
+           50 preguntas sobre: signos, operaciones combinadas,
+           distributiva, factorizacion, calculo mental, fracciones
+           ============================================= */
+        const BANK = [
+            { t:"Suma Enteros", q:"Cuanto es (-47) + (+83)?", o:["36","130","-130","-36"], c:0, f:"-47 + 83 = 83 - 47 = 36. Signos diferentes: se restan y queda el signo del mayor (positivo)." },
+            { t:"Resta Enteros", q:"Al calcular (-125) - (-68), el resultado es:", o:["-57","-193","57","193"], c:0, f:"-125 - (-68) = -125 + 68 = -57. Restar un negativo equivale a sumar su positivo." },
+            { t:"Multiplicacion Signos", q:"Cuanto vale (-8) x (+7) x (-3)?", o:["168","-168","-21","21"], c:0, f:"(-8)x7 = -56. (-56)x(-3) = 168. Dos negativos multiplicados dan positivo." },
+            { t:"Division Signos", q:"El resultado de (-144) / (-12) es:", o:["12","-12","-132","132"], c:0, f:"Negativo entre negativo da positivo. 144 / 12 = 12." },
+            { t:"Operacion Combinada", q:"Cuanto es 5 + (-3) x 4 - (-2)?", o:["-5","15","-15","9"], c:0, f:"Primero multiplicacion: (-3)x4 = -12. Luego: 5 + (-12) - (-2) = 5 - 12 + 2 = -5." },
+            { t:"Jerarquia Operaciones", q:"Al resolver 3 + 4 x 2 - 8 / 4:", o:["9","3","6","12"], c:0, f:"4x2=8, 8/4=2. Luego: 3 + 8 - 2 = 9. Multiplicacion y division antes que suma y resta." },
+            { t:"Parentesis", q:"Cuanto es (6 - 10) x (3 + 2)?", o:["-20","20","-8","8"], c:0, f:"(6-10) = -4, (3+2) = 5. Producto: -4 x 5 = -20." },
+            { t:"Distributiva Basica", q:"Al calcular -3(5x - 8), se obtiene:", o:["-15x + 24","-15x - 24","15x + 24","15x - 24"], c:0, f:"-3 x 5x = -15x. -3 x (-8) = +24. Resultado: -15x + 24." },
+            { t:"Distributiva Doble", q:"Al expandir (2a - 3)(a + 4):", o:["2a² + 5a - 12","2a² - 5a - 12","2a² + 11a - 12","2a² - 11a - 12"], c:0, f:"2a(a+4) - 3(a+4) = 2a² + 8a - 3a - 12 = 2a² + 5a - 12." },
+            { t:"Factor Comun Simple", q:"El factor comun de 18x + 27 es:", o:["9","3","6x","18"], c:0, f:"MCD de 18 y 27: 18=9x2, 27=9x3. MCD=9. Resultado: 9(2x + 3)." },
+            { t:"Factor Comun Variable", q:"Al factorizar 15a²b - 10ab²:", o:["5ab(3a - 2b)","5a(3ab - 2b²)","ab(15a - 10b)","5(3a²b - 2ab²)"], c:0, f:"MCD coeficientes: 5. Variables comunes: ab. Resultado: 5ab(3a - 2b)." },
+            { t:"Diferencia de Cuadrados", q:"Factorizar 81 - 25x²:", o:["(9 - 5x)(9 + 5x)","(9x - 5)(9x + 5)","(81 - 5x)(1 + 5x)","No se puede factorizar"], c:0, f:"81 = 9², 25x² = (5x)². Formula a²-b² = (a-b)(a+b): (9-5x)(9+5x)." },
+            { t:"Trinomio Cuadrado Perfecto", q:"x² + 10x + 25 es igual a:", o:["(x + 5)²","(x - 5)²","(x + 10)²","(x + 25)²"], c:0, f:"25 = 5², 10 = 2x5. Cumple la forma (x+a)² = x²+2ax+a². Es (x+5)²." },
+            { t:"Trinomio Cuadrado Negativo", q:"Factorizar x² - 14x + 49:", o:["(x - 7)²","(x + 7)²","(x - 14)²","(x - 49)²"], c:0, f:"49 = 7², -14 = 2(-7). Es (x-7)² = x² - 14x + 49." },
+            { t:"Calculo Mental Rapido", q:"Para calcular 99 x 47 rapidamente:", o:["4.653","4.700","4.600","4.553"], c:0, f:"99 x 47 = (100-1) x 47 = 4.700 - 47 = 4.653." },
+            { t:"Redondeo Estimacion", q:"Cual es la mejor estimacion de 487 + 312?", o:["800","790","810","780"], c:0, f:"487 ≈ 490, 312 ≈ 310. 490 + 310 = 800." },
+            { t:"Descarte Ultimo Digito", q:"Si 347 x 52, el resultado termina en:", o:["4","0","2","6"], c:0, f:"Solo verificamos el ultimo digito: 7 x 2 = 14, termina en 4." },
+            { t:"Problema Descuento", q:"Un producto de $45.000 tiene 15% de descuento. Cuanto se paga?", o:["$38.250","$38.000","$36.000","$39.600"], c:0, f:"Descuento: 45.000 x 0.15 = 6.750. Precio final: 45.000 - 6.750 = 38.250." },
+            { t:"Proporcionalidad Directa", q:"Si 5 litros cuestan $12.500, cuanto cuestan 8 litros?", o:["$20.000","$18.750","$22.500","$15.000"], c:0, f:"Precio por litro: 12.500 / 5 = 2.500. 8 litros: 8 x 2.500 = 20.000." },
+            { t:"Fraccion a Decimal", q:"Cual es el valor decimal de 3/8?", o:["0.375","0.385","0.365","0.350"], c:0, f:"3 / 8 = 0.375." },
+            { t:"Decimal a Fraccion", q:"0.625 equivale a:", o:["5/8","3/5","7/8","5/6"], c:0, f:"0.625 = 625/1000. Simplificando: divide ambos por 125 = 5/8." },
+            { t:"Suma Fracciones", q:"2/5 + 3/10 =", o:["7/10","5/15","1/2","5/10"], c:0, f:"2/5 = 4/10. 4/10 + 3/10 = 7/10." },
+            { t:"Resta Fracciones", q:"7/8 - 1/4 =", o:["5/8","6/8","3/4","1/2"], c:0, f:"1/4 = 2/8. 7/8 - 2/8 = 5/8." },
+            { t:"Multiplicacion Fracciones", q:"3/4 x 2/5 =", o:["3/10","6/20","5/9","1/3"], c:0, f:"3x2=6, 4x5=20. 6/20 simplificado = 3/10." },
+            { t:"Division Fracciones", q:"5/6 / 2/3 =", o:["5/4","10/18","1/2","15/12"], c:0, f:"Dividir = multiplicar por inversa: 5/6 x 3/2 = 15/12 = 5/4." },
+            { t:"Potencia Base Negativa Par", q:"Cuanto vale (-2)⁴?", o:["16","-16","8","-8"], c:0, f:"(-2)⁴ = (-2)x(-2)x(-2)x(-2) = 4x4 = 16. Exponente par: resultado positivo." },
+            { t:"Potencia Base Negativa Impar", q:"Cuanto vale (-3)³?", o:["-27","27","9","-9"], c:0, f:"(-3)³ = (-3)x(-3)x(-3) = 9x(-3) = -27. Exponente impar: resultado negativo." },
+            { t:"Raiz Cuadrada", q:"Cual es la raiz cuadrada de 576?", o:["24","26","22","28"], c:0, f:"24 x 24 = 576." },
+            { t:"Operacion Compleja", q:"Al resolver 2 + 3² x 4 - 10 / 2:", o:["33","28","36","22"], c:0, f:"3²=9, 9x4=36, 10/2=5. Luego: 2+36-5 = 33." },
+            { t:"Distributiva Contexto", q:"Un descuento del 15% sobre $30.000 equivale a ahorrar:", o:["$4.500","$4.000","$5.000","$3.500"], c:0, f:"30.000 x 0.15 = 4.500." },
+            { t:"Porcentaje de Aumento", q:"Si un numero pasa de 80 a 100, el porcentaje de aumento es:", o:["25%","20%","30%","15%"], c:0, f:"Aumento: 100-80 = 20. Porcentaje: (20/80) x 100 = 25%." },
+            { t:"MCD", q:"Cual es el MCD de 48 y 36?", o:["12","6","8","24"], c:0, f:"48 = 12x4, 36 = 12x3. El MCD es 12." },
+            { t:"MCM", q:"Cual es el MCM de 8 y 12?", o:["24","48","96","12"], c:0, f:"8 = 2³, 12 = 2²x3. MCM = 2³x3 = 24." },
+            { t:"Evaluacion Expresion", q:"Si x = 3, cuanto vale 2x² - 5x + 1?", o:["4","10","-2","7"], c:0, f:"2(9) - 5(3) + 1 = 18 - 15 + 1 = 4." },
+            { t:"Ecuacion Simple", q:"Si 3x + 7 = 25, cuanto vale x?", o:["6","8","5","9"], c:0, f:"3x = 25 - 7 = 18. x = 18/3 = 6." },
+            { t:"Area Rectangulo", q:"Un rectangulo de 15m x 8m tiene area de:", o:["120 m²","23 m²","46 m²","60 m²"], c:0, f:"Area = largo x ancho = 15 x 8 = 120 m²." },
+            { t:"Perimetro Triangulo", q:"Perimetro de un triangulo con lados 7, 10 y 12 cm:", o:["29 cm","84 cm","120 cm","17 cm"], c:0, f:"Perimetro = 7 + 10 + 12 = 29 cm." },
+            { t:"Problema Distancia", q:"Un auto a 80 km/h durante 2.5 horas recorre:", o:["200 km","180 km","160 km","250 km"], c:0, f:"Distancia = velocidad x tiempo = 80 x 2.5 = 200 km." },
+            { t:"Problema Ritmo", q:"Si 12 piezas en 3 horas, cuantas en 5 horas?", o:["20 piezas","15 piezas","18 piezas","24 piezas"], c:0, f:"Ritmo: 12/3 = 4 piezas/hora. En 5 horas: 4 x 5 = 20." },
+            { t:"Notacion Cientifica", q:"3.500.000 en notacion cientifica:", o:["3.5 x 10⁶","35 x 10⁵","3.5 x 10⁵","0.35 x 10⁷"], c:0, f:"3.500.000 = 3.5 x 1.000.000 = 3.5 x 10⁶." },
+            { t:"Descarte Rapido Par-Impar", q:"Cual resultado es IMPAR?", o:["347 x 53","246 x 18","128 x 32","456 x 24"], c:0, f:"347 es impar y 53 es impar. Impar x impar = impar. Los demas tienen al menos un factor par." },
+            { t:"Factorizacion Agrupacion", q:"Factorizar xy + 2y + 3x + 6 por agrupacion:", o:["(x + 2)(y + 3)","(x + 3)(y + 2)","(x + y)(3 + 2)","(xy + 2)(y + 3)"], c:0, f:"y(x+2) + 3(x+2) = (x+2)(y+3)." },
+            { t:"Concentracion Mezcla", q:"Se mezclan 3L al 20% con 7L al 40%. Concentracion final:", o:["34%","30%","36%","32%"], c:0, f:"Soluto: 3(0.20)+7(0.40) = 0.6+2.8 = 3.4L. Total: 10L. 3.4/10 = 34%." },
+            { t:"Distributiva Decimales", q:"Al calcular 0.5(24 + 16):", o:["20","15","25","18"], c:0, f:"0.5 x 24 = 12. 0.5 x 16 = 8. 12 + 8 = 20." },
+            { t:"Potencia de Potencia", q:"(2³)² equivale a:", o:["64","36","32","256"], c:0, f:"(2³)² = 2^(3x2) = 2⁶ = 64." },
+            { t:"Raiz en Contexto", q:"Un cuadrado de area 169 m² tiene lado de:", o:["13 m","14 m","12 m","15 m"], c:0, f:"Lado = √169 = 13 m." },
+            { t:"Descuento Doble", q:"$50.000 con 10% descuento luego 5% adicional. Total:", o:["$42.750","$42.500","$43.000","$41.250"], c:0, f:"Primer descuento: 50.000x0.90=45.000. Segundo: 45.000x0.95=42.750." },
+            { t:"Fracciones Mixtas", q:"1 3/4 + 2 1/2 =", o:["4 1/4","3 1/4","4 1/2","3 3/4"], c:0, f:"1 3/4 = 7/4, 2 1/2 = 5/2 = 10/4. 7/4 + 10/4 = 17/4 = 4 1/4." },
+            { t:"Signos Encadenados", q:"(-2) x (-3) + (-4) x (+5) =", o:["-14","26","-26","14"], c:0, f:"(-2)(-3)=+6. (-4)(5)=-20. 6 + (-20) = -14." },
+            { t:"Division con Cero", q:"Cual expresion NO esta definida?", o:["5 / 0","0 / 5","0 x 5","5 - 0"], c:0, f:"Dividir entre cero no esta definido en matematicas. Las demas operaciones son validas." },
+            { t:"Orden Jerarquico Avanzado", q:"Al resolver 18 / (3 + 3) x 2:", o:["6","12","2","8"], c:0, f:"Primero parentesis: 3+3=6. Luego izquierda a derecha: 18/6=3, 3x2=6." }
+        ];
+
+        /* =============================================
+           CONFIGURACION - PIEZA 1 (Operaciones Basicas)
+           Guarda en scores/1 para desbloquear Pieza 2
+           ============================================= */
+        const TOTAL_Q = 35;
+        const PTS_PER_Q = 9;
+        const MAX_PTS = 300;
+        const PASS_PTS = 180;
+        const TIME_MINUTES = 65;
+        const LOCK_HOURS = 4;
+        const PIECE_NUM = 1; // <-- PIEZA 1: Operaciones Basicas
+        const LOCK_KEY = 'evalSalida_P1_lockUntil';
+        const LAST_SCORE_KEY = 'evalSalida_P1_lastScore';
+
+        let questions = [];
+        let currentIdx = 0;
+        let score = 0;
+        let answered = new Array(TOTAL_Q).fill(null);
+        let userAnswers = new Array(TOTAL_Q).fill(-1);
+        let timerInterval = null;
+        let timeLeft = TIME_MINUTES * 60;
+        let examActive = false;
+
+        /* =============================================
+           ESCUCHAR FIREBASE PARA ACTUALIZAR SIDEBAR
+           ============================================= */
+        onValue(ref(db, `users/${userId}/progress/aritmetica_basica/scores/1`), (snapshot) => {
+            const s = snapshot.val() || 0;
+            updateSideScore(s);
+            const reqInfo = document.getElementById('reqEvalInfo');
+            if (reqInfo) {
+                if (s >= PASS_PTS) {
+                    reqInfo.classList.add('unlocked');
+                    reqInfo.innerHTML = '<i class="fas fa-unlock" style="color:var(--exito)"></i> <span>Jerarquia desbloqueada</span>';
+                } else {
+                    reqInfo.classList.remove('unlocked');
+                    reqInfo.innerHTML = '<i class="fas fa-lock"></i> <span>Requiere 180 pts para desbloquear Jerarquia</span>';
+                }
+            }
+        });
+
+        /* =============================================
+           VERIFICAR BLOQUEO POR 4 HORAS
+           ============================================= */
+        function checkLock() {
+            const lockUntil = parseInt(localStorage.getItem(LOCK_KEY) || '0');
+            const lastScore = parseInt(localStorage.getItem(LAST_SCORE_KEY) || '0');
+            const now = Date.now();
+
+            if (lockUntil > now) {
+                document.getElementById('exStart').style.display = 'none';
+                document.getElementById('exLocked').classList.add('show');
+                document.getElementById('lockScoreTxt').textContent = lastScore + ' / ' + MAX_PTS + ' pts';
+                startLockCountdown(lockUntil - now);
+                return true;
+            }
+
+            document.getElementById('exStart').style.display = '';
+            document.getElementById('exLocked').classList.remove('show');
+            return false;
+        }
+
+        function startLockCountdown(ms) {
+            const update = () => {
+                if (ms <= 0) { localStorage.removeItem(LOCK_KEY); location.reload(); return; }
+                const h = Math.floor(ms / 3600000);
+                const m = Math.floor((ms % 3600000) / 60000);
+                const s = Math.floor((ms % 60000) / 1000);
+                document.getElementById('lockTimer').textContent = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+                ms -= 1000;
+            };
+            update();
+            setInterval(update, 1000);
+        }
+
+        function updateSideScore(s) {
+            const pct = Math.min((s / PASS_PTS) * 100, 100);
+            document.getElementById('sideScoreFill').style.width = pct + '%';
+            document.getElementById('sideScoreTxt').textContent = s + ' / ' + PASS_PTS + ' pts';
+            if (s >= PASS_PTS) {
+                document.getElementById('sideScoreFill').style.background = 'linear-gradient(90deg, var(--exito), #7ab85e)';
+            }
+        }
+
+        /* =============================================
+           SELECCION ALEATORIA DE 35 PREGUNTAS
+           ============================================= */
+        function selectQuestions() {
+            const shuffled = [...BANK].sort(() => Math.random() - 0.5);
+            while (shuffled.length < TOTAL_Q) {
+                shuffled.push({...BANK[Math.floor(Math.random() * BANK.length)]});
+            }
+            return shuffled.slice(0, TOTAL_Q);
+        }
+
+        /* =============================================
+           INICIAR EXAMEN
+           ============================================= */
+        window._startExam = function() {
+            questions = selectQuestions();
+            currentIdx = 0;
+            score = 0;
+            answered = new Array(TOTAL_Q).fill(null);
+            userAnswers = new Array(TOTAL_Q).fill(-1);
+            timeLeft = TIME_MINUTES * 60;
+            examActive = true;
+
+            renderQuestions();
+            renderQMap();
+            showExamUI();
+            startTimer();
+            goToQuestion(0);
+        };
+
+        /* =============================================
+           RENDERIZAR PREGUNTAS
+           ============================================= */
+        function renderQuestions() {
+            const container = document.getElementById('exQuestions');
+            container.innerHTML = '';
+            const letters = ['A','B','C','D'];
+
+            questions.forEach((q, i) => {
+                let optsHTML = '';
+                q.o.forEach((opt, j) => {
+                    optsHTML += `<div class="opt" id="opt-${i}-${j}" onclick="window._selectOpt(${i},${j})">
+                        <div class="opt-ltr">${letters[j]}</div>
+                        <div>${opt}</div>
+                    </div>`;
+                });
+
+                container.innerHTML += `<div class="q-card" id="qcard-${i}">
+                    <div class="q-num">Pregunta ${i+1}<span class="q-topic">${q.t}</span></div>
+                    <div class="q-text">${q.q}</div>
+                    <div class="opts">${optsHTML}</div>
+                    <div class="fb-box" id="fb-${i}"></div>
+                </div>`;
+            });
+        }
+
+        /* =============================================
+           MAPA DE PREGUNTAS
+           ============================================= */
+        function renderQMap() {
+            const map = document.getElementById('qmap');
+            map.innerHTML = '';
+            for (let i = 0; i < TOTAL_Q; i++) {
+                map.innerHTML += `<div class="qdot" id="qdot-${i}" onclick="window._goToQ(${i})">${i+1}</div>`;
+            }
+        }
+
+        function updateQMap() {
+            for (let i = 0; i < TOTAL_Q; i++) {
+                const dot = document.getElementById('qdot-' + i);
+                dot.className = 'qdot';
+                if (i === currentIdx) dot.classList.add('act');
+                else if (answered[i] === true) dot.classList.add('q-ok');
+                else if (answered[i] === false) dot.classList.add('q-fail');
+                else if (userAnswers[i] >= 0) dot.classList.add('answered');
+            }
+        }
+
+        /* =============================================
+           MOSTRAR / OCULTAR UI
+           ============================================= */
+        function showExamUI() {
+            document.getElementById('exStart').style.display = 'none';
+            document.getElementById('exLocked').classList.remove('show');
+            document.getElementById('exTopbar').classList.add('show');
+            document.getElementById('exQuestions').classList.add('show');
+            document.getElementById('qmap').classList.add('show');
+            document.getElementById('exNav').classList.add('show');
+            document.getElementById('exResults').classList.remove('show');
+            document.getElementById('exResults').style.display = 'none';
+        }
+
+        /* =============================================
+           TIMER
+           ============================================= */
+        function startTimer() {
+            clearInterval(timerInterval);
+            updateTimerDisplay();
+            timerInterval = setInterval(() => {
+                if (!examActive) return;
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) { clearInterval(timerInterval); window._finishExam(); }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const m = Math.floor(Math.max(0, timeLeft) / 60);
+            const s = Math.max(0, timeLeft) % 60;
+            document.getElementById('timerTxt').textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+            const tb = document.getElementById('timerBox');
+            tb.classList.remove('warning', 'danger');
+            if (timeLeft <= 120) tb.classList.add('danger');
+            else if (timeLeft <= 600) tb.classList.add('warning');
+        }
+
+        /* =============================================
+           NAVEGACION
+           ============================================= */
+        window._goToQ = function(idx) { goToQuestion(idx); };
+
+        function goToQuestion(idx) {
+            currentIdx = idx;
+            document.querySelectorAll('.q-card').forEach((c, i) => c.classList.toggle('current', i === idx));
+            const card = document.getElementById('qcard-' + idx);
+            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            document.getElementById('prevBtn').disabled = idx === 0;
+            document.getElementById('nextBtn').style.display = idx === TOTAL_Q - 1 ? 'none' : '';
+            document.getElementById('finBtn').style.display = idx === TOTAL_Q - 1 ? '' : 'none';
+            document.getElementById('curQ').textContent = idx + 1;
+            document.getElementById('progMini').style.width = ((idx + 1) / TOTAL_Q * 100) + '%';
+            updateQMap();
+        }
+
+        window._prevQ = function() { if (currentIdx > 0) goToQuestion(currentIdx - 1); };
+        window._nextQ = function() { if (currentIdx < TOTAL_Q - 1) goToQuestion(currentIdx + 1); };
+
+        /* =============================================
+           SELECCIONAR OPCION
+           ============================================= */
+        window._selectOpt = function(qIdx, optIdx) {
+            if (!examActive || answered[qIdx] !== null) return;
+
+            userAnswers[qIdx] = optIdx;
+            const q = questions[qIdx];
+            const isCorrect = optIdx === q.c;
+
+            // Sumar puntos sin pasar de 300
+            if (isCorrect) {
+                score += Math.min(PTS_PER_Q, MAX_PTS - score);
+            }
+            answered[qIdx] = isCorrect;
+
+            // Deshabilitar opciones y marcar correcta/incorrecta
+            q.o.forEach((_, j) => {
+                const el = document.getElementById(`opt-${qIdx}-${j}`);
+                el.classList.add('dis');
+                el.onclick = null;
+                if (j === q.c) el.classList.add('ok');
+                if (j === optIdx && !isCorrect) el.classList.add('fail');
+            });
+
+            // Estilo de tarjeta
+            const card = document.getElementById('qcard-' + qIdx);
+            card.classList.remove('current');
+            card.classList.add(isCorrect ? 'q-correct' : 'q-incorrect');
+
+            // Feedback
+            const fb = document.getElementById('fb-' + qIdx);
+            fb.className = 'fb-box show ' + (isCorrect ? 'fb-ok' : 'fb-fail');
+            fb.innerHTML = `<div class="fb-head"><i class="fas fa-${isCorrect ? 'check-circle' : 'times-circle'}"></i> ${isCorrect ? 'Correcto' : 'Incorrecto'}</div>
+                <div class="fb-text">${q.f}</div>
+                <div class="fb-pts"><i class="fas fa-${isCorrect ? 'star' : 'minus-circle'}"></i> ${isCorrect ? '+9 puntos' : '+0 puntos'}</div>`;
+
+            document.getElementById('livePts').textContent = score;
+            updateQMap();
+        };
+
+        /* =============================================
+           TERMINAR EXAMEN
+           ============================================= */
+        window._finishExam = function() {
+            if (!examActive) return;
+            examActive = false;
+            clearInterval(timerInterval);
+
+            const passed = score >= PASS_PTS;
+            const correctCount = answered.filter(a => a === true).length;
+            const incorrectCount = answered.filter(a => a === false).length;
+            const unanswered = TOTAL_Q - correctCount - incorrectCount;
+            const timeUsed = TIME_MINUTES * 60 - timeLeft;
+            const mins = Math.floor(timeUsed / 60);
+            const secs = timeUsed % 60;
+
+            // Guardar en Firebase: scores/1 = puntaje de Pieza 1
+            saveToFirebase(score);
+
+            // Bloqueo si no aprueba
+            if (!passed) {
+                localStorage.setItem(LOCK_KEY, (Date.now() + LOCK_HOURS * 3600000).toString());
+            } else {
+                localStorage.removeItem(LOCK_KEY);
+            }
+            localStorage.setItem(LAST_SCORE_KEY, score.toString());
+
+            // Ocultar examen, mostrar resultados
+            document.getElementById('exTopbar').classList.remove('show');
+            document.getElementById('exQuestions').classList.remove('show');
+            document.getElementById('exQuestions').style.display = 'none';
+            document.getElementById('qmap').classList.remove('show');
+            document.getElementById('exNav').classList.remove('show');
+
+            const res = document.getElementById('exResults');
+            res.style.display = '';
+            res.classList.add('show');
+
+            res.innerHTML = `
+                <div class="res-circle ${passed ? 'pass' : 'fail'}">
+                    <div class="res-badge"><i class="fas fa-${passed ? 'trophy' : 'times'}"></i></div>
+                    <div class="res-score">${score}</div>
+                    <div class="res-max">/ ${MAX_PTS} pts</div>
+                </div>
+                <h2 class="res-title">${passed ? 'Pieza 1 Completada' : 'No Alcanzaste el Minimo'}</h2>
+                <p class="res-sub">${passed
+                    ? 'Has demostrado dominio en Operaciones Basicas. La Pieza 2 (Jerarquia) ahora esta desbloqueada en tu Dashboard.'
+                    : 'Necesitas un minimo de 180 puntos para desbloquear Jerarquia. Podras reintentar en 4 horas.'}</p>
+
+                <div class="res-stats">
+                    <div class="rs"><div class="rs-val">${correctCount}</div><div class="rs-lbl">Correctas</div></div>
+                    <div class="rs"><div class="rs-val">${incorrectCount}</div><div class="rs-lbl">Incorrectas</div></div>
+                    <div class="rs"><div class="rs-val">${unanswered}</div><div class="rs-lbl">Sin responder</div></div>
+                    <div class="rs"><div class="rs-val">${mins}:${String(secs).padStart(2,'0')}</div><div class="rs-lbl">Tiempo usado</div></div>
+                </div>
+
+                ${passed ? `<div class="unlock-msg">
+                    <i class="fas fa-lock-open"></i>
+                    <h4>Jerarquia Desbloqueada</h4>
+                    <p>Tu puntaje de ${score} puntos desbloquea la Pieza 2 en el Dashboard. Puedes continuar o repasar esta evaluacion.</p>
+                </div>` : ''}
+
+                <div class="res-actions">
+                    ${passed ? `<a href="RCDASHBOARD.html" class="rbtn pri"><i class="fas fa-arrow-right"></i> Ir al Dashboard</a>` : ''}
+                    <button class="rbtn sec" onclick="location.reload()"><i class="fas fa-redo"></i> ${passed ? 'Volver a hacer el examen' : 'Volver al inicio'}</button>
+                </div>
+            `;
+
+            if (passed) launchConfetti();
+            document.getElementById('contentArea').scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        /* =============================================
+           GUARDAR EN FIREBASE - scores/1 (Pieza 1)
+           ============================================= */
+        function saveToFirebase(scoreValue) {
+            const progressRef = ref(db, `users/${userId}/progress/aritmetica_basica`);
+
+            get(progressRef).then((snapshot) => {
+                const existing = snapshot.val() || { scores: {} };
+                existing.scores[PIECE_NUM] = scoreValue;
+
+                const allScores = Object.values(existing.scores);
+                existing.bestScore = Math.max(...allScores, 0);
+
+                set(progressRef, existing).then(() => {
+                    toast('Puntaje Pieza 1 guardado: ' + scoreValue + ' pts', 't-ok');
+                }).catch((err) => {
+                    console.error('Error guardando:', err);
+                    toast('Error al guardar el puntaje', 't-err');
+                });
+            });
+        }
+
+        /* =============================================
+           TOAST
+           ============================================= */
+        function toast(msg, cls = 't-info') {
+            const wrap = document.getElementById('toastWrap');
+            const t = document.createElement('div');
+            t.className = 'toast ' + cls;
+            const icons = { 't-ok': 'fa-check-circle', 't-err': 'fa-exclamation-circle', 't-info': 'fa-info-circle' };
+            t.innerHTML = `<i class="fas ${icons[cls] || icons['t-info']}"></i> ${msg}`;
+            wrap.appendChild(t);
+            setTimeout(() => { if (t.parentNode) t.remove(); }, 3200);
+        }
+
+        /* =============================================
+           CONFETTI
+           ============================================= */
+        function launchConfetti() {
+            const colors = ['#c9a84c','#dfc06e','#5c8a4a','#9ba882','#e8e4d4','#a68832'];
+            for (let i = 0; i < 50; i++) {
+                const el = document.createElement('div');
+                el.className = 'confetti';
+                const size = 5 + Math.random() * 6;
+                el.style.width = size + 'px';
+                el.style.height = size * (0.4 + Math.random() * 0.6) + 'px';
+                el.style.background = colors[Math.floor(Math.random() * colors.length)];
+                el.style.left = (25 + Math.random() * 50) + 'vw';
+                el.style.top = '-10px';
+                el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                document.body.appendChild(el);
+                const angle = -90 + (Math.random() - 0.5) * 70;
+                const speed = 3 + Math.random() * 5;
+                const vx = Math.cos(angle * Math.PI / 180) * speed;
+                const vy = Math.sin(angle * Math.PI / 180) * speed;
+                let x = 0, y = 0, r = 0, op = 1;
+                const anim = () => {
+                    x += vx; vy += 0.12; y += vy; r += (Math.random() - 0.5) * 12; op -= 0.005;
+                    el.style.transform = `translate(${x}px,${y}px) rotate(${r}deg)`;
+                    el.style.opacity = op;
+                    if (op > 0 && y < window.innerHeight + 50) requestAnimationFrame(anim);
+                    else el.remove();
+                };
+                setTimeout(() => requestAnimationFrame(anim), i * 20);
+            }
+        }
+
+        /* =============================================
+           SIDEBAR TOGGLE
+           ============================================= */
+        document.getElementById('sbToggle').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('hidden');
+        });
+
+        /* =============================================
+           INICIO
+           ============================================= */
+        checkLock();
+    </script>
+</body>
+</html>
