@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio Lógico Matemático - Skopia</title>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root{
+            --crema:#fdfbf5;--crema-mid:#f5f0e3;
+            --oliva-oscuro:#272b00;--oliva-medio:#5a6133;
+            --oliva-claro:#bec092;--oliva-palido:#d4d6b0;
+            --oliva-super:#e8e9d4;
+            --sombra:rgba(39,43,0,0.08);--sombra-md:rgba(39,43,0,0.12);
+            --sidebar-w:310px;--topbar-h:72px;--radius:14px;--radius-sm:8px;
+        }
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+        html{scroll-behavior:smooth;}
+        body{font-family:'Roboto',sans-serif;background:var(--crema);color:var(--oliva-oscuro);min-height:100vh;overflow-x:hidden;
+            background-image:radial-gradient(ellipse at 10% 20%,rgba(190,192,146,0.18) 0%,transparent 50%),radial-gradient(ellipse at 90% 80%,rgba(90,97,51,0.1) 0%,transparent 50%);}
+        a{text-decoration:none;color:inherit;}button{cursor:pointer;border:none;background:none;font-family:inherit;}ul{list-style:none;}input{font-family:inherit;}
+
+        /* Sidebar */
+        .sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--oliva-oscuro);color:var(--crema);display:flex;flex-direction:column;z-index:900;transition:transform .35s cubic-bezier(.4,0,.2,1);overflow:hidden;}
+        .sidebar.collapsed{transform:translateX(calc(-1 * var(--sidebar-w)));}
+        .sidebar-header{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;}
+        .sidebar-logo{width:48px;height:48px;border-radius:50%;object-fit:cover;margin-bottom:8px;border:2px solid var(--oliva-claro);}
+        .sidebar-username{font-family:'Patrick Hand',cursive;font-size:1.25rem;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .sidebar-program{font-size:.75rem;color:var(--oliva-claro);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .sidebar-search{padding:12px 14px;flex-shrink:0;}
+        .sidebar-search input{width:100%;padding:9px 12px 9px 34px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);color:var(--crema);font-size:.85rem;outline:none;transition:border .2s;}
+        .sidebar-search input::placeholder{color:rgba(255,255,255,0.35);}
+        .sidebar-search input:focus{border-color:var(--oliva-claro);}
+        .sidebar-search-wrap{position:relative;}
+        .sidebar-search-wrap i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.3);font-size:.8rem;}
+        .sidebar-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 0;scrollbar-width:thin;scrollbar-color:var(--oliva-medio) transparent;}
+        .sidebar-nav::-webkit-scrollbar{width:5px;}.sidebar-nav::-webkit-scrollbar-thumb{background:var(--oliva-medio);border-radius:3px;}
+        .menu-group-label{padding:14px 18px 6px;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--oliva-claro);display:flex;align-items:center;gap:8px;}
+        .menu-group-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.08);}
+        .menu-cat{user-select:none;}
+        .menu-cat-btn{width:100%;padding:10px 18px;display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600;color:var(--crema);transition:background .2s;text-align:left;}
+        .menu-cat-btn:hover{background:rgba(255,255,255,0.06);}
+        .menu-cat-btn i.cat-icon{width:18px;text-align:center;font-size:.82rem;color:var(--oliva-claro);}
+        .menu-cat-btn .chevron{margin-left:auto;font-size:.6rem;transition:transform .25s;color:var(--oliva-claro);}
+        .menu-cat.open>.menu-cat-btn .chevron{transform:rotate(90deg);}
+        .menu-cat-children{max-height:0;overflow:hidden;transition:max-height .35s ease;}
+        .menu-cat.open>.menu-cat-children{max-height:2000px;}
+        .menu-sub{user-select:none;}
+        .menu-sub-btn{width:100%;padding:8px 18px 8px 44px;display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:500;color:rgba(253,251,245,0.75);transition:all .2s;text-align:left;}
+        .menu-sub-btn:hover{color:var(--crema);background:rgba(255,255,255,0.04);}
+        .menu-sub-btn .chevron{margin-left:auto;font-size:.55rem;transition:transform .25s;opacity:.5;}
+        .menu-sub.open>.menu-sub-btn .chevron{transform:rotate(90deg);opacity:1;}
+        .menu-sub-children{max-height:0;overflow:hidden;transition:max-height .3s ease;}
+        .menu-sub.open>.menu-sub-children{max-height:800px;}
+        .menu-link{display:block;padding:7px 18px 7px 62px;font-size:.78rem;color:rgba(253,251,245,0.55);transition:all .2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .menu-link:hover{color:var(--crema);background:rgba(255,255,255,0.06);padding-left:68px;}
+        .menu-link::before{content:'›';margin-right:6px;color:var(--oliva-claro);font-weight:700;}
+        .menu-link.active{color:#fff;background:rgba(255,255,255,0.1);padding-left:68px;}
+        .menu-link.hidden,.menu-cat.hidden,.menu-sub.hidden{display:none;}
+        .menu-note{padding:8px 18px 8px 44px;font-size:.72rem;color:rgba(253,251,245,0.35);font-style:italic;}
+        .menu-no-result{padding:20px 18px;text-align:center;font-size:.8rem;color:rgba(255,255,255,0.3);display:none;}
+        .menu-no-result.show{display:block;}
+        .sidebar-footer{flex-shrink:0;padding:10px 0;border-top:1px solid rgba(255,255,255,0.08);}
+        .sidebar-footer a{display:flex;align-items:center;gap:10px;padding:9px 18px;font-size:.82rem;color:rgba(253,251,245,0.6);transition:all .2s;}
+        .sidebar-footer a:hover{color:var(--crema);background:rgba(255,255,255,0.06);}
+        .sidebar-footer a i{width:18px;text-align:center;font-size:.85rem;}
+        .sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:899;opacity:0;visibility:hidden;transition:all .3s;}
+        .sidebar-overlay.active{opacity:1;visibility:visible;}
+
+        /* Main */
+        .main-wrap{margin-left:var(--sidebar-w);min-height:100vh;transition:margin-left .35s cubic-bezier(.4,0,.2,1);}
+        .main-wrap.expanded{margin-left:0;}
+
+        /* Topbar */
+        .topbar{position:sticky;top:0;z-index:100;height:var(--topbar-h);background:rgba(253,251,245,0.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(39,43,0,0.06);display:flex;align-items:center;padding:0 28px;gap:16px;}
+        .topbar-toggle{width:40px;height:40px;border-radius:var(--radius-sm);display:grid;place-items:center;font-size:1.1rem;color:var(--oliva-oscuro);transition:background .2s;flex-shrink:0;}
+        .topbar-toggle:hover{background:rgba(39,43,0,0.06);}
+        .topbar-breadcrumb{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--oliva-medio);flex-wrap:wrap;}
+        .topbar-breadcrumb a{color:var(--oliva-medio);transition:color .2s;}.topbar-breadcrumb a:hover{color:var(--oliva-oscuro);}
+        .topbar-breadcrumb .sep{opacity:.4;}
+        .topbar-breadcrumb .current{color:var(--oliva-oscuro);font-weight:600;}
+        .topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+        .topbar-datetime{text-align:right;margin-right:6px;}
+        .topbar-date{font-size:.72rem;color:var(--oliva-medio);display:block;}
+        .topbar-clock{font-family:'Orbitron',monospace;font-size:1.15rem;font-weight:700;color:var(--oliva-oscuro);letter-spacing:1px;}
+
+        /* Page Content */
+        .page-content{padding:28px 28px 40px;}
+        .page-header{margin-bottom:28px;}
+        .page-header h1{font-family:'Patrick Hand',cursive;font-size:2rem;line-height:1.2;margin-bottom:6px;}
+        .page-header p{font-size:.92rem;color:var(--oliva-medio);max-width:600px;line-height:1.5;}
+
+        /* Stats mini */
+        .mini-stats{display:flex;gap:16px;margin-bottom:28px;flex-wrap:wrap;}
+        .mini-stat{background:#fff;border-radius:var(--radius-sm);padding:14px 20px;box-shadow:0 2px 8px var(--sombra);display:flex;align-items:center;gap:12px;flex:1;min-width:150px;}
+        .mini-stat-icon{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:.9rem;}
+        .mini-stat-icon.green{background:rgba(90,97,51,0.1);color:var(--oliva-medio);}
+        .mini-stat-icon.dark{background:rgba(39,43,0,0.07);color:var(--oliva-oscuro);}
+        .mini-stat-icon.light{background:rgba(190,192,146,0.2);color:var(--oliva-claro);}
+        .mini-stat-val{font-family:'Orbitron',monospace;font-size:1.3rem;font-weight:700;line-height:1;}
+        .mini-stat-label{font-size:.72rem;color:var(--oliva-medio);margin-top:2px;}
+
+        /* Activity Grid */
+        .activity-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+        .activity-card{background:#fff;border-radius:var(--radius);padding:24px;box-shadow:0 2px 12px var(--sombra);transition:transform .25s,box-shadow .25s;position:relative;overflow:hidden;opacity:0;transform:translateY(14px);animation:cardIn .45s forwards;}
+        .activity-card:nth-child(1){animation-delay:.05s;}
+        .activity-card:nth-child(2){animation-delay:.1s;}
+        .activity-card:nth-child(3){animation-delay:.15s;}
+        .activity-card:nth-child(4){animation-delay:.2s;}
+        .activity-card:nth-child(5){animation-delay:.25s;}
+        .activity-card:nth-child(6){animation-delay:.3s;}
+        .activity-card:nth-child(7){animation-delay:.35s;}
+        .activity-card:nth-child(8){animation-delay:.4s;}
+        .activity-card:nth-child(9){animation-delay:.45s;}
+        @keyframes cardIn{to{opacity:1;transform:translateY(0);}}
+        .activity-card:hover{transform:translateY(-6px);box-shadow:0 10px 28px var(--sombra-md);}
+        .activity-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;}
+        .activity-card:nth-child(odd)::before{background:var(--oliva-oscuro);}
+        .activity-card:nth-child(even)::before{background:var(--oliva-medio);}
+        .activity-card-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px;}
+        .activity-icon{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;font-size:1.3rem;flex-shrink:0;background:var(--oliva-super);color:var(--oliva-oscuro);}
+        .activity-info{flex:1;min-width:0;}
+        .activity-info h3{font-family:'Patrick Hand',cursive;font-size:1.2rem;line-height:1.2;margin-bottom:4px;}
+        .activity-info .activity-desc{font-size:.78rem;color:var(--oliva-medio);line-height:1.4;}
+        .activity-status{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;font-weight:600;padding:3px 10px;border-radius:20px;margin-bottom:14px;}
+        .activity-status.not-started{background:var(--oliva-super);color:var(--oliva-claro);}
+        .activity-status.in-progress{background:rgba(90,97,51,0.12);color:var(--oliva-medio);}
+        .activity-status.completed{background:rgba(39,43,0,0.08);color:var(--oliva-oscuro);}
+        .activity-status i{font-size:.6rem;}
+        .activity-bar{width:100%;height:4px;border-radius:2px;background:var(--oliva-super);margin-bottom:14px;overflow:hidden;}
+        .activity-bar-fill{height:100%;border-radius:2px;transition:width .6s ease;}
+        .activity-bar-fill.zero{width:0;background:var(--oliva-claro);}
+        .activity-bar-fill.half{width:50%;background:var(--oliva-medio);}
+        .activity-bar-fill.full{width:100%;background:var(--oliva-oscuro);}
+        .activity-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 20px;border-radius:24px;font-size:.82rem;font-weight:600;transition:all .2s;}
+        .activity-btn.start{background:var(--oliva-oscuro);color:var(--crema);}
+        .activity-btn.start:hover{background:var(--oliva-medio);transform:scale(1.03);}
+        .activity-btn.continue{background:var(--oliva-medio);color:var(--crema);}
+        .activity-btn.continue:hover{background:var(--oliva-oscuro);transform:scale(1.03);}
+        .activity-btn.review{background:transparent;color:var(--oliva-medio);border:1.5px solid var(--oliva-claro);}
+        .activity-btn.review:hover{border-color:var(--oliva-oscuro);color:var(--oliva-oscuro);}
+
+        /* Toast */
+        .toast{position:fixed;bottom:24px;right:24px;background:#fff;padding:14px 20px;border-radius:var(--radius-sm);border-left:4px solid var(--oliva-medio);box-shadow:0 8px 24px var(--sombra-md);z-index:6000;font-size:.88rem;transform:translateY(100px);opacity:0;transition:all .35s ease;max-width:380px;}
+        .toast.show{transform:translateY(0);opacity:1;}
+
+        @media(max-width:1100px){.activity-grid{grid-template-columns:repeat(2,1fr);}}
+        @media(max-width:768px){
+            .sidebar{transform:translateX(calc(-1 * var(--sidebar-w)));}
+            .sidebar.open{transform:translateX(0);}
+            .main-wrap{margin-left:0 !important;}
+            .topbar{padding:0 16px;}
+            .page-content{padding:16px;}
+            .activity-grid{grid-template-columns:1fr;}
+            .mini-stats{flex-direction:column;}
+        }
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0s !important;transition-duration:0s !important;}}
+    </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <a href="dashboard.html"><img src="logo.jpeg" alt="Skopia" class="sidebar-logo"></a>
+        <span class="sidebar-username" id="sidebar-username">Cargando...</span>
+        <span class="sidebar-program" id="sidebar-program"></span>
+    </div>
+    <div class="sidebar-search">
+        <div class="sidebar-search-wrap">
+            <i class="fas fa-search"></i>
+            <input type="text" id="sidebar-search" placeholder="Buscar contenido..." aria-label="Buscar contenido">
+        </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav" aria-label="Menú de contenido"></nav>
+    <div class="sidebar-footer">
+        <a href="cuenta.html"><i class="fas fa-user-circle"></i> Mi Cuenta</a>
+        <a href="configuracion.html"><i class="fas fa-cog"></i> Configuración</a>
+        <a href="#" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+    </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<!-- MAIN -->
+<div class="main-wrap" id="main-wrap">
+    <header class="topbar">
+        <button class="topbar-toggle" id="topbar-toggle" aria-label="Abrir menú"><i class="fas fa-bars"></i></button>
+        <div class="topbar-breadcrumb">
+            <a href="dashboard.html">Dashboard</a>
+            <span class="sep"><i class="fas fa-chevron-right" style="font-size:.55rem"></i></span>
+            <a href="#">Razonamiento Cuantitativo</a>
+            <span class="sep"><i class="fas fa-chevron-right" style="font-size:.55rem"></i></span>
+            <span class="current">Laboratorio Lógico Matemático</span>
+        </div>
+        <div class="topbar-right">
+            <div class="topbar-datetime">
+                <span class="topbar-date" id="top-date"></span>
+                <span class="topbar-clock" id="top-clock">00:00:00</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="page-content">
+        <div class="page-header">
+            <h1>Laboratorio Lógico Matemático</h1>
+            <p>Entrena tu pensamiento lógico con patrones, secuencias, argumentos y análisis de datos. Cada actividad fortalece una habilidad distinta.</p>
+        </div>
+
+        <div class="mini-stats">
+            <div class="mini-stat">
+                <div class="mini-stat-icon green"><i class="fas fa-check-circle"></i></div>
+                <div><div class="mini-stat-val" id="ms-done">0</div><div class="mini-stat-label">Completadas</div></div>
+            </div>
+            <div class="mini-stat">
+                <div class="mini-stat-icon dark"><i class="fas fa-spinner"></i></div>
+                <div><div class="mini-stat-val" id="ms-wip">0</div><div class="mini-stat-label">En progreso</div></div>
+            </div>
+            <div class="mini-stat">
+                <div class="mini-stat-icon light"><i class="fas fa-circle"></i></div>
+                <div><div class="mini-stat-val" id="ms-none">0</div><div class="mini-stat-label">Sin iniciar</div></div>
+            </div>
+        </div>
+
+        <div class="activity-grid" id="activity-grid"></div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+const fbConfig={apiKey:"AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",projectId:"skopia-aa786",storageBucket:"skopia-aa786.firebasestorage.app",messagingSenderId:"719823055099",appId:"1:719823055099:web:7d91ea29e4b2dcbb9b685e",authDomain:location.hostname==="localhost"||location.hostname==="127.0.0.1"?"localhost":"skopia-aa786.firebaseapp.com"};
+const app=initializeApp(fbConfig);const auth=getAuth(app);const db=getFirestore(app);
+
+/* === Actividades de esta página === */
+const activities=[
+    {id:'patrones-crecientes',title:'Patrones crecientes',desc:'Identifica y continúa secuencias numéricas que aumentan following una regla.',icon:'fa-arrow-trend-up',url:'crepatron.html'},
+    {id:'patrones-decrecientes',title:'Patrones decrecientes',desc:'Encuentra la lógica en secuencias que disminuyen paso a paso.',icon:'fa-arrow-trend-down',url:'decrepatron.html'},
+    {id:'secuencias-visuales',title:'Secuencias visuales',desc:'Analiza patrones con figuras, formas y colores para predecir el siguiente elemento.',icon:'fa-shapes',url:'secuencia.html'},
+    {id:'corregir-argumento',title:'Corregir argumento inválido',desc:'Detecta errores lógicos en razonamientos y selecciona la corrección adecuada.',icon:'fa-pen-to-square',url:'argumento.html'},
+    {id:'detectar-falacias',title:'Detectar falacias matemáticas',desc:'Identifica trampas lógicas y razonamientos falsos disfrazados de verdades.',icon:'fa-triangle-exclamation',url:'falacias.html'},
+    {id:'completar-tablas',title:'Completar tablas incompletas',desc:'Usa la lógica para llenar los datos faltantes en tablas con relaciones internas.',icon:'fa-table',url:'tablas.html'},
+    {id:'relacion-causa-efecto',title:'Relación causa-efecto',desc:'Conecta correctamente causas con sus efectos usando pensamiento deductivo.',icon:'fa-link',url:'causaefecto.html'},
+    {id:'cambiar-datos',title:'Cambiar datos',desc:'Modifica valores en un contexto y predice cómo cambian los resultados.',icon:'fa-rotate',url:'datatabla.html'},
+    {id:'contradicciones',title:'Contradicciones',desc:'Encuentra afirmaciones que se contradicen entre sí dentro de un mismo texto.',icon:'fa-bolt',url:'contradicciones.html'}
+];
+
+/* === Menú lateral (idéntico al dashboard) === */
+const menuData=[
+    {group:'Contenido Genérico',icon:'fa-book-open',cats:[
+        {title:'3.1 Razonamiento Cuantitativo',icon:'fa-calculator',subs:[
+            {title:'3.1.1 Prácticas Interactivas',links:[
+                {label:'Laboratorio lógico matemático',url:'lab-logico-matematico.html'},
+                {label:'Razonamiento lógico matemático',url:'razonamiento-logico-matematico.html'},
+                {label:'Laboratorio de análisis gráfico',url:'lab-analisis-grafico-rc.html'}
+            ]},
+            {title:'3.1.2 Prácticas Teóricas',links:[
+                {label:'Aritmética básica',url:'aritmetica-basica.html'},{label:'Porcentajes y Razones',url:'porcentajes-razones.html'},
+                {label:'Álgebra',url:'algebra.html'},{label:'Funciones',url:'funciones.html'},{label:'Geometría',url:'geometria.html'},
+                {label:'Medidas',url:'medidas.html'},{label:'Razonamiento lógico',url:'razonamiento-logico-teoria.html'},
+                {label:'Probabilidad',url:'probabilidad.html'},{label:'Estadística descriptiva',url:'estadistica-descriptiva.html'},
+                {label:'Interpretación de datos',url:'interpretacion-datos.html'}
+            ]}
+        ]},
+        {title:'3.2 Lectura Crítica',icon:'fa-book-reader',subs:[
+            {title:'3.2.1 Prácticas Interactivas',links:[
+                {label:'Biblioteca',url:'biblioteca.html'},{label:'Talleres de escritura y análisis',url:'talleres-escritura-analisis.html'},
+                {label:'Entrenador de velocidad de lectura',url:'velocidad-lectura.html'}
+            ]},
+            {title:'3.2.2 Prácticas Teóricas',links:[
+                {label:'Comprensión literal',url:'comprension-literal.html'},{label:'Comprensión inferencial',url:'comprension-inferencial.html'},
+                {label:'Comprensión crítica',url:'comprension-critica.html'},{label:'Estructura del texto',url:'estructura-texto.html'},
+                {label:'Textos narrativos',url:'textos-narrativos.html'},{label:'Textos expositivos',url:'textos-expositivos.html'},
+                {label:'Textos argumentativos',url:'textos-argumentativos.html'},{label:'Textos científicos',url:'textos-cientificos.html'},
+                {label:'Textos periodísticos',url:'textos-periodisticos.html'},{label:'Análisis intertextual',url:'analisis-intertextual.html'}
+            ]}
+        ]},
+        {title:'3.3 Competencias Ciudadanas',icon:'fa-balance-scale',subs:[
+            {title:'3.3.1 Prácticas Interactivas',links:[
+                {label:'Dilemas + decisiones',url:'dilemas-decisiones.html'},{label:'Contextos sociales',url:'contextos-sociales.html'},
+                {label:'Archivos de casos reales',url:'archivos-casos-reales.html'},{label:'Laboratorio de estrategias',url:'lab-estrategias.html'}
+            ]},
+            {title:'3.3.2 Prácticas Teóricas',links:[
+                {label:'Derechos humanos',url:'derechos-humanos.html'},{label:'Constitución política de Colombia',url:'constitucion-politica.html'},
+                {label:'Democracia',url:'democracia.html'},{label:'Estado y gobierno',url:'estado-gobierno.html'},
+                {label:'Justicia y equidad',url:'justicia-equidad.html'},{label:'Resolución pacífica de conflictos',url:'resolucion-pacifica.html'},
+                {label:'Ética y responsabilidad social',url:'etica-responsabilidad.html'},{label:'Diversidad cultural',url:'diversidad-cultural.html'},
+                {label:'Ciudadanía digital',url:'ciudadania-digital.html'},{label:'Sostenibilidad',url:'sostenibilidad.html'}
+            ]}
+        ]},
+        {title:'3.4 Inglés',icon:'fa-globe',subs:[
+            {title:'3.4.1 Prácticas Interactivas',links:[
+                {label:'Comprensión lectora en inglés',url:'comprension-lectora-ingles.html'},
+                {label:'Vocabulario en contexto',url:'vocabulario-contexto-ingles.html'},{label:'Cohesión en inglés',url:'cohesion-ingles.html'}
+            ]},
+            {title:'3.4.2 Prácticas Teóricas',links:[
+                {label:'Reading comprehension',url:'reading-comprehension.html'},{label:'Vocabulary in context',url:'vocabulary-context.html'},
+                {label:'Grammar',url:'grammar.html'},{label:'Functional language',url:'functional-language.html'},
+                {label:'Connectors and linking words',url:'connectors-linking.html'},{label:'Text types',url:'text-types.html'},
+                {label:'Error identification',url:'error-identification.html'},{label:'Synonym replacement',url:'synonym-replacement.html'},
+                {label:'Everyday situations',url:'everyday-situations.html'},{label:'Academic vocabulary',url:'academic-vocabulary.html'}
+            ]}
+        ]},
+        {title:'3.5 Comunicación Escrita',icon:'fa-pen-fancy',subs:[
+            {title:'Subtemas',links:[
+                {label:'Planteamiento y Argumentación',url:'planteamiento-argumentacion.html'},{label:'Organizar el texto',url:'organizar-texto.html'},
+                {label:'Forma de expresión',url:'forma-expresion.html'},{label:'Precisión Semántica y Claridad',url:'precision-semantica.html'},
+                {label:'Gestión del Tiempo y de la Hoja de Borrador',url:'gestion-tiempo-borrador.html'},{label:'Pertinencia y Enfoque',url:'pertinencia-enfoque.html'}
+            ]}
+        ]}
+    ]},
+    {group:'Contenido Específico',icon:'fa-graduation-cap',cats:[
+        {title:'4.1 Administración',icon:'fa-briefcase',subs:[{title:'Subtemas',links:[{label:'Formulación, Evaluación y Gestión de Proyectos',url:'formulacion-gestion-proyectos-admon.html'},{label:'Gestión de organizaciones',url:'gestion-organizaciones.html'},{label:'Gestión Financiera',url:'gestion-financiera-admon.html'}]}]},
+        {title:'4.2 Trabajo Social',icon:'fa-hands-helping',subs:[{title:'Subtemas',links:[{label:'Investigación en ciencias sociales',url:'investigacion-ciencias-sociales-ts.html'},{label:'Intervención en proyectos sociales',url:'intervencion-proyectos-sociales.html'}]}]},
+        {title:'4.3 Licenciatura Educación Infantil',icon:'fa-child',subs:[{title:'Subtemas',links:[{label:'Enseñar',url:'ensenar.html'},{label:'Formar',url:'formar.html'},{label:'Evaluar',url:'evaluar.html'}]}]},
+        {title:'4.4 Psicología',icon:'fa-brain',subs:[{title:'Subtemas',links:[{label:'Análisis de problemas psicológicos',url:'analisis-problemas-psicologicos.html'},{label:'Investigación en ciencias sociales',url:'investigacion-ciencias-sociales-psico.html'},{label:'Intervención en procesos sociales',url:'intervencion-procesos-sociales.html'}]}]},
+        {title:'4.5 Licenciatura Lenguas Extranjeras',icon:'fa-language',note:'Se cubre con Inglés genérico',links:[]},
+        {title:'4.6 Contaduría Pública',icon:'fa-file-invoice-dollar',subs:[{title:'Subtemas',links:[{label:'Información y control contable',url:'informacion-control-contable.html'},{label:'Gestión Financiera',url:'gestion-financiera-contaduria.html'}]}]},
+        {title:'4.7 Ingeniería Industrial',icon:'fa-industry',subs:[{title:'Subtemas',links:[{label:'Formulación de Proyectos de Ingeniería',url:'formulacion-proyectos-ing-industrial.html'},{label:'Diseño de Sistemas Productivos y Logísticos',url:'diseno-sistemas-productivos.html'},{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-industrial.html'}]}]},
+        {title:'4.8 Diseño Gráfico',icon:'fa-palette',subs:[{title:'Subtemas',links:[{label:'Generación de Artefactos',url:'generacion-artefactos.html'}]}]},
+        {title:'4.9 Ingeniería Electrónica',icon:'fa-microchip',subs:[{title:'Subtemas',links:[{label:'Formulación de Proyectos de Ingeniería',url:'formulacion-proyectos-ing-electronica.html'},{label:'Diseño de Sistemas de Control',url:'diseno-sistemas-control.html'},{label:'Pensamiento Científico Ciencias Físicas',url:'pensamiento-cientifico-fisicas.html'},{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-electronica.html'}]}]},
+        {title:'4.10 Tecnología e Informática',icon:'fa-laptop-code',subs:[{title:'Subtemas',links:[{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-ti.html'}]}]},
+        {title:'4.11 Comunicación Social y Periodismo',icon:'fa-newspaper',subs:[{title:'Subtemas',links:[{label:'Procesos comunicativos',url:'procesos-comunicativos.html'}]}]},
+        {title:'4.12 Ingeniería de Sistemas',icon:'fa-server',subs:[{title:'Subtemas',links:[{label:'Formulación de Proyectos de Ingeniería',url:'formulacion-proyectos-ing-sistemas.html'},{label:'Diseño de software',url:'diseno-software.html'},{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-sistemas.html'}]}]}
+    ]}
+];
+
+/* === Render menú === */
+function renderMenu(){
+    const nav=document.getElementById('sidebar-nav');
+    let h='<div class="menu-no-result" id="menu-no-result">Sin resultados</div>';
+    menuData.forEach(g=>{
+        h+=`<div class="menu-group-label"><i class="fas ${g.icon}"></i> ${g.group}</div>`;
+        g.cats.forEach(cat=>{
+            h+=`<div class="menu-cat" data-name="${cat.title.toLowerCase()}"><button class="menu-cat-btn" aria-expanded="false"><i class="cat-icon fas ${cat.icon}"></i><span>${cat.title}</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-cat-children">`;
+            if(cat.note) h+=`<div class="menu-note">${cat.note}</div>`;
+            if(cat.subs) cat.subs.forEach(sub=>{
+                h+=`<div class="menu-sub" data-name="${sub.title.toLowerCase()}"><button class="menu-sub-btn" aria-expanded="false"><span>${sub.title}</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-sub-children">`;
+                if(sub.links) sub.links.forEach(lk=>{
+                    h+=`<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;
+                });
+                h+='</div></div>';
+            });
+            if(cat.links&&cat.links.length) cat.links.forEach(lk=>{h+=`<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;});
+            h+='</div></div>';
+        });
+    });
+    nav.innerHTML=h;
+    nav.querySelectorAll('.menu-cat-btn').forEach(btn=>{btn.addEventListener('click',()=>{const c=btn.parentElement,w=c.classList.contains('open');c.parentElement.querySelectorAll(':scope>.menu-cat.open').forEach(s=>{if(s!==c)s.classList.remove('open');});c.classList.toggle('open',!w);btn.setAttribute('aria-expanded',String(!w));});});
+    nav.querySelectorAll('.menu-sub-btn').forEach(btn=>{btn.addEventListener('click',()=>{const s=btn.parentElement,w=s.classList.contains('open');s.parentElement.querySelectorAll(':scope>.menu-sub.open').forEach(x=>{if(x!==s)x.classList.remove('open');});s.classList.toggle('open',!w);btn.setAttribute('aria-expanded',String(!w));});});
+    /* Marcar link activo */
+    nav.querySelectorAll('.menu-link').forEach(lk=>{if(lk.getAttribute('href')==='lab-logico-matematico.html')lk.classList.add('active');});
+}
+
+/* === Buscar === */
+function initSearch(){const i=document.getElementById('sidebar-search'),nr=document.getElementById('menu-no-result');i.addEventListener('input',()=>{const q=i.value.toLowerCase().trim(),nav=document.getElementById('sidebar-nav'),cats=nav.querySelectorAll('.menu-cat');let any=false;cats.forEach(cat=>{const cn=cat.dataset.name||'';const subs=cat.querySelectorAll('.menu-sub');const dl=cat.querySelectorAll(':scope>.menu-cat-children>.menu-link');let cm=cn.includes(q),sh=false;subs.forEach(sub=>{const sn=sub.dataset.name||'';const lks=sub.querySelectorAll('.menu-link');let sm=sn.includes(q),lv=false;lks.forEach(lk=>{const ln=lk.dataset.name||'';const show=!q||ln.includes(q)||sm||cm;lk.classList.toggle('hidden',!show);if(show)lv=true;});sub.classList.toggle('hidden',!lv&&!sm&&!cm&&q);if(sm||lv)sh=true;if(sm||lv)sub.classList.add('open');else sub.classList.remove('open');});dl.forEach(lk=>{const ln=lk.dataset.name||'';const show=!q||ln.includes(q)||cm;lk.classList.toggle('hidden',!show);if(show)sh=true;});cat.classList.toggle('hidden',!sh&&!cm&&q);if(cm||sh)any=true;if(cm||sh)cat.classList.add('open');});nr.classList.toggle('show',!any&&q.length>0);});}
+
+/* === Sidebar toggle === */
+function initSidebar(){const sb=document.getElementById('sidebar'),ov=document.getElementById('sidebar-overlay'),tg=document.getElementById('topbar-toggle'),mw=document.getElementById('main-wrap'),mob=()=>window.innerWidth<=768;function open(){if(mob()){sb.classList.add('open');ov.classList.add('active');}else{sb.classList.remove('collapsed');mw.classList.remove('expanded');}}function close(){if(mob()){sb.classList.remove('open');ov.classList.remove('active');}else{sb.classList.add('collapsed');mw.classList.add('expanded');}}tg.addEventListener('click',()=>{const o=mob()?sb.classList.contains('open'):!sb.classList.contains('collapsed');o?close():open();});ov.addEventListener('click',close);if(!mob())sb.classList.remove('collapsed');window.addEventListener('resize',()=>{if(!mob()){ov.classList.remove('active');sb.classList.remove('open');}});}
+
+/* === Reloj === */
+function updateClock(){const n=new Date(),h=String(n.getHours()).padStart(2,'0'),m=String(n.getMinutes()).padStart(2,'0'),s=String(n.getSeconds()).padStart(2,'0');document.getElementById('top-clock').textContent=`${h}:${m}:${s}`;const d=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],me=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];document.getElementById('top-date').textContent=`${d[n.getDay()]}, ${n.getDate()} ${me[n.getMonth()]}`;}
+
+/* === Renderizar actividades === */
+function renderActivities(progressMap={}){
+    const grid=document.getElementById('activity-grid');
+    let done=0,wip=0,none=0;
+    grid.innerHTML=activities.map(a=>{
+        const st=progressMap[a.id]||'not_started';
+        if(st==='completed')done++;else if(st==='in_progress')wip++;else none++;
+        const statusClass=st==='completed'?'completed':st==='in_progress'?'in-progress':'not-started';
+        const statusLabel=st==='completed'?'Completada':st==='in_progress'?'En progreso':'Sin iniciar';
+        const statusIcon=st==='completed'?'fa-check':st==='in_progress'?'fa-circle-half-stroke':'fa-circle';
+        const barClass=st==='completed'?'full':st==='in_progress'?'half':'zero';
+        const btnClass=st==='completed'?'review':st==='in_progress'?'continue':'start';
+        const btnLabel=st==='completed'?'Repasar':st==='in_progress'?'Continuar':'Iniciar';
+        const btnIcon=st==='completed'?'fa-eye':st==='in_progress'?'fa-play':'fa-arrow-right';
+        return `<div class="activity-card">
+            <div class="activity-card-top">
+                <div class="activity-icon"><i class="fas ${a.icon}"></i></div>
+                <div class="activity-info"><h3>${a.title}</h3><p class="activity-desc">${a.desc}</p></div>
+            </div>
+            <div class="activity-status ${statusClass}"><i class="fas ${statusIcon}"></i> ${statusLabel}</div>
+            <div class="activity-bar"><div class="activity-bar-fill ${barClass}"></div></div>
+            <a href="${a.url}" class="activity-btn ${btnClass}"><i class="fas ${btnIcon}"></i> ${btnLabel}</a>
+        </div>`;
+    }).join('');
+    document.getElementById('ms-done').textContent=done;
+    document.getElementById('ms-wip').textContent=wip;
+    document.getElementById('ms-none').textContent=none;
+}
+
+/* === Cargar progreso de Firebase === */
+async function loadProgress(uid){
+    const progressMap={};
+    try{
+        const snap=await getDocs(collection(db,'users',uid,'progress'));
+        snap.forEach(d=>{
+            const id=d.id;
+            /* Solo cargar las que pertenecen a esta página */
+            if(activities.find(a=>a.id===id)){
+                progressMap[id]=d.data().status||'not_started';
+            }
+        });
+    }catch(e){console.warn('Progress no disponible');}
+    renderActivities(progressMap);
+}
+
+/* === Init === */
+onAuthStateChanged(auth,user=>{
+    if(!user){window.location.href='index.html';return;}
+    document.getElementById('sidebar-username').textContent=user.displayName||'Estudiante';
+    try{getDoc(doc(db,'users',user.uid,'profile','main')).then(s=>{if(s.exists()){const d=s.data();document.getElementById('sidebar-program').textContent=d.program||'';}});}catch(e){}
+    loadProgress(user.uid);
+    document.getElementById('logout-btn').addEventListener('click',e=>{e.preventDefault();signOut(auth).then(()=>window.location.href='index.html');});
+});
+
+renderMenu();initSearch();initSidebar();
+updateClock();setInterval(updateClock,1000);
+/* Si no hay Firebase, renderizar vacío */
+renderActivities();
+</script>
+</body>
+</html>
