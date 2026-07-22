@@ -1,0 +1,1482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Skopia</title>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        /* === Variables === */
+        :root {
+            --crema: #fdfbf5;
+            --crema-mid: #f5f0e3;
+            --oliva-oscuro: #272b00;
+            --oliva-medio: #5a6133;
+            --oliva-claro: #bec092;
+            --oliva-palido: #d4d6b0;
+            --oliva-super: #e8e9d4;
+            --sombra: rgba(39,43,0,0.08);
+            --sombra-md: rgba(39,43,0,0.12);
+            --sidebar-w: 310px;
+            --topbar-h: 72px;
+            --radius: 14px;
+            --radius-sm: 8px;
+        }
+        /* === Reset === */
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+        html{scroll-behavior:smooth;}
+        body{
+            font-family:'Roboto',sans-serif;
+            background:var(--crema);
+            color:var(--oliva-oscuro);
+            min-height:100vh;
+            overflow-x:hidden;
+            background-image:
+                radial-gradient(ellipse at 10% 20%, rgba(190,192,146,0.18) 0%, transparent 50%),
+                radial-gradient(ellipse at 90% 80%, rgba(90,97,51,0.1) 0%, transparent 50%);
+        }
+        a{text-decoration:none;color:inherit;}
+        button{cursor:pointer;border:none;background:none;font-family:inherit;}
+        ul{list-style:none;}
+        input{font-family:inherit;}
+
+        /* === Sidebar === */
+        .sidebar{
+            position:fixed;top:0;left:0;
+            width:var(--sidebar-w);height:100vh;
+            background:var(--oliva-oscuro);
+            color:var(--crema);
+            display:flex;flex-direction:column;
+            z-index:900;
+            transition:transform .35s cubic-bezier(.4,0,.2,1);
+            overflow:hidden;
+        }
+        .sidebar.collapsed{transform:translateX(calc(-1 * var(--sidebar-w)));}
+        .sidebar-header{
+            padding:20px 18px 14px;
+            border-bottom:1px solid rgba(255,255,255,0.08);
+            flex-shrink:0;
+        }
+        .sidebar-logo{
+            width:48px;height:48px;border-radius:50%;
+            object-fit:cover;margin-bottom:8px;
+            border:2px solid var(--oliva-claro);
+        }
+        .sidebar-username{
+            font-family:'Patrick Hand',cursive;
+            font-size:1.25rem;display:block;
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+        }
+        .sidebar-program{
+            font-size:.75rem;color:var(--oliva-claro);
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+        }
+        .sidebar-search{
+            padding:12px 14px;flex-shrink:0;
+        }
+        .sidebar-search input{
+            width:100%;padding:9px 12px 9px 34px;
+            border-radius:var(--radius-sm);
+            border:1px solid rgba(255,255,255,0.1);
+            background:rgba(255,255,255,0.06);
+            color:var(--crema);font-size:.85rem;
+            outline:none;transition:border .2s;
+        }
+        .sidebar-search input::placeholder{color:rgba(255,255,255,0.35);}
+        .sidebar-search input:focus{border-color:var(--oliva-claro);}
+        .sidebar-search-wrap{position:relative;}
+        .sidebar-search-wrap i{
+            position:absolute;left:11px;top:50%;transform:translateY(-50%);
+            color:rgba(255,255,255,0.3);font-size:.8rem;
+        }
+        .sidebar-nav{
+            flex:1;overflow-y:auto;overflow-x:hidden;
+            padding:8px 0;
+            scrollbar-width:thin;
+            scrollbar-color:var(--oliva-medio) transparent;
+        }
+        .sidebar-nav::-webkit-scrollbar{width:5px;}
+        .sidebar-nav::-webkit-scrollbar-thumb{background:var(--oliva-medio);border-radius:3px;}
+
+        /* Grupo header (Genérico / Específico) */
+        .menu-group-label{
+            padding:14px 18px 6px;
+            font-size:.65rem;font-weight:700;
+            text-transform:uppercase;letter-spacing:2px;
+            color:var(--oliva-claro);
+            display:flex;align-items:center;gap:8px;
+        }
+        .menu-group-label::after{
+            content:'';flex:1;height:1px;
+            background:rgba(255,255,255,0.08);
+        }
+
+        /* Categoría (, , etc.) */
+        .menu-cat{user-select:none;}
+        .menu-cat-btn{
+            width:100%;padding:10px 18px;
+            display:flex;align-items:center;gap:10px;
+            font-size:.88rem;font-weight:600;
+            color:var(--crema);transition:background .2s;
+            text-align:left;
+        }
+        .menu-cat-btn:hover{background:rgba(255,255,255,0.06);}
+        .menu-cat-btn i.cat-icon{width:18px;text-align:center;font-size:.82rem;color:var(--oliva-claro);}
+        .menu-cat-btn .chevron{
+            margin-left:auto;font-size:.6rem;
+            transition:transform .25s;color:var(--oliva-claro);
+        }
+        .menu-cat.open>.menu-cat-btn .chevron{transform:rotate(90deg);}
+        .menu-cat-children{
+            max-height:0;overflow:hidden;
+            transition:max-height .35s ease;
+        }
+        .menu-cat.open>.menu-cat-children{max-height:2000px;}
+
+        /* Subcategoría (.1, .2) */
+        .menu-sub{user-select:none;}
+        .menu-sub-btn{
+            width:100%;padding:8px 18px 8px 44px;
+            display:flex;align-items:center;gap:8px;
+            font-size:.8rem;font-weight:500;
+            color:rgba(253,251,245,0.75);transition:all .2s;
+            text-align:left;
+        }
+        .menu-sub-btn:hover{color:var(--crema);background:rgba(255,255,255,0.04);}
+        .menu-sub-btn .chevron{
+            margin-left:auto;font-size:.55rem;
+            transition:transform .25s;opacity:.5;
+        }
+        .menu-sub.open>.menu-sub-btn .chevron{transform:rotate(90deg);opacity:1;}
+        .menu-sub-children{
+            max-height:0;overflow:hidden;
+            transition:max-height .3s ease;
+        }
+        .menu-sub.open>.menu-sub-children{max-height:800px;}
+
+        /* Links finales */
+        .menu-link{
+            display:block;padding:7px 18px 7px 62px;
+            font-size:.78rem;color:rgba(253,251,245,0.55);
+            transition:all .2s;white-space:nowrap;
+            overflow:hidden;text-overflow:ellipsis;
+        }
+        .menu-link:hover{
+            color:var(--crema);background:rgba(255,255,255,0.06);
+            padding-left:68px;
+        }
+        .menu-link::before{
+            content:'›';margin-right:6px;
+            color:var(--oliva-claro);font-weight:700;
+        }
+        .menu-link.hidden{display:none;}
+        .menu-cat.hidden,.menu-sub.hidden{display:none;}
+        .menu-no-result{
+            padding:20px 18px;text-align:center;
+            font-size:.8rem;color:rgba(255,255,255,0.3);
+            display:none;
+        }
+        .menu-no-result.show{display:block;}
+
+        /* Nota especial (Lic. lenguas) */
+        .menu-note{
+            padding:8px 18px 8px 44px;
+            font-size:.72rem;color:rgba(253,251,245,0.35);
+            font-style:italic;
+        }
+
+        /* Sidebar footer */
+        .sidebar-footer{
+            flex-shrink:0;padding:10px 0;
+            border-top:1px solid rgba(255,255,255,0.08);
+        }
+        .sidebar-footer a{
+            display:flex;align-items:center;gap:10px;
+            padding:9px 18px;font-size:.82rem;
+            color:rgba(253,251,245,0.6);transition:all .2s;
+        }
+        .sidebar-footer a:hover{color:var(--crema);background:rgba(255,255,255,0.06);}
+        .sidebar-footer a i{width:18px;text-align:center;font-size:.85rem;}
+
+        /* Overlay móvil */
+        .sidebar-overlay{
+            position:fixed;inset:0;background:rgba(0,0,0,0.45);
+            z-index:899;opacity:0;visibility:hidden;
+            transition:all .3s;
+        }
+        .sidebar-overlay.active{opacity:1;visibility:visible;}
+
+        /* === Main Content === */
+        .main-wrap{
+            margin-left:var(--sidebar-w);
+            min-height:100vh;
+            transition:margin-left .35s cubic-bezier(.4,0,.2,1);
+        }
+        .main-wrap.expanded{margin-left:0;}
+
+        /* === Top Bar === */
+        .topbar{
+            position:sticky;top:0;z-index:100;
+            height:var(--topbar-h);
+            background:rgba(253,251,245,0.85);
+            backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+            border-bottom:1px solid rgba(39,43,0,0.06);
+            display:flex;align-items:center;
+            padding:0 28px;gap:16px;
+        }
+        .topbar-toggle{
+            width:40px;height:40px;border-radius:var(--radius-sm);
+            display:grid;place-items:center;
+            font-size:1.1rem;color:var(--oliva-oscuro);
+            transition:background .2s;flex-shrink:0;
+        }
+        .topbar-toggle:hover{background:rgba(39,43,0,0.06);}
+        .topbar-greeting{flex:1;min-width:0;}
+        .topbar-greeting h1{
+            font-family:'Patrick Hand',cursive;
+            font-size:1.5rem;line-height:1.2;
+        }
+        .topbar-greeting .quote{
+            font-size:.82rem;color:var(--oliva-medio);
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+            max-width:500px;
+        }
+        .topbar-right{
+            display:flex;align-items:center;gap:10px;flex-shrink:0;
+        }
+        .topbar-datetime{text-align:right;margin-right:6px;}
+        .topbar-date{font-size:.72rem;color:var(--oliva-medio);display:block;}
+        .topbar-clock{
+            font-family:'Orbitron',monospace;
+            font-size:1.15rem;font-weight:700;
+            color:var(--oliva-oscuro);letter-spacing:1px;
+        }
+        .topbar-btn{
+            display:flex;align-items:center;gap:6px;
+            padding:8px 14px;border-radius:var(--radius-sm);
+            font-size:.78rem;font-weight:500;
+            color:var(--oliva-oscuro);
+            background:rgba(39,43,0,0.04);
+            border:1px solid rgba(39,43,0,0.08);
+            transition:all .2s;white-space:nowrap;
+        }
+        .topbar-btn:hover{
+            background:var(--oliva-oscuro);color:var(--crema);
+            border-color:var(--oliva-oscuro);
+        }
+        .topbar-btn i{font-size:.85rem;}
+
+        /* === Dashboard Grid === */
+        .dashboard{padding:24px 28px 40px;}
+
+        /* Stat Cards */
+        .stats-row{
+            display:grid;
+            grid-template-columns:repeat(4,1fr);
+            gap:16px;margin-bottom:24px;
+        }
+        .stat-card{
+            background:#fff;border-radius:var(--radius);
+            padding:20px;box-shadow:0 2px 12px var(--sombra);
+            border-left:4px solid var(--oliva-medio);
+            opacity:0;transform:translateY(16px);
+            animation:cardIn .5s forwards;
+        }
+        .stat-card:nth-child(2){animation-delay:.08s;}
+        .stat-card:nth-child(3){animation-delay:.16s;}
+        .stat-card:nth-child(4){animation-delay:.24s;}
+        @keyframes cardIn{to{opacity:1;transform:translateY(0);}}
+        .stat-card .stat-icon{
+            width:40px;height:40px;border-radius:10px;
+            display:grid;place-items:center;
+            font-size:1rem;margin-bottom:12px;
+        }
+        .stat-card .stat-value{
+            font-family:'Orbitron',monospace;
+            font-size:1.7rem;font-weight:700;
+            line-height:1;
+        }
+        .stat-card .stat-label{
+            font-size:.78rem;color:var(--oliva-medio);
+            margin-top:6px;
+        }
+        .stat-card.streak .stat-icon{background:rgba(255,140,0,0.12);color:#e67e00;}
+        .stat-card.avg .stat-icon{background:rgba(39,43,0,0.08);color:var(--oliva-oscuro);}
+        .stat-card.progress .stat-icon{background:rgba(90,97,51,0.12);color:var(--oliva-medio);}
+        .stat-card.missions-done .stat-icon{background:rgba(190,192,146,0.2);color:var(--oliva-claro);}
+
+        /* Charts Row */
+        .charts-row{
+            display:grid;grid-template-columns:1.2fr 1fr;
+            gap:16px;margin-bottom:24px;
+        }
+        .chart-card{
+            background:#fff;border-radius:var(--radius);
+            padding:22px;box-shadow:0 2px 12px var(--sombra);
+            opacity:0;transform:translateY(16px);
+            animation:cardIn .5s .3s forwards;
+        }
+        .chart-card h3{
+            font-family:'Patrick Hand',cursive;
+            font-size:1.2rem;margin-bottom:14px;
+            display:flex;align-items:center;gap:8px;
+        }
+        .chart-card h3 i{color:var(--oliva-medio);font-size:.9rem;}
+        .chart-wrap{position:relative;height:220px;}
+
+        /* Bottom Row */
+        .bottom-row{
+            display:grid;grid-template-columns:1.3fr 1fr;
+            gap:16px;
+        }
+        .panel{
+            background:#fff;border-radius:var(--radius);
+            padding:22px;box-shadow:0 2px 12px var(--sombra);
+            opacity:0;transform:translateY(16px);
+            animation:cardIn .5s .4s forwards;
+        }
+        .panel h3{
+            font-family:'Patrick Hand',cursive;
+            font-size:1.2rem;margin-bottom:14px;
+            display:flex;align-items:center;gap:8px;
+        }
+        .panel h3 i{color:var(--oliva-medio);font-size:.9rem;}
+
+        /* Missions List */
+        .mission-item{
+            display:flex;align-items:center;gap:12px;
+            padding:10px 12px;border-radius:var(--radius-sm);
+            margin-bottom:6px;transition:background .2s;
+        }
+        .mission-item:hover{background:var(--crema);}
+        .mission-dot{
+            width:8px;height:8px;border-radius:50%;
+            background:var(--oliva-claro);flex-shrink:0;
+        }
+        .mission-text{flex:1;font-size:.88rem;min-width:0;}
+        .mission-text span{display:block;font-size:.72rem;color:var(--oliva-claro);}
+        .mission-pts{
+            font-family:'Orbitron',monospace;font-size:.75rem;
+            color:var(--oliva-medio);white-space:nowrap;
+        }
+        .mission-empty{
+            text-align:center;padding:24px 0;
+            color:var(--oliva-claro);font-size:.88rem;
+        }
+
+        /* Course Status */
+        .course-stat{
+            display:flex;align-items:center;gap:14px;
+            padding:14px 0;
+            border-bottom:1px solid rgba(39,43,0,0.05);
+        }
+        .course-stat:last-child{border-bottom:none;}
+        .course-icon{
+            width:42px;height:42px;border-radius:12px;
+            display:grid;place-items:center;font-size:1.1rem;
+            flex-shrink:0;
+        }
+        .course-icon.done{background:rgba(39,43,0,0.08);color:var(--oliva-oscuro);}
+        .course-icon.wip{background:rgba(90,97,51,0.1);color:var(--oliva-medio);}
+        .course-icon.none{background:rgba(190,192,146,0.15);color:var(--oliva-claro);}
+        .course-info{flex:1;}
+        .course-info .course-num{
+            font-family:'Orbitron',monospace;
+            font-size:1.4rem;font-weight:700;line-height:1;
+        }
+        .course-info .course-label{font-size:.78rem;color:var(--oliva-medio);margin-top:2px;}
+        .course-bar{
+            width:100%;height:5px;border-radius:3px;
+            background:var(--oliva-super);margin-top:8px;overflow:hidden;
+        }
+        .course-bar-fill{height:100%;border-radius:3px;transition:width .8s ease;}
+
+        /* === Tutorial Overlay === */
+        .tut-overlay{
+            position:fixed;inset:0;
+            background:rgba(0,0,0,0.6);
+            z-index:5000;display:none;
+            place-items:center;
+        }
+        .tut-overlay.active{display:grid;}
+        .tut-box{
+            background:#fff;border-radius:var(--radius);
+            padding:32px;max-width:440px;width:90%;
+            box-shadow:0 20px 60px rgba(0,0,0,0.3);
+            text-align:center;
+            animation:tutIn .35s ease;
+        }
+        @keyframes tutIn{from{opacity:0;transform:scale(.92);}to{opacity:1;transform:scale(1);}}
+        .tut-box .tut-icon{
+            width:56px;height:56px;border-radius:50%;
+            background:rgba(90,97,51,0.1);
+            display:grid;place-items:center;
+            margin:0 auto 16px;font-size:1.5rem;
+            color:var(--oliva-medio);
+        }
+        .tut-box h3{
+            font-family:'Patrick Hand',cursive;
+            font-size:1.5rem;margin-bottom:8px;
+        }
+        .tut-box p{font-size:.92rem;color:#555;margin-bottom:20px;line-height:1.5;}
+        .tut-steps{
+            display:flex;justify-content:center;gap:6px;margin-bottom:20px;
+        }
+        .tut-step-dot{
+            width:8px;height:8px;border-radius:50%;
+            background:var(--oliva-super);transition:all .2s;
+        }
+        .tut-step-dot.active{background:var(--oliva-medio);width:22px;border-radius:4px;}
+        .tut-btns{display:flex;gap:10px;justify-content:center;}
+        .tut-btn{
+            padding:10px 24px;border-radius:24px;
+            font-size:.88rem;font-weight:600;
+            transition:all .2s;
+        }
+        .tut-btn.primary{background:var(--oliva-oscuro);color:var(--crema);}
+        .tut-btn.primary:hover{background:var(--oliva-medio);}
+        .tut-btn.secondary{background:var(--oliva-super);color:var(--oliva-oscuro);}
+        .tut-btn.secondary:hover{background:var(--oliva-palido);}
+
+        /* === Toast === */
+        .toast{
+            position:fixed;bottom:24px;right:24px;
+            background:#fff;padding:14px 20px;
+            border-radius:var(--radius-sm);
+            border-left:4px solid var(--oliva-medio);
+            box-shadow:0 8px 24px var(--sombra-md);
+            z-index:6000;font-size:.88rem;
+            transform:translateY(100px);opacity:0;
+            transition:all .35s ease;
+            max-width:380px;
+        }
+        .toast.show{transform:translateY(0);opacity:1;}
+
+        /* === Responsive === */
+        @media(max-width:1200px){
+            .stats-row{grid-template-columns:repeat(2,1fr);}
+            .charts-row{grid-template-columns:1fr;}
+            .bottom-row{grid-template-columns:1fr;}
+        }
+        @media(max-width:768px){
+            .sidebar{transform:translateX(calc(-1 * var(--sidebar-w)));}
+            .sidebar.open{transform:translateX(0);}
+            .main-wrap{margin-left:0 !important;}
+            .topbar{padding:0 16px;}
+            .topbar-greeting .quote{max-width:200px;}
+            .topbar-btn span{display:none;}
+            .topbar-btn{padding:8px 10px;}
+            .dashboard{padding:16px;}
+            .stats-row{grid-template-columns:1fr 1fr;gap:10px;}
+            .stat-card{padding:14px;}
+            .stat-card .stat-value{font-size:1.3rem;}
+        }
+        @media(max-width:480px){
+            .stats-row{grid-template-columns:1fr;}
+            .topbar-greeting h1{font-size:1.2rem;}
+        }
+        @media(prefers-reduced-motion:reduce){
+            *,*::before,*::after{animation-duration:0s !important;transition-duration:0s !important;}
+        }
+    </style>
+</head>
+<body>
+
+<!-- ====== SIDEBAR ====== -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <img src="logo.jpeg" alt="Skopia" class="sidebar-logo">
+        <span class="sidebar-username" id="sidebar-username">Cargando...</span>
+        <span class="sidebar-program" id="sidebar-program"></span>
+    </div>
+    <div class="sidebar-search">
+        <div class="sidebar-search-wrap">
+            <i class="fas fa-search"></i>
+            <input type="text" id="sidebar-search" placeholder="Buscar contenido..." aria-label="Buscar contenido">
+        </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav" aria-label="Menú de contenido"></nav>
+    <div class="sidebar-footer">
+        <a href="cuenta.html"><i class="fas fa-user-circle"></i> Mi Cuenta</a>
+        <a href="configuracion.html"><i class="fas fa-cog"></i> Configuraci&oacute;n</a>
+        <a href="#" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Cerrar Sesi&oacute;n</a>
+    </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<!-- ====== MAIN ====== -->
+<div class="main-wrap" id="main-wrap">
+    <header class="topbar">
+        <button class="topbar-toggle" id="topbar-toggle" aria-label="Abrir menú">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="topbar-greeting">
+            <h1 id="greeting">Buenos d&iacute;as</h1>
+            <p class="quote" id="quote"></p>
+        </div>
+        <div class="topbar-right">
+            <div class="topbar-datetime">
+                <span class="topbar-date" id="top-date"></span>
+                <span class="topbar-clock" id="top-clock">00:00:00</span>
+            </div>
+            <button class="topbar-btn" id="btn-tutorial" title="Tutorial">
+                <i class="fas fa-graduation-cap"></i><span>Tutorial</span>
+            </button>
+            <button class="topbar-btn" id="btn-last" title="Ir a última interacción">
+                <i class="fas fa-history"></i><span>Última interacción</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="dashboard">
+        <!-- Stats -->
+        <section class="stats-row" aria-label="Estadísticas generales">
+            <div class="stat-card streak">
+                <div class="stat-icon"><i class="fas fa-fire"></i></div>
+                <div class="stat-value" id="stat-streak">0</div>
+                <div class="stat-label">Días estudiados (racha)</div>
+            </div>
+            <div class="stat-card avg">
+                <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="stat-value" id="stat-avg">0</div>
+                <div class="stat-label">Puntaje promedio general</div>
+            </div>
+            <div class="stat-card progress">
+                <div class="stat-icon"><i class="fas fa-spinner"></i></div>
+                <div class="stat-value" id="stat-progress">0</div>
+                <div class="stat-label">Cursos en progreso</div>
+            </div>
+            <div class="stat-card missions-done">
+                <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+                <div class="stat-value" id="stat-missions">0</div>
+                <div class="stat-label">Misiones completadas</div>
+            </div>
+        </section>
+
+        <!-- Charts -->
+        <section class="charts-row" aria-label="Gráficos">
+            <div class="chart-card">
+                <h3><i class="fas fa-clock"></i> Horas de interacción por día</h3>
+                <div class="chart-wrap"><canvas id="chart-hours"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3><i class="fas fa-chart-bar"></i> Promedio por módulo</h3>
+                <div class="chart-wrap"><canvas id="chart-modules"></canvas></div>
+            </div>
+        </section>
+
+        <!-- Bottom -->
+        <section class="bottom-row">
+            <div class="panel">
+                <h3><i class="fas fa-crosshairs"></i> Próximas misiones</h3>
+                <div id="missions-list"></div>
+            </div>
+            <div class="panel">
+                <h3><i class="fas fa-layer-group"></i> Estado de cursos</h3>
+                <div id="courses-status"></div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- Tutorial -->
+<div class="tut-overlay" id="tut-overlay">
+    <div class="tut-box">
+        <div class="tut-icon" id="tut-icon"><i class="fas fa-home"></i></div>
+        <h3 id="tut-title">Bienvenido a tu Dashboard</h3>
+        <p id="tut-text">Aquí tienes una vista general de tu progreso en Skopia.</p>
+        <div class="tut-steps" id="tut-steps"></div>
+        <div class="tut-btns">
+            <button class="tut-btn secondary" id="tut-skip">Saltar</button>
+            <button class="tut-btn primary" id="tut-next">Siguiente</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ====== SCRIPTS ====== -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+/* === Firebase Init === */
+const fbConfig = {
+    apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+    projectId: "skopia-aa786",
+    storageBucket: "skopia-aa786.firebasestorage.app",
+    messagingSenderId: "719823055099",
+    appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e",
+    authDomain: location.hostname === "localhost" || location.hostname === "127.0.0.1" ? "localhost" : "skopia-aa786.firebaseapp.com"
+};
+const app = initializeApp(fbConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+/* === Datos del menú lateral === */
+const menuData = [
+    { group: 'Contenido Genérico', icon: 'fa-book-open', cats: [
+        { title: ' Razonamiento Cuantitativo', icon: 'fa-calculator', subs: [
+            { title: ' Prácticas Interactivas', links: [
+                { label: 'Laboratorio lógico matemático', url: 'lab-logico-matematico.html' },
+                { label: 'Razonamiento lógico matemático', url: 'razonamiento-logico-matematico.html' },
+                { label: 'Laboratorio de análisis gráfico', url: 'lab-analisis-grafico-rc.html' }
+            ]},
+            { title: ' Prácticas Teóricas', links: [
+                { label: 'Aritmética básica', url: 'aritmetica-basica.html' },
+                { label: 'Porcentajes y Razones', url: 'porcentajes-razones.html' },
+                { label: 'Álgebra', url: 'algebra.html' },
+                { label: 'Funciones', url: 'funciones.html' },
+                { label: 'Geometría', url: 'geometria.html' },
+                { label: 'Medidas', url: 'medidas.html' },
+                { label: 'Razonamiento lógico', url: 'razonamiento-logico-teoria.html' },
+                { label: 'Probabilidad', url: 'probabilidad.html' },
+                { label: 'Estadística descriptiva', url: 'estadistica-descriptiva.html' },
+                { label: 'Interpretación de datos', url: 'interpretacion-datos.html' }
+            ]}
+        ]},
+        { title: ' Lectura Crítica', icon: 'fa-book-reader', subs: [
+            { title: ' Prácticas Interactivas', links: [
+                { label: 'Biblioteca', url: 'biblioteca.html' },
+                { label: 'Talleres de escritura y análisis', url: 'talleres-escritura-analisis.html' },
+                { label: 'Entrenador de velocidad de lectura', url: 'velocidad-lectura.html' }
+            ]},
+            { title: ' Prácticas Teóricas', links: [
+                { label: 'Comprensión literal', url: 'comprension-literal.html' },
+                { label: 'Comprensión inferencial', url: 'comprension-inferencial.html' },
+                { label: 'Comprensión crítica', url: 'comprension-critica.html' },
+                { label: 'Estructura del texto', url: 'estructura-texto.html' },
+                { label: 'Textos narrativos', url: 'textos-narrativos.html' },
+                { label: 'Textos expositivos', url: 'textos-expositivos.html' },
+                { label: 'Textos argumentativos', url: 'textos-argumentativos.html' },
+                { label: 'Textos científicos', url: 'textos-cientificos.html' },
+                { label: 'Textos periodísticos', url: 'textos-periodisticos.html' },
+                { label: 'Análisis intertextual', url: 'analisis-intertextual.html' }
+            ]}
+        ]},
+        { title: ' Competencias Ciudadanas', icon: 'fa-balance-scale', subs: [
+            { title: ' Prácticas Interactivas', links: [
+                { label: 'Dilemas + decisiones', url: 'dilemas-decisiones.html' },
+                { label: 'Contextos sociales', url: 'contextos-sociales.html' },
+                { label: 'Archivos de casos reales', url: 'archivos-casos-reales.html' },
+                { label: 'Laboratorio de estrategias', url: 'lab-estrategias.html' }
+            ]},
+            { title: '3. Prácticas Teóricas', links: [
+                { label: 'Derechos humanos', url: 'derechos-humanos.html' },
+                { label: 'Constitución política de Colombia', url: 'constitucion-politica.html' },
+                { label: 'Democracia', url: 'democracia.html' },
+                { label: 'Estado y gobierno', url: 'estado-gobierno.html' },
+                { label: 'Justicia y equidad', url: 'justicia-equidad.html' },
+                { label: 'Resolución pacífica de conflictos', url: 'resolucion-pacifica.html' },
+                { label: 'Ética y responsabilidad social', url: 'etica-responsabilidad.html' },
+                { label: 'Diversidad cultural', url: 'diversidad-cultural.html' },
+                { label: 'Ciudadanía digital', url: 'ciudadania-digital.html' },
+                { label: 'Sostenibilidad', url: 'sostenibilidad.html' }
+            ]}
+        ]},
+        { title: ' Inglés', icon: 'fa-globe', subs: [
+            { title: 'Prácticas Interactivas', links: [
+                { label: 'Comprensión lectora en inglés', url: 'comprension-lectora-ingles.html' },
+                { label: 'Vocabulario en contexto', url: 'vocabulario-contexto-ingles.html' },
+                { label: 'Cohesión en inglés', url: 'cohesion-ingles.html' }
+            ]},
+            { title: ' Prácticas Teóricas', links: [
+                { label: 'Reading comprehension', url: 'reading-comprehension.html' },
+                { label: 'Vocabulary in context', url: 'vocabulary-context.html' },
+                { label: 'Grammar', url: 'grammar.html' },
+                { label: 'Functional language', url: 'functional-language.html' },
+                { label: 'Connectors and linking words', url: 'connectors-linking.html' },
+                { label: 'Text types', url: 'text-types.html' },
+                { label: 'Error identification', url: 'error-identification.html' },
+                { label: 'Synonym replacement', url: 'synonym-replacement.html' },
+                { label: 'Everyday situations', url: 'everyday-situations.html' },
+                { label: 'Academic vocabulary', url: 'academic-vocabulary.html' }
+            ]}
+        ]},
+        { title: ' Comunicación Escrita', icon: 'fa-pen-fancy', subs: [
+            { title: 'Subtemas', links: [
+                { label: 'Planteamiento y Argumentación', url: 'planteamiento-argumentacion.html' },
+                { label: 'Organizar el texto', url: 'organizar-texto.html' },
+                { label: 'Forma de expresión', url: 'forma-expresion.html' },
+                { label: 'Precisión Semántica y Claridad', url: 'precision-semantica.html' },
+                { label: 'Gestión del Tiempo y de la Hoja de Borrador', url: 'gestion-tiempo-borrador.html' },
+                { label: 'Pertinencia y Enfoque', url: 'pertinencia-enfoque.html' }
+            ]}
+        ]}
+    ]},
+    { group: 'Contenido Específico', icon: 'fa-graduation-cap', cats: [
+        { title: ' Administración', icon: 'fa-briefcase', subs: [
+            { title: 'Subtemas', links: [
+                { label: 'Formulación, Evaluación y Gestión de Proyectos', url: 'formulacion-gestion-proyectos-admon.html' },
+                { label: 'Gestión de organizaciones', url: 'gestion-organizaciones.html' },
+                { label: 'Gestión Financiera', url: 'gestion-financiera-admon.html' }
+            ]}
+        ]},
+        { title: ' Trabajo Social', icon: 'fa-hands-helping', subs: [
+            { title: 'Subtemas', links: [
+                { label: 'Investigación en ciencias sociales', url: 'investigacion-ciencias-sociales-ts.html' },
+                { label: 'Intervención en proyectos sociales', url: 'intervencion-proyectos-sociales.html' }
+            ]}
+        ]},
+        { title: ' Licenciatura Educación Infantil', icon: 'fa-child', subs: [
+            { title: 'Subtemas', links: [
+                { label: 'Enseñar', url: 'ensenar.html' },
+                { label: 'Formar', url: 'formar.html' },
+                { label: 'Evaluar', url: 'evaluar.html' }
+            ]}
+        ]},
+        { title: ' Psicología', icon: 'fa-brain', subs: [
+            { title: 'Subtemas', links: [
+                { label: 'Análisis de problemas psicológicos', url: 'analisis-problemas-psicologicos.html' },
+                { label: 'Investigación en ciencias sociales', url: 'investigacion-ciencias-sociales-psico.html' },
+                { label: 'Intervención en procesos sociales', url: 'intervencion-procesos-sociales.html' }
+            ]}
+        ]},
+        { title: ' Licenciatura Lenguas Extranjeras', icon: 'fa-language', note: 'Se cubre con Inglés genérico', links: [] },
+        { title: ' Contaduría Pública', icon: 'fa-file-invoice-dollar', subs: [
+            { title: 'Subtemas', links: [
+                { label: 'Información y control contable', url: 'informacion-control-contable.html' },
+                { label: 'Gestión Financiera', url: 'gestion-financiera-contaduria.html' }
+            ]}
+        ]},
+        { title: ' Ingeniería Industrial', icon: 'fa-industry', subs: [
+            { title: 'Subtemas', links: [
+                { label: 'Formulación de Proyectos de Ingeniería', url: 'formulacion-proyectos-ing-industrial.html' },
+                { label: 'Diseño de Sistemas Productivos y Logísticos', url: 'diseno-sistemas-productivos.html' },
+                { label: 'Pensamiento Científico Matemáticas y Estadística', url: 'pensamiento-cientifico-mates-industrial.html' }
+            ]}
+        ]},
+        { title: ' Diseño Gráfico', icon: 'fa-palette', subs: [
+            { title: 'Subtemas', links: [
+                { label: 'Generación de Artefactos', url: 'generacion-artefactos.html' }
+            ]}
+        ]},
+        { title: ' Ingeniería Electrónica', icon: 'fa-microchip', subs: [
+            { title: 'Subtemas', links: [
+                { label: 'Formulación de Proyectos de Ingeniería', url: 'formulacion-proyectos-ing-electronica.html' },
+                { label: 'Diseño de Sistemas de Control', url: 'diseno-sistemas-control.html' },
+                { label: 'Pensamiento Científico Ciencias Físicas', url: 'pensamiento-cientifico-fisicas.html' },
+                { label: 'Pensamiento Científico Matemáticas y Estadística', url: 'pensamiento-cientifico-mates-electronica.html' }
+            ]}
+        ]},
+        { title: ' Tecnología e Informática', icon: 'fa-laptop-code', subs: [
+            { title: 'Subtemas', links: [
+                { label: 'Pensamiento Científico Matemáticas y Estadística', url: 'pensamiento-cientifico-mates-ti.html' }
+            ]}
+        ]},
+        { title: ' Comunicación Social y Periodismo', icon: 'fa-newspaper', subs: [
+            { title: 'Subtemas', links: [
+                { label: 'Procesos comunicativos', url: 'procesos-comunicativos.html' }
+            ]}
+        ]},
+        { title: ' Ingeniería de Sistemas', icon: 'fa-server', subs: [
+            { title: 'Subtemas', links: [
+                { label: 'Formulación de Proyectos de Ingeniería', url: 'formulacion-proyectos-ing-sistemas.html' },
+                { label: 'Diseño de software', url: 'diseno-software.html' },
+                { label: 'Pensamiento Científico Matemáticas y Estadística', url: 'pensamiento-cientifico-mates-sistemas.html' }
+            ]}
+        ]}
+    ]}
+];
+
+/* === Renderizar menú lateral === */
+function renderMenu() {
+    const nav = document.getElementById('sidebar-nav');
+    let html = '<div class="menu-no-result" id="menu-no-result">Sin resultados</div>';
+    menuData.forEach(g => {
+        html += `<div class="menu-group-label"><i class="fas ${g.icon}"></i> ${g.group}</div>`;
+        g.cats.forEach(cat => {
+            const hasNote = cat.note;
+            html += `<div class="menu-cat" data-name="${cat.title.toLowerCase()}">`;
+            html += `<button class="menu-cat-btn" aria-expanded="false"><i class="cat-icon fas ${cat.icon}"></i><span>${cat.title}</span><i class="fas fa-chevron-right chevron"></i></button>`;
+            html += '<div class="menu-cat-children">';
+            if (hasNote) {
+                html += `<div class="menu-note">${cat.note}</div>`;
+            }
+            if (cat.subs) {
+                cat.subs.forEach(sub => {
+                    html += `<div class="menu-sub" data-name="${sub.title.toLowerCase()}">`;
+                    html += `<button class="menu-sub-btn" aria-expanded="false"><span>${sub.title}</span><i class="fas fa-chevron-right chevron"></i></button>`;
+                    html += '<div class="menu-sub-children">';
+                    if (sub.links) {
+                        sub.links.forEach(lk => {
+                            html += `<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;
+                        });
+                    }
+                    html += '</div></div>';
+                });
+            }
+            /* Links directos sin sub (ej. lic. lenguas si tuviera) */
+            if (cat.links && cat.links.length) {
+                cat.links.forEach(lk => {
+                    html += `<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;
+                });
+            }
+            html += '</div></div>';
+        });
+    });
+    nav.innerHTML = html;
+
+    /* Toggle categorías */
+    nav.querySelectorAll('.menu-cat-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const cat = btn.parentElement;
+            const wasOpen = cat.classList.contains('open');
+            /* Cerrar hermanos */
+            cat.parentElement.querySelectorAll(':scope > .menu-cat.open').forEach(s => {
+                if (s !== cat) s.classList.remove('open');
+                s.querySelector('.menu-cat-btn').setAttribute('aria-expanded', 'false');
+            });
+            cat.classList.toggle('open', !wasOpen);
+            btn.setAttribute('aria-expanded', String(!wasOpen));
+        });
+    });
+
+    /* Toggle subcategorías */
+    nav.querySelectorAll('.menu-sub-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const sub = btn.parentElement;
+            const wasOpen = sub.classList.contains('open');
+            sub.parentElement.querySelectorAll(':scope > .menu-sub.open').forEach(s => {
+                if (s !== sub) s.classList.remove('open');
+            });
+            sub.classList.toggle('open', !wasOpen);
+            btn.setAttribute('aria-expanded', String(!wasOpen));
+        });
+    });
+}
+
+/* === Búsqueda en menú === */
+function initSearch() {
+    const input = document.getElementById('sidebar-search');
+    const noRes = document.getElementById('menu-no-result');
+    input.addEventListener('input', () => {
+        const q = input.value.toLowerCase().trim();
+        const nav = document.getElementById('sidebar-nav');
+        const cats = nav.querySelectorAll('.menu-cat');
+        let anyVisible = false;
+
+        cats.forEach(cat => {
+            const catName = cat.dataset.name || '';
+            const subs = cat.querySelectorAll('.menu-sub');
+            const directLinks = cat.querySelectorAll(':scope > .menu-cat-children > .menu-link');
+            let catMatch = catName.includes(q);
+            let subHasVisible = false;
+
+            subs.forEach(sub => {
+                const subName = sub.dataset.name || '';
+                const links = sub.querySelectorAll('.menu-link');
+                let subMatch = subName.includes(q);
+                let linkVisible = false;
+
+                links.forEach(lk => {
+                    const ln = lk.dataset.name || '';
+                    const show = !q || ln.includes(q) || subMatch || catMatch;
+                    lk.classList.toggle('hidden', !show);
+                    if (show) linkVisible = true;
+                });
+
+                sub.classList.toggle('hidden', !linkVisible && !subMatch && !catMatch && q);
+                if (subMatch || linkVisible) subHasVisible = true;
+                if (subMatch || linkVisible) sub.classList.add('open');
+                else sub.classList.remove('open');
+            });
+
+            directLinks.forEach(lk => {
+                const ln = lk.dataset.name || '';
+                const show = !q || ln.includes(q) || catMatch;
+                lk.classList.toggle('hidden', !show);
+                if (show) subHasVisible = true;
+            });
+
+            cat.classList.toggle('hidden', !subHasVisible && !catMatch && q);
+            if (catMatch || subHasVisible) anyVisible = true;
+            if (catMatch || subHasVisible) cat.classList.add('open');
+        });
+
+        noRes.classList.toggle('show', !anyVisible && q.length > 0);
+    });
+}
+
+/* === Sidebar toggle === */
+function initSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const toggle = document.getElementById('topbar-toggle');
+    const mainWrap = document.getElementById('main-wrap');
+    const isMobile = () => window.innerWidth <= 768;
+
+    function openSidebar() {
+        if (isMobile()) {
+            sidebar.classList.add('open');
+            overlay.classList.add('active');
+        } else {
+            sidebar.classList.remove('collapsed');
+            mainWrap.classList.remove('expanded');
+        }
+    }
+    function closeSidebar() {
+        if (isMobile()) {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+        } else {
+            sidebar.classList.add('collapsed');
+            mainWrap.classList.add('expanded');
+        }
+    }
+    toggle.addEventListener('click', () => {
+        const isOpen = isMobile() ? sidebar.classList.contains('open') : !sidebar.classList.contains('collapsed');
+        isOpen ? closeSidebar() : openSidebar();
+    });
+    overlay.addEventListener('click', closeSidebar);
+
+    /* Estado inicial en desktop */
+    if (!isMobile()) {
+        sidebar.classList.remove('collapsed');
+    }
+    window.addEventListener('resize', () => {
+        if (!isMobile()) {
+            overlay.classList.remove('active');
+            sidebar.classList.remove('open');
+        }
+    });
+}
+
+/* === Reloj y fecha === */
+function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    document.getElementById('top-clock').textContent = `${h}:${m}:${s}`;
+
+    const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    document.getElementById('top-date').textContent = `${dias[now.getDay()]}, ${now.getDate()} de ${meses[now.getMonth()]}`;
+}
+
+/* === Saludo según hora === */
+function getGreeting() {
+    const h = new Date().getHours();
+    if (h >= 5 && h < 12) return 'Buenos días';
+    if (h >= 12 && h < 18) return 'Buenas tardes';
+    return 'Buenas noches';
+}
+
+/* === Frases motivadoras === */
+const quotes = [
+    "El éxito es la suma de pequeños esfuerzos repetidos día tras día.",
+    "No estudies para aprobar, estudia para comprender.",
+    "Cada hora de estudio es una inversión en tu futuro.",
+    "La disciplina supera al talento cuando el talento no tiene disciplina.",
+    "El conocimiento es la única riqueza que crece cuando se comparte.",
+    "No te compares con otros, compárate con quien eras ayer.",
+    "Un examen no define tu vida, pero la preparación sí te transforma.",
+    "La constancia vence al talento que no se entrena.",
+    "Aprender no es llenar un recipiente, sino encender una llama.",
+    "El límite no está en el examen, está en tu mente.",
+    "Cada pregunta que respondes te acerca a tu mejor versión.",
+    "El esfuerzo de hoy es el resultado de mañana.",
+    "No hay atajos hacia un lugar que valga la pena llegar.",
+    "La educación es el arma más poderosa para cambiar el mundo."
+];
+let quoteIdx = Math.floor(Math.random() * quotes.length);
+function rotateQuote() {
+    const el = document.getElementById('quote');
+    el.style.opacity = '0';
+    setTimeout(() => {
+        el.textContent = `"${quotes[quoteIdx]}"`;
+        el.style.opacity = '1';
+        quoteIdx = (quoteIdx + 1) % quotes.length;
+    }, 300);
+}
+
+/* === Animar número === */
+function animateValue(el, target, duration = 800) {
+    const start = parseInt(el.textContent) || 0;
+    if (start === target) return;
+    const startTime = performance.now();
+    function tick(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.round(start + (target - start) * ease);
+        if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+}
+
+/* === Gráficos === */
+let hoursChart = null, modulesChart = null;
+
+function renderHoursChart(labels, data) {
+    const ctx = document.getElementById('chart-hours').getContext('2d');
+    if (hoursChart) hoursChart.destroy();
+    hoursChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Horas',
+                data,
+                backgroundColor: 'rgba(90,97,51,0.65)',
+                borderColor: 'rgba(39,43,0,0.8)',
+                borderWidth: 1,
+                borderRadius: 6,
+                maxBarThickness: 40
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#272b00', titleColor: '#fdfbf5',
+                    bodyColor: '#fdfbf5', cornerRadius: 8, padding: 10
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#5a6133', font: { size: 11 } },
+                    grid: { color: 'rgba(39,43,0,0.05)' }
+                },
+                x: {
+                    ticks: { color: '#5a6133', font: { size: 11 } },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+}
+
+function renderModulesChart(labels, data) {
+    const ctx = document.getElementById('chart-modules').getContext('2d');
+    if (modulesChart) modulesChart.destroy();
+    const colors = ['#272b00','#5a6133','#7a8044','#9ea066','#bec092'];
+    modulesChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Promedio',
+                data,
+                backgroundColor: colors.map(c => c + 'cc'),
+                borderColor: colors,
+                borderWidth: 1,
+                borderRadius: 6,
+                maxBarThickness: 32
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#272b00', titleColor: '#fdfbf5',
+                    bodyColor: '#fdfbf5', cornerRadius: 8, padding: 10,
+                    callbacks: { label: ctx => ` ${ctx.parsed.x} / 300` }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true, max: 300,
+                    ticks: { color: '#5a6133', font: { size: 11 } },
+                    grid: { color: 'rgba(39,43,0,0.05)' }
+                },
+                y: {
+                    ticks: { color: '#272b00', font: { size: 11, weight: '500' } },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+}
+
+/* === Datos placeholder === */
+function getDefaultHours() {
+    const labels = [], data = [];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+        labels.push(dias[d.getDay()] + ' ' + d.getDate());
+        data.push(0);
+    }
+    return { labels, data };
+}
+function getDefaultModules() {
+    return {
+        labels: ['Razonamiento Cuantitativo','Lectura Crítica','Competencias Ciudadanas','Inglés','Comunicación Escrita'],
+        data: [0, 0, 0, 0, 0]
+    };
+}
+
+/* === Misiones placeholder (primeras 8 no completadas) === */
+const missionsTemplate = [
+   { id: 1, title: "Completa tu primer examen", points: 50 },
+            { id: 2, title: "Logra al menos 180/300 en un examen", points: 80 },
+            { id: 3, title: "Lee toda la teoría de una lección", points: 40 },
+            { id: 4, title: "Termina una sesión de estudio sin salir", points: 50 },
+            { id: 5, title: "Gana tu primer juego", points: 50 },
+            { id: 6, title: "Usa una pista o ayuda en un juego", points: 30 },
+            { id: 7, title: "Repite un examen para mejorar tu nota", points: 50 },
+            { id: 8, title: "Cambia tu nombre de usuario", points: 40 },
+            { id: 9, title: "Acumula tus primeras 200 estrellas", points: 30 },
+            { id: 10, title: "Completa 3 misiones seguidas", points: 50 },
+            { id: 11, title: "Logra 240/300 en un examen", points: 150 },
+            { id: 12, title: "Completa un examen sin errores (300/300)", points: 200 },
+            { id: 13, title: "Gana 3 juegos distintos", points: 60 },
+            { id: 14, title: "Termina una teoría con ejemplo práctico", points: 40 },
+            { id: 15, title: "Participa en una práctica de repaso", points: 30 },
+            { id: 16, title: "Completa 2 exámenes el mismo día", points: 80 },
+            { id: 17, title: "Obtén 500 estrellas acumuladas", points: 50 },
+            { id: 18, title: "Gana un examen con tiempo limitado", points: 80 },
+            { id: 19, title: "Repite un juego hasta mejorar tu resultado", points: 30 },
+            { id: 20, title: "Completa todos los subniveles de un tema (5/5)", points: 100 },
+            { id: 21, title: "Logra 270/300 en un examen", points: 180 },
+            { id: 22, title: "Supera tu propia mejor nota", points: 60 },
+            { id: 23, title: "Termina 5 juegos de práctica", points: 50 },
+            { id: 24, title: "Lee toda la teoría sin usar pistas", points: 40 },
+            { id: 25, title: "Completa todos los subniveles del nivel 6", points: 140 },
+            { id: 26, title: "Suma 1000 estrellas totales", points: 50 },
+            { id: 27, title: "Gana un examen con tiempo limitado", points: 80 },
+            { id: 28, title: "Juega y gana el modo “escape room”", points: 60 },
+            { id: 29, title: "Gana un juego de ahorcado correctamente", points: 50 },
+            { id: 30, title: "Haz un examen de repaso general", points: 70 },
+            { id: 31, title: "Logra 300/300 en dos exámenes seguidos", points: 200 },
+            { id: 32, title: "Completa todos los juegos de un módulo", points: 100 },
+            { id: 33, title: "Termina la teoría de un módulo completo", points: 80 },
+            { id: 34, title: "Gana un juego tipo tablero", points: 60 },
+            { id: 35, title: "Completa una misión cronometrada", points: 80 },
+            { id: 36, title: "Obtén 2000 estrellas acumuladas", points: 60 },
+            { id: 37, title: "Gana un juego sin usar pistas", points: 50 },
+            { id: 38, title: "Revisa tu historial de progreso", points: 30 },
+            { id: 39, title: "Completa 10 misiones seguidas sin fallar", points: 100 },
+            { id: 40, title: "Termina un examen con todos los tiempos perfectos", points: 150 },
+            { id: 41, title: "Completa 5 exámenes con más de 240/300", points: 150 },
+            { id: 42, title: "Termina todos los subniveles del nivel 6", points: 140 },
+            { id: 43, title: "Consigue 3000 estrellas", points: 120 },
+            { id: 44, title: "Estudia 10 días seguidos", points: 130 },
+            { id: 45, title: "Completa 10 misiones", points: 140 },
+            { id: 46, title: "Llega al nivel 6.5", points: 130 },
+            { id: 47, title: "Termina un examen sin errores", points: 150 },
+            { id: 48, title: "Supera tu propio puntaje anterior", points: 140 },
+            { id: 49, title: "Contesta 500 preguntas", points: 130 },
+            { id: 50, title: "Completa un examen en menos de 25 minutos", points: 140 },
+            { id: 51, title: "Alcanza el top 10 por primera vez (local)", points: 150 },
+            { id: 52, title: "Mantente en el top 10 por 3 días (local)", points: 140 },
+            { id: 53, title: "Gana 4000 estrellas", points: 130 },
+            { id: 54, title: "Termina la ruta RC con promedio ≥200", points: 140 },
+            { id: 55, title: "Termina la ruta LC con promedio ≥200", points: 140 },
+            { id: 56, title: "Termina la ruta CC con promedio ≥200", points: 140 },
+            { id: 57, title: "Obtén 250 puntos o más en tres rutas", points: 150 },
+            { id: 58, title: "Crea una racha de 20 aciertos seguidos", points: 140 },
+            { id: 59, title: "Completa 15 misiones", points: 130 },
+            { id: 60, title: "Alcanza el nivel 7", points: 150 },
+            { id: 61, title: "Consigue 6000 estrellas", points: 160 },
+            { id: 62, title: "Estudia 20 días seguidos", points: 170 },
+            { id: 63, title: "Termina todos los niveles de una ruta (10/10)", points: 180 },
+            { id: 64, title: "Contesta 1000 preguntas", points: 160 },
+            { id: 65, title: "Supera a 5 usuarios en el ranking (local)", points: 170 },
+            { id: 66, title: "Alcanza el nivel 8", points: 170 },
+            { id: 67, title: "Termina 20 misiones", points: 160 },
+            { id: 68, title: "Obtén promedio ≥250 puntos en una ruta", points: 180 },
+            { id: 69, title: "Logra 5 exámenes con 250 o más puntos", points: 170 },
+            { id: 70, title: "Termina las rutas RC y LC completas", points: 180 },
+            { id: 71, title: "Mantente en el top 5 (local)", points: 170 },
+            { id: 72, title: "Completa todos los subniveles (50 total)", points: 180 },
+            { id: 73, title: "Gana 8000 estrellas", points: 160 },
+            { id: 74, title: "Termina 25 misiones", points: 170 },
+            { id: 75, title: "Sube de nivel sin fallar un examen", points: 160 },
+            { id: 76, title: "Obtén 280 puntos en un examen", points: 180 },
+            { id: 77, title: "Completa 10 exámenes sin pistas", points: 170 },
+            { id: 78, title: "Obtén 270 o más en las tres rutas", points: 180 },
+            { id: 79, title: "Alcanza el nivel 9", points: 180 },
+            { id: 80, title: "Termina 30 misiones", points: 170 },
+            { id: 81, title: "Gana 10,000 estrellas", points: 190 },
+            { id: 82, title: "Mantente en el top 3 (local)", points: 190 },
+            { id: 83, title: "Termina las tres rutas con promedio ≥250", points: 190 },
+            { id: 84, title: "Completa los 50 subniveles con más de 200 puntos promedio", points: 200 },
+            { id: 85, title: "Llega al nivel 10", points: 200 },
+            { id: 86, title: "Gana 15,000 estrellas", points: 200 },
+            { id: 87, title: "Mantente en el top 3 por 7 días (local)", points: 190 },
+            { id: 88, title: "Consigue 300 puntos en un examen", points: 200 },
+            { id: 89, title: "Termina 40 misiones", points: 190 },
+            { id: 90, title: "Completa todos los exámenes de práctica", points: 190 },
+            { id: 91, title: "Llega a 20,000 estrellas", points: 200 },
+            { id: 92, title: "Termina 50 misiones", points: 190 },
+            { id: 93, title: "Mantente en el top 1 por 3 días (local)", points: 200 },
+            { id: 94, title: "Termina todas las rutas al 100%", points: 200 },
+            { id: 95, title: "Obtén todas las medallas", points: 190 },
+            { id: 96, title: "Consigue 25,000 estrellas", points: 200 },
+            { id: 97, title: "Cumple todas las misiones básicas e intermedias", points: 190 },
+            { id: 98, title: "Mantente activo 30 días seguidos", points: 200 },
+            { id: 99, title: "Llega a 30,000 estrellas", points: 200 },
+            { id: 100, title: "🏆 Maestro del Saber Pro: completa todo el sistema", points: 200 }
+];
+
+function renderMissions(completedIds = []) {
+    const list = document.getElementById('missions-list');
+    const upcoming = missionsTemplate.filter(m => !completedIds.includes(m.id)).slice(0, 8);
+    if (!upcoming.length) {
+        list.innerHTML = '<div class="mission-empty">Todas las misiones completadas</div>';
+        return;
+    }
+    list.innerHTML = upcoming.map(m => `
+        <div class="mission-item">
+            <div class="mission-dot"></div>
+            <div class="mission-text">${m.title}<span>Misión #${m.id}</span></div>
+            <div class="mission-pts">+${m.pts} pts</div>
+        </div>
+    `).join('');
+}
+
+/* === Estado de cursos === */
+function renderCourses(status = { completed: 0, in_progress: 0, not_started: 0 }, total = 1) {
+    const el = document.getElementById('courses-status');
+    const pDone = Math.round((status.completed / total) * 100) || 0;
+    const pWip = Math.round((status.in_progress / total) * 100) || 0;
+    const pNone = Math.round((status.not_started / total) * 100) || 0;
+    el.innerHTML = `
+        <div class="course-stat">
+            <div class="course-icon done"><i class="fas fa-check-circle"></i></div>
+            <div class="course-info">
+                <div class="course-num">${status.completed}</div>
+                <div class="course-label">Completados</div>
+                <div class="course-bar"><div class="course-bar-fill" style="width:${pDone}%;background:var(--oliva-oscuro);"></div></div>
+            </div>
+        </div>
+        <div class="course-stat">
+            <div class="course-icon wip"><i class="fas fa-spinner"></i></div>
+            <div class="course-info">
+                <div class="course-num">${status.in_progress}</div>
+                <div class="course-label">En progreso</div>
+                <div class="course-bar"><div class="course-bar-fill" style="width:${pWip}%;background:var(--oliva-medio);"></div></div>
+            </div>
+        </div>
+        <div class="course-stat">
+            <div class="course-icon none"><i class="fas fa-circle"></i></div>
+            <div class="course-info">
+                <div class="course-num">${status.not_started}</div>
+                <div class="course-label">No iniciados</div>
+                <div class="course-bar"><div class="course-bar-fill" style="width:${pNone}%;background:var(--oliva-claro);"></div></div>
+            </div>
+        </div>
+    `;
+}
+
+/* === Toast === */
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+/* === Tutorial === */
+const tutSteps = [
+    { icon:'fa-home', title:'Bienvenido a tu Dashboard', text:'Aquí tienes una vista general de tu progreso en Skopia. Te guiaré por las secciones principales.' },
+    { icon:'fa-fire', title:'Tus estadísticas', text:'En las tarjetas superiores ves tu racha de días estudiados, puntaje promedio, cursos en progreso y misiones completadas.' },
+    { icon:'fa-chart-bar', title:'Gráficos de progreso', text:'El gráfico de barras muestra tus horas de interacción diarias. El de comparativa indica tu promedio por cada módulo (escala 0-300).' },
+    { icon:'fa-crosshairs', title:'Próximas misiones', text:'Aquí ves las misiones pendientes más cercanas. Completa actividades para ganar puntos y desbloquear nuevas misiones.' },
+    { icon:'fa-layer-group', title:'Estado de cursos', text:'Un resumen visual de cuántos cursos tienes completados, en progreso y sin iniciar.' },
+    { icon:'fa-bars', title:'Menú de contenido', text:'Usa el menú lateral para navegar a cualquier lección, práctica o teoría. Puedes buscar contenido con el buscador.' },
+    { icon:'fa-rocket', title:'Listo para estudiar', text:'Explora tu contenido, completa misiones y mejora tus puntajes. Tú pones el límite.' }
+];
+let tutStep = 0;
+function openTutorial() {
+    tutStep = 0;
+    renderTutStep();
+    document.getElementById('tut-overlay').classList.add('active');
+}
+function renderTutStep() {
+    const s = tutSteps[tutStep];
+    document.getElementById('tut-icon').innerHTML = `<i class="fas ${s.icon}"></i>`;
+    document.getElementById('tut-title').textContent = s.title;
+    document.getElementById('tut-text').textContent = s.text;
+    document.getElementById('tut-next').textContent = tutStep === tutSteps.length - 1 ? 'Cerrar' : 'Siguiente';
+    const dots = document.getElementById('tut-steps');
+    dots.innerHTML = tutSteps.map((_, i) => `<div class="tut-step-dot ${i === tutStep ? 'active' : ''}"></div>`).join('');
+}
+document.getElementById('tut-next').addEventListener('click', () => {
+    if (tutStep < tutSteps.length - 1) { tutStep++; renderTutStep(); }
+    else document.getElementById('tut-overlay').classList.remove('active');
+});
+document.getElementById('tut-skip').addEventListener('click', () => {
+    document.getElementById('tut-overlay').classList.remove('active');
+});
+document.getElementById('btn-tutorial').addEventListener('click', openTutorial);
+
+/* === Cargar datos de Firebase === */
+async function loadDashboard(uid) {
+    const userRef = doc(db, 'users', uid, 'profile', 'main');
+    const scoresRef = collection(db, 'users', uid, 'scores');
+    const interRef = collection(db, 'users', uid, 'interactions');
+    const missionsRef = collection(db, 'users', uid, 'missions');
+    const progressRef = collection(db, 'users', uid, 'progress');
+    const streakRef = doc(db, 'users', uid, 'streak', 'main');
+    const lastRef = doc(db, 'users', uid, 'lastInteraction', 'main');
+
+    /* Perfil */
+    try {
+        const snap = await getDoc(userRef);
+        if (snap.exists()) {
+            const d = snap.data();
+            const name = d.displayName || 'Estudiante';
+            document.getElementById('sidebar-username').textContent = name;
+            document.getElementById('sidebar-program').textContent = d.program || '';
+            document.getElementById('greeting').textContent = `${getGreeting()}, ${name.split(' ')[0]}`;
+        }
+    } catch(e) { console.warn('Perfil no disponible'); }
+
+    /* Racha */
+    try {
+        const snap = await getDoc(streakRef);
+        if (snap.exists()) {
+            animateValue(document.getElementById('stat-streak'), snap.data().currentStreak || 0);
+        }
+    } catch(e) {}
+
+    /* Puntajes por módulo */
+    const modLabels = [];
+    const modData = [];
+    let totalAvg = 0, modCount = 0;
+    try {
+        const snap = await getDocs(scoresRef);
+        snap.forEach(doc => {
+            const d = doc.data();
+            const avg = d.average || 0;
+            if (avg > 0) {
+                let name = doc.id.replace(/-/g, ' ');
+                name = name.charAt(0).toUpperCase() + name.slice(1);
+                modLabels.push(name);
+                modData.push(avg);
+                totalAvg += avg;
+                modCount++;
+            }
+        });
+        if (modCount) {
+            animateValue(document.getElementById('stat-avg'), Math.round(totalAvg / modCount));
+        }
+    } catch(e) {}
+    if (!modLabels.length) {
+        const def = getDefaultModules();
+        modLabels.push(...def.labels);
+        modData.push(...def.data);
+    }
+    renderModulesChart(modLabels, modData);
+
+    /* Interacciones (horas por día) */
+    try {
+        const snap = await getDocs(interRef);
+        if (snap.size) {
+            const sorted = snap.docs.sort((a, b) => a.id.localeCompare(b.id)).slice(-7);
+            const labels = [], data = [];
+            sorted.forEach(d => {
+                const dt = new Date(d.id + 'T12:00:00');
+                const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+                labels.push(dias[dt.getDay()] + ' ' + dt.getDate());
+                data.push(parseFloat((d.data().hours || 0).toFixed(1)));
+            });
+            renderHoursChart(labels, data);
+        } else {
+            const def = getDefaultHours();
+            renderHoursChart(def.labels, def.data);
+        }
+    } catch(e) {
+        const def = getDefaultHours();
+        renderHoursChart(def.labels, def.data);
+    }
+
+    /* Misiones */
+    const completedIds = [];
+    try {
+        const snap = await getDocs(missionsRef);
+        snap.forEach(d => { if (d.data().completed) completedIds.push(parseInt(d.id.replace('mission_', ''))); });
+    } catch(e) {}
+    renderMissions(completedIds);
+    animateValue(document.getElementById('stat-missions'), completedIds.length);
+
+    /* Progreso de cursos */
+    let status = { completed: 0, in_progress: 0, not_started: 0 };
+    let totalCourses = 0;
+    try {
+        const snap = await getDocs(progressRef);
+        totalCourses = snap.size || 1;
+        snap.forEach(d => {
+            const s = d.data().status;
+            if (s === 'completed') status.completed++;
+            else if (s === 'in_progress') status.in_progress++;
+            else status.not_started++;
+        });
+    } catch(e) {}
+    if (!totalCourses) totalCourses = 1;
+    renderCourses(status, totalCourses);
+    animateValue(document.getElementById('stat-progress'), status.in_progress);
+
+    /* Última interacción */
+    try {
+        const snap = await getDoc(lastRef);
+        if (snap.exists()) {
+            const d = snap.data();
+            document.getElementById('btn-last').addEventListener('click', () => {
+                if (d.url) window.location.href = d.url;
+                else showToast('No hay última interacción registrada');
+            });
+        } else {
+            document.getElementById('btn-last').addEventListener('click', () => {
+                showToast('No hay última interacción registrada');
+            });
+        }
+    } catch(e) {
+        document.getElementById('btn-last').addEventListener('click', () => {
+            showToast('No hay última interacción registrada');
+        });
+    }
+}
+
+/* === Init === */
+onAuthStateChanged(auth, (user) => {
+    if (!user) { window.location.href = 'index.html'; return; }
+    document.getElementById('greeting').textContent = `${getGreeting()}, ${user.displayName?.split(' ')[0] || 'Estudiante'}`;
+    document.getElementById('sidebar-username').textContent = user.displayName || 'Estudiante';
+
+    loadDashboard(user.uid);
+
+    /* Logout */
+    document.getElementById('logout-btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        signOut(auth).then(() => window.location.href = 'index.html');
+    });
+});
+
+/* Construir UI estática */
+renderMenu();
+initSearch();
+initSidebar();
+
+/* Reloj */
+updateClock();
+setInterval(updateClock, 1000);
+
+/* Frase */
+const quoteEl = document.getElementById('quote');
+quoteEl.style.transition = 'opacity 0.3s';
+quoteEl.textContent = `"${quotes[quoteIdx]}"`;
+quoteIdx = (quoteIdx + 1) % quotes.length;
+setInterval(rotateQuote, 10000);
+
+/* Abrir tutorial si es primera vez */
+const TUT_KEY = 'skopia_dash_tut_done';
+if (!localStorage.getItem(TUT_KEY)) {
+    setTimeout(openTutorial, 1200);
+    localStorage.setItem(TUT_KEY, '1');
+}
+</script>
+</body>
+</html>
