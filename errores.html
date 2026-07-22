@@ -4,1344 +4,780 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Centro de Mejora - Skópia</title>
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    
-    <!-- Font Awesome para iconos -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    
-    <!-- AOS para animaciones -->
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&family=Patrick+Hand&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+        const firebaseConfig = {
+            apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+            authDomain: "skopia-aa786.firebaseapp.com",
+            databaseURL: "https://skopia-aa786-default-rtdb.firebaseio.com",
+            projectId: "skopia-aa786", storageBucket: "skopia-aa786.firebasestorage.app",
+            messagingSenderId: "719823055099", appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        window.auth = auth;
+        onAuthStateChanged(auth, (user) => {
+            if (!user) { window.location.href = 'index.html'; return; }
+            window.currentUser = user;
+            window.dispatchEvent(new CustomEvent('userReady', { detail: { user } }));
+        });
+    </script>
+
+    <!--
+    ═══════════════════════════════════════════════════════════════
+      SISTEMA DE ETIQUETA UNIVERSAL PARA GUARDAR PREGUNTAS FALLIDAS
+    ═══════════════════════════════════════════════════════════════
+
+      Pega este bloque en CUALQUIER HTML que tenga cuestionarios
+      (NO en el diagnóstico inicial, ese no guarda nada).
+
+      La función detecta automáticamente el módulo desde los tags
+      de la pregunta (LC, RC, CC, IN) y evita duplicados por ID.
+
+    <script>
+    function guardarPreguntasFallidas(preguntasFallidas) {
+        // preguntasFallidas: array de objetos pregunta con respuestaUsuario
+        const key = 'SKOPIA_ERRORES_UNIVERSAL';
+        let all = JSON.parse(localStorage.getItem(key) || '[]');
+        const existIds = new Set(all.map(q => q.id));
+
+        preguntasFallidas.forEach(q => {
+            if (q.id && !existIds.has(q.id)) {
+                // Detectar módulo automáticamente desde los tags
+                if (!q.modulo && q.tags && Array.isArray(q.tags)) {
+                    const up = q.tags.map(t => t.toUpperCase().trim());
+                    if (up.includes('LC')) q.modulo = 'LC';
+                    else if (up.includes('RC')) q.modulo = 'RC';
+                    else if (up.includes('CC')) q.modulo = 'CC';
+                    else if (up.includes('IN')) q.modulo = 'IN';
+                    else q.modulo = 'OTRO';
+                }
+                all.push(q);
+                existIds.add(q.id);
+            }
+        });
+        localStorage.setItem(key, JSON.stringify(all));
+    }
+
+    // USO: Al finalizar cualquier cuestionario (que NO sea diagnóstico):
+    // const fallidas = preguntas.filter((q, i) => respuestas[i] !== q.respuestaCorrecta)
+    //     .map(q => ({ ...q, respuestaUsuario: respuestas[preguntas.indexOf(q)] }));
+    // guardarPreguntasFallidas(fallidas);
+    </script>
+    ═══════════════════════════════════════════════════════════════
+    -->
 
     <style>
         :root {
-            --color-crema: #fdfbf5;
-            --color-beige: #f5f2e8;
-            --color-oliva-claro: #bec092;
-            --color-oliva-medio: #5a6133;
-            --color-oliva-oscuro: #272b00;
-            --color-verde: #4CAF50;
-            --color-rojo: #f44336;
-            --color-acento: #ff9e6d;
+            --bg-deep:#0e1000;--paper:#f8f4e8;--paper-edge:#ede8d6;
+            --olive-dark:#272b00;--olive-mid:#5a6133;--olive-light:#bec092;
+            --seal-red:#b5453a;--gold:#c9a84c;--gold-dim:rgba(201,168,76,0.15);
+            --accent:#c17f4e;--muted:#7a7566;
+            --mod-lc:#5b8fd4;--mod-rc:#c17f4e;--mod-cc:#7d8a5e;--mod-in:#c9a84c;--mod-otro:#8a8578;
         }
+        *{margin:0;padding:0;box-sizing:border-box}
+        html{scroll-behavior:smooth}
+        body{font-family:'DM Sans',sans-serif;background:var(--bg-deep);color:var(--olive-dark);min-height:100vh;overflow-x:hidden}
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Roboto', sans-serif;
-            background: linear-gradient(135deg, var(--color-beige) 0%, var(--color-crema) 100%);
-            color: var(--color-oliva-oscuro);
-            min-height: 100vh;
-            position: relative;
-            overflow-x: hidden;
-        }
-
-        /* Elementos decorativos de fondo */
-        .bg-decoration {
-            position: fixed;
-            z-index: -1;
-            opacity: 0.1;
-        }
-
-        .bg-decoration-1 {
-            top: 10%;
-            left: 5%;
-            font-size: 8rem;
-            transform: rotate(-15deg);
-        }
-
-        .bg-decoration-2 {
-            bottom: 10%;
-            right: 5%;
-            font-size: 10rem;
-            transform: rotate(15deg);
-        }
+        /* Fondo */
+        .bg-glow{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+        .bg-g1{width:500px;height:500px;background:rgba(90,97,51,0.06);top:-150px;left:-150px;animation:drift 14s ease-in-out infinite alternate}
+        .bg-g2{width:400px;height:400px;background:rgba(201,168,76,0.05);bottom:-120px;right:-120px;animation:drift 18s ease-in-out infinite alternate-reverse}
+        @keyframes drift{0%{transform:translate(0,0)}100%{transform:translate(30px,-20px)}}
 
         /* Header */
-        header {
-            background-color: var(--color-oliva-oscuro);
-            color: var(--color-crema);
-            padding: 15px 0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .header-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            font-family: 'Patrick Hand', cursive;
-            font-size: 1.8rem;
-            font-weight: bold;
-        }
-
-        .logo i {
-            margin-right: 10px;
-            font-size: 2rem;
-            color: var(--color-acento);
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: var(--color-oliva-medio);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--color-crema);
-            font-weight: bold;
-        }
-
-        /* Contenedor principal */
-        .main-container {
-            max-width: 1200px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
-
-        .page-title {
-            font-family: 'Patrick Hand', cursive;
-            font-size: 3rem;
-            color: var(--color-oliva-oscuro);
-            text-align: center;
-            margin-bottom: 20px;
-            position: relative;
-        }
-
-        .page-subtitle {
-            text-align: center;
-            color: var(--color-oliva-medio);
-            font-size: 1.2rem;
-            margin-bottom: 40px;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        /* Tarjetas de opciones principales */
-        .options-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-bottom: 40px;
-        }
-
-        .option-card {
-            background-color: white;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .option-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-        }
-
-        .option-card-header {
-            background-color: var(--color-oliva-oscuro);
-            color: var(--color-crema);
-            padding: 20px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .option-card-header::after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 0;
-            width: 100%;
-            height: 20px;
-            background-color: white;
-            border-radius: 50% 50% 0 0 / 100% 100% 0 0;
-        }
-
-        .option-card-header i {
-            font-size: 3rem;
-            margin-bottom: 10px;
-            color: var(--color-acento);
-        }
-
-        .option-card-header h2 {
-            font-family: 'Patrick Hand', cursive;
-            font-size: 1.8rem;
-            margin: 0;
-        }
-
-        .option-card-body {
-            padding: 30px 20px;
-            text-align: center;
-        }
-
-        .option-card-body p {
-            color: var(--color-oliva-medio);
-            margin-bottom: 20px;
-            line-height: 1.6;
-        }
-
-        .option-card-footer {
-            padding: 0 20px 20px;
-            text-align: center;
-        }
-
-        .option-button {
-            display: inline-block;
-            background-color: var(--color-oliva-oscuro);
-            color: var(--color-crema);
-            padding: 12px 30px;
-            border-radius: 50px;
-            font-weight: bold;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            border: none;
-            cursor: pointer;
-        }
-
-        .option-button:hover {
-            background-color: var(--color-oliva-medio);
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        /* Sección de contenido */
-        .content-section {
-            background-color: white;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            padding: 30px;
-            margin-bottom: 30px;
-            display: none;
-        }
-
-        .content-section.active {
-            display: block;
-            animation: fadeIn 0.5s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .section-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid var(--color-beige);
-        }
-
-        .section-header h2 {
-            font-family: 'Patrick Hand', cursive;
-            font-size: 2rem;
-            color: var(--color-oliva-oscuro);
-            margin: 0;
-        }
-
-        .back-button {
-            margin-right: 15px;
-            background-color: transparent;
-            color: var(--color-oliva-medio);
-            border: 1px solid var(--color-oliva-medio);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .back-button:hover {
-            background-color: var(--color-oliva-medio);
-            color: white;
-        }
-
-        /* Filtros por módulo */
-        .module-filters {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-            justify-content: center;
-        }
-
-        .module-filter {
-            padding: 8px 16px;
-            background-color: var(--color-beige);
-            border: 2px solid var(--color-oliva-claro);
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 500;
-        }
-
-        .module-filter:hover {
-            background-color: var(--color-oliva-claro);
-        }
-
-        .module-filter.active {
-            background-color: var(--color-oliva-oscuro);
-            color: var(--color-crema);
-            border-color: var(--color-oliva-oscuro);
-        }
-
-        /* Estilos para la sección de revisión */
-        .review-questions {
-            display: grid;
-            gap: 20px;
-        }
-
-        .review-question {
-            background-color: var(--color-beige);
-            border-radius: 15px;
-            padding: 25px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .review-question::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 5px;
-            height: 100%;
-            background-color: var(--color-oliva-oscuro);
-        }
-
-        .review-question h3 {
-            font-family: 'Patrick Hand', cursive;
-            font-size: 1.3rem;
-            color: var(--color-oliva-oscuro);
-            margin-bottom: 15px;
-        }
-
-        .review-options {
-            list-style: none;
-            padding: 0;
-            margin-bottom: 15px;
-        }
-
-        .review-option {
-            padding: 10px 15px;
-            margin-bottom: 8px;
-            border-radius: 10px;
-            position: relative;
-            padding-left: 40px;
-        }
-
-        .review-option::before {
-            content: '';
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-        }
-
-        .review-option.correct {
-            background-color: rgba(76, 175, 80, 0.1);
-        }
-
-        .review-option.correct::before {
-            background-color: var(--color-verde);
-        }
-
-        .review-option.incorrect {
-            background-color: rgba(244, 67, 54, 0.1);
-            text-decoration: line-through;
-        }
-
-        .review-option.incorrect::before {
-            background-color: var(--color-rojo);
-        }
-
-        .review-explanation {
-            background-color: white;
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 15px;
-        }
-
-        .review-explanation h4 {
-            color: var(--color-oliva-oscuro);
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-        }
-
-        .review-explanation h4 i {
-            margin-right: 8px;
-            color: var(--color-acento);
-        }
-
-        .module-tag {
-            display: inline-block;
-            padding: 4px 8px;
-            background-color: var(--color-oliva-oscuro);
-            color: var(--color-crema);
-            border-radius: 10px;
-            font-size: 0.8rem;
-            margin-left: 10px;
-        }
-
-        /* Estilos para el quiz de reintento */
-        .quiz-container {
-            display: none;
-        }
-
-        .quiz-container.active {
-            display: block;
-        }
-
-        .quiz-progress {
-            background-color: var(--color-beige);
-            height: 10px;
-            border-radius: 5px;
-            margin-bottom: 30px;
-            overflow: hidden;
-        }
-
-        .quiz-progress-bar {
-            height: 100%;
-            background-color: var(--color-oliva-oscuro);
-            transition: width 0.3s ease;
-        }
-
-        .quiz-question-container {
-            display: flex;
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-
-        .quiz-panda {
-            flex-shrink: 0;
-            width: 120px;
-            height: 120px;
-            background-color: var(--color-beige);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 4rem;
-        }
-
-        .quiz-question-bubble {
-            flex-grow: 1;
-            background-color: var(--color-beige);
-            border-radius: 20px;
-            padding: 25px;
-            position: relative;
-        }
-
-        .quiz-question-bubble::before {
-            content: '';
-            position: absolute;
-            left: -15px;
-            top: 50%;
-            transform: translateY(-50%);
-            border-width: 15px 15px 15px 0;
-            border-style: solid;
-            border-color: transparent var(--color-beige) transparent transparent;
-        }
-
-        .quiz-question-text {
-            font-family: 'Patrick Hand', cursive;
-            font-size: 1.5rem;
-            color: var(--color-oliva-oscuro);
-            margin: 0;
-        }
-
-        .quiz-options {
-            display: grid;
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        .quiz-option {
-            background-color: white;
-            border: 2px solid var(--color-oliva-claro);
-            border-radius: 15px;
-            padding: 15px 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            padding-left: 50px;
-        }
-
-        .quiz-option:hover {
-            background-color: var(--color-beige);
-            border-color: var(--color-oliva-medio);
-            transform: translateX(5px);
-        }
-
-        .quiz-option input[type="radio"] {
-            position: absolute;
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .quiz-option .checkmark {
-            position: absolute;
-            top: 50%;
-            left: 15px;
-            transform: translateY(-50%);
-            height: 20px;
-            width: 20px;
-            background-color: #eee;
-            border: 2px solid var(--color-oliva-claro);
-            border-radius: 50%;
-        }
-
-        .quiz-option input:checked ~ .checkmark {
-            background-color: var(--color-oliva-oscuro);
-            border-color: var(--color-oliva-oscuro);
-        }
-
-        .quiz-option .checkmark:after {
-            content: "";
-            position: absolute;
-            display: none;
-            left: 6px;
-            top: 2px;
-            width: 5px;
-            height: 10px;
-            border: solid white;
-            border-width: 0 3px 3px 0;
-            transform: rotate(45deg);
-        }
-
-        .quiz-option input:checked ~ .checkmark:after {
-            display: block;
-        }
-
-        .quiz-option.correct {
-            background-color: rgba(76, 175, 80, 0.1);
-            border-color: var(--color-verde);
-        }
-
-        .quiz-option.incorrect {
-            background-color: rgba(244, 67, 54, 0.1);
-            border-color: var(--color-rojo);
-        }
-
-        .quiz-option.disabled {
-            pointer-events: none;
-            opacity: 0.7;
-        }
-
-        .quiz-feedback {
-            background-color: var(--color-beige);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .quiz-feedback.active {
-            display: block;
-            animation: slideDown 0.3s ease;
-        }
-
-        @keyframes slideDown {
-            from { opacity: 0; max-height: 0; }
-            to { opacity: 1; max-height: 500px; }
-        }
-
-        .quiz-feedback-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .quiz-feedback-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
-            color: white;
-            font-size: 1.2rem;
-        }
-
-        .quiz-feedback-icon.correct {
-            background-color: var(--color-verde);
-        }
-
-        .quiz-feedback-icon.incorrect {
-            background-color: var(--color-rojo);
-        }
-
-        .quiz-feedback-title {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: var(--color-oliva-oscuro);
-        }
-
-        .quiz-feedback-message {
-            color: var(--color-oliva-medio);
-            margin-bottom: 15px;
-            font-style: italic;
-        }
-
-        .quiz-feedback-explanation {
-            background-color: white;
-            border-radius: 10px;
-            padding: 15px;
-        }
-
-        .quiz-feedback-explanation h4 {
-            color: var(--color-oliva-oscuro);
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-        }
-
-        .quiz-feedback-explanation h4 i {
-            margin-right: 8px;
-            color: var(--color-acento);
-        }
-
-        .quiz-actions {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-        }
-
-        .quiz-button {
-            background-color: var(--color-oliva-oscuro);
-            color: var(--color-crema);
-            border: none;
-            padding: 12px 30px;
-            border-radius: 50px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .quiz-button:hover {
-            background-color: var(--color-oliva-medio);
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        .quiz-button.secondary {
-            background-color: transparent;
-            color: var(--color-oliva-oscuro);
-            border: 2px solid var(--color-oliva-oscuro);
-        }
-
-        .quiz-button.secondary:hover {
-            background-color: var(--color-oliva-oscuro);
-            color: var(--color-crema);
-        }
-
-        /* Pantalla de resultados */
-        .results-container {
-            text-align: center;
-            padding: 30px;
-            display: none;
-        }
-
-        .results-container.active {
-            display: block;
-        }
-
-        .results-panda {
-            font-size: 6rem;
-            margin-bottom: 20px;
-        }
-
-        .results-title {
-            font-family: 'Patrick Hand', cursive;
-            font-size: 2.5rem;
-            color: var(--color-oliva-oscuro);
-            margin-bottom: 15px;
-        }
-
-        .results-score {
-            font-size: 3rem;
-            font-weight: bold;
-            color: var(--color-oliva-oscuro);
-            margin-bottom: 15px;
-        }
-
-        .results-message {
-            font-size: 1.2rem;
-            color: var(--color-oliva-medio);
-            margin-bottom: 30px;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        /* Footer */
-        .footer-actions {
-            text-align: center;
-            margin-top: 40px;
-        }
-
-        .footer-button {
-            display: inline-block;
-            background-color: var(--color-oliva-oscuro);
-            color: var(--color-crema);
-            padding: 15px 30px;
-            border-radius: 50px;
-            font-weight: bold;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            margin: 0 10px;
-        }
-
-        .footer-button:hover {
-            background-color: var(--color-oliva-medio);
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        /* Frases motivadoras */
-        .motivational-quote {
-            font-style: italic;
-            color: var(--color-oliva-medio);
-            text-align: center;
-            margin: 20px 0;
-            padding: 15px;
-            background-color: var(--color-beige);
-            border-radius: 15px;
-            position: relative;
-        }
-
-        .motivational-quote::before,
-        .motivational-quote::after {
-            content: '"';
-            font-family: 'Patrick Hand', cursive;
-            font-size: 3rem;
-            color: var(--color-oliva-claro);
-            position: absolute;
-            opacity: 0.5;
-        }
-
-        .motivational-quote::before {
-            top: 0;
-            left: 10px;
-        }
-
-        .motivational-quote::after {
-            bottom: -15px;
-            right: 10px;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .page-title {
-                font-size: 2.5rem;
-            }
-            
-            .quiz-question-container {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .quiz-question-bubble::before {
-                display: none;
-            }
-            
-            .quiz-panda {
-                margin-bottom: 20px;
-            }
-        }
+        header{position:sticky;top:0;z-index:100;background:rgba(14,16,0,0.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,0.06);padding:14px 0}
+        .header-inner{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;padding:0 24px}
+        .logo{font-family:'Patrick Hand',cursive;font-size:1.8rem;color:#fff;display:flex;align-items:center;gap:8px;text-decoration:none}
+        .logo-dot{width:8px;height:8px;background:var(--accent);border-radius:50%}
+        .user-pill{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.06);padding:6px 14px 6px 6px;border-radius:50px}
+        .user-avatar{width:32px;height:32px;border-radius:50%;background:var(--olive-mid);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.8rem}
+        .user-name{color:rgba(255,255,255,0.7);font-size:.88rem;font-weight:500}
+
+        /* Main */
+        main{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:32px 24px 60px}
+
+        /* Page Header */
+        .page-head{text-align:center;margin-bottom:40px}
+        .page-tag{display:inline-block;background:rgba(181,69,58,0.12);color:var(--seal-red);padding:6px 18px;border-radius:50px;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px}
+        .page-title{font-family:'Outfit',sans-serif;font-size:clamp(2rem,4vw,2.8rem);font-weight:800;color:#fff;line-height:1.15;margin-bottom:12px}
+        .page-desc{color:rgba(255,255,255,0.5);font-size:1.05rem;max-width:600px;margin:0 auto;line-height:1.6}
+
+        /* Quote */
+        .quote-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:20px 28px;margin-bottom:36px;text-align:center;position:relative}
+        .quote-card::before{content:'\201C';position:absolute;top:8px;left:20px;font-family:'Patrick Hand',cursive;font-size:3rem;color:var(--gold);opacity:.25;line-height:1}
+        .quote-card p{color:rgba(255,255,255,0.55);font-style:italic;font-size:.95rem;line-height:1.6}
+
+        /* Stats Row */
+        .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:36px}
+        .stat-card{background:var(--paper);border-radius:14px;padding:22px 18px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.3);position:relative;overflow:hidden}
+        .stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+        .stat-card:nth-child(1)::after{background:var(--seal-red)}
+        .stat-card:nth-child(2)::after{background:var(--mod-lc)}
+        .stat-card:nth-child(3)::after{background:var(--mod-rc)}
+        .stat-card:nth-child(4)::after{background:var(--mod-cc)}
+        .stat-num{font-family:'Outfit',sans-serif;font-size:2rem;font-weight:800;color:var(--olive-dark);line-height:1}
+        .stat-label{font-size:.78rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:6px}
+
+        /* Hero Image */
+        .hero-img-wrap{border-radius:16px;overflow:hidden;margin-bottom:36px;position:relative;box-shadow:0 15px 50px rgba(0,0,0,0.4);max-height:280px}
+        .hero-img-wrap img{width:100%;height:280px;object-fit:cover;display:block}
+        .hero-img-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(14,16,0,0.7) 0%,transparent 50%);display:flex;align-items:flex-end;padding:28px}
+        .hero-img-overlay h3{font-family:'Patrick Hand',cursive;font-size:1.6rem;color:#fff}
+
+        /* Option Cards */
+        .options-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:40px}
+        .opt-card{background:var(--paper);border-radius:16px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,0.3);cursor:pointer;transition:all .35s;border:2px solid transparent}
+        .opt-card:hover{transform:translateY(-6px);box-shadow:0 20px 50px rgba(0,0,0,0.4);border-color:var(--gold)}
+        .opt-card-top{padding:28px 24px 20px;display:flex;align-items:center;gap:16px}
+        .opt-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:#fff;flex-shrink:0}
+        .opt-card:nth-child(1) .opt-icon{background:var(--olive-dark)}
+        .opt-card:nth-child(2) .opt-icon{background:var(--accent)}
+        .opt-card-top h3{font-family:'Outfit',sans-serif;font-size:1.15rem;font-weight:700;color:var(--olive-dark)}
+        .opt-card-top p{font-size:.88rem;color:var(--muted);margin-top:2px}
+        .opt-card-bottom{padding:0 24px 24px;font-size:.88rem;color:var(--muted);line-height:1.6}
+        .opt-card-arrow{display:flex;align-items:center;justify-content:center;padding:14px;border-top:1px solid var(--paper-edge);color:var(--olive-mid);font-weight:600;font-size:.9rem;gap:8px;transition:all .3s}
+        .opt-card:hover .opt-card-arrow{background:var(--olive-dark);color:var(--paper)}
+
+        /* Charts */
+        .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:40px}
+        .chart-card{background:var(--paper);border-radius:16px;padding:28px;box-shadow:0 8px 30px rgba(0,0,0,0.3)}
+        .chart-card h3{font-family:'Outfit',sans-serif;font-size:1rem;font-weight:700;color:var(--olive-dark);margin-bottom:18px;display:flex;align-items:center;gap:8px}
+        .chart-card h3 i{color:var(--gold)}
+        .chart-wrap{position:relative;max-height:260px}
+
+        /* Section Panel */
+        .panel{display:none;background:var(--paper);border-radius:16px;box-shadow:0 15px 50px rgba(0,0,0,0.4);overflow:hidden;margin-bottom:32px}
+        .panel.active{display:block;animation:panelIn .5s ease}
+        @keyframes panelIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        .panel-head{display:flex;align-items:center;gap:14px;padding:24px 28px;border-bottom:1px solid var(--paper-edge);background:rgba(0,0,0,0.015)}
+        .back-btn{width:38px;height:38px;border-radius:10px;border:1.5px solid var(--olive-light);background:transparent;color:var(--olive-mid);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;flex-shrink:0}
+        .back-btn:hover{background:var(--olive-dark);color:var(--paper);border-color:var(--olive-dark)}
+        .panel-head h2{font-family:'Outfit',sans-serif;font-size:1.2rem;font-weight:700;color:var(--olive-dark)}
+
+        /* Module Filters */
+        .filters{display:flex;flex-wrap:wrap;gap:8px;padding:20px 28px;border-bottom:1px solid var(--paper-edge);justify-content:center}
+        .filter-btn{padding:8px 18px;border-radius:8px;background:rgba(39,43,0,0.04);border:1.5px solid transparent;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .25s;font-family:'DM Sans',sans-serif;color:var(--muted)}
+        .filter-btn:hover{background:rgba(39,43,0,0.08)}
+        .filter-btn.active{background:var(--olive-dark);color:var(--paper);border-color:var(--olive-dark)}
+        .filter-btn .fcount{display:inline-block;min-width:20px;height:20px;border-radius:10px;background:rgba(255,255,255,0.15);text-align:center;font-size:.72rem;line-height:20px;margin-left:6px;padding:0 6px}
+        .filter-btn:not(.active) .fcount{background:rgba(39,43,0,0.08)}
+
+        /* Review Items */
+        .review-list{padding:24px 28px;display:flex;flex-direction:column;gap:20px}
+        .review-item{background:rgba(39,43,0,0.03);border-radius:14px;padding:24px;border-left:4px solid var(--olive-mid);transition:all .3s}
+        .review-item:hover{transform:translateX(4px);box-shadow:0 4px 15px rgba(0,0,0,0.06)}
+        .review-item.mod-LC{border-left-color:var(--mod-lc)}
+        .review-item.mod-RC{border-left-color:var(--mod-rc)}
+        .review-item.mod-CC{border-left-color:var(--mod-cc)}
+        .review-item.mod-IN{border-left-color:var(--mod-in)}
+        .ri-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+        .ri-mod{padding:3px 10px;border-radius:6px;font-size:.72rem;font-weight:700;color:#fff;letter-spacing:1px;text-transform:uppercase}
+        .ri-mod.LC{background:var(--mod-lc)}.ri-mod.RC{background:var(--mod-rc)}.ri-mod.CC{background:var(--mod-cc)}.ri-mod.IN{background:var(--mod-in)}.ri-mod.OTRO{background:var(--mod-otro)}
+        .ri-topic{font-size:.8rem;color:var(--muted);font-weight:500}
+        .ri-q{font-size:1.02rem;line-height:1.7;color:#2a2818;margin-bottom:14px}
+        .ri-q img{max-width:100%;max-height:250px;object-fit:contain;border-radius:8px;margin-top:10px;border:1px solid var(--paper-edge);display:block}
+        .ri-opts{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+        .ri-opt{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;font-size:.92rem}
+        .ri-opt-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+        .ri-opt.correct{background:rgba(76,175,80,0.1)}.ri-opt.correct .ri-opt-dot{background:#4CAF50}
+        .ri-opt.wrong{background:rgba(244,67,54,0.08);text-decoration:line-through;opacity:.7}.ri-opt.wrong .ri-opt-dot{background:#f44336}
+        .ri-opt.neutral{background:transparent;opacity:.5}.ri-opt.neutral .ri-opt-dot{background:#ccc}
+        .ri-explain{background:#fff;border-radius:10px;padding:14px 18px;font-size:.9rem;line-height:1.6;color:#3a3828}
+        .ri-explain strong{color:var(--olive-mid);display:block;margin-bottom:4px;font-size:.8rem;letter-spacing:.5px;text-transform:uppercase}
+        .ri-tip{background:rgba(201,168,76,0.08);border-radius:10px;padding:14px 18px;margin-top:8px;font-size:.88rem;line-height:1.5;color:#3a3828}
+        .ri-tip strong{color:var(--gold);display:block;margin-bottom:4px;font-size:.8rem;letter-spacing:.5px;text-transform:uppercase}
+
+        /* Empty State */
+        .empty-state{text-align:center;padding:60px 24px}
+        .empty-state i{font-size:3rem;color:var(--olive-light);margin-bottom:16px}
+        .empty-state h3{font-family:'Outfit',sans-serif;font-size:1.3rem;color:var(--olive-dark);margin-bottom:8px}
+        .empty-state p{color:var(--muted);font-size:.95rem}
+
+        /* Quiz Retake */
+        .retake-area{padding:28px}
+        .retake-progress{height:8px;background:rgba(39,43,0,0.06);border-radius:4px;margin-bottom:28px;overflow:hidden}
+        .retake-progress-fill{height:100%;background:linear-gradient(90deg,var(--olive-mid),var(--gold));border-radius:4px;transition:width .4s;width:0%}
+        .retake-q{font-size:1.08rem;line-height:1.8;color:#2a2818;margin-bottom:20px}
+        .retake-q img{max-width:100%;max-height:280px;object-fit:contain;border-radius:10px;margin-top:12px;border:1px solid var(--paper-edge);display:block}
+        .retake-opts{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+        .ropt{display:flex;align-items:flex-start;gap:14px;background:rgba(39,43,0,0.02);border:2px solid transparent;border-radius:12px;padding:16px 18px;cursor:pointer;transition:all .25s}
+        .ropt:hover{background:rgba(190,192,146,0.1);border-color:var(--olive-light);transform:translateX(3px)}
+        .ropt-radio{width:22px;height:22px;min-width:22px;border-radius:50%;border:2px solid #ccc;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:all .25s}
+        .ropt.selected .ropt-radio{border-color:var(--olive-dark);background:var(--olive-dark)}
+        .ropt.selected .ropt-radio::after{content:'';width:8px;height:8px;border-radius:50%;background:#fff}
+        .ropt.disabled{pointer-events:none;opacity:.6}
+        .ropt.correct{background:rgba(76,175,80,0.1);border-color:#4CAF50}
+        .ropt.correct .ropt-radio{border-color:#4CAF50;background:#4CAF50}
+        .ropt.wrong{background:rgba(244,67,54,0.08);border-color:#f44336}
+        .ropt.wrong .ropt-radio{border-color:#f44336;background:#f44336}
+        .ropt-text{font-size:.98rem;line-height:1.5;padding-top:1px}
+        .retake-fb{display:none;margin-bottom:20px}
+        .retake-fb.show{display:block;animation:panelIn .3s ease}
+        .rfb-msg{padding:14px 18px;border-radius:10px;font-weight:700;font-size:.93rem;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+        .rfb-msg.ok{background:rgba(76,175,80,0.1);color:#2e7d32}
+        .rfb-msg.fail{background:rgba(244,67,54,0.08);color:#c62828}
+        .rfb-box{border-radius:10px;padding:14px 18px;font-size:.9rem;line-height:1.6;margin-bottom:8px}
+        .rfb-box.exp{background:rgba(39,43,0,0.03)}
+        .rfb-box.tip{background:rgba(201,168,76,0.08)}
+        .rfb-box strong{display:block;margin-bottom:4px;font-size:.8rem;letter-spacing:.5px;text-transform:uppercase}
+        .rfb-box.exp strong{color:var(--olive-mid)}.rfb-box.tip strong{color:var(--gold)}
+        .retake-nav{display:flex;justify-content:center;gap:12px}
+        .rbtn{padding:14px 32px;border-radius:12px;border:none;font-family:'Outfit',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;transition:all .3s;display:inline-flex;align-items:center;gap:8px}
+        .rbtn.primary{background:var(--olive-dark);color:var(--paper)}
+        .rbtn.primary:hover{background:var(--olive-mid);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.2)}
+        .rbtn:disabled{opacity:.35;pointer-events:none}
+
+        /* Results Panel */
+        .results-panel{padding:48px 28px;text-align:center}
+        .results-ring{width:140px;height:140px;margin:0 auto 20px;position:relative}
+        .results-ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+        .results-ring circle{fill:none;stroke-width:8;stroke-linecap:round}
+        .results-ring .rbg{stroke:rgba(39,43,0,0.06)}
+        .results-ring .rfill{stroke:var(--accent);transition:stroke-dashoffset 1.2s ease}
+        .results-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;font-size:2.2rem;font-weight:900;color:var(--olive-dark);z-index:1}
+        .results-title{font-family:'Outfit',sans-serif;font-size:1.5rem;font-weight:800;color:var(--olive-dark);margin-bottom:8px}
+        .results-msg{color:var(--muted);font-size:1rem;max-width:480px;margin:0 auto 28px;line-height:1.6}
+        .results-btns{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+
+        /* Footer Link */
+        .footer-link{text-align:center;margin-top:24px}
+        .footer-link a{display:inline-flex;align-items:center;gap:8px;color:rgba(255,255,255,0.4);text-decoration:none;font-weight:600;font-size:.9rem;transition:color .3s}
+        .footer-link a:hover{color:var(--gold)}
+
+        /* Responsive */
+        @media(max-width:768px){
+            .stats-row{grid-template-columns:1fr 1fr}
+            .options-grid{grid-template-columns:1fr}
+            .charts-grid{grid-template-columns:1fr}
+            .hero-img-wrap img{height:200px}
+            .review-list{padding:16px}
+            .filters{padding:14px 16px}
+        }
+        @media(max-width:480px){
+            .stats-row{grid-template-columns:1fr 1fr;gap:10px}
+            .stat-card{padding:16px 12px}
+            .stat-num{font-size:1.5rem}
+        }
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
     </style>
 </head>
 <body>
-    <!-- Elementos decorativos de fondo -->
-    <div class="bg-decoration bg-decoration-1">🐼</div>
-    <div class="bg-decoration bg-decoration-2">🐼</div>
 
-    <!-- Header -->
-    <header>
-        <div class="header-container">
-            <div class="logo">
-                <i class="fas fa-panda"></i>
-                SKOPIA
-            </div>
-            <div class="user-info">
-                <span id="user-name">Estudiante</span>
-                <div class="user-avatar">E</div>
-            </div>
+<div class="bg-glow bg-g1"></div>
+<div class="bg-glow bg-g2"></div>
+
+<header>
+    <div class="header-inner">
+        <a href="#" class="logo"><span class="logo-dot"></span>SKOPIA</a>
+        <div class="user-pill">
+            <span class="user-name" id="user-name">Estudiante</span>
+            <div class="user-avatar" id="user-avatar">E</div>
         </div>
-    </header>
+    </div>
+</header>
 
-    <!-- Contenedor principal -->
-    <div class="main-container">
-        <h1 class="page-title" data-aos="fade-down">Centro de Mejora</h1>
-        <p class="page-subtitle" data-aos="fade-up">Aprender de los errores es el primer paso hacia el éxito. Aquí podrás revisar tus respuestas incorrectas y poner a prueba lo aprendido.</p>
-        
-        <!-- Frase motivadora aleatoria -->
-        <div class="motivational-quote" id="motivational-quote" data-aos="fade-up" data-aos-delay="200">
-            "El error no es tu enemigo, es tu maestro. Cada respuesta incorrecta es una oportunidad para crecer."
-        </div>
+<main>
+    <!-- Page Head -->
+    <div class="page-head">
+        <div class="page-tag"><i class="fas fa-crosshairs"></i> Centro de mejora</div>
+        <h1 class="page-title">Aprende de cada error</h1>
+        <p class="page-desc">Revisa tus preguntas falladas, identifica patrones y demuestra que ya las dominas.</p>
+    </div>
 
-        <!-- Opciones principales -->
-        <div id="initial-options" class="options-container" data-aos="fade-up" data-aos-delay="300">
-            <div id="review-card" class="option-card">
-                <div class="option-card-header">
-                    <i class="fas fa-book-open"></i>
-                    <h2>Revisar Errores</h2>
-                </div>
-                <div class="option-card-body">
-                    <p>Analiza tus respuestas incorrectas y sus explicaciones para comprender mejor los conceptos y aprender de ellos.</p>
-                </div>
-                <div class="option-card-footer">
-                    <button class="option-button">Comenzar Revisión</button>
-                </div>
-            </div>
-            
-            <div id="retake-card" class="option-card">
-                <div class="option-card-header">
-                    <i class="fas fa-redo"></i>
-                    <h2>Reintentar Preguntas</h2>
-                </div>
-                <div class="option-card-body">
-                    <p>Pon a prueba lo aprendido respondiendo de nuevo solo las preguntas que fallaste. ¡Demuestra que ya las dominas!</p>
-                </div>
-                <div class="option-card-footer">
-                    <button class="option-button">Comenzar Reintento</button>
-                </div>
-            </div>
-        </div>
+    <!-- Frase motivadora -->
+    <div class="quote-card" id="quote-card">
+        <p id="quote-text">"El error no es tu enemigo, es tu maestro."</p>
+    </div>
 
-        <!-- Sección de revisión -->
-        <section id="review-content" class="content-section">
-            <div class="section-header">
-                <button class="back-button" id="back-from-review">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
-                <h2>Revisión de Errores</h2>
-            </div>
-            
-            <!-- Filtros por módulo -->
-            <div class="module-filters" id="module-filters">
-                <div class="module-filter active" data-module="all">Todos</div>
-                <div class="module-filter" data-module="diagnostico">Diagnóstico</div>
-                <div class="module-filter" data-module="lectura">Lectura Crítica</div>
-                <div class="module-filter" data-module="cuantitativo">Razonamiento Cuantitativo</div>
-                <div class="module-filter" data-module="ciudadanas">Competencias Ciudadanas</div>
-                <div class="module-filter" data-module="ingles">Inglés</div>
-            </div>
-            
-            <div id="review-dynamic-content" class="review-questions">
-                <!-- El contenido de revisión se generará aquí dinámicamente -->
-            </div>
-        </section>
-
-        <!-- Sección de reintento -->
-        <section id="retake-content" class="content-section">
-            <div class="section-header">
-                <button class="back-button" id="back-from-retake">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
-                <h2>Reintento de Preguntas</h2>
-            </div>
-            
-            <div id="retake-quiz" class="quiz-container">
-                <div class="quiz-progress">
-                    <div class="quiz-progress-bar" id="quiz-progress-bar"></div>
-                </div>
-                
-                <div class="quiz-question-container">
-                    <div class="quiz-panda">🐼</div>
-                    <div class="quiz-question-bubble">
-                        <p id="retake-question-text" class="quiz-question-text">Cargando pregunta...</p>
-                    </div>
-                </div>
-                
-                <div id="retake-options-container" class="quiz-options"></div>
-                
-                <div id="retake-feedback-container" class="quiz-feedback">
-                    <div class="quiz-feedback-header">
-                        <div class="quiz-feedback-icon" id="feedback-icon">
-                            <i class="fas fa-check"></i>
-                        </div>
-                        <div class="quiz-feedback-title" id="feedback-title">¡Respuesta correcta!</div>
-                    </div>
-                    <div class="quiz-feedback-message" id="feedback-message">
-                        ¡Excelente trabajo! Has respondido correctamente.
-                    </div>
-                    <div class="quiz-feedback-explanation">
-                        <h4><i class="fas fa-lightbulb"></i> Explicación:</h4>
-                        <div id="retake-explanation-text"></div>
-                    </div>
-                </div>
-                
-                <div class="quiz-actions">
-                    <button id="retake-submit-btn" class="quiz-button">Enviar Respuesta</button>
-                    <button id="retake-next-btn" class="quiz-button" style="display: none;">Siguiente Pregunta</button>
-                </div>
-            </div>
-            
-            <div id="results-container" class="results-container">
-                <div class="results-panda">🐼</div>
-                <h2 class="results-title">¡Has completado el reintento!</h2>
-                <div class="results-score" id="results-score">0/0</div>
-                <p class="results-message" id="results-message">
-                    ¡Felicidades por tu esfuerzo! Cada pregunta que respondes correctamente es un paso más hacia tu meta.
-                </p>
-                <div class="quiz-actions">
-                    <button id="restart-quiz-btn" class="quiz-button">Reintentar de Nuevo</button>
-                    <button id="review-answers-btn" class="quiz-button secondary">Revisar Respuestas</button>
-                </div>
-            </div>
-        </section>
-
-        <!-- Footer con acciones -->
-        <div class="footer-actions">
-            <a href="modulos.html" class="footer-button">
-                <i class="fas fa-map"></i> Ir a mi Mapa de Rutas
-            </a>
+    <!-- Imagen hero -->
+    <div class="hero-img-wrap">
+        <img src="https://picsum.photos/seed/skopia-improve-study/1200/400.jpg" alt="Estudiante mejorando">
+        <div class="hero-img-overlay">
+            <h3>Tu zona de entrenamiento personal</h3>
         </div>
     </div>
 
-    <!-- Sonidos para respuestas -->
-    <audio id="correct-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3"></audio>
-    <audio id="incorrect-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3"></audio>
+    <!-- Stats -->
+    <div class="stats-row" id="stats-row">
+        <div class="stat-card"><div class="stat-num" id="stat-total">0</div><div class="stat-label">Total errores</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-lc">0</div><div class="stat-label">Lectura Crítica</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-rc">0</div><div class="stat-label">Razonamiento Cuant.</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-cc">0</div><div class="stat-label">C. Ciudadanas</div></div>
+    </div>
 
-    <script>
-        // Inicializar AOS
-        AOS.init({
-            duration: 1000,
-            once: true
-        });
+    <!-- Gráficos -->
+    <div class="charts-grid" id="charts-area">
+        <div class="chart-card">
+            <h3><i class="fas fa-chart-pie"></i> Distribución por módulo</h3>
+            <div class="chart-wrap"><canvas id="chart-doughnut"></canvas></div>
+        </div>
+        <div class="chart-card">
+            <h3><i class="fas fa-chart-bar"></i> Errores por módulo</h3>
+            <div class="chart-wrap"><canvas id="chart-bar"></canvas></div>
+        </div>
+    </div>
 
-        // Frases motivadoras
-        const motivationalQuotes = [
-            "El error no es tu enemigo, es tu maestro. Cada respuesta incorrecta es una oportunidad para crecer.",
-            "No temas equivocarte, teme no intentarlo. Cada error te acerca más a la respuesta correcta.",
-            "Los errores son las puertas del descubrimiento. Atrévete a abrirlas.",
-            "El éxito es la suma de pequeños esfuerzos repetidos día tras día, incluyendo aprender de los errores.",
-            "No hay fracaso, solo retroalimentación. Cada respuesta incorrecta te dice qué necesitas mejorar.",
-            "El experto en cualquier cosa fue una vez un principiante que no tuvo miedo a equivocarse.",
-            "Los errores son pruebas de que estás intentando. Sigue adelante, estás en el camino correcto.",
-            "Aprender de los errores es más inteligente que pretender ser perfecto.",
-            "Cada error es un escalón hacia arriba. No dejes que te detenga.",
-            "El conocimiento se adquiere mediante la experiencia, y la experiencia incluye cometer errores."
-        ];
+    <!-- Opciones principales -->
+    <div class="options-grid" id="initial-opts">
+        <div class="opt-card" id="opt-review">
+            <div class="opt-card-top">
+                <div class="opt-icon"><i class="fas fa-search"></i></div>
+                <div><h3>Revisar Errores</h3><p id="review-count-text">0 preguntas por revisar</p></div>
+            </div>
+            <div class="opt-card-bottom">Analiza cada pregunta fallada con su explicación y truco. Filtra por módulo para enfocarte.</div>
+            <div class="opt-card-arrow">Ir a revisión <i class="fas fa-arrow-right"></i></div>
+        </div>
+        <div class="opt-card" id="opt-retake">
+            <div class="opt-card-top">
+                <div class="opt-icon"><i class="fas fa-redo"></i></div>
+                <div><h3>Reintentar Preguntas</h3><p>Quiz dinámico con tus fallas</p></div>
+            </div>
+            <div class="opt-card-bottom">Responde de nuevo las preguntas que fallaste. Las que aciertes se eliminan de tu lista.</div>
+            <div class="opt-card-arrow">Iniciar reintento <i class="fas fa-arrow-right"></i></div>
+        </div>
+    </div>
 
-        // Mostrar una frase motivadora aleatoria
-        function showRandomMotivationalQuote() {
-            const randomIndex = Math.floor(Math.random() * motivationalQuotes.length);
-            document.getElementById('motivational-quote').textContent = `"${motivationalQuotes[randomIndex]}"`;
+    <!-- Panel Revisión -->
+    <div class="panel" id="panel-review">
+        <div class="panel-head">
+            <button class="back-btn" id="back-review"><i class="fas fa-arrow-left"></i></button>
+            <h2>Revisión de Errores</h2>
+        </div>
+        <div class="filters" id="review-filters"></div>
+        <div class="review-list" id="review-list"></div>
+    </div>
+
+    <!-- Panel Reintento -->
+    <div class="panel" id="panel-retake">
+        <div class="panel-head">
+            <button class="back-btn" id="back-retake"><i class="fas fa-arrow-left"></i></button>
+            <h2>Reintento de Preguntas</h2>
+        </div>
+        <div class="retake-area" id="retake-quiz">
+            <div class="retake-progress"><div class="retake-progress-fill" id="retake-progress"></div></div>
+            <div id="retake-q-text" class="retake-q"></div>
+            <div id="retake-opts" class="retake-opts"></div>
+            <div id="retake-fb" class="retake-fb">
+                <div id="rfb-msg" class="rfb-msg"></div>
+                <div class="rfb-box exp"><strong><i class="fas fa-lightbulb"></i> Explicación</strong><div id="rfb-exp"></div></div>
+                <div class="rfb-box tip"><strong><i class="fas fa-magic"></i> Truco</strong><div id="rfb-tip"></div></div>
+            </div>
+            <div class="retake-nav">
+                <button class="rbtn primary" id="rbtn-submit"><i class="fas fa-check"></i> Enviar</button>
+                <button class="rbtn primary" id="rbtn-next" style="display:none"><i class="fas fa-arrow-right"></i> Siguiente</button>
+            </div>
+        </div>
+        <div class="results-panel" id="retake-results" style="display:none">
+            <div class="results-ring">
+                <svg viewBox="0 0 140 140"><circle class="rbg" cx="70" cy="70" r="60"/><circle class="rfill" cx="70" cy="70" r="60" stroke-dasharray="377" stroke-dashoffset="377" id="rfill-circle"/></svg>
+                <div class="results-inner" id="rfill-num">0%</div>
+            </div>
+            <h3 class="results-title" id="rtitle">Reintento completado</h3>
+            <p class="results-msg" id="rmsg"></p>
+            <div class="results-btns">
+                <button class="rbtn primary" id="rbtn-restart"><i class="fas fa-redo"></i> Reintentar</button>
+                <button class="rbtn primary" id="rbtn-go-review" style="background:transparent;color:var(--olive-dark);border:2px solid var(--olive-dark)"><i class="fas fa-search"></i> Revisar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-link">
+        <a href="SKOPIA.html"><i class="fas fa-map"></i> Volver al Mapa de Rutas</a>
+    </div>
+</main>
+
+<script>
+(function(){
+    // ═══════════════════════════════════════════════════
+    //  ETIQUETA UNIVERSAL — Lectura
+    // ═══════════════════════════════════════════════════
+    const STORAGE_KEY = 'SKOPIA_ERRORES_UNIVERSAL';
+    const MODULE_INFO = {
+        LC:{name:'Lectura Crítica',color:'#5b8fd4',cls:'LC'},
+        RC:{name:'Razonamiento Cuant.',color:'#c17f4e',cls:'RC'},
+        CC:{name:'Comp. Ciudadanas',color:'#7d8a5e',cls:'CC'},
+        IN:{name:'Inglés',color:'#c9a84c',cls:'IN'},
+        OTRO:{name:'Otro',color:'#8a8578',cls:'OTRO'}
+    };
+
+    function loadErrors(){
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+    }
+    function saveErrors(arr){
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+    }
+    function removeErrorsByIds(idsToRemove){
+        const idSet = new Set(idsToRemove);
+        const remaining = loadErrors().filter(q => !idSet.has(q.id));
+        saveErrors(remaining);
+    }
+
+    // Frases motivadoras
+    const quotes = [
+        "El error no es tu enemigo, es tu maestro.",
+        "No temas equivocarte, teme no intentarlo.",
+        "Los errores son las puertas del descubrimiento.",
+        "No hay fracaso, solo retroalimentación.",
+        "El experto fue un principiante que no tuvo miedo a fallar.",
+        "Aprender de los errores es más inteligente que pretender ser perfecto.",
+        "Cada error es un escalón hacia arriba.",
+        "El conocimiento se adquiere con experiencia, y la experiencia incluye errores."
+    ];
+    function showQuote(){
+        document.getElementById('quote-text').textContent = '\u201C' + quotes[Math.floor(Math.random()*quotes.length)] + '\u201D';
+    }
+    showQuote();
+    setInterval(showQuote, 25000);
+
+    // ═══════════════════════════════════════════════════
+    //  Estado
+    // ═══════════════════════════════════════════════════
+    let allErrors = loadErrors();
+    let currentFilter = 'ALL';
+    let retakeQs = [], retakeIdx = 0, retakeAnswers = [], retakeCorrect = 0, retakeSelected = null;
+    let doughnutChart = null, barChart = null;
+
+    // ═══════════════════════════════════════════════════
+    //  Usuario
+    // ═══════════════════════════════════════════════════
+    function setUser(name){
+        document.getElementById('user-name').textContent = name || 'Estudiante';
+        document.getElementById('user-avatar').textContent = (name||'E').charAt(0).toUpperCase();
+    }
+    if(window.currentUser) setUser(window.currentUser.displayName || window.currentUser.email);
+    else window.addEventListener('userReady', e => setUser(e.detail.user.displayName || e.detail.user.email));
+
+    // ═══════════════════════════════════════════════════
+    //  Estadísticas y gráficos
+    // ═══════════════════════════════════════════════════
+    function getModuleCounts(){
+        const counts = {LC:0,RC:0,CC:0,IN:0,OTRO:0};
+        allErrors.forEach(q => { counts[q.modulo||'OTRO']++; });
+        return counts;
+    }
+
+    function animateNum(el, target){
+        const dur = 600, start = performance.now();
+        const from = parseInt(el.textContent)||0;
+        function tick(now){
+            const p = Math.min((now-start)/dur,1);
+            el.textContent = Math.round(from + (target-from)*(1-Math.pow(1-p,3)));
+            if(p<1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+    }
+
+    function updateStats(){
+        const c = getModuleCounts();
+        animateNum(document.getElementById('stat-total'), allErrors.length);
+        animateNum(document.getElementById('stat-lc'), c.LC);
+        animateNum(document.getElementById('stat-rc'), c.RC);
+        animateNum(document.getElementById('stat-cc'), c.CC);
+        document.getElementById('review-count-text').textContent = allErrors.length + ' preguntas por revisar';
+    }
+
+    function renderCharts(){
+        const c = getModuleCounts();
+        const labels = [], data = [], colors = [];
+        for(const [mod,info] of Object.entries(MODULE_INFO)){
+            if(mod==='OTRO' && c.OTRO===0) continue;
+            labels.push(info.name);
+            data.push(c[mod]);
+            colors.push(info.color);
         }
 
-        // Cambiar la frase motivadora cada 30 segundos
-        setInterval(showRandomMotivationalQuote, 30000);
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // Obtener todas las preguntas incorrectas de todos los módulos
-            function getAllIncorrectQuestions() {
-                const allIncorrectQuestions = [];
-                
-                // Obtener preguntas incorrectas de cada módulo
-                const modules = ['Diagnostico', 'Lectura', 'Cuantitativo', 'Ciudadanas', 'Ingles'];
-                
-                modules.forEach(module => {
-                    const moduleQuestions = JSON.parse(localStorage.getItem(`preguntasIncorrectas${module}`) || '[]');
-                    moduleQuestions.forEach(question => {
-                        // Asegurarse de que cada pregunta tenga el módulo asignado
-                        if (!question.modulo) {
-                            question.modulo = module.toLowerCase();
-                        }
-                        allIncorrectQuestions.push(question);
-                    });
-                });
-                
-                // También obtener del array general si existe
-                const generalQuestions = JSON.parse(localStorage.getItem('preguntasIncorrectasGeneral') || '[]');
-                generalQuestions.forEach(question => {
-                    // Evitar duplicados
-                    if (!allIncorrectQuestions.some(q => q.pregunta === question.pregunta)) {
-                        allIncorrectQuestions.push(question);
-                    }
-                });
-                
-                return allIncorrectQuestions;
-            }
-            
-            const incorrectQuestions = getAllIncorrectQuestions();
-            
-            const initialOptions = document.getElementById('initial-options');
-            const reviewContent = document.getElementById('review-content');
-            const retakeContent = document.getElementById('retake-content');
-            const reviewDynamicContent = document.getElementById('review-dynamic-content');
-            const retakeQuiz = document.getElementById('retake-quiz');
-            const resultsContainer = document.getElementById('results-container');
-            const moduleFilters = document.getElementById('module-filters');
-            
-            let currentFilter = 'all';
-            let filteredQuestions = [...incorrectQuestions];
-
-            function showSection(sectionToShow) {
-                initialOptions.style.display = 'none';
-                reviewContent.classList.remove('active');
-                retakeContent.classList.remove('active');
-
-                if (sectionToShow === 'initial') {
-                    initialOptions.style.display = 'grid';
-                } else if (sectionToShow === 'review') {
-                    reviewContent.classList.add('active');
-                } else if (sectionToShow === 'retake') {
-                    retakeContent.classList.add('active');
-                }
-            }
-
-            // Event listeners para los filtros de módulo
-            moduleFilters.addEventListener('click', (e) => {
-                if (e.target.classList.contains('module-filter')) {
-                    // Actualizar filtro activo
-                    document.querySelectorAll('.module-filter').forEach(filter => {
-                        filter.classList.remove('active');
-                    });
-                    e.target.classList.add('active');
-                    
-                    // Filtrar preguntas
-                    currentFilter = e.target.dataset.module;
-                    if (currentFilter === 'all') {
-                        filteredQuestions = [...incorrectQuestions];
-                    } else {
-                        filteredQuestions = incorrectQuestions.filter(q => 
-                            q.modulo === currentFilter || 
-                            (q.tags && q.tags.includes(currentFilter))
-                        );
-                    }
-                    
-                    // Actualizar vista de revisión si está activa
-                    if (reviewContent.classList.contains('active')) {
-                        displayReviewQuestions();
-                    }
-                }
-            });
-
-            document.getElementById('back-from-review').addEventListener('click', () => {
-                showSection('initial');
-            });
-
-            document.getElementById('back-from-retake').addEventListener('click', () => {
-                showSection('initial');
-            });
-
-            // Función para mostrar las preguntas de revisión
-            function displayReviewQuestions() {
-                reviewDynamicContent.innerHTML = '';
-
-                if (filteredQuestions.length === 0) {
-                    reviewDynamicContent.innerHTML = `
-                        <div class="review-question">
-                            <h3>¡Felicidades!</h3>
-                            <p>No tienes preguntas incorrectas para revisar en este módulo. ¡Sigue así!</p>
-                        </div>
-                    `;
-                } else {
-                    let html = '';
-                    filteredQuestions.forEach((q, index) => {
-                        const moduleTag = q.modulo || (q.tags && q.tags[1]) || 'desconocido';
-                        html += `
-                            <div class="review-question" data-aos="fade-up" data-aos-delay="${index * 100}">
-                                <h3>${q.pregunta} <span class="module-tag">${moduleTag}</span></h3>
-                                <ul class="review-options">
-                                    ${q.opciones.map((option, i) => {
-                                        let className = '';
-                                        if (i === q.respuestaCorrecta) {
-                                            className = 'correct';
-                                        } else if (i === q.respuestaUsuario && i !== q.respuestaCorrecta) {
-                                            className = 'incorrect';
-                                        }
-                                        return `<li class="review-option ${className}">${option}</li>`;
-                                    }).join('')}
-                                </ul>
-                                <div class="review-explanation">
-                                    <h4><i class="fas fa-lightbulb"></i> Explicación:</h4>
-                                    <p>${q.explicacion}</p>
-                                    ${q.truco ? `
-                                        <h4><i class="fas fa-magic"></i> Truco:</h4>
-                                        <p>${q.truco}</p>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        `;
-                    });
-                    reviewDynamicContent.innerHTML = html;
-                    
-                    // Reinicializar AOS para los nuevos elementos
-                    AOS.refresh();
-                }
-            }
-
-            document.getElementById('review-card').addEventListener('click', () => {
-                filteredQuestions = currentFilter === 'all' ? [...incorrectQuestions] : 
-                    incorrectQuestions.filter(q => q.modulo === currentFilter || (q.tags && q.tags.includes(currentFilter)));
-                displayReviewQuestions();
-                showSection('review');
-            });
-
-            let retakeQuestions = [];
-            let currentRetakeIndex = 0;
-            let retakeUserAnswers = [];
-            let correctAnswers = 0;
-
-            document.getElementById('retake-card').addEventListener('click', () => {
-                if (incorrectQuestions.length === 0) {
-                    retakeQuiz.style.display = 'none';
-                    resultsContainer.classList.add('active');
-                    document.getElementById('results-score').textContent = '0/0';
-                    document.getElementById('results-message').textContent = 'No tienes preguntas incorrectas para reintentar. ¡Sigue así!';
-                } else {
-                    retakeQuestions = shuffleArray([...incorrectQuestions]).slice(0, Math.min(10, incorrectQuestions.length));
-                    currentRetakeIndex = 0;
-                    retakeUserAnswers = [];
-                    correctAnswers = 0;
-                    resultsContainer.classList.remove('active');
-                    displayRetakeQuestion();
-                    retakeQuiz.classList.add('active');
-                }
-                showSection('retake');
-            });
-
-            function displayRetakeQuestion() {
-                if (currentRetakeIndex >= retakeQuestions.length) {
-                    finishRetakeQuiz();
-                    return;
-                }
-
-                const question = retakeQuestions[currentRetakeIndex];
-                const questionTextEl = document.getElementById('retake-question-text');
-                const optionsContainer = document.getElementById('retake-options-container');
-                const feedbackContainer = document.getElementById('retake-feedback-container');
-                const submitBtn = document.getElementById('retake-submit-btn');
-                const nextBtn = document.getElementById('retake-next-btn');
-                const progressBar = document.getElementById('quiz-progress-bar');
-
-                // Actualizar barra de progreso
-                const progress = ((currentRetakeIndex) / retakeQuestions.length) * 100;
-                progressBar.style.width = `${progress}%`;
-
-                questionTextEl.textContent = question.pregunta;
-                optionsContainer.innerHTML = '';
-                feedbackContainer.classList.remove('active');
-                submitBtn.style.display = 'inline-block';
-                nextBtn.style.display = 'none';
-
-                question.opciones.forEach((option, index) => {
-                    const label = document.createElement('label');
-                    label.className = 'quiz-option';
-                    label.id = `retake-option-${index}`;
-                    const input = document.createElement('input');
-                    input.type = 'radio';
-                    input.name = 'retake-answer';
-                    input.value = index;
-                    const checkmark = document.createElement('span');
-                    checkmark.className = 'checkmark';
-
-                    label.appendChild(input);
-                    label.appendChild(checkmark);
-                    label.appendChild(document.createTextNode(option));
-                    optionsContainer.appendChild(label);
-                });
-            }
-
-            document.getElementById('retake-submit-btn').addEventListener('click', () => {
-                const selected = document.querySelector('input[name="retake-answer"]:checked');
-                if (!selected) return alert("Por favor, selecciona una respuesta.");
-                
-                const selectedIndex = parseInt(selected.value);
-                retakeUserAnswers[currentRetakeIndex] = selectedIndex;
-                
-                showRetakeFeedback(selectedIndex);
-                
-                const options = document.querySelectorAll('.quiz-option');
-                options.forEach(option => option.classList.add('disabled'));
-                
-                const correctIndex = retakeQuestions[currentRetakeIndex].respuestaCorrecta;
-                document.getElementById(`retake-option-${correctIndex}`).classList.add('correct');
-                
-                if (selectedIndex !== correctIndex) {
-                    document.getElementById(`retake-option-${selectedIndex}`).classList.add('incorrect');
-                } else {
-                    correctAnswers++;
-                    // Reproducir sonido de respuesta correcta
-                    document.getElementById('correct-sound').play();
-                }
-                
-                document.getElementById('retake-submit-btn').style.display = 'none';
-                document.getElementById('retake-next-btn').style.display = 'inline-block';
-            });
-
-            document.getElementById('retake-next-btn').addEventListener('click', () => {
-                currentRetakeIndex++;
-                displayRetakeQuestion();
-            });
-
-            function showRetakeFeedback(selectedIndex) {
-                const question = retakeQuestions[currentRetakeIndex];
-                const isCorrect = selectedIndex === question.respuestaCorrecta;
-                const feedbackIcon = document.getElementById('feedback-icon');
-                const feedbackTitle = document.getElementById('feedback-title');
-                const feedbackMessage = document.getElementById('feedback-message');
-                const explanationText = document.getElementById('retake-explanation-text');
-                
-                const feedbackContainer = document.getElementById('retake-feedback-container');
-                feedbackContainer.classList.add('active');
-                
-                if (isCorrect) {
-                    feedbackIcon.className = 'quiz-feedback-icon correct';
-                    feedbackIcon.innerHTML = '<i class="fas fa-check"></i>';
-                    feedbackTitle.textContent = '¡Respuesta correcta!';
-                    feedbackMessage.textContent = '¡Excelente trabajo! Has respondido correctamente.';
-                } else {
-                    feedbackIcon.className = 'quiz-feedback-icon incorrect';
-                    feedbackIcon.innerHTML = '<i class="fas fa-times"></i>';
-                    feedbackTitle.textContent = 'Respuesta incorrecta';
-                    feedbackMessage.textContent = 'No te preocupes, cada error es una oportunidad para aprender. La respuesta correcta está marcada en verde.';
-                    // Reproducir sonido de respuesta incorrecta
-                    document.getElementById('incorrect-sound').play();
-                }
-                
-                explanationText.textContent = question.explicacion;
-            }
-
-            function finishRetakeQuiz() {
-                retakeQuiz.classList.remove('active');
-                resultsContainer.classList.add('active');
-                
-                document.getElementById('results-score').textContent = `${correctAnswers}/${retakeQuestions.length}`;
-                
-                const percentage = Math.round((correctAnswers / retakeQuestions.length) * 100);
-                let message = '';
-                
-                if (percentage === 100) {
-                    message = '¡Perfecto! Has respondido correctamente todas las preguntas. ¡Felicidades por tu excelente trabajo!';
-                    // Eliminar las preguntas respondidas correctamente del almacenamiento
-                    removeCorrectlyAnsweredQuestions();
-                } else if (percentage >= 80) {
-                    message = '¡Excelente trabajo! Has respondido correctamente la mayoría de las preguntas. ¡Sigue así!';
-                } else if (percentage >= 60) {
-                    message = '¡Buen trabajo! Has respondido correctamente muchas preguntas. Sigue esforzándote y mejorarás cada vez más.';
-                } else {
-                    message = 'Gracias por tu esfuerzo. Recuerda que cada pregunta incorrecta es una oportunidad para aprender. ¡No te rindas!';
-                }
-                
-                document.getElementById('results-message').textContent = message;
-            }
-            
-            // Función para eliminar las preguntas respondidas correctamente del almacenamiento
-            function removeCorrectlyAnsweredQuestions() {
-                // Obtener todas las preguntas incorrectas actuales
-                const allIncorrectQuestions = getAllIncorrectQuestions();
-                
-                // Filtrar las preguntas que se respondieron correctamente en el reintento
-                const remainingIncorrectQuestions = allIncorrectQuestions.filter(originalQuestion => {
-                    // Verificar si esta pregunta fue respondida correctamente en el reintento
-                    const wasAnsweredCorrectly = retakeQuestions.some(retakeQuestion => {
-                        if (retakeQuestion.pregunta === originalQuestion.pregunta) {
-                            const index = retakeQuestions.indexOf(retakeQuestion);
-                            return retakeUserAnswers[index] === retakeQuestion.respuestaCorrecta;
-                        }
-                        return false;
-                    });
-                    
-                    // Mantener la pregunta solo si no fue respondida correctamente
-                    return !wasAnsweredCorrectly;
-                });
-                
-                // Agrupar las preguntas restantes por módulo
-                const questionsByModule = {
-                    'Diagnostico': [],
-                    'Lectura': [],
-                    'Cuantitativo': [],
-                    'Ciudadanas': [],
-                    'Ingles': []
-                };
-                
-                remainingIncorrectQuestions.forEach(question => {
-                    const module = question.modulo || 'Diagnostico';
-                    const moduleName = module.charAt(0).toUpperCase() + module.slice(1);
-                    if (questionsByModule[moduleName]) {
-                        questionsByModule[moduleName].push(question);
-                    }
-                });
-                
-                // Actualizar el almacenamiento para cada módulo
-                Object.keys(questionsByModule).forEach(moduleName => {
-                    const storageKey = `preguntasIncorrectas${moduleName}`;
-                    localStorage.setItem(storageKey, JSON.stringify(questionsByModule[moduleName]));
-                });
-                
-                // También actualizar el array general
-                localStorage.setItem('preguntasIncorrectasGeneral', JSON.stringify(remainingIncorrectQuestions));
-            }
-
-            document.getElementById('restart-quiz-btn').addEventListener('click', () => {
-                if (incorrectQuestions.length === 0) {
-                    showSection('initial');
-                } else {
-                    retakeQuestions = shuffleArray([...incorrectQuestions]).slice(0, Math.min(10, incorrectQuestions.length));
-                    currentRetakeIndex = 0;
-                    retakeUserAnswers = [];
-                    correctAnswers = 0;
-                    resultsContainer.classList.remove('active');
-                    displayRetakeQuestion();
-                    retakeQuiz.classList.add('active');
-                }
-            });
-
-            document.getElementById('review-answers-btn').addEventListener('click', () => {
-                document.getElementById('review-card').click();
-            });
-
-            function shuffleArray(array) {
-                let i = array.length, j, temp;
-                while (i--) {
-                    j = Math.floor(Math.random() * (i + 1));
-                    temp = array[i];
-                    array[i] = array[j];
-                    array[j] = temp;
-                }
-                return array;
+        // Doughnut
+        const dCtx = document.getElementById('chart-doughnut').getContext('2d');
+        if(doughnutChart) doughnutChart.destroy();
+        doughnutChart = new Chart(dCtx, {
+            type:'doughnut',
+            data:{ labels, datasets:[{data, backgroundColor:colors, borderWidth:0, hoverOffset:8}] },
+            options:{ responsive:true, maintainAspectRatio:true, cutout:'65%',
+                plugins:{ legend:{ position:'bottom', labels:{ padding:14, usePointStyle:true, pointStyle:'circle', font:{size:12,family:'DM Sans'} } } }
             }
         });
-    </script>
+
+        // Bar
+        const bCtx = document.getElementById('chart-bar').getContext('2d');
+        if(barChart) barChart.destroy();
+        barChart = new Chart(bCtx, {
+            type:'bar',
+            data:{ labels, datasets:[{data, backgroundColor:colors.map(c=>c+'cc'), borderRadius:8, borderSkipped:false, barThickness:40}] },
+            options:{ responsive:true, maintainAspectRatio:true, indexAxis:'y',
+                scales:{ x:{beginAtZero:true,ticks:{stepSize:1,font:{family:'DM Sans'}},grid:{color:'rgba(0,0,0,0.04)'}}, y:{ticks:{font:{family:'DM Sans',weight:600}},grid:{display:false}} },
+                plugins:{ legend:{display:false} }
+            }
+        });
+    }
+
+    function hideChartsIfEmpty(){
+        const area = document.getElementById('charts-area');
+        area.style.display = allErrors.length === 0 ? 'none' : '';
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  Navegación entre vistas
+    // ═══════════════════════════════════════════════════
+    const initialOpts = document.getElementById('initial-opts');
+    const panelReview = document.getElementById('panel-review');
+    const panelRetake = document.getElementById('panel-retake');
+
+    function showView(view){
+        initialOpts.style.display = 'none';
+        panelReview.classList.remove('active');
+        panelRetake.classList.remove('active');
+        document.getElementById('retake-quiz').style.display = '';
+        document.getElementById('retake-results').style.display = 'none';
+
+        if(view==='initial') initialOpts.style.display = '';
+        else if(view==='review') panelReview.classList.add('active');
+        else if(view==='retake') panelRetake.classList.add('active');
+
+        window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    // ═══════════════════════════════════════════════════
+    //  REVISIÓN
+    // ═══════════════════════════════════════════════════
+    function buildFilters(){
+        const counts = getModuleCounts();
+        let html = `<button class="filter-btn active" data-f="ALL">Todos<span class="fcount">${allErrors.length}</span></button>`;
+        for(const [mod,info] of Object.entries(MODULE_INFO)){
+            if(counts[mod]===0) continue;
+            html += `<button class="filter-btn" data-f="${mod}">${info.name}<span class="fcount">${counts[mod]}</span></button>`;
+        }
+        document.getElementById('review-filters').innerHTML = html;
+
+        document.getElementById('review-filters').addEventListener('click', e => {
+            const btn = e.target.closest('.filter-btn');
+            if(!btn) return;
+            document.querySelectorAll('#review-filters .filter-btn').forEach(b=>b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFilter = btn.dataset.f;
+            renderReviewList();
+        });
+    }
+
+    function getFilteredErrors(){
+        if(currentFilter==='ALL') return allErrors;
+        return allErrors.filter(q=>(q.modulo||'OTRO')===currentFilter);
+    }
+
+    function extractTopic(q){
+        if(!q.tags||!Array.isArray(q.tags)) return 'General';
+        const skip = new Set(['diagnostico','basico','intermedio','avanzado','practica','repaso','lc','rc','cc','in','imagen']);
+        const topic = q.tags.find(t=>!skip.has(t.toLowerCase().trim()));
+        return topic || 'General';
+    }
+
+    function renderReviewList(){
+        const list = document.getElementById('review-list');
+        const filtered = getFilteredErrors();
+
+        if(filtered.length===0){
+            list.innerHTML = `<div class="empty-state"><i class="fas fa-trophy"></i><h3>Sin errores aqui</h3><p>No tienes preguntas falladas en esta categoría.</p></div>`;
+            return;
+        }
+
+        let html = '';
+        filtered.forEach(q => {
+            const mod = q.modulo||'OTRO';
+            const info = MODULE_INFO[mod]||MODULE_INFO.OTRO;
+            const topic = extractTopic(q);
+            const correct = q.respuestaCorrecta;
+            const userAns = q.respuestaUsuario;
+
+            html += `<div class="review-item mod-${mod}">
+                <div class="ri-head">
+                    <span class="ri-mod ${mod}">${mod}</span>
+                    <span class="ri-topic"><i class="fas fa-tag"></i> ${topic}</span>
+                </div>
+                <div class="ri-q">${escapeHtml(q.pregunta)}`;
+            if(q.imagen) html += `<img src="${q.imagen}" alt="Imagen de pregunta" onerror="this.remove()">`;
+            html += `</div><div class="ri-opts">`;
+            q.opciones.forEach((opt,i) => {
+                let cls = 'neutral';
+                if(i===correct) cls='correct';
+                else if(i===userAns && i!==correct) cls='wrong';
+                html += `<div class="ri-opt ${cls}"><div class="ri-opt-dot"></div><span>${escapeHtml(opt)}</span></div>`;
+            });
+            html += `</div><div class="ri-explain"><strong><i class="fas fa-lightbulb"></i> Explicación</strong>${escapeHtml(q.explicacion||'Sin explicación disponible.')}</div>`;
+            if(q.truco) html += `<div class="ri-tip"><strong><i class="fas fa-magic"></i> Truco</strong>${escapeHtml(q.truco)}</div>`;
+            html += `</div>`;
+        });
+        list.innerHTML = html;
+    }
+
+    function escapeHtml(str){
+        const d = document.createElement('div');
+        d.textContent = str||'';
+        return d.innerHTML;
+    }
+
+    document.getElementById('opt-review').addEventListener('click', () => {
+        buildFilters();
+        renderReviewList();
+        showView('review');
+    });
+    document.getElementById('back-review').addEventListener('click', () => showView('initial'));
+
+    // ═══════════════════════════════════════════════════
+    //  REINTENTO
+    // ═══════════════════════════════════════════════════
+    function shuffle(arr){
+        const a=[...arr];
+        for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+        return a;
+    }
+
+    function startRetake(){
+        if(allErrors.length===0){
+            document.getElementById('retake-quiz').style.display='none';
+            document.getElementById('retake-results').style.display='';
+            document.getElementById('rfill-num').textContent='0%';
+            document.getElementById('rfill-circle').style.strokeDashoffset='377';
+            document.getElementById('rtitle').textContent='Sin errores para reintentar';
+            document.getElementById('rmsg').textContent='No tienes preguntas falladas. Sigue estudiando y vuelve cuando tengas errores que revisar.';
+            showView('retake');
+            return;
+        }
+        retakeQs = shuffle(allErrors).slice(0, Math.min(15, allErrors.length));
+        retakeIdx=0; retakeAnswers=[]; retakeCorrect=0; retakeSelected=null;
+        document.getElementById('retake-quiz').style.display='';
+        document.getElementById('retake-results').style.display='none';
+        showRetakeQ();
+        showView('retake');
+    }
+
+    function showRetakeQ(){
+        if(retakeIdx>=retakeQs.length){ finishRetake(); return; }
+        const q = retakeQs[retakeIdx];
+        document.getElementById('retake-progress').style.width = (retakeIdx/retakeQs.length*100)+'%';
+        document.getElementById('retake-q-text').innerHTML = escapeHtml(q.pregunta);
+        if(q.imagen) document.getElementById('retake-q-text').innerHTML += `<img src="${q.imagen}" alt="Imagen" onerror="this.remove()">`;
+
+        const optsEl = document.getElementById('retake-opts');
+        optsEl.innerHTML = '';
+        q.opciones.forEach((opt,i) => {
+            const div = document.createElement('div');
+            div.className = 'ropt';
+            div.dataset.idx = i;
+            div.innerHTML = `<div class="ropt-radio"></div><div class="ropt-text">${escapeHtml(opt)}</div>`;
+            div.addEventListener('click', () => {
+                optsEl.querySelectorAll('.ropt').forEach(o=>o.classList.remove('selected'));
+                div.classList.add('selected');
+                retakeSelected = i;
+            });
+            optsEl.appendChild(div);
+        });
+
+        document.getElementById('retake-fb').classList.remove('show');
+        document.getElementById('rbtn-submit').style.display='inline-flex';
+        document.getElementById('rbtn-next').style.display='none';
+        retakeSelected = null;
+    }
+
+    document.getElementById('rbtn-submit').addEventListener('click', () => {
+        if(retakeSelected===null) return;
+        const q = retakeQs[retakeIdx];
+        const correct = q.respuestaCorrecta;
+        const isOk = retakeSelected === correct;
+        retakeAnswers[retakeIdx] = retakeSelected;
+        if(isOk) retakeCorrect++;
+
+        // Marcar opciones
+        document.querySelectorAll('#retake-opts .ropt').forEach(o => {
+            o.classList.add('disabled');
+            const idx = parseInt(o.dataset.idx);
+            if(idx===correct) o.classList.add('correct');
+            if(idx===retakeSelected && !isOk) o.classList.add('wrong');
+        });
+
+        // Feedback
+        const fbEl = document.getElementById('retake-fb');
+        const msgEl = document.getElementById('rfb-msg');
+        msgEl.className = 'rfb-msg ' + (isOk?'ok':'fail');
+        msgEl.innerHTML = isOk
+            ? '<i class="fas fa-check-circle"></i> Respuesta correcta'
+            : '<i class="fas fa-times-circle"></i> Incorrecta. La correcta es: ' + ['A','B','C','D','E','F','G','H'][correct];
+        document.getElementById('rfb-exp').textContent = q.explicacion||'Sin explicación.';
+        document.getElementById('rfb-tip').textContent = q.truco||'Sin truco.';
+        fbEl.classList.add('show');
+
+        document.getElementById('rbtn-submit').style.display='none';
+        document.getElementById('rbtn-next').style.display='inline-flex';
+    });
+
+    document.getElementById('rbtn-next').addEventListener('click', () => {
+        retakeIdx++;
+        showRetakeQ();
+    });
+
+    // Teclado
+    document.addEventListener('keydown', e => {
+        if(!panelRetake.classList.contains('active')) return;
+        if(document.getElementById('retake-quiz').style.display==='none') return;
+        const n = parseInt(e.key);
+        if(n>=1 && n<=4 && document.getElementById('rbtn-submit').style.display!=='none'){
+            const opts = document.querySelectorAll('#retake-opts .ropt');
+            if(opts[n-1]) opts[n-1].click();
+        }
+        if(e.key==='Enter'){
+            if(document.getElementById('rbtn-submit').style.display!=='none' && retakeSelected!==null) document.getElementById('rbtn-submit').click();
+            else if(document.getElementById('rbtn-next').style.display!=='none') document.getElementById('rbtn-next').click();
+        }
+    });
+
+    function finishRetake(){
+        document.getElementById('retake-quiz').style.display='none';
+        document.getElementById('retake-results').style.display='';
+        const pct = Math.round((retakeCorrect/retakeQs.length)*100);
+        const circ = 2*Math.PI*60;
+        document.getElementById('rfill-circle').style.strokeDashoffset = circ - (pct/100)*circ;
+        document.getElementById('rfill-num').textContent = pct+'%';
+
+        let msg;
+        if(pct===100){
+            msg='Perfecto. Todas las respuestas correctas. Estas preguntas se han eliminado de tu lista de errores.';
+            // Eliminar las acertadas
+            const idsToRemove = retakeQs.filter((q,i) => retakeAnswers[i]===q.respuestaCorrecta).map(q=>q.id).filter(Boolean);
+            removeErrorsByIds(idsToRemove);
+            allErrors = loadErrors();
+            updateStats();
+            renderCharts();
+            hideChartsIfEmpty();
+        } else if(pct>=80){
+            msg='Excelente trabajo. La mayoría correctas. Sigue practicando las que fallaste.';
+        } else if(pct>=50){
+            msg='Buen esfuerzo. Repasa las explicaciones y vuelve a intentarlo.';
+        } else {
+            msg='No te desanimes. Revisa cada explicación con calma y vuelve a intentarlo.';
+        }
+        document.getElementById('rtitle').textContent = `${retakeCorrect} de ${retakeQs.length} correctas`;
+        document.getElementById('rmsg').textContent = msg;
+    }
+
+    document.getElementById('opt-retake').addEventListener('click', startRetake);
+    document.getElementById('back-retake').addEventListener('click', () => showView('initial'));
+    document.getElementById('rbtn-restart').addEventListener('click', startRetake);
+    document.getElementById('rbtn-go-review').addEventListener('click', () => {
+        buildFilters(); renderReviewList(); showView('review');
+    });
+
+    // ═══════════════════════════════════════════════════
+    //  Init
+    // ═══════════════════════════════════════════════════
+    updateStats();
+    renderCharts();
+    hideChartsIfEmpty();
+})();
+</script>
 </body>
 </html>
