@@ -1254,15 +1254,28 @@ async function loadDashboard(user) {
     }
     animateValue(document.getElementById('stat-streak'), streakDays);
 
-    /* ── TARJETA 2: PUNTAJE PROMEDIO GENERAL ──
-       Promediar los bestScore de todos los gameScores,
-       escalados a base 300 (si los juegos son de 5 preguntas → * 60) */
-    const allScores = Object.values(gameScores).map(g => g.bestScore || g.lastScore || 0).filter(s => s > 0);
+     /* ── TARJETA 2: PUNTAJE PROMEDIO GENERAL ──
+       Solo cuenta EXÁMENES, no juegos.
+       Los exámenes se guardan en completedMissions con campo score.
+       Los juegos en gameScores NO se incluyen aquí. */
     let avgScore = 0;
-    if (allScores.length > 0) {
-        // Los juegos de 5 preguntas dan score de 0-5, escalar a 0-300
-        const scaled = allScores.map(s => s <= 5 ? s * 60 : s);
-        avgScore = Math.round(scaled.reduce((a, b) => a + b, 0) / scaled.length);
+    let examCount = 0;
+    let examTotal = 0;
+    
+    // Buscar exámenes en completedMissions (cuando se agreguen)
+    try {
+        const examSnap = await getDocs(collection(db, 'users', uid, 'completedMissions'));
+        examSnap.forEach(d => {
+            const data = d.data();
+            if (data.score && data.type === 'exam') {
+                examTotal += data.score;
+                examCount++;
+            }
+        });
+    } catch (e) {}
+    
+    if (examCount > 0) {
+        avgScore = Math.round(examTotal / examCount);
     }
     animateValue(document.getElementById('stat-avg'), avgScore);
 
@@ -1309,26 +1322,30 @@ async function loadDashboard(user) {
     renderHoursChart(hoursData.labels, hoursData.data);
 
     /* ── GRÁFICO DE PROMEDIO POR MÓDULO ──
-       Para cada módulo, buscar el mejor gameScore que pertenezca a ese módulo */
+       Solo de exámenes por módulo, no de juegos */
     const modOrder = ['Razonamiento Cuantitativo','Lectura Crítica','Competencias Ciudadanas','Inglés','Comunicación Escrita'];
     const modLabels = [];
     const modAvgs = [];
-    modOrder.forEach(mod => {
-        const pages = modulePages[mod] || [];
-        let bestScore = 0;
-        // Buscar en gameScores si hay algún juego de este módulo
-        pages.forEach(pid => {
-            if (gameScores[pid]) {
-                const s = gameScores[pid].bestScore || gameScores[pid].lastScore || 0;
-                const scaled = s <= 5 ? s * 60 : s;
-                if (scaled > bestScore) bestScore = scaled;
+    
+    // Leer exámenes completados con score y módulo
+    let examScoresByModule = {};
+    try {
+        const examSnap = await getDocs(collection(db, 'users', uid, 'completedMissions'));
+        examSnap.forEach(d => {
+            const data = d.data();
+            if (data.score && data.module) {
+                if (!examScoresByModule[data.module]) examScoresByModule[data.module] = [];
+                examScoresByModule[data.module].push(data.score);
             }
         });
+    } catch (e) {}
+
+    modOrder.forEach(mod => {
         modLabels.push(mod);
-        modAvgs.push(bestScore);
+        const scores = examScoresByModule[mod] || [];
+        modAvgs.push(scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0);
     });
     renderModulesChart(modLabels, modAvgs);
-
     /* ── PRÓXIMAS MISIONES (pendientes de las 100) ── */
     const pendingMissions = ALL_MISSIONS.filter(m => !completedMissionIds.has(m.id) && m.id > missionsCount);
     // Si missionsCount de stats es mayor que lo encontrado en DB, ocultar hasta ese número
