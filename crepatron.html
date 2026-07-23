@@ -2347,27 +2347,39 @@ async function updateStreak(){
 async function checkAndCompleteMissions(correctCount,hintsUsed){
     const won=correctCount>=3;const newMissions=[];const ptsEarned=correctCount*20;
     let newStars=userStats.totalStars+ptsEarned;
-    if(won&&!completedMissions.mission_5){newMissions.push(5);}
+
+    // === FIX: Separar primera victoria de mejora de puntaje ===
+    const hadWonBefore=(userStats.gamesWon||0)>0;
+    const prevBest=gameBest?.bestScore||0;
+    const improved=correctCount>prevBest;
+
+    // Misión 5: Primera vez que ganas CUALQUIER juego
+    if(won&&!hadWonBefore&&!completedMissions.mission_5){newMissions.push(5);}
+    // Misión 19: Ya habías ganado antes Y mejoraste tu puntaje
+    if(won&&hadWonBefore&&improved&&!completedMissions.mission_19){newMissions.push(19);}
+
+    // Misión 6: Usaste pista
     if(hintsUsed&&!completedMissions.mission_6){newMissions.push(6);}
+    // Misión 37: Ganaste sin pistas
     if(won&&!hintsUsed&&!completedMissions.mission_37){newMissions.push(37);}
-    if(won&&gameBest&&gameBest.bestScore!==undefined&&correctCount>gameBest.bestScore&&!completedMissions.mission_19){newMissions.push(19);}
-    let newGamesList=[...userStats.gamesWonList];
+
+    let newGamesList=[...(userStats.gamesWonList||[])];
     if(won&&!newGamesList.includes('patrones-crecientes')){newGamesList.push('patrones-crecientes');}
     if(newGamesList.length>=3&&!completedMissions.mission_13){newMissions.push(13);}
     if(MODULE_GAMES.every(g=>newGamesList.includes(g))&&!completedMissions.mission_32){newMissions.push(32);}
     let newConsecutive=userStats.consecutiveSuccesses||0;if(won)newConsecutive++;else newConsecutive=0;
     if(newConsecutive>=3&&!completedMissions.mission_10){newMissions.push(10);}
     if(newConsecutive>=10&&!completedMissions.mission_39){newMissions.push(39);}
-    let newTotalMissions=userStats.totalMissionsCompleted+newMissions.length;
+    let newTotalMissions=(userStats.totalMissionsCompleted||0)+newMissions.length;
     let missionPts=0;newMissions.forEach(id=>{if(MC[id])missionPts+=MC[id].pts;});newStars+=missionPts;
     STAR_THRESHOLDS.forEach(t=>{if(newStars>=t.n&&!completedMissions[`mission_${t.id}`]){newMissions.push(t.id);missionPts+=MC[t.id].pts;newStars+=MC[t.id].pts;newTotalMissions++;}});
     MISSION_COUNT_THRESHOLDS.forEach(t=>{if(newTotalMissions>=t.n&&!completedMissions[`mission_${t.id}`]){newMissions.push(t.id);missionPts+=MC[t.id].pts;newStars+=MC[t.id].pts;newTotalMissions++;}});
     const streakData=await updateStreak();
     STREAK_THRESHOLDS.forEach(t=>{if((streakData?.currentStreak||0)>=t.n&&!completedMissions[`mission_${t.id}`]){newMissions.push(t.id);missionPts+=MC[t.id].pts;newStars+=MC[t.id].pts;newTotalMissions++;}});
     if(newTotalMissions>=84&&!completedMissions.mission_97){newMissions.push(97);newStars+=MC[97].pts;newTotalMissions++;}
+    if(newTotalMissions>=95&&!completedMissions.mission_94){newMissions.push(94);newStars+=MC[94].pts;newTotalMissions++;}
     if(newTotalMissions>=100&&!completedMissions.mission_95){newMissions.push(95);newStars+=MC[95].pts;newTotalMissions++;}
     if(newTotalMissions>=100&&!completedMissions.mission_100){newMissions.push(100);newStars+=MC[100].pts;newTotalMissions++;}
-    if(newTotalMissions>=95&&!completedMissions.mission_94){newMissions.push(94);newStars+=MC[94].pts;newTotalMissions++;}
     await saveStats({totalStars:newStars,gamesWon:userStats.gamesWon+(won?1:0),gamesWonList:newGamesList,consecutiveSuccesses:newConsecutive,totalMissionsCompleted:newTotalMissions,...(streakData||{})});
     for(const mid of newMissions){await completeMissionInDB(mid);showMedal(mid);}
     return{ptsEarned,missionPts,totalNewPts:ptsEarned+missionPts,newStars,newTotalMissions};
@@ -2418,8 +2430,11 @@ function nextExercise(){curIdx++;if(curIdx<exercises.length){loadExercise();}els
 async function showResults(){
     $('exercise-section').style.display='none';$('results-section').style.display='block';$('progress-fill').style.width='100%';
     const info=icfesMsg[score];$('icfes-level').className=`icfes-level ${info.cls}`;$('icfes-level').textContent=info.level;$('res-title').textContent=info.title;$('res-score').textContent=`${score} / 5`;$('icfes-msg').textContent=info.msg;
-    await saveGameScore(score,usedHints);
+    // FIX: Checkear misiones ANTES de guardar el nuevo score,
+    // así gameBest sigue siendo el valor anterior y la lógica funciona bien
     const missionData=await checkAndCompleteMissions(score,usedHints);
+    // Ahora sí guardar el nuevo score
+    await saveGameScore(score,usedHints);
     $('res-pts').textContent=`+${missionData.totalNewPts} puntos (Total: ${missionData.newStars} estrellas)`;
     if(score>=4){pandaSay(pandaMsgs.goodEnd[Math.floor(Math.random()*pandaMsgs.goodEnd.length)]);}else{pandaSay(pandaMsgs.badEnd[Math.floor(Math.random()*pandaMsgs.badEnd.length)]);}
 }
