@@ -624,9 +624,8 @@ const db = getFirestore(app);
 
 /* ============================================================
    LAS 100 MISIONES DE LOGRO
-   Cada misión tiene id, title y points.
-   En Firebase se guardan en: users/{uid}/completedMissions/{id}
-   Ejemplo: completedMissions/1 → { completedAt: ..., points: 50 }
+   En Firebase se guardan como:
+   users/{uid}/missions/mission_{id} → { completed: true, completedAt: ... }
    ============================================================ */
 const ALL_MISSIONS = [
     { id: 1, title: "Completa tu primer examen", points: 50 },
@@ -732,8 +731,7 @@ const ALL_MISSIONS = [
 ];
 
 /* ============================================================
-   RASTREADOR DE TIEMPO ACTIVO (localStorage compartido entre
-   todas las páginas del mismo dominio)
+   RASTREADOR DE TIEMPO ACTIVO (localStorage - todas las páginas)
    ============================================================ */
 const TIME_KEY = 'skopia_active_time';
 const TIME_INTERVAL = 10000;
@@ -742,12 +740,10 @@ function getTodayKey() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-
 function getTimeData() {
     try { return JSON.parse(localStorage.getItem(TIME_KEY)) || {}; }
     catch { return {}; }
 }
-
 function saveTimeTick() {
     if (document.hidden) return;
     const key = getTodayKey();
@@ -755,48 +751,24 @@ function saveTimeTick() {
     data[key] = (data[key] || 0) + (TIME_INTERVAL / 1000);
     localStorage.setItem(TIME_KEY, JSON.stringify(data));
 }
-
 setInterval(saveTimeTick, TIME_INTERVAL);
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) saveTimeTick();
-});
+document.addEventListener('visibilitychange', () => { if (!document.hidden) saveTimeTick(); });
 
 function getLast7DaysHours() {
     const data = getTimeData();
-    const labels = [];
-    const values = [];
+    const labels = [], values = [];
     const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
     for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
+        const d = new Date(); d.setDate(d.getDate() - i);
         const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         labels.push(dias[d.getDay()] + ' ' + d.getDate());
-        const secs = data[key] || 0;
-        values.push(Math.round(secs / 3600 * 100) / 100);
+        values.push(Math.round((data[key] || 0) / 3600 * 100) / 100);
     }
     return { labels, data: values };
 }
 
-function getActiveDays() {
-    const data = getTimeData();
-    let count = 0;
-    const today = new Date();
-    for (let i = 0; i < 365; i++) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        if (data[key] && data[key] >= 60) {
-            count++;
-        } else {
-            if (i === 0) continue;
-            break;
-        }
-    }
-    return count;
-}
-
 /* ============================================================
-   MENÚ LATERAL
+   MENÚ LATERAL (idéntico, sin cambios)
    ============================================================ */
 const menuData = [
     { group: 'Contenido Genérico', icon: 'fa-book-open', cats: [
@@ -1065,14 +1037,12 @@ function updateClock() {
     const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     document.getElementById('top-date').textContent = `${dias[now.getDay()]}, ${now.getDate()} de ${meses[now.getMonth()]}`;
 }
-
 function getGreeting() {
     const h = new Date().getHours();
     if (h >= 5 && h < 12) return 'Buenos días';
     if (h >= 12 && h < 18) return 'Buenas tardes';
     return 'Buenas noches';
 }
-
 const quotes = [
     "El éxito es la suma de pequeños esfuerzos repetidos día tras día.",
     "No estudies para aprobar, estudia para comprender.",
@@ -1121,87 +1091,36 @@ function animateValue(el, target, duration = 800) {
    GRÁFICOS
    ============================================================ */
 let hoursChart = null, modulesChart = null;
-
 function renderHoursChart(labels, data) {
     const ctx = document.getElementById('chart-hours').getContext('2d');
     if (hoursChart) hoursChart.destroy();
     hoursChart = new Chart(ctx, {
         type: 'bar',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Horas', data,
-                backgroundColor: 'rgba(90,97,51,0.65)',
-                borderColor: 'rgba(39,43,0,0.8)',
-                borderWidth: 1, borderRadius: 6, maxBarThickness: 40
-            }]
-        },
+        data: { labels, datasets: [{ label: 'Horas', data, backgroundColor: 'rgba(90,97,51,0.65)', borderColor: 'rgba(39,43,0,0.8)', borderWidth: 1, borderRadius: 6, maxBarThickness: 40 }] },
         options: {
             responsive: true, maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: '#272b00', titleColor: '#fdfbf5',
-                    bodyColor: '#fdfbf5', cornerRadius: 8, padding: 10,
-                    callbacks: { label: ctx => ` ${ctx.parsed.y} horas` }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { color: '#5a6133', font: { size: 11 }, callback: v => v + 'h' },
-                    grid: { color: 'rgba(39,43,0,0.05)' }
-                },
-                x: {
-                    ticks: { color: '#5a6133', font: { size: 11 } },
-                    grid: { display: false }
-                }
-            }
+            plugins: { legend: { display: false }, tooltip: { backgroundColor: '#272b00', titleColor: '#fdfbf5', bodyColor: '#fdfbf5', cornerRadius: 8, padding: 10, callbacks: { label: ctx => ` ${ctx.parsed.y} horas` } } },
+            scales: { y: { beginAtZero: true, ticks: { color: '#5a6133', font: { size: 11 }, callback: v => v + 'h' }, grid: { color: 'rgba(39,43,0,0.05)' } }, x: { ticks: { color: '#5a6133', font: { size: 11 } }, grid: { display: false } } }
         }
     });
 }
-
 function renderModulesChart(labels, data) {
     const ctx = document.getElementById('chart-modules').getContext('2d');
     if (modulesChart) modulesChart.destroy();
     const colors = ['#272b00','#5a6133','#7a8044','#9ea066','#bec092'];
     modulesChart = new Chart(ctx, {
         type: 'bar',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Promedio', data,
-                backgroundColor: colors.map(c => c + 'cc'),
-                borderColor: colors, borderWidth: 1, borderRadius: 6, maxBarThickness: 32
-            }]
-        },
+        data: { labels, datasets: [{ label: 'Promedio', data, backgroundColor: colors.map(c => c + 'cc'), borderColor: colors, borderWidth: 1, borderRadius: 6, maxBarThickness: 32 }] },
         options: {
             indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: '#272b00', titleColor: '#fdfbf5',
-                    bodyColor: '#fdfbf5', cornerRadius: 8, padding: 10,
-                    callbacks: { label: ctx => ` ${ctx.parsed.x} / 300` }
-                }
-            },
-            scales: {
-                x: {
-                    beginAtZero: true, max: 300,
-                    ticks: { color: '#5a6133', font: { size: 11 } },
-                    grid: { color: 'rgba(39,43,0,0.05)' }
-                },
-                y: {
-                    ticks: { color: '#272b00', font: { size: 11, weight: '500' } },
-                    grid: { display: false }
-                }
-            }
+            plugins: { legend: { display: false }, tooltip: { backgroundColor: '#272b00', titleColor: '#fdfbf5', bodyColor: '#fdfbf5', cornerRadius: 8, padding: 10, callbacks: { label: ctx => ` ${ctx.parsed.x} / 300` } } },
+            scales: { x: { beginAtZero: true, max: 300, ticks: { color: '#5a6133', font: { size: 11 } }, grid: { color: 'rgba(39,43,0,0.05)' } }, y: { ticks: { color: '#272b00', font: { size: 11, weight: '500' } }, grid: { display: false } } }
         }
     });
 }
 
 /* ============================================================
-   CLASIFICAR PÁGINA POR MÓDULO (para cursos/estado)
+   CLASIFICAR PÁGINA POR MÓDULO
    ============================================================ */
 function classifyPage(pageUrl) {
     const id = (pageUrl || '').toLowerCase();
@@ -1219,25 +1138,20 @@ function classifyPage(pageUrl) {
 }
 
 /* ============================================================
-   TOAST
+   TOAST + TUTORIAL
    ============================================================ */
 function showToast(msg, duration = 3500) {
     const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
+    t.textContent = msg; t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), duration);
 }
-
-/* ============================================================
-   TUTORIAL
-   ============================================================ */
 const tutSteps = [
-    { icon: 'fa-home', title: 'Bienvenido a tu Dashboard', text: 'Aquí tienes una vista general de todo tu progreso en Skopia. Revisaremos las secciones principales.' },
-    { icon: 'fa-fire', title: 'Racha y Estadísticas', text: 'Las tarjetas superiores muestran tus días de racha, puntaje promedio, cursos activos y misiones completadas de las 100 disponibles.' },
-    { icon: 'fa-clock', title: 'Horas de Interacción', text: 'El gráfico registra cuántas horas pasas activo en la plataforma cada día. Se cuenta automáticamente mientras navegas cualquier página.' },
-    { icon: 'fa-chart-bar', title: 'Promedio por Módulo', text: 'Muestra tu puntaje promedio en cada módulo genérico sobre 300 puntos. Te ayuda a identificar áreas de mejora.' },
-    { icon: 'fa-crosshairs', title: 'Próximas Misiones', text: 'Lista las misiones de logro que aún no has completado. Las que ya desbloqueaste se ocultan automáticamente. Son 100 en total.' },
-    { icon: 'fa-layer-group', title: 'Estado de Cursos', text: 'Muestra el progreso por cada módulo según las páginas de contenido que has completado.' }
+    { icon: 'fa-home', title: 'Bienvenido a tu Dashboard', text: 'Aquí tienes una vista general de todo tu progreso en Skopia.' },
+    { icon: 'fa-fire', title: 'Racha y Estadísticas', text: 'Días de racha desde Firebase, puntaje promedio de tus juegos, cursos activos y misiones de logro completadas.' },
+    { icon: 'fa-clock', title: 'Horas de Interacción', text: 'Se cuentan automáticamente mientras navegas cualquier página del sitio. Funciona en celular y computadora.' },
+    { icon: 'fa-chart-bar', title: 'Promedio por Módulo', text: 'Tu mejor puntaje en cada módulo basado en los gameScores guardados.' },
+    { icon: 'fa-crosshairs', title: 'Próximas Misiones', text: 'Misiones de logro pendientes de las 100. Las completadas se ocultan. Incluye barra de progreso.' },
+    { icon: 'fa-layer-group', title: 'Estado de Cursos', text: 'Progreso por módulo basado en los documentos de progress en Firebase.' }
 ];
 let tutIdx = 0;
 function renderTutorial() {
@@ -1252,69 +1166,109 @@ function renderTutorial() {
 }
 
 /* ============================================================
-   CARGA PRINCIPAL DEL DASHBOARD
+   CARGA PRINCIPAL - LEE DE LAS RUTAS REALES DE FIREBASE
    ============================================================ */
 async function loadDashboard(user) {
     const uid = user.uid;
-    const userRef = doc(db, 'users', uid);
-    const missionsRef = collection(db, 'users', uid, 'completedMissions');
 
-    // Cargar datos del usuario
-    let userData = {};
+    /* ── 1. LEER STATS: users/{uid}/stats/main ── */
+    let userStats = {};
     try {
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) userData = userSnap.data();
-    } catch (e) {
-        console.warn('Error cargando usuario:', e);
-    }
+        const s = await getDoc(doc(db, 'users', uid, 'stats', 'main'));
+        if (s.exists()) userStats = s.data();
+    } catch (e) { console.warn('Error leyendo stats:', e); }
 
-    // Cargar misiones completadas de Firebase
-    // Los documentos en completedMissions tienen ID numérico: "1", "2", ... "100"
-    // y además pueden venir de páginas de contenido: "crepatron", "algebra", etc.
-    // Separamos en dos conjuntos:
-    const completedMissionIds = new Set(); // IDs numéricos de logros (1-100)
-    const completedPageIds = new Set();   // IDs de páginas de contenido
+    const currentStreak = userStats.currentStreak || 0;
+    const totalStars = userStats.totalStars || 0;
+    const gamesWon = userStats.gamesWon || 0;
+    const totalMissionsCompleted = userStats.totalMissionsCompleted || 0;
 
-    let allFirebaseDocs = [];
+    /* ── 2. LEER MISIONES: users/{uid}/missions/ ──
+       Los IDs son como "mission_5", "mission_13", etc.
+       Cada doc tiene { completed: true, completedAt: ... } */
+    const completedMissionIds = new Set();
     try {
-        const snap = await getDocs(missionsRef);
+        const snap = await getDocs(collection(db, 'users', uid, 'missions'));
         snap.forEach(d => {
-            allFirebaseDocs.push({ id: d.id, ...d.data() });
-            // Determinar si es un logro (1-100) o una página de contenido
-            const numId = parseInt(d.id);
-            if (!isNaN(numId) && numId >= 1 && numId <= 100) {
-                completedMissionIds.add(numId);
-            } else {
-                completedPageIds.add(d.id);
+            if (d.data().completed) {
+                // Extraer número del ID: "mission_5" → 5
+                const numMatch = d.id.match(/mission_(\d+)/);
+                if (numMatch) {
+                    completedMissionIds.add(parseInt(numMatch[1]));
+                }
             }
         });
-    } catch (e) {
-        console.warn('Error cargando misiones:', e);
-    }
+    } catch (e) { console.warn('Error leyendo missions:', e); }
 
-    // ── 1. RACHA DE DÍAS ──
-    const streakDays = getActiveDays();
+    /* ── 3. LEER PROGRESO: users/{uid}/progress/ ──
+       Los IDs son como "patrones-crecientes", "algebra", etc.
+       Cada doc tiene { status: 'completed' | 'in_progress' } */
+    const completedPages = new Set();
+    const inProgressPages = new Set();
+    try {
+        const snap = await getDocs(collection(db, 'users', uid, 'progress'));
+        snap.forEach(d => {
+            const data = d.data();
+            if (data.status === 'completed') completedPages.add(d.id);
+            else if (data.status === 'in_progress') inProgressPages.add(d.id);
+        });
+    } catch (e) { console.warn('Error leyendo progress:', e); }
+
+    /* ── 4. LEER SCORES: users/{uid}/gameScores/ ──
+       Los IDs son como "patrones-crecientes".
+       Cada doc tiene { bestScore, lastScore } */
+    const gameScores = {};
+    try {
+        const snap = await getDocs(collection(db, 'users', uid, 'gameScores'));
+        snap.forEach(d => { gameScores[d.id] = d.data(); });
+    } catch (e) { console.warn('Error leyendo gameScores:', e); }
+
+    /* ── 5. LEER INTERACCIONES: users/{uid}/interactions/ ──
+       Para contar días activos si currentStreak es 0 */
+    let interactionDays = new Set();
+    try {
+        const snap = await getDocs(collection(db, 'users', uid, 'interactions'));
+        snap.forEach(d => { interactionDays.add(d.id); });
+    } catch (e) { console.warn('Error leyendo interactions:', e); }
+
+    // ============================================
+    // AHORA CALCULAR Y MOSTRAR TODO
+    // ============================================
+
+    /* ── TARJETA 1: RACHA DE DÍAS ── */
+    // Prioridad: currentStreak de stats > días en interactions > días en localStorage
+    let streakDays = currentStreak;
+    if (streakDays === 0 && interactionDays.size > 0) {
+        streakDays = interactionDays.size;
+    }
+    if (streakDays === 0) {
+        // Fallback: contar días en localStorage con al menos 1 min
+        const timeData = getTimeData();
+        const today = new Date();
+        for (let i = 0; i < 365; i++) {
+            const d = new Date(today); d.setDate(d.getDate() - i);
+            const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            if (timeData[key] && timeData[key] >= 60) streakDays++;
+            else { if (i === 0) continue; break; }
+        }
+    }
     animateValue(document.getElementById('stat-streak'), streakDays);
 
-    // ── 2. PUNTAJE PROMEDIO GENERAL (de las páginas de contenido) ──
-    let totalScore = 0;
-    let pageMissionCount = 0;
-    allFirebaseDocs.forEach(m => {
-        if (!completedMissionIds.has(parseInt(m.id)) && m.score) {
-            totalScore += m.score;
-            pageMissionCount++;
-        }
-    });
-    const avgScore = pageMissionCount > 0 ? Math.round(totalScore / pageMissionCount) : 0;
+    /* ── TARJETA 2: PUNTAJE PROMEDIO GENERAL ──
+       Promediar los bestScore de todos los gameScores,
+       escalados a base 300 (si los juegos son de 5 preguntas → * 60) */
+    const allScores = Object.values(gameScores).map(g => g.bestScore || g.lastScore || 0).filter(s => s > 0);
+    let avgScore = 0;
+    if (allScores.length > 0) {
+        // Los juegos de 5 preguntas dan score de 0-5, escalar a 0-300
+        const scaled = allScores.map(s => s <= 5 ? s * 60 : s);
+        avgScore = Math.round(scaled.reduce((a, b) => a + b, 0) / scaled.length);
+    }
     animateValue(document.getElementById('stat-avg'), avgScore);
 
-    // ── 3. MISIONES COMPLETADAS (de las 100 de logro) ──
-    const missionsCompleted = completedMissionIds.size;
-    animateValue(document.getElementById('stat-missions'), missionsCompleted);
-
-    // ── 4. CURSOS EN PROGRESO ──
-    // Contar páginas totales por módulo desde el menú
-    const modulePages = {}; // { 'Razonamiento Cuantitativo': ['url1', 'url2', ...], ... }
+    /* ── TARJETA 3: CURSOS EN PROGRESO ──
+       Módulos que tienen al menos 1 página in_progress o completed pero no todas completadas */
+    const modulePages = {};
     menuData.forEach(g => {
         g.cats.forEach(cat => {
             const links = [];
@@ -1335,45 +1289,64 @@ async function loadDashboard(user) {
 
     let coursesInProgress = 0;
     Object.entries(modulePages).forEach(([mod, pages]) => {
-        let done = 0;
-        pages.forEach(pid => { if (completedPageIds.has(pid)) done++; });
-        if (done > 0 && done < pages.length) coursesInProgress++;
+        let done = 0, inProg = 0;
+        pages.forEach(pid => {
+            if (completedPages.has(pid)) done++;
+            else if (inProgressPages.has(pid)) inProg++;
+        });
+        if ((done > 0 || inProg > 0) && done < pages.length) coursesInProgress++;
     });
     animateValue(document.getElementById('stat-progress'), coursesInProgress);
 
-    // ── 5. GRÁFICO DE HORAS ──
+    /* ── TARJETA 4: MISIONES COMPLETADAS (de las 100 de logro) ── */
+    // Usar el mayor entre lo que dice stats y lo que realmente existe en missions
+    const missionsFromDB = completedMissionIds.size;
+    const missionsCount = Math.max(missionsFromDB, totalMissionsCompleted);
+    animateValue(document.getElementById('stat-missions'), missionsCount);
+
+    /* ── GRÁFICO DE HORAS (localStorage) ── */
     const hoursData = getLast7DaysHours();
     renderHoursChart(hoursData.labels, hoursData.data);
 
-    // ── 6. GRÁFICO DE PROMEDIO POR MÓDULO ──
+    /* ── GRÁFICO DE PROMEDIO POR MÓDULO ──
+       Para cada módulo, buscar el mejor gameScore que pertenezca a ese módulo */
     const modOrder = ['Razonamiento Cuantitativo','Lectura Crítica','Competencias Ciudadanas','Inglés','Comunicación Escrita'];
     const modLabels = [];
     const modAvgs = [];
     modOrder.forEach(mod => {
         const pages = modulePages[mod] || [];
-        let sum = 0, count = 0;
+        let bestScore = 0;
+        // Buscar en gameScores si hay algún juego de este módulo
         pages.forEach(pid => {
-            const doc = allFirebaseDocs.find(d => d.id === pid);
-            if (doc && doc.score) { sum += doc.score; count++; }
+            if (gameScores[pid]) {
+                const s = gameScores[pid].bestScore || gameScores[pid].lastScore || 0;
+                const scaled = s <= 5 ? s * 60 : s;
+                if (scaled > bestScore) bestScore = scaled;
+            }
         });
         modLabels.push(mod);
-        modAvgs.push(count > 0 ? Math.round(sum / count) : 0);
+        modAvgs.push(bestScore);
     });
     renderModulesChart(modLabels, modAvgs);
 
-    // ── 7. PRÓXIMAS MISIONES (las 100 de logro, solo pendientes) ──
-    const pendingMissions = ALL_MISSIONS.filter(m => !completedMissionIds.has(m.id));
-    const missionsList = document.getElementById('missions-list');
+    /* ── PRÓXIMAS MISIONES (pendientes de las 100) ── */
+    const pendingMissions = ALL_MISSIONS.filter(m => !completedMissionIds.has(m.id) && m.id > missionsCount);
+    // Si missionsCount de stats es mayor que lo encontrado en DB, ocultar hasta ese número
+    const effectivePending = ALL_MISSIONS.filter(m => {
+        if (completedMissionIds.has(m.id)) return false;
+        if (m.id <= totalMissionsCompleted && !completedMissionIds.has(m.id)) return false;
+        return true;
+    });
 
-    if (pendingMissions.length === 0) {
+    const missionsList = document.getElementById('missions-list');
+    if (effectivePending.length === 0) {
         missionsList.innerHTML = `
             <div class="mission-empty">
                 <i class="fas fa-crown" style="font-size:2rem;display:block;margin-bottom:10px;color:var(--oliva-medio)"></i>
-                Todas las 100 misiones completadas
+                Todas las misiones completadas
             </div>`;
     } else {
-        // Mostrar las primeras 8 pendientes
-        const show = pendingMissions.slice(0, 8);
+        const show = effectivePending.slice(0, 8);
         let html = show.map(m => `
             <div class="mission-item">
                 <div class="mission-dot">${m.id}</div>
@@ -1383,28 +1356,24 @@ async function loadDashboard(user) {
                 </div>
             </div>
         `).join('');
-
-        // Barra de progreso total
-        const pct = Math.round((missionsCompleted / ALL_MISSIONS.length) * 100);
+        const pct = Math.round((missionsCount / ALL_MISSIONS.length) * 100);
         html += `
             <div class="mission-progress-bar">
                 <div class="mission-progress-fill" style="width:0%" data-target="${pct}"></div>
             </div>
             <div class="mission-progress-text">
-                <span>${missionsCompleted} de ${ALL_MISSIONS.length} completadas</span>
+                <span>${missionsCount} de ${ALL_MISSIONS.length} completadas</span>
                 <span>${pct}%</span>
             </div>
         `;
         missionsList.innerHTML = html;
-
-        // Animar barra después de un momento
         setTimeout(() => {
             const fill = missionsList.querySelector('.mission-progress-fill');
             if (fill) fill.style.width = fill.dataset.target + '%';
         }, 400);
     }
 
-    // ── 8. ESTADO DE CURSOS ──
+    /* ── ESTADO DE CURSOS ── */
     const coursesStatus = document.getElementById('courses-status');
     const courseIcons = {
         'Razonamiento Cuantitativo': 'fa-calculator',
@@ -1413,15 +1382,14 @@ async function loadDashboard(user) {
         'Inglés': 'fa-globe',
         'Comunicación Escrita': 'fa-pen-fancy'
     };
-
     coursesStatus.innerHTML = modOrder.map(mod => {
         const pages = modulePages[mod] || [];
-        const total = pages.length || 1;
+        const total = pages.length;
         let done = 0;
-        pages.forEach(pid => { if (completedPageIds.has(pid)) done++; });
-        const pct = Math.round((done / total) * 100);
+        pages.forEach(pid => { if (completedPages.has(pid)) done++; });
+        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
         let stateClass = 'none';
-        if (pct === 100) stateClass = 'done';
+        if (pct === 100 && total > 0) stateClass = 'done';
         else if (pct > 0) stateClass = 'wip';
         const icon = courseIcons[mod] || 'fa-book';
         const barColor = stateClass === 'done' ? '#272b00' : stateClass === 'wip' ? '#5a6133' : '#bec092';
@@ -1429,7 +1397,7 @@ async function loadDashboard(user) {
             <div class="course-stat">
                 <div class="course-icon ${stateClass}"><i class="fas ${icon}"></i></div>
                 <div class="course-info">
-                    <div class="course-num">${done}/${pages.length}</div>
+                    <div class="course-num">${done}/${total}</div>
                     <div class="course-label">${mod}</div>
                     <div class="course-bar">
                         <div class="course-bar-fill" style="width:${pct}%;background:${barColor}"></div>
@@ -1439,16 +1407,16 @@ async function loadDashboard(user) {
         `;
     }).join('');
 
-    // ── 9. OCULTAR PÁGINAS COMPLETADAS DEL MENÚ ──
+    /* ── OCULTAR PÁGINAS COMPLETADAS DEL MENÚ ── */
     document.querySelectorAll('.menu-link').forEach(link => {
         const href = link.getAttribute('href') || '';
         const pageId = href.replace('.html', '');
-        if (completedPageIds.has(pageId)) {
+        if (completedPages.has(pageId)) {
             link.classList.add('hidden');
         }
     });
 
-    // ── Mostrar todo ──
+    /* ── MOSTRAR DASHBOARD ── */
     document.getElementById('loading-spinner').style.display = 'none';
     document.getElementById('stats-row').style.display = '';
     document.getElementById('charts-row').style.display = '';
@@ -1467,7 +1435,6 @@ document.getElementById('greeting').textContent = getGreeting();
 rotateQuote();
 setInterval(rotateQuote, 8000);
 
-// Tutorial
 renderTutorial();
 document.getElementById('btn-tutorial').addEventListener('click', () => {
     tutIdx = 0; renderTutorial();
@@ -1481,7 +1448,6 @@ document.getElementById('tut-skip').addEventListener('click', () => {
     document.getElementById('tut-overlay').classList.remove('active');
 });
 
-// Última interacción
 document.getElementById('btn-last').addEventListener('click', () => {
     try {
         const last = JSON.parse(localStorage.getItem('skopia_last_page'));
@@ -1490,14 +1456,12 @@ document.getElementById('btn-last').addEventListener('click', () => {
     } catch { showToast('Aún no tienes una última interacción registrada.'); }
 });
 
-// Cerrar sesión
 document.getElementById('logout-btn').addEventListener('click', async (e) => {
     e.preventDefault();
     try { await signOut(auth); window.location.href = 'index.html'; }
     catch { showToast('Error al cerrar sesión.'); }
 });
 
-// Esperar autenticación
 onAuthStateChanged(auth, async (user) => {
     if (user) {
         document.getElementById('sidebar-username').textContent = user.displayName || 'Estudiante';
