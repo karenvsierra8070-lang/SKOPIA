@@ -333,18 +333,38 @@
         }
         .mission-item:hover{background:var(--crema);}
         .mission-dot{
-            width:8px;height:8px;border-radius:50%;
-            background:var(--oliva-claro);flex-shrink:0;
+            width:32px;height:32px;border-radius:50%;
+            background:var(--oliva-super);flex-shrink:0;
+            display:grid;place-items:center;
+            font-family:'Orbitron',monospace;
+            font-size:.65rem;font-weight:700;
+            color:var(--oliva-medio);
+            border:2px solid var(--oliva-palido);
         }
-        .mission-text{flex:1;font-size:.88rem;min-width:0;}
-        .mission-text span{display:block;font-size:.72rem;color:var(--oliva-claro);}
-        .mission-pts{
-            font-family:'Orbitron',monospace;font-size:.75rem;
-            color:var(--oliva-medio);white-space:nowrap;
+        .mission-text{flex:1;font-size:.85rem;min-width:0;line-height:1.3;}
+        .mission-text .mission-pts-inline{
+            display:inline-block;font-size:.7rem;
+            color:var(--oliva-claro);margin-left:6px;
+            font-weight:500;
         }
         .mission-empty{
             text-align:center;padding:24px 0;
             color:var(--oliva-claro);font-size:.88rem;
+        }
+        .mission-progress-bar{
+            width:100%;height:4px;border-radius:2px;
+            background:var(--oliva-super);margin-top:14px;
+            overflow:hidden;
+        }
+        .mission-progress-fill{
+            height:100%;border-radius:2px;
+            background:linear-gradient(90deg, var(--oliva-medio), var(--oliva-oscuro));
+            transition:width 1s ease;
+        }
+        .mission-progress-text{
+            display:flex;justify-content:space-between;
+            font-size:.72rem;color:var(--oliva-claro);
+            margin-top:6px;
         }
 
         .course-stat{
@@ -602,7 +622,182 @@ const app = initializeApp(fbConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* ========== MENÚ LATERAL ========== */
+/* ============================================================
+   LAS 100 MISIONES DE LOGRO
+   Cada misión tiene id, title y points.
+   En Firebase se guardan en: users/{uid}/completedMissions/{id}
+   Ejemplo: completedMissions/1 → { completedAt: ..., points: 50 }
+   ============================================================ */
+const ALL_MISSIONS = [
+    { id: 1, title: "Completa tu primer examen", points: 50 },
+    { id: 2, title: "Logra al menos 180/300 en un examen", points: 80 },
+    { id: 3, title: "Lee toda la teoría de una lección", points: 40 },
+    { id: 4, title: "Termina una sesión de estudio sin salir", points: 50 },
+    { id: 5, title: "Gana tu primer juego", points: 50 },
+    { id: 6, title: "Usa una pista o ayuda en un juego", points: 30 },
+    { id: 7, title: "Repite un examen para mejorar tu nota", points: 50 },
+    { id: 8, title: "Cambia tu nombre de usuario", points: 40 },
+    { id: 9, title: "Acumula tus primeras 200 estrellas", points: 30 },
+    { id: 10, title: "Completa 3 misiones seguidas", points: 50 },
+    { id: 11, title: "Logra 240/300 en un examen", points: 150 },
+    { id: 12, title: "Completa un examen sin errores (300/300)", points: 200 },
+    { id: 13, title: "Gana 3 juegos distintos", points: 60 },
+    { id: 14, title: "Termina una teoría con ejemplo práctico", points: 40 },
+    { id: 15, title: "Participa en una práctica de repaso", points: 30 },
+    { id: 16, title: "Completa 2 exámenes el mismo día", points: 80 },
+    { id: 17, title: "Obtén 500 estrellas acumuladas", points: 50 },
+    { id: 18, title: "Gana un examen con tiempo limitado", points: 80 },
+    { id: 19, title: "Repite un juego hasta mejorar tu resultado", points: 30 },
+    { id: 20, title: "Completa todos los subniveles de un tema (5/5)", points: 100 },
+    { id: 21, title: "Logra 270/300 en un examen", points: 180 },
+    { id: 22, title: "Supera tu propia mejor nota", points: 60 },
+    { id: 23, title: "Termina 5 juegos de práctica", points: 50 },
+    { id: 24, title: "Lee toda la teoría sin usar pistas", points: 40 },
+    { id: 25, title: "Completa todos los subniveles del nivel 6", points: 140 },
+    { id: 26, title: "Suma 1000 estrellas totales", points: 50 },
+    { id: 27, title: "Gana un examen con tiempo limitado", points: 80 },
+    { id: 28, title: "Juega y gana el modo \"escape room\"", points: 60 },
+    { id: 29, title: "Gana un juego de ahorcado correctamente", points: 50 },
+    { id: 30, title: "Haz un examen de repaso general", points: 70 },
+    { id: 31, title: "Logra 300/300 en dos exámenes seguidos", points: 200 },
+    { id: 32, title: "Completa todos los juegos de un módulo", points: 100 },
+    { id: 33, title: "Termina la teoría de un módulo completo", points: 80 },
+    { id: 34, title: "Gana un juego tipo tablero", points: 60 },
+    { id: 35, title: "Completa una misión cronometrada", points: 80 },
+    { id: 36, title: "Obtén 2000 estrellas acumuladas", points: 60 },
+    { id: 37, title: "Gana un juego sin usar pistas", points: 50 },
+    { id: 38, title: "Revisa tu historial de progreso", points: 30 },
+    { id: 39, title: "Completa 10 misiones seguidas sin fallar", points: 100 },
+    { id: 40, title: "Termina un examen con todos los tiempos perfectos", points: 150 },
+    { id: 41, title: "Completa 5 exámenes con más de 240/300", points: 150 },
+    { id: 42, title: "Termina todos los subniveles del nivel 6", points: 140 },
+    { id: 43, title: "Consigue 3000 estrellas", points: 120 },
+    { id: 44, title: "Estudia 10 días seguidos", points: 130 },
+    { id: 45, title: "Completa 10 misiones", points: 140 },
+    { id: 46, title: "Llega al nivel 6.5", points: 130 },
+    { id: 47, title: "Termina un examen sin errores", points: 150 },
+    { id: 48, title: "Supera tu propio puntaje anterior", points: 140 },
+    { id: 49, title: "Contesta 500 preguntas", points: 130 },
+    { id: 50, title: "Completa un examen en menos de 25 minutos", points: 140 },
+    { id: 51, title: "Alcanza el top 10 por primera vez (local)", points: 150 },
+    { id: 52, title: "Mantente en el top 10 por 3 días (local)", points: 140 },
+    { id: 53, title: "Gana 4000 estrellas", points: 130 },
+    { id: 54, title: "Termina la ruta RC con promedio ≥200", points: 140 },
+    { id: 55, title: "Termina la ruta LC con promedio ≥200", points: 140 },
+    { id: 56, title: "Termina la ruta CC con promedio ≥200", points: 140 },
+    { id: 57, title: "Obtén 250 puntos o más en tres rutas", points: 150 },
+    { id: 58, title: "Crea una racha de 20 aciertos seguidos", points: 140 },
+    { id: 59, title: "Completa 15 misiones", points: 130 },
+    { id: 60, title: "Alcanza el nivel 7", points: 150 },
+    { id: 61, title: "Consigue 6000 estrellas", points: 160 },
+    { id: 62, title: "Estudia 20 días seguidos", points: 170 },
+    { id: 63, title: "Termina todos los niveles de una ruta (10/10)", points: 180 },
+    { id: 64, title: "Contesta 1000 preguntas", points: 160 },
+    { id: 65, title: "Supera a 5 usuarios en el ranking (local)", points: 170 },
+    { id: 66, title: "Alcanza el nivel 8", points: 170 },
+    { id: 67, title: "Termina 20 misiones", points: 160 },
+    { id: 68, title: "Obtén promedio ≥250 puntos en una ruta", points: 180 },
+    { id: 69, title: "Logra 5 exámenes con 250 o más puntos", points: 170 },
+    { id: 70, title: "Termina las rutas RC y LC completas", points: 180 },
+    { id: 71, title: "Mantente en el top 5 (local)", points: 170 },
+    { id: 72, title: "Completa todos los subniveles (50 total)", points: 180 },
+    { id: 73, title: "Gana 8000 estrellas", points: 160 },
+    { id: 74, title: "Termina 25 misiones", points: 170 },
+    { id: 75, title: "Sube de nivel sin fallar un examen", points: 160 },
+    { id: 76, title: "Obtén 280 puntos en un examen", points: 180 },
+    { id: 77, title: "Completa 10 exámenes sin pistas", points: 170 },
+    { id: 78, title: "Obtén 270 o más en las tres rutas", points: 180 },
+    { id: 79, title: "Alcanza el nivel 9", points: 180 },
+    { id: 80, title: "Termina 30 misiones", points: 170 },
+    { id: 81, title: "Gana 10,000 estrellas", points: 190 },
+    { id: 82, title: "Mantente en el top 3 (local)", points: 190 },
+    { id: 83, title: "Termina las tres rutas con promedio ≥250", points: 190 },
+    { id: 84, title: "Completa los 50 subniveles con más de 200 pts promedio", points: 200 },
+    { id: 85, title: "Llega al nivel 10", points: 200 },
+    { id: 86, title: "Gana 15,000 estrellas", points: 200 },
+    { id: 87, title: "Mantente en el top 3 por 7 días (local)", points: 190 },
+    { id: 88, title: "Consigue 300 puntos en un examen", points: 200 },
+    { id: 89, title: "Termina 40 misiones", points: 190 },
+    { id: 90, title: "Completa todos los exámenes de práctica", points: 190 },
+    { id: 91, title: "Llega a 20,000 estrellas", points: 200 },
+    { id: 92, title: "Termina 50 misiones", points: 190 },
+    { id: 93, title: "Mantente en el top 1 por 3 días (local)", points: 200 },
+    { id: 94, title: "Termina todas las rutas al 100%", points: 200 },
+    { id: 95, title: "Obtén todas las medallas", points: 190 },
+    { id: 96, title: "Consigue 25,000 estrellas", points: 200 },
+    { id: 97, title: "Cumple todas las misiones básicas e intermedias", points: 190 },
+    { id: 98, title: "Mantente activo 30 días seguidos", points: 200 },
+    { id: 99, title: "Llega a 30,000 estrellas", points: 200 },
+    { id: 100, title: "Maestro del Saber Pro: completa todo el sistema", points: 200 }
+];
+
+/* ============================================================
+   RASTREADOR DE TIEMPO ACTIVO (localStorage compartido entre
+   todas las páginas del mismo dominio)
+   ============================================================ */
+const TIME_KEY = 'skopia_active_time';
+const TIME_INTERVAL = 10000;
+
+function getTodayKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getTimeData() {
+    try { return JSON.parse(localStorage.getItem(TIME_KEY)) || {}; }
+    catch { return {}; }
+}
+
+function saveTimeTick() {
+    if (document.hidden) return;
+    const key = getTodayKey();
+    const data = getTimeData();
+    data[key] = (data[key] || 0) + (TIME_INTERVAL / 1000);
+    localStorage.setItem(TIME_KEY, JSON.stringify(data));
+}
+
+setInterval(saveTimeTick, TIME_INTERVAL);
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) saveTimeTick();
+});
+
+function getLast7DaysHours() {
+    const data = getTimeData();
+    const labels = [];
+    const values = [];
+    const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        labels.push(dias[d.getDay()] + ' ' + d.getDate());
+        const secs = data[key] || 0;
+        values.push(Math.round(secs / 3600 * 100) / 100);
+    }
+    return { labels, data: values };
+}
+
+function getActiveDays() {
+    const data = getTimeData();
+    let count = 0;
+    const today = new Date();
+    for (let i = 0; i < 365; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        if (data[key] && data[key] >= 60) {
+            count++;
+        } else {
+            if (i === 0) continue;
+            break;
+        }
+    }
+    return count;
+}
+
+/* ============================================================
+   MENÚ LATERAL
+   ============================================================ */
 const menuData = [
     { group: 'Contenido Genérico', icon: 'fa-book-open', cats: [
         { title: '3.1 Razonamiento Cuantitativo', icon: 'fa-calculator', subs: [
@@ -756,17 +951,13 @@ function renderMenu() {
             html += `<button class="menu-cat-btn" aria-expanded="false"><i class="cat-icon fas ${cat.icon}"></i><span>${cat.title}</span><i class="fas fa-chevron-right chevron"></i></button>`;
             html += '<div class="menu-cat-children">';
             if (cat.note) html += `<div class="menu-note">${cat.note}</div>`;
-            if (cat.subs) {
-                cat.subs.forEach(sub => {
-                    html += `<div class="menu-sub" data-name="${sub.title.toLowerCase()}">`;
-                    html += `<button class="menu-sub-btn" aria-expanded="false"><span>${sub.title}</span><i class="fas fa-chevron-right chevron"></i></button>`;
-                    html += '<div class="menu-sub-children">';
-                    if (sub.links) sub.links.forEach(lk => {
-                        html += `<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;
-                    });
-                    html += '</div></div>';
+            if (cat.subs) cat.subs.forEach(sub => {
+                html += `<div class="menu-sub" data-name="${sub.title.toLowerCase()}"><button class="menu-sub-btn" aria-expanded="false"><span>${sub.title}</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-sub-children">`;
+                if (sub.links) sub.links.forEach(lk => {
+                    html += `<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;
                 });
-            }
+                html += '</div></div>';
+            });
             if (cat.links && cat.links.length) cat.links.forEach(lk => {
                 html += `<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;
             });
@@ -774,7 +965,6 @@ function renderMenu() {
         });
     });
     nav.innerHTML = html;
-
     nav.querySelectorAll('.menu-cat-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const cat = btn.parentElement;
@@ -786,7 +976,6 @@ function renderMenu() {
             btn.setAttribute('aria-expanded', String(!wasOpen));
         });
     });
-
     nav.querySelectorAll('.menu-sub-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const sub = btn.parentElement;
@@ -865,13 +1054,13 @@ function initSidebar() {
     });
 }
 
-/* ========== RELOJ Y FECHA ========== */
+/* ============================================================
+   RELOJ, FECHA, SALUDO, FRASES
+   ============================================================ */
 function updateClock() {
     const now = new Date();
-    const h = String(now.getHours()).padStart(2, '0');
-    const m = String(now.getMinutes()).padStart(2, '0');
-    const s = String(now.getSeconds()).padStart(2, '0');
-    document.getElementById('top-clock').textContent = `${h}:${m}:${s}`;
+    document.getElementById('top-clock').textContent =
+        `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
     const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
     const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     document.getElementById('top-date').textContent = `${dias[now.getDay()]}, ${now.getDate()} de ${meses[now.getMonth()]}`;
@@ -884,7 +1073,6 @@ function getGreeting() {
     return 'Buenas noches';
 }
 
-/* ========== FRASES MOTIVADORAS ========== */
 const quotes = [
     "El éxito es la suma de pequeños esfuerzos repetidos día tras día.",
     "No estudies para aprobar, estudia para comprender.",
@@ -912,7 +1100,9 @@ function rotateQuote() {
     }, 300);
 }
 
-/* ========== ANIMAR NÚMERO ========== */
+/* ============================================================
+   ANIMAR NÚMERO
+   ============================================================ */
 function animateValue(el, target, duration = 800) {
     const start = parseInt(el.textContent) || 0;
     if (start === target) return;
@@ -927,7 +1117,9 @@ function animateValue(el, target, duration = 800) {
     requestAnimationFrame(tick);
 }
 
-/* ========== GRÁFICOS ========== */
+/* ============================================================
+   GRÁFICOS
+   ============================================================ */
 let hoursChart = null, modulesChart = null;
 
 function renderHoursChart(labels, data) {
@@ -938,13 +1130,10 @@ function renderHoursChart(labels, data) {
         data: {
             labels,
             datasets: [{
-                label: 'Horas',
-                data,
+                label: 'Horas', data,
                 backgroundColor: 'rgba(90,97,51,0.65)',
                 borderColor: 'rgba(39,43,0,0.8)',
-                borderWidth: 1,
-                borderRadius: 6,
-                maxBarThickness: 40
+                borderWidth: 1, borderRadius: 6, maxBarThickness: 40
             }]
         },
         options: {
@@ -981,18 +1170,13 @@ function renderModulesChart(labels, data) {
         data: {
             labels,
             datasets: [{
-                label: 'Promedio',
-                data,
+                label: 'Promedio', data,
                 backgroundColor: colors.map(c => c + 'cc'),
-                borderColor: colors,
-                borderWidth: 1,
-                borderRadius: 6,
-                maxBarThickness: 32
+                borderColor: colors, borderWidth: 1, borderRadius: 6, maxBarThickness: 32
             }]
         },
         options: {
-            indexAxis: 'y',
-            responsive: true, maintainAspectRatio: false,
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -1016,371 +1200,311 @@ function renderModulesChart(labels, data) {
     });
 }
 
-/* ========== DATOS POR DEFECTO ========== */
-function getDefaultHours() {
-    const labels = [], data = [];
-    const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-    for (let i = 6; i >= 0; i--) {
-        const d = new Date(); d.setDate(d.getDate() - i);
-        labels.push(dias[d.getDay()] + ' ' + d.getDate());
-        data.push(0);
-    }
-    return { labels, data };
-}
-
-function getDefaultModules() {
-    return {
-        labels: ['Razonamiento Cuantitativo','Lectura Crítica','Competencias Ciudadanas','Inglés','Comunicación Escrita'],
-        data: [0, 0, 0, 0, 0]
+/* ============================================================
+   CLASIFICAR PÁGINA POR MÓDULO (para cursos/estado)
+   ============================================================ */
+function classifyPage(pageUrl) {
+    const id = (pageUrl || '').toLowerCase();
+    const map = {
+        'Razonamiento Cuantitativo': ['razonamiento','patrones','aritmetica','algebra','geometria','funciones','porcentajes','medidas','probabilidad','estadistica','interpretacion','lab-logico','analisis-grafico','crepatron'],
+        'Lectura Crítica': ['biblioteca','comprension','lectura','texto','narrativo','expositivo','argumentativo','cientifico','periodistico','intertextual','taller','velocidad','estructura'],
+        'Competencias Ciudadanas': ['dilema','contexto','archivo','lab-estrategia','derecho','constitucion','democra','estado','justicia','resolucion','etica','diversidad','ciudadania','sostenibilidad'],
+        'Inglés': ['ingles','vocabulary','grammar','functional','connector','text-type','error','synonym','everyday','academic','cohesion','reading'],
+        'Comunicación Escrita': ['escritura','argumentacion','organizar-texto','forma-expresion','precision','gestion-tiempo','pertinencia']
     };
-}
-
-/* ========== CLASIFICAR MISIÓN POR MÓDULO ========== */
-function classifyMission(missionId) {
-    const id = (missionId || '').toLowerCase();
-    const rcKeywords = ['razonamiento','patrones','aritmetica','algebra','geometria','funciones','porcentajes','medidas','probabilidad','estadistica','interpretacion','lab-logico','analisis-grafico'];
-    const lcKeywords = ['biblioteca','comprension','lectura','texto','narrativo','expositivo','argumentativo','cientifico','periodistico','intertextual','taller','velocidad','estructura'];
-    const ccKeywords = ['dilema','contexto','archivo','lab-estrategia','derecho','constitucion','democra','estado','justicia','resolucion','etica','diversidad','ciudadania','sostenibilidad'];
-    const enKeywords = ['ingles','vocabulary','grammar','functional','connector','text-type','error','synonym','everyday','academic','cohesion','reading'];
-    const ceKeywords = ['escritura','argumentacion','organizar-texto','forma-expresion','precision','gestion-tiempo','pertinencia'];
-
-    for (const k of rcKeywords) if (id.includes(k)) return 'Razonamiento Cuantitativo';
-    for (const k of lcKeywords) if (id.includes(k)) return 'Lectura Crítica';
-    for (const k of ccKeywords) if (id.includes(k)) return 'Competencias Ciudadanas';
-    for (const k of enKeywords) if (id.includes(k)) return 'Inglés';
-    for (const k of ceKeywords) if (id.includes(k)) return 'Comunicación Escrita';
+    for (const [mod, keywords] of Object.entries(map)) {
+        for (const k of keywords) { if (id.includes(k)) return mod; }
+    }
     return null;
 }
 
-/* ========== LISTA COMPLETA DE MISIONES ========== */
-const allMissionsList = [
-    { id: 1, title: "Completa tu primer examen", pts: 50 },
-            { id: 2, title: "Logra al menos 180/300 en un examen", pts: 80 },
-            { id: 3, title: "Lee toda la teoría de una lección", pts: 40 },
-            { id: 4, title: "Termina una sesión de estudio sin salir", pts: 50 },
-            { id: 5, title: "Gana tu primer juego", pts: 50 },
-            { id: 6, title: "Usa una pista o ayuda en un juego", pts: 30 },
-            { id: 7, title: "Repite un examen para mejorar tu nota", pts: 50 },
-            { id: 8, title: "Cambia tu nombre de usuario", pts: 40 },
-            { id: 9, title: "Acumula tus primeras 200 estrellas", pts: 30 },
-            { id: 10, title: "Completa 3 misiones seguidas", pts: 50 },
-            { id: 11, title: "Logra 240/300 en un examen", pts: 150 },
-            { id: 12, title: "Completa un examen sin errores (300/300)", pts: 200 },
-            { id: 13, title: "Gana 3 juegos distintos", pts: 60 },
-            { id: 14, title: "Termina una teoría con ejemplo práctico", pts: 40 },
-            { id: 15, title: "Participa en una práctica de repaso", pts: 30 },
-            { id: 16, title: "Completa 2 exámenes el mismo día", pts: 80 },
-            { id: 17, title: "Obtén 500 estrellas acumuladas", pts: 50 },
-            { id: 18, title: "Gana un examen con tiempo limitado", pts: 80 },
-            { id: 19, title: "Repite un juego hasta mejorar tu resultado", pts: 30 },
-            { id: 20, title: "Completa todos los subniveles de un tema (5/5)", pts: 100 },
-            { id: 21, title: "Logra 270/300 en un examen", pts: 180 },
-            { id: 22, title: "Supera tu propia mejor nota", pts: 60 },
-            { id: 23, title: "Termina 5 juegos de práctica", pts: 50 },
-            { id: 24, title: "Lee toda la teoría sin usar pistas", pts: 40 },
-            { id: 25, title: "Completa todos los subniveles del nivel 6", pts: 140 },
-            { id: 26, title: "Suma 1000 estrellas totales", pts: 50 },
-            { id: 27, title: "Gana un examen con tiempo limitado", pts: 80 },
-            { id: 28, title: "Juega y gana el modo “escape room”", pts: 60 },
-            { id: 29, title: "Gana un juego de ahorcado correctamente", pts: 50 },
-            { id: 30, title: "Haz un examen de repaso general", pts: 70 },
-            { id: 31, title: "Logra 300/300 en dos exámenes seguidos", pts: 200 },
-            { id: 32, title: "Completa todos los juegos de un módulo", pts: 100 },
-            { id: 33, title: "Termina la teoría de un módulo completo", pts: 80 },
-            { id: 34, title: "Gana un juego tipo tablero", pts: 60 },
-            { id: 35, title: "Completa una misión cronometrada", pts: 80 },
-            { id: 36, title: "Obtén 2000 estrellas acumuladas", pts: 60 },
-            { id: 37, title: "Gana un juego sin usar pistas", pts: 50 },
-            { id: 38, title: "Revisa tu historial de progreso", pts: 30 },
-            { id: 39, title: "Completa 10 misiones seguidas sin fallar", pts: 100 },
-            { id: 40, title: "Termina un examen con todos los tiempos perfectos", pts: 150 },
-            { id: 41, title: "Completa 5 exámenes con más de 240/300", pts: 150 },
-            { id: 42, title: "Termina todos los subniveles del nivel 6", pts: 140 },
-            { id: 43, title: "Consigue 3000 estrellas", pts: 120 },
-            { id: 44, title: "Estudia 10 días seguidos", pts: 130 },
-            { id: 45, title: "Completa 10 misiones", pts: 140 },
-            { id: 46, title: "Llega al nivel 6.5", pts: 130 },
-            { id: 47, title: "Termina un examen sin errores", pts: 150 },
-            { id: 48, title: "Supera tu propio puntaje anterior", pts: 140 },
-            { id: 49, title: "Contesta 500 preguntas", pts: 130 },
-            { id: 50, title: "Completa un examen en menos de 25 minutos", pts: 140 },
-            { id: 51, title: "Alcanza el top 10 por primera vez (local)", pts: 150 },
-            { id: 52, title: "Mantente en el top 10 por 3 días (local)", pts: 140 },
-            { id: 53, title: "Gana 4000 estrellas", pts: 130 },
-            { id: 54, title: "Termina la ruta RC con promedio ≥200", pts: 140 },
-            { id: 55, title: "Termina la ruta LC con promedio ≥200", pts: 140 },
-            { id: 56, title: "Termina la ruta CC con promedio ≥200", pts: 140 },
-            { id: 57, title: "Obtén 250 puntos o más en tres rutas", pts: 150 },
-            { id: 58, title: "Crea una racha de 20 aciertos seguidos", pts: 140 },
-            { id: 59, title: "Completa 15 misiones", pts: 130 },
-            { id: 60, title: "Alcanza el nivel 7", pts: 150 },
-            { id: 61, title: "Consigue 6000 estrellas", pts: 160 },
-            { id: 62, title: "Estudia 20 días seguidos", pts: 170 },
-            { id: 63, title: "Termina todos los niveles de una ruta (10/10)", pts: 180 },
-            { id: 64, title: "Contesta 1000 preguntas", pts: 160 },
-            { id: 65, title: "Supera a 5 usuarios en el ranking (local)", pts: 170 },
-            { id: 66, title: "Alcanza el nivel 8", pts: 170 },
-            { id: 67, title: "Termina 20 misiones", pts: 160 },
-            { id: 68, title: "Obtén promedio ≥250 puntos en una ruta", pts: 180 },
-            { id: 69, title: "Logra 5 exámenes con 250 o más puntos", pts: 170 },
-            { id: 70, title: "Termina las rutas RC y LC completas", pts: 180 },
-            { id: 71, title: "Mantente en el top 5 (local)", pts: 170 },
-            { id: 72, title: "Completa todos los subniveles (50 total)", pts: 180 },
-            { id: 73, title: "Gana 8000 estrellas", pts: 160 },
-            { id: 74, title: "Termina 25 misiones", pts: 170 },
-            { id: 75, title: "Sube de nivel sin fallar un examen", pts: 160 },
-            { id: 76, title: "Obtén 280 puntos en un examen", pts: 180 },
-            { id: 77, title: "Completa 10 exámenes sin pistas", pts: 170 },
-            { id: 78, title: "Obtén 270 o más en las tres rutas", pts: 180 },
-            { id: 79, title: "Alcanza el nivel 9", pts: 180 },
-            { id: 80, title: "Termina 30 misiones", pts: 170 },
-            { id: 81, title: "Gana 10,000 estrellas", pts: 190 },
-            { id: 82, title: "Mantente en el top 3 (local)", pts: 190 },
-            { id: 83, title: "Termina las tres rutas con promedio ≥250", pts: 190 },
-            { id: 84, title: "Completa los 50 subniveles con más de 200 puntos promedio", pts: 200 },
-            { id: 85, title: "Llega al nivel 10", pts: 200 },
-            { id: 86, title: "Gana 15,000 estrellas", pts: 200 },
-            { id: 87, title: "Mantente en el top 3 por 7 días (local)", pts: 190 },
-            { id: 88, title: "Consigue 300 puntos en un examen", pts: 200 },
-            { id: 89, title: "Termina 40 misiones", pts: 190 },
-            { id: 90, title: "Completa todos los exámenes de práctica", pts: 190 },
-            { id: 91, title: "Llega a 20,000 estrellas", pts: 200 },
-            { id: 92, title: "Termina 50 misiones", pts: 190 },
-            { id: 93, title: "Mantente en el top 1 por 3 días (local)", pts: 200 },
-            { id: 94, title: "Termina todas las rutas al 100%", pts: 200 },
-            { id: 95, title: "Obtén todas las medallas", pts: 190 },
-            { id: 96, title: "Consigue 25,000 estrellas", pts: 200 },
-            { id: 97, title: "Cumple todas las misiones básicas e intermedias", pts: 190 },
-            { id: 98, title: "Mantente activo 30 días seguidos", pts: 200 },
-            { id: 99, title: "Llega a 30,000 estrellas", pts: 200 },
-            { id: 100, title: "🏆 Maestro del Saber Pro: completa todo el sistema", pts: 200 }
-
-];
-
-/* ========== TOAST ========== */
-function showToast(msg) {
+/* ============================================================
+   TOAST
+   ============================================================ */
+function showToast(msg, duration = 3500) {
     const t = document.getElementById('toast');
     t.textContent = msg;
     t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 3500);
+    setTimeout(() => t.classList.remove('show'), duration);
 }
 
-/* ========== TUTORIAL ========== */
+/* ============================================================
+   TUTORIAL
+   ============================================================ */
 const tutSteps = [
-    { icon: 'fa-home', title: 'Bienvenido a tu Dashboard', text: 'Aquí tienes una vista general de todo tu progreso en Skopia. Cada sección se actualiza en tiempo real.' },
-    { icon: 'fa-fire', title: 'Tu racha de estudio', text: 'Los días consecutivos que estudias se cuentan automáticamente. Mantén la racha para desbloquear misiones especiales.' },
-    { icon: 'fa-clock', title: 'Horas de interacción', text: 'El gráfico registra cuánto tiempo pasas en la plataforma cada día. Los datos se guardan automáticamente al cerrar cada página.' },
-    { icon: 'fa-crosshairs', title: 'Sistema de misiones', text: 'Completa misiones para ganar puntos. Cada ejercicio que terminas puede completar una o varias misiones automáticamente.' },
-    { icon: 'fa-graduation-cap', title: 'Estado de cursos', text: 'Aquí ves tu promedio en cada módulo ICFES. El color indica si ya dominas el módulo o necesitas más práctica.' }
+    { icon: 'fa-home', title: 'Bienvenido a tu Dashboard', text: 'Aquí tienes una vista general de todo tu progreso en Skopia. Revisaremos las secciones principales.' },
+    { icon: 'fa-fire', title: 'Racha y Estadísticas', text: 'Las tarjetas superiores muestran tus días de racha, puntaje promedio, cursos activos y misiones completadas de las 100 disponibles.' },
+    { icon: 'fa-clock', title: 'Horas de Interacción', text: 'El gráfico registra cuántas horas pasas activo en la plataforma cada día. Se cuenta automáticamente mientras navegas cualquier página.' },
+    { icon: 'fa-chart-bar', title: 'Promedio por Módulo', text: 'Muestra tu puntaje promedio en cada módulo genérico sobre 300 puntos. Te ayuda a identificar áreas de mejora.' },
+    { icon: 'fa-crosshairs', title: 'Próximas Misiones', text: 'Lista las misiones de logro que aún no has completado. Las que ya desbloqueaste se ocultan automáticamente. Son 100 en total.' },
+    { icon: 'fa-layer-group', title: 'Estado de Cursos', text: 'Muestra el progreso por cada módulo según las páginas de contenido que has completado.' }
 ];
-let tutStep = 0;
-
-function showTutStep() {
-    const s = tutSteps[tutStep];
+let tutIdx = 0;
+function renderTutorial() {
+    const s = tutSteps[tutIdx];
     document.getElementById('tut-icon').innerHTML = `<i class="fas ${s.icon}"></i>`;
     document.getElementById('tut-title').textContent = s.title;
     document.getElementById('tut-text').textContent = s.text;
-    const dots = document.getElementById('tut-steps');
-    dots.innerHTML = tutSteps.map((_, i) => `<div class="tut-step-dot ${i === tutStep ? 'active' : ''}"></div>`).join('');
-    document.getElementById('tut-next').textContent = tutStep === tutSteps.length - 1 ? 'Entendido' : 'Siguiente';
+    document.getElementById('tut-steps').innerHTML = tutSteps.map((_, i) =>
+        `<div class="tut-step-dot ${i === tutIdx ? 'active' : ''}"></div>`
+    ).join('');
+    document.getElementById('tut-next').textContent = tutIdx === tutSteps.length - 1 ? 'Finalizar' : 'Siguiente';
 }
 
-function initTutorial() {
-    const overlay = document.getElementById('tut-overlay');
-    const seen = localStorage.getItem('skopia_tut_seen');
-    if (!seen) { overlay.classList.add('active'); showTutStep(); }
-    document.getElementById('btn-tutorial').addEventListener('click', () => { tutStep = 0; overlay.classList.add('active'); showTutStep(); });
-    document.getElementById('tut-next').addEventListener('click', () => {
-        tutStep++;
-        if (tutStep >= tutSteps.length) { overlay.classList.remove('active'); localStorage.setItem('skopia_tut_seen', '1'); }
-        else showTutStep();
-    });
-    document.getElementById('tut-skip').addEventListener('click', () => { overlay.classList.remove('active'); localStorage.setItem('skopia_tut_seen', '1'); });
-}
+/* ============================================================
+   CARGA PRINCIPAL DEL DASHBOARD
+   ============================================================ */
+async function loadDashboard(user) {
+    const uid = user.uid;
+    const userRef = doc(db, 'users', uid);
+    const missionsRef = collection(db, 'users', uid, 'completedMissions');
 
-/* ========== ÚLTIMA INTERACCIÓN ========== */
-function initLastInteraction(data) {
-    const btn = document.getElementById('btn-last');
-    btn.addEventListener('click', () => {
-        const history = data?.missionsHistory || [];
-        if (history.length === 0) { showToast('Aún no tienes interacciones registradas.'); return; }
-        const last = history[history.length - 1];
-        if (last.url) {
-            window.location.href = last.url;
-        } else {
-            showToast(`Tu última actividad fue: ${last.name || last.id} (${last.score}/${last.total})`);
+    // Cargar datos del usuario
+    let userData = {};
+    try {
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) userData = userSnap.data();
+    } catch (e) {
+        console.warn('Error cargando usuario:', e);
+    }
+
+    // Cargar misiones completadas de Firebase
+    // Los documentos en completedMissions tienen ID numérico: "1", "2", ... "100"
+    // y además pueden venir de páginas de contenido: "crepatron", "algebra", etc.
+    // Separamos en dos conjuntos:
+    const completedMissionIds = new Set(); // IDs numéricos de logros (1-100)
+    const completedPageIds = new Set();   // IDs de páginas de contenido
+
+    let allFirebaseDocs = [];
+    try {
+        const snap = await getDocs(missionsRef);
+        snap.forEach(d => {
+            allFirebaseDocs.push({ id: d.id, ...d.data() });
+            // Determinar si es un logro (1-100) o una página de contenido
+            const numId = parseInt(d.id);
+            if (!isNaN(numId) && numId >= 1 && numId <= 100) {
+                completedMissionIds.add(numId);
+            } else {
+                completedPageIds.add(d.id);
+            }
+        });
+    } catch (e) {
+        console.warn('Error cargando misiones:', e);
+    }
+
+    // ── 1. RACHA DE DÍAS ──
+    const streakDays = getActiveDays();
+    animateValue(document.getElementById('stat-streak'), streakDays);
+
+    // ── 2. PUNTAJE PROMEDIO GENERAL (de las páginas de contenido) ──
+    let totalScore = 0;
+    let pageMissionCount = 0;
+    allFirebaseDocs.forEach(m => {
+        if (!completedMissionIds.has(parseInt(m.id)) && m.score) {
+            totalScore += m.score;
+            pageMissionCount++;
         }
     });
-}
-
-/* ========== CARGAR DASHBOARD ========== */
-async function loadDashboard(user) {
-    const userRef = doc(db, 'users', user.uid);
-    const userSnap = await getDoc(userRef);
-
-    let data = {};
-
-    if (userSnap.exists()) {
-        data = userSnap.data();
-    } else {
-        console.log('Documento de usuario no existe, se creará al completar el primer ejercicio.');
-    }
-
-    const completedMissions = data.completedMissions || [];
-    const missionsHistory = data.missionsHistory || [];
-    const dailyActivity = data.dailyActivity || {};
-    const studyStreak = data.studyStreak || 0;
-    const totalpts = data.totalpts || 0;
-
-    /* --- Racha de días --- */
-    animateValue(document.getElementById('stat-streak'), studyStreak);
-
-    /* --- Puntaje promedio general --- */
-    let avgScore = 0;
-    if (missionsHistory.length > 0) {
-        const sumPct = missionsHistory.reduce((acc, m) => {
-            const pct = m.total > 0 ? (m.score / m.total) * 100 : 0;
-            return acc + pct;
-        }, 0);
-        avgScore = Math.round(sumPct / missionsHistory.length);
-    }
+    const avgScore = pageMissionCount > 0 ? Math.round(totalScore / pageMissionCount) : 0;
     animateValue(document.getElementById('stat-avg'), avgScore);
 
-    /* --- Cursos en progreso --- */
-    const modulesStarted = new Set();
-    missionsHistory.forEach(m => {
-        const mod = classifyMission(m.id);
-        if (mod) modulesStarted.add(mod);
-    });
-    animateValue(document.getElementById('stat-progress'), modulesStarted.size);
+    // ── 3. MISIONES COMPLETADAS (de las 100 de logro) ──
+    const missionsCompleted = completedMissionIds.size;
+    animateValue(document.getElementById('stat-missions'), missionsCompleted);
 
-    /* --- Misiones completadas --- */
-    animateValue(document.getElementById('stat-missions'), completedMissions.length);
-
-    /* --- Gráfico de horas por día --- */
-    const hoursDefault = getDefaultHours();
-    const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-    hoursDefault.labels.forEach((label, i) => {
-        for (const [dateKey, seconds] of Object.entries(dailyActivity)) {
-            const d = new Date(dateKey);
-            if ((dias[d.getDay()] + ' ' + d.getDate()) === label) {
-                hoursDefault.data[i] = Math.round((seconds / 3600) * 100) / 100;
-                break;
-            }
-        }
+    // ── 4. CURSOS EN PROGRESO ──
+    // Contar páginas totales por módulo desde el menú
+    const modulePages = {}; // { 'Razonamiento Cuantitativo': ['url1', 'url2', ...], ... }
+    menuData.forEach(g => {
+        g.cats.forEach(cat => {
+            const links = [];
+            if (cat.subs) cat.subs.forEach(sub => {
+                if (sub.links) sub.links.forEach(lk => links.push(lk.url));
+            });
+            if (cat.links) cat.links.forEach(lk => links.push(lk.url));
+            links.forEach(url => {
+                const mod = classifyPage(url);
+                if (mod) {
+                    if (!modulePages[mod]) modulePages[mod] = [];
+                    const pageId = url.replace('.html', '');
+                    if (!modulePages[mod].includes(pageId)) modulePages[mod].push(pageId);
+                }
+            });
+        });
     });
-    renderHoursChart(hoursDefault.labels, hoursDefault.data);
 
-    /* --- Gráfico promedio por módulo --- */
-    const moduleScores = {
-        'Razonamiento Cuantitativo': [],
-        'Lectura Crítica': [],
-        'Competencias Ciudadanas': [],
-        'Inglés': [],
-        'Comunicación Escrita': []
-    };
-    missionsHistory.forEach(m => {
-        const mod = classifyMission(m.id);
-        if (mod && m.total > 0) {
-            moduleScores[mod].push((m.score / m.total) * 300);
-        }
+    let coursesInProgress = 0;
+    Object.entries(modulePages).forEach(([mod, pages]) => {
+        let done = 0;
+        pages.forEach(pid => { if (completedPageIds.has(pid)) done++; });
+        if (done > 0 && done < pages.length) coursesInProgress++;
     });
-    const modLabels = Object.keys(moduleScores);
-    const modData = modLabels.map(mod => {
-        const scores = moduleScores[mod];
-        if (scores.length === 0) return 0;
-        return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-    });
-    renderModulesChart(modLabels, modData);
+    animateValue(document.getElementById('stat-progress'), coursesInProgress);
 
-    /* --- Próximas misiones --- */
-    const pending = allMissionsList.filter(m => !completedMissions.includes(m.id));
+    // ── 5. GRÁFICO DE HORAS ──
+    const hoursData = getLast7DaysHours();
+    renderHoursChart(hoursData.labels, hoursData.data);
+
+    // ── 6. GRÁFICO DE PROMEDIO POR MÓDULO ──
+    const modOrder = ['Razonamiento Cuantitativo','Lectura Crítica','Competencias Ciudadanas','Inglés','Comunicación Escrita'];
+    const modLabels = [];
+    const modAvgs = [];
+    modOrder.forEach(mod => {
+        const pages = modulePages[mod] || [];
+        let sum = 0, count = 0;
+        pages.forEach(pid => {
+            const doc = allFirebaseDocs.find(d => d.id === pid);
+            if (doc && doc.score) { sum += doc.score; count++; }
+        });
+        modLabels.push(mod);
+        modAvgs.push(count > 0 ? Math.round(sum / count) : 0);
+    });
+    renderModulesChart(modLabels, modAvgs);
+
+    // ── 7. PRÓXIMAS MISIONES (las 100 de logro, solo pendientes) ──
+    const pendingMissions = ALL_MISSIONS.filter(m => !completedMissionIds.has(m.id));
     const missionsList = document.getElementById('missions-list');
-    if (pending.length === 0) {
-        missionsList.innerHTML = '<div class="mission-empty"><i class="fas fa-check-circle" style="font-size:1.5rem;display:block;margin-bottom:8px;color:var(--oliva-medio)"></i>Todas las misiones completadas</div>';
+
+    if (pendingMissions.length === 0) {
+        missionsList.innerHTML = `
+            <div class="mission-empty">
+                <i class="fas fa-crown" style="font-size:2rem;display:block;margin-bottom:10px;color:var(--oliva-medio)"></i>
+                Todas las 100 misiones completadas
+            </div>`;
     } else {
-        missionsList.innerHTML = pending.slice(0, 6).map(m =>
-            `<div class="mission-item">
-                <div class="mission-dot"></div>
-                <div class="mission-text">${m.title}<span>${m.pts} puntos</span></div>
-                <div class="mission-pts">+${m.pts}</div>
-            </div>`
-        ).join('');
+        // Mostrar las primeras 8 pendientes
+        const show = pendingMissions.slice(0, 8);
+        let html = show.map(m => `
+            <div class="mission-item">
+                <div class="mission-dot">${m.id}</div>
+                <div class="mission-text">
+                    ${m.title}
+                    <span class="mission-pts-inline">+${m.points} pts</span>
+                </div>
+            </div>
+        `).join('');
+
+        // Barra de progreso total
+        const pct = Math.round((missionsCompleted / ALL_MISSIONS.length) * 100);
+        html += `
+            <div class="mission-progress-bar">
+                <div class="mission-progress-fill" style="width:0%" data-target="${pct}"></div>
+            </div>
+            <div class="mission-progress-text">
+                <span>${missionsCompleted} de ${ALL_MISSIONS.length} completadas</span>
+                <span>${pct}%</span>
+            </div>
+        `;
+        missionsList.innerHTML = html;
+
+        // Animar barra después de un momento
+        setTimeout(() => {
+            const fill = missionsList.querySelector('.mission-progress-fill');
+            if (fill) fill.style.width = fill.dataset.target + '%';
+        }, 400);
     }
 
-    /* --- Estado de cursos --- */
-    const courseData = [
-        { name: 'Razonamiento Cuantitativo', icon: 'fa-calculator', key: 'Razonamiento Cuantitativo' },
-        { name: 'Lectura Crítica', icon: 'fa-book-reader', key: 'Lectura Crítica' },
-        { name: 'Competencias Ciudadanas', icon: 'fa-balance-scale', key: 'Competencias Ciudadanas' },
-        { name: 'Inglés', icon: 'fa-globe', key: 'Inglés' },
-        { name: 'Comunicación Escrita', icon: 'fa-pen-fancy', key: 'Comunicación Escrita' }
-    ];
+    // ── 8. ESTADO DE CURSOS ──
     const coursesStatus = document.getElementById('courses-status');
-    coursesStatus.innerHTML = courseData.map(c => {
-        const scores = moduleScores[c.key];
-        const avg = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
-        const pct = Math.round((avg / 300) * 100);
-        const cls = pct > 0 ? (pct >= 70 ? 'done' : 'wip') : 'none';
-        const barColor = cls === 'done' ? '#272b00' : cls === 'wip' ? '#5a6133' : '#bec092';
-        return `<div class="course-stat">
-            <div class="course-icon ${cls}"><i class="fas ${c.icon}"></i></div>
-            <div class="course-info">
-                <div class="course-num">${avg}</div>
-                <div class="course-label">${c.name}</div>
-                <div class="course-bar"><div class="course-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+    const courseIcons = {
+        'Razonamiento Cuantitativo': 'fa-calculator',
+        'Lectura Crítica': 'fa-book-reader',
+        'Competencias Ciudadanas': 'fa-balance-scale',
+        'Inglés': 'fa-globe',
+        'Comunicación Escrita': 'fa-pen-fancy'
+    };
+
+    coursesStatus.innerHTML = modOrder.map(mod => {
+        const pages = modulePages[mod] || [];
+        const total = pages.length || 1;
+        let done = 0;
+        pages.forEach(pid => { if (completedPageIds.has(pid)) done++; });
+        const pct = Math.round((done / total) * 100);
+        let stateClass = 'none';
+        if (pct === 100) stateClass = 'done';
+        else if (pct > 0) stateClass = 'wip';
+        const icon = courseIcons[mod] || 'fa-book';
+        const barColor = stateClass === 'done' ? '#272b00' : stateClass === 'wip' ? '#5a6133' : '#bec092';
+        return `
+            <div class="course-stat">
+                <div class="course-icon ${stateClass}"><i class="fas ${icon}"></i></div>
+                <div class="course-info">
+                    <div class="course-num">${done}/${pages.length}</div>
+                    <div class="course-label">${mod}</div>
+                    <div class="course-bar">
+                        <div class="course-bar-fill" style="width:${pct}%;background:${barColor}"></div>
+                    </div>
+                </div>
             </div>
-        </div>`;
+        `;
     }).join('');
 
-    /* --- Programa académico en sidebar --- */
-    if (data.program) {
-        document.getElementById('sidebar-program').textContent = data.program;
-    }
+    // ── 9. OCULTAR PÁGINAS COMPLETADAS DEL MENÚ ──
+    document.querySelectorAll('.menu-link').forEach(link => {
+        const href = link.getAttribute('href') || '';
+        const pageId = href.replace('.html', '');
+        if (completedPageIds.has(pageId)) {
+            link.classList.add('hidden');
+        }
+    });
 
-    /* --- Última interacción --- */
-    initLastInteraction(data);
-
-    /* --- Ocultar spinner y mostrar contenido --- */
+    // ── Mostrar todo ──
     document.getElementById('loading-spinner').style.display = 'none';
     document.getElementById('stats-row').style.display = '';
     document.getElementById('charts-row').style.display = '';
     document.getElementById('bottom-row').style.display = '';
 }
 
-/* ========== INICIALIZACIÓN ========== */
+/* ============================================================
+   INICIALIZACIÓN
+   ============================================================ */
 renderMenu();
 initSearch();
 initSidebar();
-initTutorial();
 updateClock();
 setInterval(updateClock, 1000);
+document.getElementById('greeting').textContent = getGreeting();
 rotateQuote();
-setInterval(rotateQuote, 12000);
+setInterval(rotateQuote, 8000);
 
-/* Cerrar sesión */
+// Tutorial
+renderTutorial();
+document.getElementById('btn-tutorial').addEventListener('click', () => {
+    tutIdx = 0; renderTutorial();
+    document.getElementById('tut-overlay').classList.add('active');
+});
+document.getElementById('tut-next').addEventListener('click', () => {
+    if (tutIdx < tutSteps.length - 1) { tutIdx++; renderTutorial(); }
+    else { document.getElementById('tut-overlay').classList.remove('active'); }
+});
+document.getElementById('tut-skip').addEventListener('click', () => {
+    document.getElementById('tut-overlay').classList.remove('active');
+});
+
+// Última interacción
+document.getElementById('btn-last').addEventListener('click', () => {
+    try {
+        const last = JSON.parse(localStorage.getItem('skopia_last_page'));
+        if (last && last.url) window.location.href = last.url;
+        else showToast('Aún no tienes una última interacción registrada.');
+    } catch { showToast('Aún no tienes una última interacción registrada.'); }
+});
+
+// Cerrar sesión
 document.getElementById('logout-btn').addEventListener('click', async (e) => {
     e.preventDefault();
     try { await signOut(auth); window.location.href = 'index.html'; }
-    catch (err) { showToast('Error al cerrar sesión.'); }
+    catch { showToast('Error al cerrar sesión.'); }
 });
 
-/* Escuchar estado de autenticación */
+// Esperar autenticación
 onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-        window.location.href = 'index.html';
-        return;
-    }
-
-    document.getElementById('sidebar-username').textContent = user.displayName || 'Estudiante';
-    const firstName = user.displayName ? user.displayName.split(' ')[0] : 'Estudiante';
-    document.getElementById('greeting').textContent = getGreeting() + ', ' + firstName;
-
-    try {
+    if (user) {
+        document.getElementById('sidebar-username').textContent = user.displayName || 'Estudiante';
+        document.getElementById('sidebar-program').textContent = 'Programa Saber Pro';
         await loadDashboard(user);
-    } catch (err) {
-        console.error('Error cargando dashboard:', err);
-        document.getElementById('loading-spinner').innerHTML = '<p style="color:#d32f2f">Error al cargar los datos. Recarga la página.</p>';
+    } else {
+        window.location.href = 'index.html';
     }
 });
 </script>
