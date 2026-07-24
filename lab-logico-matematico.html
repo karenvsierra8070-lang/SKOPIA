@@ -393,6 +393,103 @@ function renderActivities(progressMap={}){
     document.getElementById('ms-wip').textContent=wip;
     document.getElementById('ms-none').textContent=none;
 }
+    /* ============================================================
+   SISTEMA DE MISIONES DE RESPALDO (LABORATORIO)
+   Se ejecuta después de cargar el progreso.
+   Verifica misiones que los juegos individuales podrían no haber
+   registrado por bug, y las completa si se cumplen.
+   NOTA: Solo suma los pts de la misión misma, NO los pts de preguntas.
+   ============================================================ */
+async function checkLabMissionsBackup(uid) {
+    if (!uid) return;
+    try {
+        /* 1. Cargar stats principales del usuario */
+        const statsSnap = await getDoc(doc(db, 'users', uid, 'stats', 'main'));
+        const stats = statsSnap.exists() ? statsSnap.data() : {};
+        const totalStars = stats.totalStars || 0;
+        const gamesWonList = stats.gamesWonList || [];
+        const totalMissionsCompleted = stats.totalMissionsCompleted || 0;
+        const currentStreak = stats.currentStreak || 0;
+        const consecutiveSuccesses = stats.consecutiveSuccesses || 0;
+
+        /* 2. Cargar misiones ya completadas */
+        const missionsSnap = await getDocs(collection(db, 'users', uid, 'missions'));
+        const completed = {};
+        missionsSnap.forEach(d => { if (d.data().completed) completed[d.id] = true; });
+
+        /* 3. Cargar progreso de los 9 juegos de ESTE laboratorio */
+        const progressSnap = await getDocs(collection(db, 'users', uid, 'progress'));
+        const progressMap = {};
+        progressSnap.forEach(d => { progressMap[d.id] = d.data().status || 'not_started'; });
+
+        const LAB_GAMES = [
+            'patrones-crecientes', 'patrones-decrecientes', 'secuencias-visuales',
+            'corregir-argumento', 'detectar-falacias', 'completar-tablas',
+            'relacion-causa-efecto', 'cambiar-datos', 'contradicciones'
+        ];
+
+        /* Contar cuántos de estos 9 están completados */
+        const labCompletedCount = LAB_GAMES.filter(g => progressMap[g] === 'completed').length;
+
+        /* Contar cuántos juegos distintos en TODA la plataforma están completados */
+        const allCompletedGames = Object.values(progressMap).filter(s => s === 'completed').length;
+
+        /* 4. Definir las misiones que vamos a verificar aquí */
+        const LAB_MISSIONS = [
+            { id: 9,  check: () => totalStars >= 200,                                         pts: 30 },
+            { id: 10, check: () => consecutiveSuccesses >= 3,                                 pts: 50 },
+            { id: 13, check: () => allCompletedGames >= 3,                                    pts: 60 },
+            { id: 17, check: () => totalStars >= 500,                                         pts: 50 },
+            { id: 23, check: () => allCompletedGames >= 5,                                    pts: 50 },
+            { id: 26, check: () => totalStars >= 1000,                                        pts: 50 },
+            { id: 32, check: () => labCompletedCount >= 9,                                    pts: 100 },
+            { id: 36, check: () => totalStars >= 2000,                                        pts: 60 },
+            { id: 39, check: () => consecutiveSuccesses >= 10,                                pts: 100 },
+            { id: 43, check: () => totalStars >= 3000,                                        pts: 120 },
+            { id: 44, check: () => currentStreak >= 10,                                       pts: 130 }
+        ];
+
+        /* 5. Verificar cada misión y completar si aplica */
+        let newMissionsFound = 0;
+        let totalMissionPts = 0;
+
+        for (const m of LAB_MISSIONS) {
+            const missionKey = `mission_${m.id}`;
+            /* Solo si NO fue completada antes (por bug o lo que sea) */
+            if (!completed[missionKey] && m.check()) {
+                completed[missionKey] = true;
+                newMissionsFound++;
+                totalMissionPts += m.pts;
+                /* Guardar la misión en Firebase */
+                await setDoc(doc(db, 'users', uid, 'missions', missionKey), {
+                    completed: true,
+                    completedAt: serverTimestamp(),
+                    source: 'lab-backup'
+                });
+            }
+        }
+
+        /* 6. Si se completaron misiones nuevas, actualizar el totalStars y totalMissionsCompleted */
+        if (newMissionsFound > 0) {
+            const newTotalStars = totalStars + totalMissionPts;
+            const newTotalMissions = totalMissionsCompleted + newMissionsFound;
+            await setDoc(doc(db, 'users', uid, 'stats', 'main'), {
+                totalStars: newTotalStars,
+                totalMissionsCompleted: newTotalMissions
+            }, { merge: true });
+
+            /* Mostrar toast informativo */
+            const toastEl = document.getElementById('toast');
+            if (toastEl) {
+                toastEl.textContent = `Se verificaron ${newMissionsFound} misión(es) pendiente(s) y se sumaron ${totalMissionPts} estrellas.`;
+                toastEl.classList.add('show');
+                setTimeout(() => toastEl.classList.remove('show'), 4000);
+            }
+        }
+    } catch (e) {
+        console.warn('Error en checkLabMissionsBackup:', e);
+    }
+}
 
 /* === Cargar progreso de Firebase === */
 async function loadProgress(uid){
