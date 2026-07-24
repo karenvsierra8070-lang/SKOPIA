@@ -114,6 +114,8 @@
         .activity-card:nth-child(8){animation-delay:.4s;}
         .activity-card:nth-child(9){animation-delay:.45s;}
         @keyframes cardIn{to{opacity:1;transform:translateY(0);}}
+        @keyframes medalPop{from{opacity:0;transform:scale(.85);}to{opacity:1;transform:scale(1);}}
+@keyframes medalSpin{from{transform:rotate(-30deg) scale(0);}to{transform:rotate(0) scale(1);}}
         .activity-card:hover{transform:translateY(-6px);box-shadow:0 10px 28px var(--sombra-md);}
         .activity-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;}
         .activity-card:nth-child(odd)::before{background:var(--oliva-oscuro);}
@@ -223,6 +225,16 @@
         </div>
 
         <div class="activity-grid" id="activity-grid"></div>
+    </div>
+</div>
+    <!-- Overlay de medallas para misiones de respaldo -->
+<div class="medal-overlay" id="medal-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:5000;display:none;place-items:center;">
+    <div style="background:#fff;border-radius:14px;padding:36px 32px;max-width:380px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:medalPop .4s ease;">
+        <div style="font-size:3.5rem;color:#f9a825;margin-bottom:14px;animation:medalSpin .6s ease .2s both;"><i class="fas fa-medal"></i></div>
+        <h3 style="font-family:'Patrick Hand',cursive;font-size:1.6rem;color:var(--oliva-oscuro);margin-bottom:8px;">Misión Completada</h3>
+        <p id="medal-mission-name" style="font-size:1rem;color:#555;margin-bottom:6px;"></p>
+        <p id="medal-mission-pts" style="font-family:'Orbitron',monospace;font-size:1.3rem;font-weight:700;color:var(--oliva-medio);margin-bottom:22px;"></p>
+        <button id="medal-close-btn" style="background:var(--oliva-oscuro);color:var(--crema);padding:10px 32px;border-radius:24px;font-size:.92rem;font-weight:600;cursor:pointer;border:none;">Gracias</button>
     </div>
 </div>
 
@@ -400,6 +412,43 @@ function renderActivities(progressMap={}){
    registrado por bug, y las completa si se cumplen.
    NOTA: Solo suma los pts de la misión misma, NO los pts de preguntas.
    ============================================================ */
+/* ============================================================
+   SISTEMA DE MISIONES DE RESPALDO (LABORATORIO)
+   Verifica misiones que los juegos individuales podrían no haber
+   registrado por bug, y las completa con medalla individual.
+   NOTA: Solo suma los pts de la misión misma, NO los pts de preguntas.
+   ============================================================ */
+
+/* Nombres de las misiones para mostrar en la medalla */
+const LAB_MISSION_NAMES = {
+    9:  "Acumula tus primeras 200 estrellas",
+    10: "Completa 3 misiones seguidas",
+    13: "Gana 3 juegos distintos",
+    17: "Obtén 500 estrellas acumuladas",
+    23: "Termina 5 juegos de práctica",
+    26: "Suma 1000 estrellas totales",
+    32: "Completa todos los juegos de este módulo",
+    36: "Obtén 2000 estrellas acumuladas",
+    39: "Completa 10 misiones seguidas sin fallar",
+    43: "Consigue 3000 estrellas",
+    44: "Estudia 10 días seguidos"
+};
+
+let _medalQueue = [];
+
+function _showNextMedal() {
+    const overlay = document.getElementById('medal-overlay');
+    if (!overlay) return;
+    if (!_medalQueue.length) {
+        overlay.style.display = 'none';
+        return;
+    }
+    const m = _medalQueue[0];
+    document.getElementById('medal-mission-name').textContent = m.name;
+    document.getElementById('medal-mission-pts').textContent = `+${m.pts} puntos`;
+    overlay.style.display = 'grid';
+}
+
 async function checkLabMissionsBackup(uid) {
     if (!uid) return;
     try {
@@ -407,7 +456,6 @@ async function checkLabMissionsBackup(uid) {
         const statsSnap = await getDoc(doc(db, 'users', uid, 'stats', 'main'));
         const stats = statsSnap.exists() ? statsSnap.data() : {};
         const totalStars = stats.totalStars || 0;
-        const gamesWonList = stats.gamesWonList || [];
         const totalMissionsCompleted = stats.totalMissionsCompleted || 0;
         const currentStreak = stats.currentStreak || 0;
         const consecutiveSuccesses = stats.consecutiveSuccesses || 0;
@@ -417,7 +465,7 @@ async function checkLabMissionsBackup(uid) {
         const completed = {};
         missionsSnap.forEach(d => { if (d.data().completed) completed[d.id] = true; });
 
-        /* 3. Cargar progreso de los 9 juegos de ESTE laboratorio */
+        /* 3. Cargar progreso de TODOS los juegos de la plataforma */
         const progressSnap = await getDocs(collection(db, 'users', uid, 'progress'));
         const progressMap = {};
         progressSnap.forEach(d => { progressMap[d.id] = d.data().status || 'not_started'; });
@@ -428,39 +476,41 @@ async function checkLabMissionsBackup(uid) {
             'relacion-causa-efecto', 'cambiar-datos', 'contradicciones'
         ];
 
-        /* Contar cuántos de estos 9 están completados */
+        /* Cuántos de los 9 de ESTE laboratorio están completados */
         const labCompletedCount = LAB_GAMES.filter(g => progressMap[g] === 'completed').length;
 
-        /* Contar cuántos juegos distintos en TODA la plataforma están completados */
+        /* Cuántos juegos de TODA la plataforma están completados */
         const allCompletedGames = Object.values(progressMap).filter(s => s === 'completed').length;
 
-        /* 4. Definir las misiones que vamos a verificar aquí */
+        /* 4. Definir misiones a verificar */
         const LAB_MISSIONS = [
-            { id: 9,  check: () => totalStars >= 200,                                         pts: 30 },
-            { id: 10, check: () => consecutiveSuccesses >= 3,                                 pts: 50 },
-            { id: 13, check: () => allCompletedGames >= 3,                                    pts: 60 },
-            { id: 17, check: () => totalStars >= 500,                                         pts: 50 },
-            { id: 23, check: () => allCompletedGames >= 5,                                    pts: 50 },
-            { id: 26, check: () => totalStars >= 1000,                                        pts: 50 },
-            { id: 32, check: () => labCompletedCount >= 9,                                    pts: 100 },
-            { id: 36, check: () => totalStars >= 2000,                                        pts: 60 },
-            { id: 39, check: () => consecutiveSuccesses >= 10,                                pts: 100 },
-            { id: 43, check: () => totalStars >= 3000,                                        pts: 120 },
-            { id: 44, check: () => currentStreak >= 10,                                       pts: 130 }
+            { id: 9,  check: () => totalStars >= 200,                    pts: 30  },
+            { id: 10, check: () => consecutiveSuccesses >= 3,            pts: 50  },
+            { id: 13, check: () => allCompletedGames >= 3,               pts: 60  },
+            { id: 17, check: () => totalStars >= 500,                    pts: 50  },
+            { id: 23, check: () => allCompletedGames >= 5,               pts: 50  },
+            { id: 26, check: () => totalStars >= 1000,                   pts: 50  },
+            { id: 32, check: () => labCompletedCount >= 9,               pts: 100 },
+            { id: 36, check: () => totalStars >= 2000,                   pts: 60  },
+            { id: 39, check: () => consecutiveSuccesses >= 10,           pts: 100 },
+            { id: 43, check: () => totalStars >= 3000,                   pts: 120 },
+            { id: 44, check: () => currentStreak >= 10,                  pts: 130 }
         ];
 
-        /* 5. Verificar cada misión y completar si aplica */
-        let newMissionsFound = 0;
+        /* 5. Verificar y encolar */
+        _medalQueue = [];
         let totalMissionPts = 0;
 
         for (const m of LAB_MISSIONS) {
             const missionKey = `mission_${m.id}`;
-            /* Solo si NO fue completada antes (por bug o lo que sea) */
             if (!completed[missionKey] && m.check()) {
                 completed[missionKey] = true;
-                newMissionsFound++;
                 totalMissionPts += m.pts;
-                /* Guardar la misión en Firebase */
+                _medalQueue.push({
+                    name: LAB_MISSION_NAMES[m.id] || `Misión ${m.id}`,
+                    pts: m.pts
+                });
+                /* Guardar en Firebase */
                 await setDoc(doc(db, 'users', uid, 'missions', missionKey), {
                     completed: true,
                     completedAt: serverTimestamp(),
@@ -469,27 +519,28 @@ async function checkLabMissionsBackup(uid) {
             }
         }
 
-        /* 6. Si se completaron misiones nuevas, actualizar el totalStars y totalMissionsCompleted */
-        if (newMissionsFound > 0) {
-            const newTotalStars = totalStars + totalMissionPts;
-            const newTotalMissions = totalMissionsCompleted + newMissionsFound;
+        /* 6. Actualizar totalStars y totalMissionsCompleted si hubo nuevas */
+        if (_medalQueue.length > 0) {
             await setDoc(doc(db, 'users', uid, 'stats', 'main'), {
-                totalStars: newTotalStars,
-                totalMissionsCompleted: newTotalMissions
+                totalStars: totalStars + totalMissionPts,
+                totalMissionsCompleted: totalMissionsCompleted + _medalQueue.length
             }, { merge: true });
 
-            /* Mostrar toast informativo */
-            const toastEl = document.getElementById('toast');
-            if (toastEl) {
-                toastEl.textContent = `Se verificaron ${newMissionsFound} misión(es) pendiente(s) y se sumaron ${totalMissionPts} estrellas.`;
-                toastEl.classList.add('show');
-                setTimeout(() => toastEl.classList.remove('show'), 4000);
-            }
+            /* Mostrar la primera medalla; las demás van saliendo al hacer click */
+            _showNextMedal();
         }
     } catch (e) {
         console.warn('Error en checkLabMissionsBackup:', e);
     }
 }
+
+/* Botón de cerrar medalla: pasa a la siguiente o cierra */
+document.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'medal-close-btn') {
+        _medalQueue.shift();
+        _showNextMedal();
+    }
+});
 
 /* === Cargar progreso de Firebase === */
 async function loadProgress(uid){
@@ -508,11 +559,13 @@ async function loadProgress(uid){
 }
 
 /* === Init === */
-onAuthStateChanged(auth,user=>{
+onAuthStateChanged(auth,async(user)=>{
     if(!user){window.location.href='index.html';return;}
     document.getElementById('sidebar-username').textContent=user.displayName||'Estudiante';
-    try{getDoc(doc(db,'users',user.uid,'profile','main')).then(s=>{if(s.exists()){const d=s.data();document.getElementById('sidebar-program').textContent=d.program||'';}});}catch(e){}
-    loadProgress(user.uid);
+    try{const s=await getDoc(doc(db,'users',user.uid,'profile','main'));if(s.exists()){const d=s.data();document.getElementById('sidebar-program').textContent=d.program||'';}}catch(e){}
+    await loadProgress(user.uid);
+    /* ← RESPALDO DE MISIONES: se ejecuta después de cargar todo */
+    await checkLabMissionsBackup(user.uid);
     document.getElementById('logout-btn').addEventListener('click',e=>{e.preventDefault();signOut(auth).then(()=>window.location.href='index.html');});
 });
 
