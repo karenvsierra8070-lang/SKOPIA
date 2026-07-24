@@ -137,12 +137,23 @@ a{text-decoration:none;color:inherit;}button{cursor:pointer;border:none;backgrou
 .proof-feedback{display:none;margin-top:16px;padding:14px 18px;border-radius:8px;border-left:4px solid var(--oliva-medio);background:rgba(90,97,51,0.06);font-size:.88rem;line-height:1.5;color:#333;}
 .proof-feedback.show{display:block;}
 .converse-feedback{margin-top:16px;font-weight:600;font-size:1rem;min-height:24px;text-align:center;}
-.refresh-wrap{text-align:center;margin-top:28px;padding-top:16px;border-top:1px solid var(--oliva-palido);}
+.refresh-wrap{text-align:center;margin-top:28px;padding-top:16px;border-top:1px solid var(--oliva-palido);display:flex;justify-content:center;gap:14px;flex-wrap:wrap;}
+.btn-finish{padding:12px 32px;background:#2e7d32;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:1rem;transition:all .2s;display:inline-flex;align-items:center;gap:8px;}
+.btn-finish:hover{background:#1b5e20;transform:translateY(-2px);}
 .completion-banner{display:none;text-align:center;padding:28px;margin-top:20px;background:linear-gradient(135deg,rgba(39,43,0,0.06),rgba(90,97,51,0.08));border-radius:var(--radius);border:2px solid var(--oliva-claro);}
 .completion-banner.show{display:block;animation:popIn .5s ease;}
 .completion-banner h3{font-family:'Patrick Hand',cursive;font-size:1.6rem;color:var(--oliva-oscuro);margin-bottom:8px;}
 .completion-banner p{color:var(--oliva-medio);font-size:.95rem;margin-bottom:16px;}
 .completion-banner .final-score{font-family:'Orbitron',monospace;font-size:2rem;font-weight:700;color:#2e7d32;margin:8px 0;}
+.fail-banner{display:none;text-align:center;padding:28px;margin-top:20px;background:linear-gradient(135deg,rgba(211,47,47,0.04),rgba(211,47,47,0.08));border-radius:var(--radius);border:2px solid #ef9a9a;}
+.fail-banner.show{display:block;animation:popIn .5s ease;}
+.fail-banner h3{font-family:'Patrick Hand',cursive;font-size:1.6rem;color:#d32f2f;margin-bottom:8px;}
+.fail-banner p{color:#666;font-size:.95rem;margin-bottom:10px;line-height:1.5;}
+.fail-banner .final-score{font-family:'Orbitron',monospace;font-size:2rem;font-weight:700;color:#d32f2f;margin:8px 0;}
+.fail-banner .missing-list{text-align:left;max-width:400px;margin:16px auto 0;padding:0;list-style:none;}
+.fail-banner .missing-list li{padding:8px 0;font-size:.9rem;color:#555;border-bottom:1px solid #eee;display:flex;align-items:center;gap:8px;}
+.fail-banner .missing-list li:last-child{border-bottom:none;}
+.fail-banner .missing-list li i{color:#d32f2f;font-size:.8rem;flex-shrink:0;}
 .toast{position:fixed;bottom:24px;right:24px;background:#fff;padding:14px 20px;border-radius:var(--radius-sm);border-left:4px solid var(--oliva-medio);box-shadow:0 8px 24px var(--sombra-md);z-index:6000;font-size:.88rem;transform:translateY(100px);opacity:0;transition:all .35s ease;max-width:380px;display:flex;align-items:center;gap:8px;}
 .toast.show{transform:translateY(0);opacity:1;}
 .toast.success{border-left-color:#2e7d32;}.toast.error{border-left-color:#d32f2f;}
@@ -156,6 +167,7 @@ a{text-decoration:none;color:inherit;}button{cursor:pointer;border:none;backgrou
 .logic-box{padding:14px 18px;font-size:.9rem;}
 .counterexample-area{flex-direction:column;}
 .score-bar{gap:8px;}.score-item{min-width:90px;padding:8px 12px;}.score-item .score-val{font-size:.95rem;}
+.refresh-wrap{flex-direction:column;align-items:stretch;}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;}}
 </style>
@@ -241,8 +253,11 @@ a{text-decoration:none;color:inherit;}button{cursor:pointer;border:none;backgrou
                 <p style="font-size:.9rem;color:var(--oliva-medio);margin-bottom:14px;">Dictamina la validez de estos argumentos.</p>
                 <div class="social-grid" id="social-grid"></div>
                 <div class="refresh-wrap">
-                    <button class="btn-check" id="btn-refresh-audits" style="background:var(--oliva-oscuro);padding:12px 32px;font-size:1rem;">
+                    <button class="btn-check" id="btn-refresh-audits" style="background:var(--oliva-oscuro);padding:12px 24px;font-size:.95rem;">
                         <i class="fas fa-sync-alt"></i> Cargar Nuevos Casos
+                    </button>
+                    <button class="btn-finish" id="btn-finish">
+                        <i class="fas fa-flag-checkered"></i> Terminar Ejercicios
                     </button>
                 </div>
             </div>
@@ -252,6 +267,16 @@ a{text-decoration:none;color:inherit;}button{cursor:pointer;border:none;backgrou
                 <p>Has demostrado un dominio sólido de la lógica argumentativa.</p>
                 <div class="final-score" id="final-score-display">0 / 75</div>
                 <a href="lab-logico-matematico.html" class="start-btn" style="margin-top:8px;"><i class="fas fa-arrow-left"></i> Volver al Laboratorio</a>
+            </div>
+
+            <div class="fail-banner" id="fail-banner">
+                <h3><i class="fas fa-exclamation-triangle" style="color:#d32f2f"></i> Aún no completas todo</h3>
+                <div class="final-score" id="fail-score-display">0 / 75</div>
+                <p>Revisa lo que falta antes de terminar:</p>
+                <ul class="missing-list" id="missing-list"></ul>
+                <button class="btn-check" id="btn-dismiss-fail" style="background:var(--oliva-medio);margin-top:20px;padding:12px 32px;font-size:1rem;">
+                    <i class="fas fa-arrow-up"></i> Seguir Practicando
+                </button>
             </div>
         </div>
     </div>
@@ -284,21 +309,15 @@ const app=initializeApp(fbConfig);const auth=getAuth(app);const db=getFirestore(
 
 const GAME_ID='corregir-argumento';
 const MAX_SCORE=75;
-const PASS=Math.ceil(MAX_SCORE*0.6);
+const PASS=45;
 
 const menuData=[{group:'Contenido Genérico',icon:'fa-book-open',cats:[{title:'3.1 Razonamiento Cuantitativo',icon:'fa-calculator',subs:[{title:'3.1.1 Prácticas Interactivas',links:[{label:'Laboratorio lógico matemático',url:'lab-logico-matematico.html'},{label:'Razonamiento lógico matemático',url:'razonamiento-logico-matematico.html'},{label:'Laboratorio de análisis gráfico',url:'lab-analisis-grafico-rc.html'}]},{title:'3.1.2 Prácticas Teóricas',links:[{label:'Aritmética básica',url:'aritmetica-basica.html'},{label:'Porcentajes y Razones',url:'porcentajes-razones.html'},{label:'Álgebra',url:'algebra.html'},{label:'Funciones',url:'funciones.html'},{label:'Geometría',url:'geometria.html'},{label:'Medidas',url:'medidas.html'},{label:'Razonamiento lógico',url:'razonamiento-logico-teoria.html'},{label:'Probabilidad',url:'probabilidad.html'},{label:'Estadística descriptiva',url:'estadistica-descriptiva.html'},{label:'Interpretación de datos',url:'interpretacion-datos.html'}]}]},{title:'3.2 Lectura Crítica',icon:'fa-book-reader',subs:[{title:'3.2.1 Prácticas Interactivas',links:[{label:'Biblioteca',url:'biblioteca.html'},{label:'Talleres de escritura y análisis',url:'talleres-escritura-analisis.html'},{label:'Entrenador de velocidad de lectura',url:'velocidad-lectura.html'}]},{title:'3.2.2 Prácticas Teóricas',links:[{label:'Comprensión literal',url:'comprension-literal.html'},{label:'Comprensión inferencial',url:'comprension-inferencial.html'},{label:'Comprensión crítica',url:'comprension-critica.html'},{label:'Estructura del texto',url:'estructura-texto.html'},{label:'Textos narrativos',url:'textos-narrativos.html'},{label:'Textos expositivos',url:'textos-expositivos.html'},{label:'Textos argumentativos',url:'textos-argumentativos.html'},{label:'Textos científicos',url:'textos-cientificos.html'},{label:'Textos periodísticos',url:'textos-periodisticos.html'},{label:'Análisis intertextual',url:'analisis-intertextual.html'}]}]},{title:'3.3 Competencias Ciudadanas',icon:'fa-balance-scale',subs:[{title:'3.3.1 Prácticas Interactivas',links:[{label:'Dilemas + decisiones',url:'dilemas-decisiones.html'},{label:'Contextos sociales',url:'contextos-sociales.html'},{label:'Archivos de casos reales',url:'archivos-casos-reales.html'},{label:'Laboratorio de estrategias',url:'lab-estrategias.html'}]},{title:'3.3.2 Prácticas Teóricas',links:[{label:'Derechos humanos',url:'derechos-humanos.html'},{label:'Constitución política de Colombia',url:'constitucion-politica.html'},{label:'Democracia',url:'democracia.html'},{label:'Estado y gobierno',url:'estado-gobierno.html'},{label:'Justicia y equidad',url:'justicia-equidad.html'},{label:'Resolución pacífica de conflictos',url:'resolucion-pacifica.html'},{label:'Ética y responsabilidad social',url:'etica-responsabilidad.html'},{label:'Diversidad cultural',url:'diversidad-cultural.html'},{label:'Ciudadanía digital',url:'ciudadania-digital.html'},{label:'Sostenibilidad',url:'sostenibilidad.html'}]}]},{title:'3.4 Inglés',icon:'fa-globe',subs:[{title:'3.4.1 Prácticas Interactivas',links:[{label:'Comprensión lectora en inglés',url:'comprension-lectora-ingles.html'},{label:'Vocabulario en contexto',url:'vocabulario-contexto-ingles.html'},{label:'Cohesión en inglés',url:'cohesion-ingles.html'}]},{title:'3.4.2 Prácticas Teóricas',links:[{label:'Reading comprehension',url:'reading-comprehension.html'},{label:'Vocabulary in context',url:'vocabulary-context.html'},{label:'Grammar',url:'grammar.html'},{label:'Functional language',url:'functional-language.html'},{label:'Connectors and linking words',url:'connectors-linking.html'},{label:'Text types',url:'text-types.html'},{label:'Error identification',url:'error-identification.html'},{label:'Synonym replacement',url:'synonym-replacement.html'},{label:'Everyday situations',url:'everyday-situations.html'},{label:'Academic vocabulary',url:'academic-vocabulary.html'}]}]},{title:'3.5 Comunicación Escrita',icon:'fa-pen-fancy',subs:[{title:'Subtemas',links:[{label:'Planteamiento y Argumentación',url:'planteamiento-argumentacion.html'},{label:'Organizar el texto',url:'organizar-texto.html'},{label:'Forma de expresión',url:'forma-expresion.html'},{label:'Precisión Semántica y Claridad',url:'precision-semantica.html'},{label:'Gestión del Tiempo y de la Hoja de Borrador',url:'gestion-tiempo-borrador.html'},{label:'Pertinencia y Enfoque',url:'pertinencia-enfoque.html'}]}]}]},{group:'Contenido Específico',icon:'fa-graduation-cap',cats:[{title:'4.1 Administración',icon:'fa-briefcase',subs:[{title:'Subtemas',links:[{label:'Formulación, Evaluación y Gestión de Proyectos',url:'formulacion-gestion-proyectos-admon.html'},{label:'Gestión de organizaciones',url:'gestion-organizaciones.html'},{label:'Gestión Financiera',url:'gestion-financiera-admon.html'}]}]},{title:'4.2 Trabajo Social',icon:'fa-hands-helping',subs:[{title:'Subtemas',links:[{label:'Investigación en ciencias sociales',url:'investigacion-ciencias-sociales-ts.html'},{label:'Intervención en proyectos sociales',url:'intervencion-proyectos-sociales.html'}]}]},{title:'4.3 Licenciatura Educación Infantil',icon:'fa-child',subs:[{title:'Subtemas',links:[{label:'Enseñar',url:'ensenar.html'},{label:'Formar',url:'formar.html'},{label:'Evaluar',url:'evaluar.html'}]}]},{title:'4.4 Psicología',icon:'fa-brain',subs:[{title:'Subtemas',links:[{label:'Análisis de problemas psicológicos',url:'analisis-problemas-psicologicos.html'},{label:'Investigación en ciencias sociales',url:'investigacion-ciencias-sociales-psico.html'},{label:'Intervención en procesos sociales',url:'intervencion-procesos-sociales.html'}]}]},{title:'4.5 Licenciatura Lenguas Extranjeras',icon:'fa-language',note:'Se cubre con Inglés genérico',links:[]},{title:'4.6 Contaduría Pública',icon:'fa-file-invoice-dollar',subs:[{title:'Subtemas',links:[{label:'Información y control contable',url:'informacion-control-contable.html'},{label:'Gestión Financiera',url:'gestion-financiera-contaduria.html'}]}]},{title:'4.7 Ingeniería Industrial',icon:'fa-industry',subs:[{title:'Subtemas',links:[{label:'Formulación de Proyectos de Ingeniería',url:'formulacion-proyectos-ing-industrial.html'},{label:'Diseño de Sistemas Productivos y Logísticos',url:'diseno-sistemas-productivos.html'},{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-industrial.html'}]}]},{title:'4.8 Diseño Gráfico',icon:'fa-palette',subs:[{title:'Subtemas',links:[{label:'Generación de Artefactos',url:'generacion-artefactos.html'}]}]},{title:'4.9 Ingeniería Electrónica',icon:'fa-microchip',subs:[{title:'Subtemas',links:[{label:'Formulación de Proyectos de Ingeniería',url:'formulacion-proyectos-ing-electronica.html'},{label:'Diseño de Sistemas de Control',url:'diseno-sistemas-control.html'},{label:'Pensamiento Científico Ciencias Físicas',url:'pensamiento-cientifico-fisicas.html'},{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-electronica.html'}]}]},{title:'4.10 Tecnología e Informática',icon:'fa-laptop-code',subs:[{title:'Subtemas',links:[{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-ti.html'}]}]},{title:'4.11 Comunicación Social y Periodismo',icon:'fa-newspaper',subs:[{title:'Subtemas',links:[{label:'Procesos comunicativos',url:'procesos-comunicativos.html'}]}]},{title:'4.12 Ingeniería de Sistemas',icon:'fa-server',subs:[{title:'Subtemas',links:[{label:'Formulación de Proyectos de Ingeniería',url:'formulacion-proyectos-ing-sistemas.html'},{label:'Diseño de software',url:'diseno-software.html'},{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-sistemas.html'}]}]}]}];
 
 const $=id=>document.getElementById(id);
 let uid=null,scoreLupa=0,scoreConverse=0,scoreAudit=0;
-let completionShown=false;
-
-/* ★★★ Flags de sección completada ★★★ */
-let lupaDone=false;       /* true cuando responde el modal (bien o mal) */
-let converseDone=false;   /* true cuando encuentra el contraejemplo */
-let auditsDone=false;     /* true cuando respondió las 5 tarjetas */
+let lupaDone=false,converseDone=false,auditsDone=false;
 let currentAuditSelections=[];
-
-const $=id=>document.getElementById(id);
+let finished=false;
 
 /* === SIDEBAR === */
 function renderMenu(){const nav=$('sidebar-nav');let h='<div class="menu-no-result" id="menu-no-result">Sin resultados</div>';menuData.forEach(g=>{h+=`<div class="menu-group-label"><i class="fas ${g.icon}"></i> ${g.group}</div>`;g.cats.forEach(cat=>{h+=`<div class="menu-cat" data-name="${cat.title.toLowerCase()}"><button class="menu-cat-btn" aria-expanded="false"><i class="cat-icon fas ${cat.icon}"></i><span>${cat.title}</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-cat-children">`;if(cat.note)h+=`<div class="menu-note">${cat.note}</div>`;if(cat.subs)cat.subs.forEach(sub=>{h+=`<div class="menu-sub" data-name="${sub.title.toLowerCase()}"><button class="menu-sub-btn" aria-expanded="false"><span>${sub.title}</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-sub-children">`;if(sub.links)sub.links.forEach(lk=>{h+=`<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;});h+='</div></div>';});if(cat.links&&cat.links.length)cat.links.forEach(lk=>{h+=`<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;});h+='</div></div>';});});nav.innerHTML=h;nav.querySelectorAll('.menu-cat-btn').forEach(b=>{b.addEventListener('click',()=>{const c=b.parentElement,w=c.classList.contains('open');c.parentElement.querySelectorAll(':scope>.menu-cat.open').forEach(s=>{if(s!==c)s.classList.remove('open');});c.classList.toggle('open',!w);b.setAttribute('aria-expanded',String(!w));});});nav.querySelectorAll('.menu-sub-btn').forEach(b=>{b.addEventListener('click',()=>{const s=b.parentElement,w=s.classList.contains('open');s.parentElement.querySelectorAll(':scope>.menu-sub.open').forEach(x=>{if(x!==s)x.classList.remove('open');});s.classList.toggle('open',!w);b.setAttribute('aria-expanded',String(!w));});});nav.querySelectorAll('.menu-link').forEach(lk=>{if(lk.getAttribute('href')==='argumento.html')lk.classList.add('active');});}
@@ -313,47 +332,87 @@ function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.fl
 
 function getTotal(){return scoreLupa+scoreConverse+scoreAudit;}
 
-/* ★★★ Verifica si TODAS las secciones están completadas ★★★ */
-function allSectionsDone(){
-    return lupaDone && converseDone && auditsDone;
-}
-
+/* Actualiza los números en pantalla. Nada más. Sin guardar, sin banner. */
 function updateScoreUI(){
     $('score-lupa').querySelector('.score-val').textContent=scoreLupa;
     $('score-converse').querySelector('.score-val').textContent=scoreConverse;
     $('score-audit').querySelector('.score-val').textContent=scoreAudit;
     const t=getTotal();
-    const totalEl=$('score-total').querySelector('.score-val');
-    totalEl.textContent=t+' / '+MAX_SCORE;
-    totalEl.parentElement.classList.toggle('done',t>=PASS);
-
-    saveProgress(t);
-
-    /* ★ Solo mostrar completado si: puntaje >= 45 Y las 3 secciones terminadas */
-    if(t>=PASS && !completionShown && allSectionsDone()){
-        completionShown=true;
-        $('final-score-display').textContent=t+' / '+MAX_SCORE;
-        $('completion-banner').classList.add('show');
-        $('completion-banner').scrollIntoView({behavior:'smooth',block:'center'});
-        toast('Actividad completada','success');
-    }
+    $('score-total').querySelector('.score-val').textContent=t+' / '+MAX_SCORE;
+    $('score-total').classList.toggle('done',t>=PASS);
 }
 
-async function saveProgress(score){
+/* Guarda en Firebase como in_progress siempre (solo el botón Terminar lo cambia a completed) */
+async function saveProgress(score,status){
     if(!uid)return;
-    /* ★ El status solo cambia a 'completed' si también todas las secciones están hechas */
-    const status=(score>=PASS && allSectionsDone())?'completed':'in_progress';
     try{
         await setDoc(doc(db,'users',uid,'progress',GAME_ID),{
-            status:status,
+            status:status||'in_progress',
             lastScore:score,
             lastVisited:serverTimestamp()
         },{merge:true});
-        console.log('[argumento] Guardado:',GAME_ID,'→',status,'(',score,'pts, secciones:',lupaDone,converseDone,auditsDone,')');
-    }catch(e){
-        console.warn('[argumento] Error guardando progreso',e);
-    }
+    }catch(e){console.warn('[argumento] Error guardando',e);}
 }
+
+/* ★★★ BOTÓN TERMINAR EJERCICIOS ★★★ */
+ $('btn-finish').addEventListener('click',()=>{
+    if(finished)return; /* Evitar múltiples clics */
+
+    const t=getTotal();
+    const missing=[];
+
+    /* Verificar cada sección */
+    if(!lupaDone){
+        missing.push('Auditor de Demostraciones: arrastra la lupa hasta el error y clasifícalo.');
+    }
+    if(!converseDone){
+        missing.push('Conversómetro: escribe un contraejemplo válido que rompa el inverso.');
+    }
+    if(!auditsDone){
+        const respondidas=currentAuditSelections.filter(s=>s!==null).length;
+        missing.push('Auditoría de Redes: has respondido '+respondidas+' de 5 analistas.');
+    }
+
+    /* Ocultar banners previos por si acaso */
+    $('completion-banner').classList.remove('show');
+    $('fail-banner').classList.remove('show');
+
+    if(missing.length===0 && t>=PASS){
+        /* ¡TODO COMPLETO Y PUNTUACIÓN SUFICIENTE! */
+        finished=true;
+        $('final-score-display').textContent=t+' / '+MAX_SCORE;
+        $('completion-banner').classList.add('show');
+        $('completion-banner').scrollIntoView({behavior:'smooth',block:'center'});
+        saveProgress(t,'completed');
+        toast('Actividad completada','success');
+
+        /* Deshabilitar botón terminar para que no se pueda volver a clicar */
+        $('btn-finish').style.opacity='0.5';
+        $('btn-finish').style.pointerEvents='none';
+
+    }else{
+        /* Faltan cosas */
+        $('fail-score-display').textContent=t+' / '+MAX_SCORE;
+        const ul=$('missing-list');
+        ul.innerHTML=missing.map(m=>'<li><i class="fas fa-times-circle"></i> '+m+'</li>').join('');
+
+        if(t<PASS && missing.length===0){
+            /* Todas las secciones hechas pero sin puntos suficientes */
+            ul.innerHTML='<li><i class="fas fa-times-circle"></i> Puntuación insuficiente: necesitas al menos '+PASS+' puntos y tienes '+t+'.</li>';
+        }
+
+        $('fail-banner').classList.add('show');
+        $('fail-banner').scrollIntoView({behavior:'smooth',block:'center'});
+        /* Sigue guardando como in_progress */
+        saveProgress(t,'in_progress');
+    }
+});
+
+/* Cerrar el banner de "aún no completas" */
+ $('btn-dismiss-fail').addEventListener('click',()=>{
+    $('fail-banner').classList.remove('show');
+    $('fail-banner').scrollIntoView({behavior:'smooth',block:'start'});
+});
 
 /* === GAME DATA === */
 const proofs=[
@@ -453,7 +512,6 @@ function closeModal(){$('logic-modal').classList.remove('active');}
 
  $('btn-validez').addEventListener('click',()=>{
     const fb=$('modal-feedback');
-    /* ★ Marcar sección como completada (bien o mal) */
     lupaDone=true;
     if(currentProof.type==='validez'){
         scoreLupa+=10;
@@ -464,11 +522,11 @@ function closeModal(){$('logic-modal').classList.remove('active');}
         fb.innerHTML='<strong style="color:#d32f2f">Incorrecto.</strong> El error era de <strong>solidez</strong>, no de validez. '+currentProof.explanation;
     }
     updateScoreUI();
+    saveProgress(getTotal(),'in_progress');
     setTimeout(closeModal,200);
 });
  $('btn-solidez').addEventListener('click',()=>{
     const fb=$('modal-feedback');
-    /* ★ Marcar sección como completada (bien o mal) */
     lupaDone=true;
     if(currentProof.type==='solidez'){
         scoreLupa+=10;
@@ -479,6 +537,7 @@ function closeModal(){$('logic-modal').classList.remove('active');}
         fb.innerHTML='<strong style="color:#d32f2f">Incorrecto.</strong> El error era de <strong>validez</strong>, no de solidez. '+currentProof.explanation;
     }
     updateScoreUI();
+    saveProgress(getTotal(),'in_progress');
     setTimeout(closeModal,200);
 });
  $('modal-close').addEventListener('click',closeModal);
@@ -499,10 +558,11 @@ function loadConverse(){
     const isMatch=currentConverse.counterexamples.some(ex=>ex.toLowerCase()===input);
     if(isMatch&&!converseFound){
         converseFound=true;
-        converseDone=true; /* ★ Marcar sección completada */
+        converseDone=true;
         scoreConverse+=15;updateScoreUI();
         $('converse-feedback').innerHTML='<span style="color:#2e7d32">¡Correcto! "'+raw+'" es un contraejemplo válido que rompe el inverso.</span>';
         toast('+15 puntos Conversómetro','success');
+        saveProgress(getTotal(),'in_progress');
     }else if(!isMatch){
         $('converse-feedback').innerHTML='<span style="color:#d32f2f">"'+raw+'" no rompe el inverso. Intenta con otro ejemplo.</span>';
     }else{
@@ -516,7 +576,7 @@ function loadConverse(){
 function loadAudits(){
     const selected=shuffle(audits).slice(0,5);
     currentAuditSelections=selected.map(()=>null);
-    auditsDone=false; /* ★ Reiniciar al cargar nuevos casos */
+    auditsDone=false;
     const grid=$('social-grid');grid.innerHTML='';
     selected.forEach((a,i)=>{
         const div=document.createElement('div');div.className='tweet-card';
@@ -563,17 +623,18 @@ function loadAudits(){
                 fb.innerHTML='<i class="fas fa-times-circle" style="color:#d32f2f"></i> Incorrecto. '+a.reason;
             }
 
-            /* ★ Verificar si ya respondió todas las tarjetas */
             if(currentAuditSelections.every(s=>s!==null)){
                 auditsDone=true;
             }
 
             updateScoreUI();
+            saveProgress(getTotal(),'in_progress');
         });
     });
 }
 
  $('btn-refresh-audits').addEventListener('click',()=>{
+    if(finished)return;
     loadAudits();
     toast('Nuevos casos cargados','success');
 });
@@ -583,7 +644,7 @@ function loadAudits(){
     $('video-section').style.display='none';
     $('game-wrapper').style.display='block';
     loadProof();loadConverse();loadAudits();
-    saveProgress(0);
+    saveProgress(0,'in_progress');
 });
 
 /* === CARGAR PROGRESO ANTERIOR === */
@@ -594,19 +655,19 @@ async function loadPreviousProgress(){
         if(snap.exists()){
             const data=snap.data();
             if(data.status==='completed'){
-                completionShown=true;
+                finished=true;
                 lupaDone=true;converseDone=true;auditsDone=true;
                 $('final-score-display').textContent=(data.lastScore||0)+' / '+MAX_SCORE;
                 $('video-section').style.display='none';
                 $('game-wrapper').style.display='block';
                 loadProof();loadConverse();loadAudits();
+                $('btn-finish').style.opacity='0.5';
+                $('btn-finish').style.pointerEvents='none';
                 setTimeout(()=>{$('completion-banner').classList.add('show');},500);
                 toast('Actividad previamente completada ('+data.lastScore+' pts)','success');
             }
         }
-    }catch(e){
-        console.warn('[argumento] No se pudo cargar progreso previo',e);
-    }
+    }catch(e){console.warn('[argumento] No se pudo cargar progreso previo',e);}
 }
 
 /* === AUTH INIT === */
@@ -616,10 +677,7 @@ onAuthStateChanged(auth,user=>{
     $('sidebar-username').textContent=user.displayName||'Estudiante';
     try{
         getDoc(doc(db,'users',user.uid,'profile','main')).then(s=>{
-            if(s.exists()){
-                const d=s.data();
-                $('sidebar-program').textContent=d.program||'';
-            }
+            if(s.exists()){$('sidebar-program').textContent=s.data().program||'';}
         });
     }catch(e){}
     loadPreviousProgress();
