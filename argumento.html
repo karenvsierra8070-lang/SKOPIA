@@ -128,25 +128,29 @@ a{text-decoration:none;color:inherit;}button{cursor:pointer;border:none;backgrou
 .glitch-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,0,0,0.15);z-index:3000;pointer-events:none;display:none;mix-blend-mode:multiply;}
 .glitch-active{display:block;animation:glitch-anim .2s infinite;}
 @keyframes glitch-anim{0%{transform:translate(0);}25%{transform:translate(-5px,5px);}50%{transform:translate(5px,-5px);}75%{transform:translate(-5px,-5px);}100%{transform:translate(0);}}
-.global-score{display:inline-block;background:#2e7d32;color:white;padding:8px 20px;border-radius:20px;font-weight:700;font-size:.9rem;margin-bottom:20px;}
-.toast{position:fixed;bottom:24px;right:24px;background:#fff;padding:14px 20px;border-radius:var(--radius-sm);border-left:4px solid var(--oliva-medio);box-shadow:0 8px 24px var(--sombra-md);z-index:6000;font-size:.88rem;transform:translateY(100px);opacity:0;transition:all .35s ease;max-width:380px;display:flex;align-items:center;gap:8px;}
-.toast.show{transform:translateY(0);opacity:1;}
-.toast.success{border-left-color:#2e7d32;}.toast.error{border-left-color:#d32f2f;}
+.score-bar{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:24px;flex-wrap:wrap;}
+.score-item{background:#fff;border-radius:var(--radius-sm);padding:10px 18px;box-shadow:0 2px 8px var(--sombra);text-align:center;min-width:120px;}
+.score-item .score-val{font-family:'Orbitron',monospace;font-size:1.1rem;font-weight:700;color:var(--oliva-medio);}
+.score-item .score-label{font-size:.72rem;color:var(--oliva-claro);margin-top:2px;}
+.score-item.done .score-val{color:#2e7d32;}
 .hint-text{font-size:.82rem;color:#888;text-align:center;margin-top:12px;}
 .proof-feedback{display:none;margin-top:16px;padding:14px 18px;border-radius:8px;border-left:4px solid var(--oliva-medio);background:rgba(90,97,51,0.06);font-size:.88rem;line-height:1.5;color:#333;}
 .proof-feedback.show{display:block;}
 .converse-feedback{margin-top:16px;font-weight:600;font-size:1rem;min-height:24px;text-align:center;}
 .refresh-wrap{text-align:center;margin-top:28px;padding-top:16px;border-top:1px solid var(--oliva-palido);}
+.toast{position:fixed;bottom:24px;right:24px;background:#fff;padding:14px 20px;border-radius:var(--radius-sm);border-left:4px solid var(--oliva-medio);box-shadow:0 8px 24px var(--sombra-md);z-index:6000;font-size:.88rem;transform:translateY(100px);opacity:0;transition:all .35s ease;max-width:380px;display:flex;align-items:center;gap:8px;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{border-left-color:#2e7d32;}.toast.error{border-left-color:#d32f2f;}
 @media(max-width:768px){
 .sidebar{transform:translateX(calc(-1 * var(--sidebar-w)));}.sidebar.open{transform:translateX(0);}
 .main-wrap{margin-left:0!important;}
 .topbar{padding:0 16px;}
 .page-content{padding:16px 16px 120px;}
 .modal-options{grid-template-columns:1fr;}
-.magnifying-glass{width:65px;height:65px;}
-.magnifying-glass::after{font-size:24px;}
+.magnifying-glass{width:65px;height:65px;}.magnifying-glass::after{font-size:24px;}
 .logic-box{padding:14px 18px;font-size:.9rem;}
 .counterexample-area{flex-direction:column;}
+.score-bar{gap:8px;}.score-item{min-width:90px;padding:8px 12px;}.score-item .score-val{font-size:.95rem;}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;}}
 </style>
@@ -194,7 +198,12 @@ a{text-decoration:none;color:inherit;}button{cursor:pointer;border:none;backgrou
         </div>
 
         <div id="game-wrapper" style="display:none">
-            <span class="global-score" id="global-score">Puntos: 0</span>
+            <div class="score-bar">
+                <div class="score-item" id="score-lupa"><div class="score-val">0</div><div class="score-label">Lupa</div></div>
+                <div class="score-item" id="score-converse"><div class="score-val">0</div><div class="score-label">Conversómetro</div></div>
+                <div class="score-item" id="score-audit"><div class="score-val">0</div><div class="score-label">Auditoría</div></div>
+                <div class="score-item" id="score-total"><div class="score-val">0 / 75</div><div class="score-label">Total</div></div>
+            </div>
 
             <div class="card">
                 <div class="card-title"><i class="fas fa-search"></i> Auditor de Demostraciones</div>
@@ -215,7 +224,7 @@ a{text-decoration:none;color:inherit;}button{cursor:pointer;border:none;backgrou
                     <div class="logic-box inverse" id="converse-box">¿Cuál es el inverso?</div>
                     <div class="inverse-arrow-area"><i class="fas fa-arrow-up"></i> <span>EL RETO</span></div>
                     <div class="counterexample-area">
-                        <input type="text" id="counter-input" class="input-counter" placeholder="Ej: 9, Triángulo, Manguera...">
+                        <input type="text" id="counter-input" class="input-counter" placeholder="Ej: 9, Triángulo, Manguera, Leche...">
                         <button class="btn-check" id="btn-check-counter">Comprobar</button>
                     </div>
                     <div id="converse-feedback" class="converse-feedback"></div>
@@ -260,39 +269,56 @@ import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.
 
 const fbConfig={apiKey:"AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",projectId:"skopia-aa786",storageBucket:"skopia-aa786.firebasestorage.app",messagingSenderId:"719823055099",appId:"1:719823055099:web:7d91ea29e4b2dcbb9b685e",authDomain:"skopia-aa786.firebaseapp.com"};
 const app=initializeApp(fbConfig);const auth=getAuth(app);const db=getFirestore(app);
-const GAME_ID='corregir-argumento';const TOTAL_ROUNDS=5;const PASS=Math.ceil(TOTAL_ROUNDS*0.6);
+const GAME_ID='corregir-argumento';
+const MAX_SCORE=75;
+const PASS=Math.ceil(MAX_SCORE*0.6);
 
 const menuData=[{group:'Contenido Genérico',icon:'fa-book-open',cats:[{title:'3.1 Razonamiento Cuantitativo',icon:'fa-calculator',subs:[{title:'3.1.1 Prácticas Interactivas',links:[{label:'Laboratorio lógico matemático',url:'lab-logico-matematico.html'},{label:'Razonamiento lógico matemático',url:'razonamiento-logico-matematico.html'},{label:'Laboratorio de análisis gráfico',url:'lab-analisis-grafico-rc.html'}]},{title:'3.1.2 Prácticas Teóricas',links:[{label:'Aritmética básica',url:'aritmetica-basica.html'},{label:'Porcentajes y Razones',url:'porcentajes-razones.html'},{label:'Álgebra',url:'algebra.html'},{label:'Funciones',url:'funciones.html'},{label:'Geometría',url:'geometria.html'},{label:'Medidas',url:'medidas.html'},{label:'Razonamiento lógico',url:'razonamiento-logico-teoria.html'},{label:'Probabilidad',url:'probabilidad.html'},{label:'Estadística descriptiva',url:'estadistica-descriptiva.html'},{label:'Interpretación de datos',url:'interpretacion-datos.html'}]}]},{title:'3.2 Lectura Crítica',icon:'fa-book-reader',subs:[{title:'3.2.1 Prácticas Interactivas',links:[{label:'Biblioteca',url:'biblioteca.html'},{label:'Talleres de escritura y análisis',url:'talleres-escritura-analisis.html'},{label:'Entrenador de velocidad de lectura',url:'velocidad-lectura.html'}]},{title:'3.2.2 Prácticas Teóricas',links:[{label:'Comprensión literal',url:'comprension-literal.html'},{label:'Comprensión inferencial',url:'comprension-inferencial.html'},{label:'Comprensión crítica',url:'comprension-critica.html'},{label:'Estructura del texto',url:'estructura-texto.html'},{label:'Textos narrativos',url:'textos-narrativos.html'},{label:'Textos expositivos',url:'textos-expositivos.html'},{label:'Textos argumentativos',url:'textos-argumentativos.html'},{label:'Textos científicos',url:'textos-cientificos.html'},{label:'Textos periodísticos',url:'textos-periodisticos.html'},{label:'Análisis intertextual',url:'analisis-intertextual.html'}]}]},{title:'3.3 Competencias Ciudadanas',icon:'fa-balance-scale',subs:[{title:'3.3.1 Prácticas Interactivas',links:[{label:'Dilemas + decisiones',url:'dilemas-decisiones.html'},{label:'Contextos sociales',url:'contextos-sociales.html'},{label:'Archivos de casos reales',url:'archivos-casos-reales.html'},{label:'Laboratorio de estrategias',url:'lab-estrategias.html'}]},{title:'3.3.2 Prácticas Teóricas',links:[{label:'Derechos humanos',url:'derechos-humanos.html'},{label:'Constitución política de Colombia',url:'constitucion-politica.html'},{label:'Democracia',url:'democracia.html'},{label:'Estado y gobierno',url:'estado-gobierno.html'},{label:'Justicia y equidad',url:'justicia-equidad.html'},{label:'Resolución pacífica de conflictos',url:'resolucion-pacifica.html'},{label:'Ética y responsabilidad social',url:'etica-responsabilidad.html'},{label:'Diversidad cultural',url:'diversidad-cultural.html'},{label:'Ciudadanía digital',url:'ciudadania-digital.html'},{label:'Sostenibilidad',url:'sostenibilidad.html'}]}]},{title:'3.4 Inglés',icon:'fa-globe',subs:[{title:'3.4.1 Prácticas Interactivas',links:[{label:'Comprensión lectora en inglés',url:'comprension-lectora-ingles.html'},{label:'Vocabulario en contexto',url:'vocabulario-contexto-ingles.html'},{label:'Cohesión en inglés',url:'cohesion-ingles.html'}]},{title:'3.4.2 Prácticas Teóricas',links:[{label:'Reading comprehension',url:'reading-comprehension.html'},{label:'Vocabulary in context',url:'vocabulary-context.html'},{label:'Grammar',url:'grammar.html'},{label:'Functional language',url:'functional-language.html'},{label:'Connectors and linking words',url:'connectors-linking.html'},{label:'Text types',url:'text-types.html'},{label:'Error identification',url:'error-identification.html'},{label:'Synonym replacement',url:'synonym-replacement.html'},{label:'Everyday situations',url:'everyday-situations.html'},{label:'Academic vocabulary',url:'academic-vocabulary.html'}]}]},{title:'3.5 Comunicación Escrita',icon:'fa-pen-fancy',subs:[{title:'Subtemas',links:[{label:'Planteamiento y Argumentación',url:'planteamiento-argumentacion.html'},{label:'Organizar el texto',url:'organizar-texto.html'},{label:'Forma de expresión',url:'forma-expresion.html'},{label:'Precisión Semántica y Claridad',url:'precision-semantica.html'},{label:'Gestión del Tiempo y de la Hoja de Borrador',url:'gestion-tiempo-borrador.html'},{label:'Pertinencia y Enfoque',url:'pertinencia-enfoque.html'}]}]}]},{group:'Contenido Específico',icon:'fa-graduation-cap',cats:[{title:'4.1 Administración',icon:'fa-briefcase',subs:[{title:'Subtemas',links:[{label:'Formulación, Evaluación y Gestión de Proyectos',url:'formulacion-gestion-proyectos-admon.html'},{label:'Gestión de organizaciones',url:'gestion-organizaciones.html'},{label:'Gestión Financiera',url:'gestion-financiera-admon.html'}]}]},{title:'4.2 Trabajo Social',icon:'fa-hands-helping',subs:[{title:'Subtemas',links:[{label:'Investigación en ciencias sociales',url:'investigacion-ciencias-sociales-ts.html'},{label:'Intervención en proyectos sociales',url:'intervencion-proyectos-sociales.html'}]}]},{title:'4.3 Licenciatura Educación Infantil',icon:'fa-child',subs:[{title:'Subtemas',links:[{label:'Enseñar',url:'ensenar.html'},{label:'Formar',url:'formar.html'},{label:'Evaluar',url:'evaluar.html'}]}]},{title:'4.4 Psicología',icon:'fa-brain',subs:[{title:'Subtemas',links:[{label:'Análisis de problemas psicológicos',url:'analisis-problemas-psicologicos.html'},{label:'Investigación en ciencias sociales',url:'investigacion-ciencias-sociales-psico.html'},{label:'Intervención en procesos sociales',url:'intervencion-procesos-sociales.html'}]}]},{title:'4.5 Licenciatura Lenguas Extranjeras',icon:'fa-language',note:'Se cubre con Inglés genérico',links:[]},{title:'4.6 Contaduría Pública',icon:'fa-file-invoice-dollar',subs:[{title:'Subtemas',links:[{label:'Información y control contable',url:'informacion-control-contable.html'},{label:'Gestión Financiera',url:'gestion-financiera-contaduria.html'}]}]},{title:'4.7 Ingeniería Industrial',icon:'fa-industry',subs:[{title:'Subtemas',links:[{label:'Formulación de Proyectos de Ingeniería',url:'formulacion-proyectos-ing-industrial.html'},{label:'Diseño de Sistemas Productivos y Logísticos',url:'diseno-sistemas-productivos.html'},{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-industrial.html'}]}]},{title:'4.8 Diseño Gráfico',icon:'fa-palette',subs:[{title:'Subtemas',links:[{label:'Generación de Artefactos',url:'generacion-artefactos.html'}]}]},{title:'4.9 Ingeniería Electrónica',icon:'fa-microchip',subs:[{title:'Subtemas',links:[{label:'Formulación de Proyectos de Ingeniería',url:'formulacion-proyectos-ing-electronica.html'},{label:'Diseño de Sistemas de Control',url:'diseno-sistemas-control.html'},{label:'Pensamiento Científico Ciencias Físicas',url:'pensamiento-cientifico-fisicas.html'},{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-electronica.html'}]}]},{title:'4.10 Tecnología e Informática',icon:'fa-laptop-code',subs:[{title:'Subtemas',links:[{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-ti.html'}]}]},{title:'4.11 Comunicación Social y Periodismo',icon:'fa-newspaper',subs:[{title:'Subtemas',links:[{label:'Procesos comunicativos',url:'procesos-comunicativos.html'}]}]},{title:'4.12 Ingeniería de Sistemas',icon:'fa-server',subs:[{title:'Subtemas',links:[{label:'Formulación de Proyectos de Ingeniería',url:'formulacion-proyectos-ing-sistemas.html'},{label:'Diseño de software',url:'diseno-software.html'},{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-sistemas.html'}]}]}]}];
 
 const $=id=>document.getElementById(id);
-let uid=null,globalScore=0;
+let uid=null,scoreLupa=0,scoreConverse=0,scoreAudit=0;
 
 /* === SIDEBAR === */
 function renderMenu(){const nav=$('sidebar-nav');let h='<div class="menu-no-result" id="menu-no-result">Sin resultados</div>';menuData.forEach(g=>{h+=`<div class="menu-group-label"><i class="fas ${g.icon}"></i> ${g.group}</div>`;g.cats.forEach(cat=>{h+=`<div class="menu-cat" data-name="${cat.title.toLowerCase()}"><button class="menu-cat-btn" aria-expanded="false"><i class="cat-icon fas ${cat.icon}"></i><span>${cat.title}</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-cat-children">`;if(cat.note)h+=`<div class="menu-note">${cat.note}</div>`;if(cat.subs)cat.subs.forEach(sub=>{h+=`<div class="menu-sub" data-name="${sub.title.toLowerCase()}"><button class="menu-sub-btn" aria-expanded="false"><span>${sub.title}</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-sub-children">`;if(sub.links)sub.links.forEach(lk=>{h+=`<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;});h+='</div></div>';});if(cat.links&&cat.links.length)cat.links.forEach(lk=>{h+=`<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;});h+='</div></div>';});});nav.innerHTML=h;nav.querySelectorAll('.menu-cat-btn').forEach(b=>{b.addEventListener('click',()=>{const c=b.parentElement,w=c.classList.contains('open');c.parentElement.querySelectorAll(':scope>.menu-cat.open').forEach(s=>{if(s!==c)s.classList.remove('open');});c.classList.toggle('open',!w);b.setAttribute('aria-expanded',String(!w));});});nav.querySelectorAll('.menu-sub-btn').forEach(b=>{b.addEventListener('click',()=>{const s=b.parentElement,w=s.classList.contains('open');s.parentElement.querySelectorAll(':scope>.menu-sub.open').forEach(x=>{if(x!==s)x.classList.remove('open');});s.classList.toggle('open',!w);b.setAttribute('aria-expanded',String(!w));});});nav.querySelectorAll('.menu-link').forEach(lk=>{if(lk.getAttribute('href')==='argumento.html')lk.classList.add('active');});}
 function initSearch(){const i=$('sidebar-search'),nr=$('menu-no-result');i.addEventListener('input',()=>{const q=i.value.toLowerCase().trim(),nav=$('sidebar-nav'),cats=nav.querySelectorAll('.menu-cat');let any=false;cats.forEach(cat=>{const cn=cat.dataset.name||'';const subs=cat.querySelectorAll('.menu-sub');const dl=cat.querySelectorAll(':scope>.menu-cat-children>.menu-link');let cm=cn.includes(q),sh=false;subs.forEach(sub=>{const sn=sub.dataset.name||'';const lks=sub.querySelectorAll('.menu-link');let sm=sn.includes(q),lv=false;lks.forEach(lk=>{const ln=lk.dataset.name||'';const show=!q||ln.includes(q)||sm||cm;lk.classList.toggle('hidden',!show);if(show)lv=true;});sub.classList.toggle('hidden',!lv&&!sm&&!cm&&q);if(sm||lv)sh=true;if(sm||lv)sub.classList.add('open');else sub.classList.remove('open');});dl.forEach(lk=>{const ln=lk.dataset.name||'';const show=!q||ln.includes(q)||cm;lk.classList.toggle('hidden',!show);if(show)sh=true;});cat.classList.toggle('hidden',!sh&&!cm&&q);if(cm||sh)any=true;if(cm||sh)cat.classList.add('open');});nr.classList.toggle('show',!any&&q.length>0);});}
 function initSidebar(){const sb=$('sidebar'),ov=$('sidebar-overlay'),tg=$('topbar-toggle'),mw=$('main-wrap'),mob=()=>window.innerWidth<=768;function open(){if(mob()){sb.classList.add('open');ov.classList.add('active');}else{sb.classList.remove('collapsed');mw.classList.remove('expanded');}}function close(){if(mob()){sb.classList.remove('open');ov.classList.remove('active');}else{sb.classList.add('collapsed');mw.classList.add('expanded');}}tg.addEventListener('click',()=>{const o=mob()?sb.classList.contains('open'):!sb.classList.contains('collapsed');o?close():open();});ov.addEventListener('click',close);if(!mob())sb.classList.remove('collapsed');window.addEventListener('resize',()=>{if(!mob()){ov.classList.remove('active');sb.classList.remove('open');}});}
 
-/* === CLOCK === */
 function updateClock(){const n=new Date(),h=String(n.getHours()).padStart(2,'0'),m=String(n.getMinutes()).padStart(2,'0'),s=String(n.getSeconds()).padStart(2,'0');$('top-clock').textContent=`${h}:${m}:${s}`;}
 updateClock();setInterval(updateClock,1000);
 
 function toast(msg,type){const t=$('toast');t.querySelector('span').textContent=msg;t.className='toast show'+(type?' '+type:'');setTimeout(()=>t.classList.remove('show'),3500);}
 function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
-async function saveProgress(status){if(!uid)return;try{await setDoc(doc(db,'users',uid,'progress',GAME_ID),{status,lastVisited:serverTimestamp()},{merge:true});}catch(e){}}
+
+function getTotal(){return scoreLupa+scoreConverse+scoreAudit;}
+function updateScoreUI(){
+    $('score-lupa').querySelector('.score-val').textContent=scoreLupa;
+    $('score-converse').querySelector('.score-val').textContent=scoreConverse;
+    $('score-audit').querySelector('.score-val').textContent=scoreAudit;
+    const t=getTotal();
+    const totalEl=$('score-total').querySelector('.score-val');
+    totalEl.textContent=t+' / '+MAX_SCORE;
+    totalEl.parentElement.classList.toggle('done',t>=PASS);
+}
+async function saveProgress(score){
+    if(!uid)return;
+    try{
+        await setDoc(doc(db,'users',uid,'progress',GAME_ID),{status:score>=PASS?'completed':'in_progress',lastScore:score,lastVisited:serverTimestamp()},{merge:true});
+    }catch(e){console.warn('Error guardando progreso',e);}
+}
 
 /* === GAME DATA === */
 const proofs=[
 {title:"1 = 2",lines:["Sea a = b","Multiplicamos por a: a² = ab","Restamos b²: a² - b² = ab - b²","Factorizamos: (a-b)(a+b) = b(a-b)","Dividimos por (a-b): a+b = b","Como a=b, entonces 2b = b","Dividimos por b: 2 = 1"],errorIndex:4,explanation:"¡Error de Validez! En el paso 5 intentas dividir por (a-b). Como a=b, entonces (a-b)=0. La división por cero está indefinida.",type:'validez'},
-{title:"Suma Infinita",lines:["Sea S = 1 + 2 + 4 + 8 + ...","Multiplicamos por 2: 2S = 2 + 4 + 8 + ...","Restamos: 2S - S","Cancelamos términos","Resultado: S = -1"],errorIndex:3,explanation:"¡Error de Validez! No se pueden cancelar términos en series infinitas que no convergen. Esta serie crece al infinito.",type:'validez'},
-{title:"Círculo = Cuadrado",lines:["Aproximamos π = 3","Área círculo = πr²","Sustituimos: 3r²","Lado cuadrado circunscrito = 2r","Área cuadrado = 4r²","Diferencia pequeña, por lo tanto son iguales"],errorIndex:5,explanation:"¡Error de Solidez! La premisa π=3 es falsa. Además, que dos valores sean 'parecidos' no permite concluir que sean iguales.",type:'solidez'},
-{title:"Peso de nubes",lines:["El algodón pesa poco","Las nubes parecen algodón","Por lo tanto, las nubes pesan poco"],errorIndex:1,explanation:"¡Error de Solidez! Falsa analogía. El parecido visual no implica que compartan propiedades físicas como la densidad.",type:'solidez'},
-{title:"Demostración Trigonométrica",lines:["Sea θ = 0","sin(2θ) = 2sin(θ)","Dividimos todo por sin(θ)","2 = 2cos(θ)","Para θ=0, 2 = 2"],errorIndex:2,explanation:"¡Error de Validez! Divides por sin(θ). Como θ=0, sin(0)=0. División por cero.",type:'validez'},
-{title:"1+1=1",lines:["Sea a = 1, b = 1","a = b","a² = ab","a² - b² = ab - b²","(a-b)(a+b) = b(a-b)","a+b = b","2 = 1"],errorIndex:4,explanation:"¡Error de Validez! Paso 5: divides por (a-b). Como ambos valen 1, su resta es 0. Operación prohibida.",type:'validez'},
-{title:"Números son 0",lines:["Sean x e y","Sea d = x - y","x(x-y) = d(x-y)","x² - xy = dx - dy","(x-y)² = d(x-y) + y²","d² = d² + y²","Por lo tanto y² = 0"],errorIndex:4,explanation:"¡Error de Validez! El paso 5 introduce términos que no se derivan lógicamente de la igualdad anterior.",type:'validez'}
+{title:"Suma Infinita",lines:["Sea S = 1 + 2 + 4 + 8 + ...","Multiplicamos por 2: 2S = 2 + 4 + 8 + ...","Restamos: 2S - S","Cancelamos términos","Resultado: S = -1"],errorIndex:3,explanation:"¡Error de Validez! No se pueden cancelar términos en series infinitas que no convergen.",type:'validez'},
+{title:"Círculo = Cuadrado",lines:["Aproximamos π = 3","Área círculo = πr²","Sustituimos: 3r²","Lado cuadrado circunscrito = 2r","Área cuadrado = 4r²","Diferencia pequeña, son iguales"],errorIndex:5,explanation:"¡Error de Solidez! La premisa π=3 es falsa. Además, parecido no significa igual.",type:'solidez'},
+{title:"Peso de nubes",lines:["El algodón pesa poco","Las nubes parecen algodón","Por lo tanto, las nubes pesan poco"],errorIndex:1,explanation:"¡Error de Solidez! Falsa analogía. El parecido visual no implica mismas propiedades físicas.",type:'solidez'},
+{title:"Demo. Trigonométrica",lines:["Sea θ = 0","sin(2θ) = 2sin(θ)","Dividimos todo por sin(θ)","2 = 2cos(θ)","Para θ=0, 2 = 2"],errorIndex:2,explanation:"¡Error de Validez! Divides por sin(θ). Como θ=0, sin(0)=0. División por cero.",type:'validez'},
+{title:"1+1=1",lines:["Sea a = 1, b = 1","a = b","a² = ab","a² - b² = ab - b²","(a-b)(a+b) = b(a-b)","a+b = b","2 = 1"],errorIndex:4,explanation:"¡Error de Validez! Paso 5: divides por (a-b). Como ambos valen 1, su resta es 0.",type:'validez'}
 ];
 
+/* FIX: counterexamples siempre en minúsculas, check siempre compara en minúsculas */
 const converses=[
-{premise:"Si un número es múltiplo de 10, entonces es par.",correctConverse:"Si un número es par, entonces es múltiplo de 10.",check:input=>{const n=parseInt(input);return!isNaN(n)&&n%2===0&&n%10!==0;},counterexamples:["2","4","6","8","12","14","16","18","22","24","26","28","32","34","36","38","42","44","46","48"]},
+{premise:"Si un número es múltiplo de 10, entonces es par.",correctConverse:"Si un número es par, entonces es múltiplo de 10.",counterexamples:["2","4","6","8","12","14","16","18","22","24","26","28","32","34","36","38","42","44","46","48"]},
 {premise:"Si llueve, el suelo se moja.",correctConverse:"Si el suelo se moja, entonces llovió.",counterexamples:["manguera","balde","cubo","riego","aspersor","grifo","piscina","vaso","fregona","camión cisterna","hidrante"]},
 {premise:"Si es cuadrado, tiene 4 lados.",correctConverse:"Si tiene 4 lados, es cuadrado.",counterexamples:["rectángulo","rombo","trapecio","paralelogramo","romboide","cuadrilátero","cometa","diamante"]},
 {premise:"Si estudias, apruebas.",correctConverse:"Si apruebas, entonces estudias.",counterexamples:["copiar","trampa","chuleta","suerte","azar","soborno","inteligencia","conocimiento previo","facil"]},
@@ -305,18 +331,17 @@ const converses=[
 ];
 
 const audits=[
-{text:"Un concejal afirmó: 'Siempre que llueve, el pavimento queda mojado. Esta mañana el pavimento está mojado. Por lo tanto, llovió hace pocos minutos, descartando cualquier otra posibilidad.'",type:"converse",reason:"Falacia del inverso (afirmación del consecuente). El suelo mojado puede deberse a riego, fugas o limpieza."},
-{text:"Un artículo afirmó: 'Todos los cuadrados son rectángulos. Esta baldosa es un rectángulo. Por lo tanto, es un cuadrado perfecto.'",type:"converse",reason:"Confunde la relación de inclusión entre conjuntos. No todo rectángulo es cuadrado."},
-{text:"Un estudiante escribió: 'Todas las aves vuelan. El pingüino es un ave. Por lo tanto, el pingüino vuela.'",type:"invalid",reason:"Premisa falsa: no todas las aves vuelan. Error de solidez derivado de una generalización incorrecta."},
-{text:"Un analista afirmó: 'Cuando un empleado duerme, sueña. El empleado García no recuerda haber soñado. Por lo tanto, no durmió.'",type:"invalid",reason:"Falacia de negación del antecedente. Confunde no recordar con no haber soñado, y no soñar con no haber dormido."},
-{text:"Un epidemiólogo afirmó: 'Todos los pacientes con influenza tienen fiebre. El paciente 505 tiene fiebre. Por lo tanto, tiene influenza.'",type:"converse",reason:"Falacia del inverso. Tener fiebre no implica tener influenza; muchas patologías causan fiebre."},
-{text:"Un informe señala: 'Si un conductor excede el límite de velocidad, el sistema genera una sanción. No se generó sanción para el vehículo XYZ-123. Por lo tanto, es imposible que haya excedido el límite.'",type:"valid",reason:"Razonamiento válido (modus tollens). Si la condición necesaria no se cumple, el antecedente no puede ser verdadero."},
-{text:"Un profesor dijo: 'Si un estudiante aprueba el examen, entonces estudió. Juan no estudió. Por lo tanto, no aprobó el examen.'",type:"valid",reason:"Razonamiento válido (modus tollens). La negación del consecente permite negar el antecedente cuando es una bicondicional."},
-{text:"Un tweet decía: 'Si un número es primo, entonces es impar. El número 9 es impar. Luego, 9 es primo.'",type:"converse",reason:"Falacia del inverso. Ser impar no implica ser primo (9 = 3×3)."}
+{text:"Un concejal afirmó: 'Siempre que llueve, el pavimento queda mojado. Esta mañana el pavimento está mojado. Por lo tanto, llovió hace pocos minutos.'",type:"converse",reason:"Falacia del inverso. El suelo mojado puede deberse a riego, fugas o limpieza."},
+{text:"Un artículo afirmó: 'Todos los cuadrados son rectángulos. Esta baldosa es un rectángulo. Por lo tanto, es un cuadrado perfecto.'",type:"converse",reason:"Confunde inclusión entre conjuntos. No todo rectángulo es cuadrado."},
+{text:"Un estudiante: 'Todas las aves vuelan. El pingüino es un ave. Por lo tanto, el pingüino vuela.'",type:"invalid",reason:"Premisa falsa. No todas las aves vuelan. Error de solidez."},
+{text:"Un analista: 'Cuando un empleado duerme, sueña. García no recuerda haber soñado. Por lo tanto, no durmió.'",type:"invalid",reason:"Negación del antecedente. Confunde no recordar con no haber soñado."},
+{text:"Un epidemiólogo: 'Todos con influenza tienen fiebre. El paciente 505 tiene fiebre. Tiene influenza.'",type:"converse",reason:"Falacia del inverso. Tener fiebre no implica tener influenza."},
+{text:"Un informe: 'Si excede velocidad, el sistema genera sanción. No hubo sanción para XYZ-123. Es imposible que haya excedido el límite.'",type:"valid",reason:"Razonamiento válido (modus tollens)."},
+{text:"Un profesor: 'Si aprueba el examen, entonces estudió. Juan no estudió. Por lo tanto, no aprobó.'",type:"valid",reason:"Razonamiento válido (modus tollens)."},
+{text:"Un tweet: 'Si un número es primo, entonces es impar. El 9 es impar. Luego, 9 es primo.'",type:"converse",reason:"Falacia del inverso. Ser impar no implica ser primo (9=3×3)."}
 ];
 
-let currentProof=null,currentConverse=null,auditSelections={};
-let proofFound=false,converseFound=false;
+let currentProof=null,currentConverse=null,proofFound=false,converseFound=false;
 
 /* === PROOF / LUPA === */
 function loadProof(){
@@ -324,9 +349,7 @@ function loadProof(){
     currentProof=proofs[Math.floor(Math.random()*proofs.length)];
     const c=$('proof-container');
     let html='<div id="magnifier" class="magnifying-glass"></div>';
-    currentProof.lines.forEach((line,i)=>{
-        html+=`<div class="proof-line" data-index="${i}">${line}</div>`;
-    });
+    currentProof.lines.forEach((line,i)=>{html+=`<div class="proof-line" data-index="${i}">${line}</div>`;});
     c.innerHTML=html;
     $('proof-feedback').classList.remove('show');$('proof-feedback').textContent='';
     initMagnifier();
@@ -341,9 +364,8 @@ function initMagnifier(){
         x=Math.max(0,Math.min(x,r.width-80));
         y=Math.max(0,Math.min(y,r.height-80));
         mag.style.left=x+'px';mag.style.top=y+'px';
-        const lines=c.querySelectorAll('.proof-line');
-        lines.forEach(l=>l.style.backgroundColor='');
-        lines.forEach(l=>{
+        c.querySelectorAll('.proof-line').forEach(l=>l.style.backgroundColor='');
+        c.querySelectorAll('.proof-line').forEach(l=>{
             const lr=l.getBoundingClientRect();
             if(x+80>lr.left&&x<lr.right&&y+80>lr.top&&y<lr.bottom){
                 l.style.backgroundColor='rgba(90,97,51,0.15)';
@@ -357,18 +379,15 @@ function initMagnifier(){
         lines.forEach((l,i)=>{
             const lr=l.getBoundingClientRect();
             const overlap=mr.left+80>lr.left&&mr.left<lr.right&&mr.top+80>lr.top&&mr.top<lr.bottom;
-            if(overlap){
-                l.style.backgroundColor='rgba(90,97,51,0.15)';
-                if(i===currentProof.errorIndex&&!proofFound){
-                    proofFound=true;
-                    mag.classList.add('vibrating');
-                    $('glitch-effect').classList.add('glitch-active');
-                    setTimeout(()=>{
-                        mag.classList.remove('vibrating');
-                        $('glitch-effect').classList.remove('glitch-active');
-                        showModal();
-                    },1200);
-                }
+            if(overlap&&i===currentProof.errorIndex&&!proofFound){
+                proofFound=true;
+                mag.classList.add('vibrating');
+                $('glitch-effect').classList.add('glitch-active');
+                setTimeout(()=>{
+                    mag.classList.remove('vibrating');
+                    $('glitch-effect').classList.remove('glitch-active');
+                    showModal();
+                },1200);
             }
         });
     }
@@ -381,31 +400,32 @@ function initMagnifier(){
 }
 
 /* === MODAL === */
-function showModal(){
-    $('logic-modal').classList.add('active');
-    $('modal-feedback').textContent='';
-}
+function showModal(){$('logic-modal').classList.add('active');$('modal-feedback').textContent='';}
 function closeModal(){$('logic-modal').classList.remove('active');}
 
  $('btn-validez').addEventListener('click',()=>{
     const fb=$('modal-feedback');
     if(currentProof.type==='validez'){
-        globalScore+=10;fb.innerHTML='<strong style="color:#2e7d32">¡Correcto!</strong> '+currentProof.explanation;
+        scoreLupa+=10;updateScoreUI();
+        fb.innerHTML='<strong style="color:#2e7d32">¡Correcto!</strong> '+currentProof.explanation;
         $('proof-feedback').textContent=currentProof.explanation;$('proof-feedback').classList.add('show');
+        toast('+10 puntos Lupa','success');
     }else{
         fb.innerHTML='<strong style="color:#d32f2f">Incorrecto.</strong> El error era de <strong>solidez</strong>, no de validez. '+currentProof.explanation;
     }
-    updateScore();setTimeout(closeModal,200);
+    setTimeout(closeModal,200);
 });
  $('btn-solidez').addEventListener('click',()=>{
     const fb=$('modal-feedback');
     if(currentProof.type==='solidez'){
-        globalScore+=10;fb.innerHTML='<strong style="color:#2e7d32">¡Correcto!</strong> '+currentProof.explanation;
+        scoreLupa+=10;updateScoreUI();
+        fb.innerHTML='<strong style="color:#2e7d32">¡Correcto!</strong> '+currentProof.explanation;
         $('proof-feedback').textContent=currentProof.explanation;$('proof-feedback').classList.add('show');
+        toast('+10 puntos Lupa','success');
     }else{
         fb.innerHTML='<strong style="color:#d32f2f">Incorrecto.</strong> El error era de <strong>validez</strong>, no de solidez. '+currentProof.explanation;
     }
-    updateScore();setTimeout(closeModal,200);
+    setTimeout(closeModal,200);
 });
  $('modal-close').addEventListener('click',closeModal);
 
@@ -419,21 +439,29 @@ function loadConverse(){
 }
 
  $('btn-check-counter').addEventListener('click',()=>{
-    const input=$('counter-input').value.trim().toLowerCase();
-    if(!input){$('converse-feedback').innerHTML='<span style="color:#d32f2f">Escribe un contraejemplo</span>';return;}
-    if(currentConverse.check(input)){
-        converseFound=true;globalScore+=15;
-        $('converse-feedback').innerHTML='<span style="color:#2e7d32">¡Correcto! "'+input+'" es un contraejemplo válido que rompe el inverso.</span>';
-        updateScore();toast('+15 puntos','success');
+    const raw=$('counter-input').value.trim();
+    if(!raw){$('converse-feedback').innerHTML='<span style="color:#d32f2f">Escribe un contraejemplo</span>';return;}
+    /* FIX: comparar siempre en minúsculas */
+    const input=raw.toLowerCase();
+    const isMatch=currentConverse.counterexamples.some(ex=>ex.toLowerCase()===input);
+    if(isMatch&&!converseFound){
+        converseFound=true;
+        scoreConverse+=15;updateScoreUI();
+        $('converse-feedback').innerHTML='<span style="color:#2e7d32">¡Correcto! "'+raw+'" es un contraejemplo válido que rompe el inverso.</span>';
+        toast('+15 puntos Conversómetro','success');
+    }else if(!isMatch){
+        $('converse-feedback').innerHTML='<span style="color:#d32f2f">"'+raw+'" no rompe el inverso. Intenta con otro ejemplo.</span>';
     }else{
-        $('converse-feedback').innerHTML='<span style="color:#d32f2f">"'+input+'" no rompe el inverso. Intenta con otro ejemplo.</span>';
+        $('converse-feedback').innerHTML='<span style="color:var(--oliva-claro)">Ya encontraste el contraejemplo para este caso.</span>';
     }
 });
+
+/* Permite enviar con Enter */
+ $('counter-input').addEventListener('keydown',e=>{if(e.key==='Enter')$('btn-check-counter').click();});
 
 /* === SOCIAL AUDIT === */
 function loadAudits(){
     const selected=shuffle(audits).slice(0,5);
-    auditSelections={};
     const grid=$('social-grid');grid.innerHTML='';
     selected.forEach((a,i)=>{
         const div=document.createElement('div');div.className='tweet-card';
@@ -458,32 +486,29 @@ function loadAudits(){
             const card=this.closest('.tweet-card');
             card.querySelectorAll('.stamp-btn').forEach(b=>b.classList.remove('selected'));
             this.classList.add('selected');
-            auditSelections[idx]=type;
             const a=selected[idx];
             const fb=$('audit-fb-'+idx);
             if(type===a.type){
-                globalScore+=10;fb.innerHTML='<i class="fas fa-check-circle" style="color:#2e7d32"></i> ¡Correcto! '+a.reason;
+                scoreAudit+=10;updateScoreUI();
+                fb.innerHTML='<i class="fas fa-check-circle" style="color:#2e7d32"></i> ¡Correcto! '+a.reason;
                 fb.style.background='rgba(46,125,50,0.08)';fb.style.borderLeft='3px solid #2e7d32';
-                toast('+10 puntos','success');
+                toast('+10 puntos Auditoría','success');
             }else{
                 fb.innerHTML='<i class="fas fa-times-circle" style="color:#d32f2f"></i> Incorrecto. '+a.reason;
                 fb.style.background='rgba(211,47,47,0.08)';fb.style.borderLeft='3px solid #d32f2f';
             }
-            updateScore();
         });
     });
 }
 
  $('btn-refresh-audits').addEventListener('click',()=>{loadAudits();toast('Nuevos casos cargados');});
 
-function updateScore(){$('global-score').textContent='Puntos: '+globalScore;}
-
 /* === START === */
  $('start-btn').addEventListener('click',()=>{
     $('video-section').style.display='none';$('game-wrapper').style.display='block';
-    globalScore=0;updateScore();
+    scoreLupa=0;scoreConverse=0;scoreAudit=0;updateScoreUI();
     loadProof();loadConverse();loadAudits();
-    saveProgress('in_progress');
+    saveProgress(0);
     window.scrollTo({top:$('game-wrapper').offsetTop-80,behavior:'smooth'});
 });
 
