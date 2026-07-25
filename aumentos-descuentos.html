@@ -239,8 +239,6 @@
         .recibo-fila.total{border-top:2px solid var(--oliva-oscuro);margin-top:8px;padding-top:10px;font-weight:700;font-size:.95rem;color:var(--oliva-oscuro);}
         .recibo-fila.iva{color:var(--rojo-suave);}
         .recibo-fila.base{color:var(--oliva-medio);}
-        .recibo-flecha{text-align:center;margin:14px 0;font-size:.8rem;color:var(--oliva-medio);font-weight:600;}
-        .recibo-flecha i{font-size:1.2rem;display:block;margin-bottom:4px;}
 
         @media(max-width:768px){
             .sidebar{transform:translateX(calc(-1 * var(--sidebar-w)));}.sidebar.open{transform:translateX(0);}
@@ -328,7 +326,7 @@ renderMenu();initSearch();initSidebar();
 
 /* ===== TOAST ===== */
 let toastTimer=null;
-function showToast(msg){const t=document.getElementById('toast');document.getElementById('toast-text').textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),4000);}
+function showToast(msg){const t=document.getElementById('toast');document.getElementById('toast-text').textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),4500);}
 
 /* ===== POPUP ===== */
 function openPopup(title,sub,html){document.getElementById('popup-title').textContent=title;document.getElementById('popup-sub').textContent=sub;document.getElementById('popup-body').innerHTML=html;document.getElementById('popup-overlay').classList.add('active');usedNoEntiendo=true;}
@@ -469,8 +467,11 @@ function skipSession(cid){
     qs.forEach((_,i)=>{const el=document.getElementById(`${cid}-q${i}`);if(el)el.classList.remove('active');});
     document.getElementById(navId).style.display='flex';
     document.getElementById(cntId).textContent=`${qs.length} / ${qs.length}`;
+    state.done=true;
+    state.score=0;
     showResults(cid,0,0,qs.length);
     window.scrollTo({top:document.getElementById(resId).offsetTop-120,behavior:'smooth'});
+    saveTheoryComplete(0,0,qs.length);
 }
 window.skipSession=skipSession;
 
@@ -485,9 +486,11 @@ function finishSession(cid){
     state.done=true;state.score=score;
     showResults(cid,score,cor,qs.length);
     window.scrollTo({top:document.getElementById(resId).offsetTop-120,behavior:'smooth'});
-    if(s1.done&&s2.done)saveTheoryComplete(Math.round((s1.score+s2.score)/2),s1.score+s2.score,20);
-    else if(cid==='s1q'&&s2.done)saveTheoryComplete(s2.score,s2.score,10);
-    else if(cid==='s2q'&&s1.done)saveTheoryComplete(s1.score,s1.score,10);
+    if(s1.done&&s2.done){
+        saveTheoryComplete(Math.round((s1.score+s2.score)/2),s1.score+s2.score,20);
+    } else {
+        saveTheoryComplete(score,cor,qs.length);
+    }
 }
 window.finishSession=finishSession;
 
@@ -515,26 +518,67 @@ async function saveTheoryComplete(score,correct,total){
 
 async function checkTheoryMissions(score){
     if(!uid)return;
-    const stars=userData?.stars||0;
     const streak=userData?.streak||{current:0,lastDate:''};
-    const cm=Object.keys(missionData).filter(k=>missionData[k].completed).length;
     const today=getTodayKey();
     let sc=streak.current||0;if(streak.lastDate!==today)sc++;
 
+    /* Contar misiones YA completadas en Firebase */
+    const completedCount=Object.keys(missionData).filter(k=>missionData[k].completed).length;
+
+    /* Calcular puntos que se van a dar en esta ronda */
+    let pendingPoints=0;
     const checks=[
-        {id:3,cond:true},{id:9,cond:stars>=200},{id:10,cond:cm>=2},{id:14,cond:score>0},
-        {id:17,cond:stars>=500},{id:24,cond:!usedNoEntiendo},{id:26,cond:stars>=1000},
-        {id:44,cond:sc>=10},{id:45,cond:cm>=9}
+        {id:3,cond:true,pts:40},
+        {id:14,cond:score>0,pts:40},
+        {id:24,cond:!usedNoEntiendo,pts:40}
     ];
-    const batch=writeBatch(db);let nc=0;
+    checks.forEach(c=>{if(!missionData[c.id]?.completed&&c.cond)pendingPoints+=c.pts;});
+
+    /* Estrellas proyectadas para verificar misiones que dependen de estrellas */
+    const projectedStars=(userData?.stars||0)+pendingPoints;
+    if(!missionData[9]?.completed&&projectedStars>=200){checks.push({id:9,cond:true,pts:30});pendingPoints+=30;}
+    if(!missionData[17]?.completed&&projectedStars>=500){checks.push({id:17,cond:true,pts:50});pendingPoints+=50;}
+    if(!missionData[26]?.completed&&projectedStars>=1000){checks.push({id:26,cond:true,pts:50});pendingPoints+=50;}
+    if(!missionData[10]?.completed&&completedCount>=2){checks.push({id:10,cond:true,pts:50});pendingPoints+=50;}
+    if(!missionData[45]?.completed&&completedCount>=9){checks.push({id:45,cond:true,pts:140});pendingPoints+=140;}
+    if(!missionData[44]?.completed&&sc>=10){checks.push({id:44,cond:true,pts:130});pendingPoints+=130;}
+
+    /* Ejecutar las que cumplen */
+    const batch=writeBatch(db);
+    const newCompleted=[];
+
     for(const c of checks){
         if(missionData[c.id]?.completed||!c.cond)continue;
         const info=getMissionInfo(c.id);
         missionData[c.id]={completed:true,completedAt:new Date().toISOString()};
         batch.set(doc(db,'users',uid,'missions','mission_'+c.id),{completed:true,completedAt:new Date().toISOString()});
-        userData.stars=(userData.stars||0)+(info.points||0);nc++;
+        userData.stars=(userData.stars||0)+(info.points||0);
+        newCompleted.push(info);
     }
-    if(nc>0){batch.update(doc(db,'users',uid),{stars:userData.stars});try{await batch.commit();}catch(e){}document.getElementById('top-stars').textContent=userData.stars||0;}
+
+    /* Siempre actualizar estrellas y stats/main para que el dashboard lea el conteo */
+    const newTotalMissions=Object.keys(missionData).filter(k=>missionData[k].completed).length;
+    batch.update(doc(db,'users',uid),{stars:userData.stars});
+    batch.set(doc(db,'users',uid,'stats','main'),{
+        totalStars:userData.stars,
+        totalMissionsCompleted:newTotalMissions,
+        currentStreak:sc,
+        lastDate:today
+    },{merge:true});
+
+    try{
+        await batch.commit();
+        document.getElementById('top-stars').textContent=userData.stars||0;
+        /* Mostrar toast por CADA misión completada */
+        newCompleted.forEach((m,i)=>{
+            setTimeout(()=>{
+                showToast('Misión completada: "'+m.title+'" +'+m.points+' pts');
+            },i*800);
+        });
+    }catch(e){
+        console.error('Error guardando misiones:',e);
+        showToast('Error de conexion. Las misiones se guardaran al recargar.');
+    }
 }
 
 function getMissionInfo(id){const m={3:{title:'Lee toda la teoria de una leccion',points:40},9:{title:'Acumula tus primeras 200 estrellas',points:30},10:{title:'Completa 3 misiones seguidas',points:50},14:{title:'Termina una teoria con ejemplo practico',points:40},17:{title:'Obtén 500 estrellas acumuladas',points:50},24:{title:'Lee toda la teoria sin usar pistas',points:40},26:{title:'Suma 1000 estrellas totales',points:50},44:{title:'Estudia 10 dias seguidos',points:130},45:{title:'Completa 10 misiones',points:140}};return m[id]||{title:'Mision '+id,points:0};}
@@ -552,55 +596,38 @@ async function updateStreak(){if(!uid)return;const today=getTodayKey();const s=u
 const GRAFICO_BARRAS = `
 <div class="grafico-wrap">
     <svg viewBox="0 0 520 310" width="520" height="310" xmlns="http://www.w3.org/2000/svg" font-family="Roboto, sans-serif">
-        <!-- Fondo y ejes -->
         <rect x="60" y="20" width="440" height="240" rx="6" fill="#fdfbf5" stroke="#d4d6b0" stroke-width="1"/>
-        <!-- Líneas guía horizontales -->
         <line x1="60" y1="68" x2="500" y2="68" stroke="#e8e9d4" stroke-width="1" stroke-dasharray="4,4"/>
         <line x1="60" y1="116" x2="500" y2="116" stroke="#e8e9d4" stroke-width="1" stroke-dasharray="4,4"/>
         <line x1="60" y1="164" x2="500" y2="164" stroke="#e8e9d4" stroke-width="1" stroke-dasharray="4,4"/>
         <line x1="60" y1="212" x2="500" y2="212" stroke="#e8e9d4" stroke-width="1" stroke-dasharray="4,4"/>
-        <!-- Etiquetas eje Y -->
         <text x="52" y="74" text-anchor="end" font-size="11" fill="#bec092">150</text>
         <text x="52" y="122" text-anchor="end" font-size="11" fill="#bec092">112</text>
         <text x="52" y="170" text-anchor="end" font-size="11" fill="#bec092">75</text>
         <text x="52" y="218" text-anchor="end" font-size="11" fill="#bec092">37</text>
         <text x="52" y="264" text-anchor="end" font-size="11" fill="#bec092">0</text>
-        <!-- Eje X -->
         <line x1="60" y1="260" x2="500" y2="260" stroke="#bec092" stroke-width="1.5"/>
-        <!-- Barra Tienda A - Base (100) -->
         <rect x="110" y="143" width="50" height="117" rx="4" fill="#bec092" opacity="0.7"/>
         <text x="135" y="137" text-anchor="middle" font-size="12" font-weight="700" fill="#5a6133">100</text>
-        <!-- Barra Tienda A - Final (130) -->
         <rect x="170" y="100" width="50" height="160" rx="4" fill="#5a6133"/>
         <text x="195" y="94" text-anchor="middle" font-size="12" font-weight="700" fill="#272b00">130</text>
-        <!-- Flecha aumento A -->
         <line x1="185" y1="150" x2="185" y2="108" stroke="#c9a227" stroke-width="2.5" marker-end="url(#arrowG)"/>
         <text x="210" y="132" font-size="11" font-weight="700" fill="#c9a227">+30%</text>
-        <!-- Barra Tienda B - Base (50) -->
         <rect x="290" y="201" width="50" height="59" rx="4" fill="#bec092" opacity="0.7"/>
         <text x="315" y="195" text-anchor="middle" font-size="12" font-weight="700" fill="#5a6133">50</text>
-        <!-- Barra Tienda B - Final (75) -->
         <rect x="350" y="172" width="50" height="88" rx="4" fill="#3e6b3a"/>
         <text x="375" y="166" text-anchor="middle" font-size="12" font-weight="700" fill="#272b00">75</text>
-        <!-- Flecha aumento B -->
         <line x1="370" y1="208" x2="370" y2="178" stroke="#c9a227" stroke-width="2.5" marker-end="url(#arrowG)"/>
         <text x="393" y="198" font-size="11" font-weight="700" fill="#c9a227">+50%</text>
-        <!-- Etiquetas eje X -->
         <text x="165" y="280" text-anchor="middle" font-size="13" font-weight="600" fill="#272b00">Tienda A</text>
         <text x="345" y="280" text-anchor="middle" font-size="13" font-weight="600" fill="#272b00">Tienda B</text>
-        <!-- Marca de flecha -->
-        <defs>
-            <marker id="arrowG" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-                <path d="M0,1 L7,4 L0,7 Z" fill="#c9a227"/>
-            </marker>
-        </defs>
-        <!-- Título -->
+        <defs><marker id="arrowG" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,1 L7,4 L0,7 Z" fill="#c9a227"/></marker></defs>
         <text x="280" y="14" text-anchor="middle" font-size="13" font-weight="700" fill="#5a6133">Ventas por tienda: valor absoluto vs porcentaje</text>
     </svg>
     <div class="grafico-leyenda">
-        <div class="grafico-leyenda-item"><span style="background:#bec092;opacity:.7;"></span> Valor base (año anterior)</div>
-        <div class="grafico-leyenda-item"><span style="background:#5a6133;"></span> Tienda A - valor final</div>
-        <div class="grafico-leyenda-item"><span style="background:#3e6b3a;"></span> Tienda B - valor final</div>
+        <div class="grafico-leyenda-item"><span style="background:#bec092;opacity:.7;"></span> Valor base</div>
+        <div class="grafico-leyenda-item"><span style="background:#5a6133;"></span> Tienda A final</div>
+        <div class="grafico-leyenda-item"><span style="background:#3e6b3a;"></span> Tienda B final</div>
     </div>
     <p class="grafico-nota"><i class="fas fa-exclamation-triangle" style="margin-right:4px;"></i> La Tienda A subio 30 unidades pero solo 30%. La Tienda B subio 25 unidades pero 50%. La base importa.</p>
 </div>`;
@@ -609,38 +636,29 @@ const GRAFICO_COMPARACION = `
 <div class="grafico-wrap">
     <svg viewBox="0 0 520 260" width="520" height="260" xmlns="http://www.w3.org/2000/svg" font-family="Roboto, sans-serif">
         <rect x="60" y="20" width="440" height="200" rx="6" fill="#fdfbf5" stroke="#d4d6b0" stroke-width="1"/>
-        <!-- Líneas guía -->
         <line x1="60" y1="70" x2="500" y2="70" stroke="#e8e9d4" stroke-width="1" stroke-dasharray="4,4"/>
         <line x1="60" y1="120" x2="500" y2="120" stroke="#e8e9d4" stroke-width="1" stroke-dasharray="4,4"/>
         <line x1="60" y1="170" x2="500" y2="170" stroke="#e8e9d4" stroke-width="1" stroke-dasharray="4,4"/>
-        <!-- Etiquetas Y -->
         <text x="52" y="75" text-anchor="end" font-size="11" fill="#bec092">100%</text>
         <text x="52" y="125" text-anchor="end" font-size="11" fill="#bec092">67%</text>
         <text x="52" y="175" text-anchor="end" font-size="11" fill="#bec092">33%</text>
         <text x="52" y="224" text-anchor="end" font-size="11" fill="#bec092">0%</text>
         <line x1="60" y1="220" x2="500" y2="220" stroke="#bec092" stroke-width="1.5"/>
-        <!-- Barra "3 por 2" = 66.7% del precio -->
         <rect x="100" y="86" width="70" height="134" rx="4" fill="#3e6b3a"/>
         <text x="135" y="80" text-anchor="middle" font-size="11" font-weight="700" fill="#272b00">66,7%</text>
         <text x="135" y="155" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">Pagas</text>
-        <!-- Zona rayada descuento "3 por 2" -->
         <rect x="170" y="86" width="35" height="134" rx="0" fill="#3e6b3a" opacity="0.25"/>
         <text x="188" y="158" text-anchor="middle" font-size="9" font-weight="700" fill="#b85c38">-33,3%</text>
-        <!-- Barra "4 por 3" = 75% del precio -->
         <rect x="250" y="70" width="70" height="150" rx="4" fill="#5a6133"/>
         <text x="285" y="64" text-anchor="middle" font-size="11" font-weight="700" fill="#272b00">75%</text>
         <text x="285" y="150" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">Pagas</text>
-        <!-- Zona rayada descuento "4 por 3" -->
         <rect x="320" y="70" width="23" height="150" rx="0" fill="#5a6133" opacity="0.25"/>
         <text x="332" y="150" text-anchor="middle" font-size="9" font-weight="700" fill="#b85c38">-25%</text>
-        <!-- Barra descuento 30% = 70% del precio -->
         <rect x="400" y="80" width="70" height="140" rx="4" fill="#c9a227"/>
         <text x="435" y="74" text-anchor="middle" font-size="11" font-weight="700" fill="#272b00">70%</text>
         <text x="435" y="155" text-anchor="middle" font-size="10" font-weight="600" fill="#fff">Pagas</text>
-        <!-- Zona rayada descuento 30% -->
         <rect x="470" y="80" width="20" height="140" rx="0" fill="#c9a227" opacity="0.25"/>
         <text x="480" y="155" text-anchor="middle" font-size="9" font-weight="700" fill="#b85c38">-30%</text>
-        <!-- Etiquetas X -->
         <text x="152" y="240" text-anchor="middle" font-size="12" font-weight="600" fill="#272b00">3 por 2</text>
         <text x="302" y="240" text-anchor="middle" font-size="12" font-weight="600" fill="#272b00">4 por 3</text>
         <text x="450" y="240" text-anchor="middle" font-size="12" font-weight="600" fill="#272b00">30% off</text>
@@ -681,53 +699,32 @@ const GRAFICO_LINEA = `
 <div class="grafico-wrap">
     <svg viewBox="0 0 520 270" width="520" height="270" xmlns="http://www.w3.org/2000/svg" font-family="Roboto, sans-serif">
         <rect x="60" y="20" width="440" height="210" rx="6" fill="#fdfbf5" stroke="#d4d6b0" stroke-width="1"/>
-        <!-- Guías -->
         <line x1="60" y1="62" x2="500" y2="62" stroke="#e8e9d4" stroke-width="1" stroke-dasharray="4,4"/>
         <line x1="60" y1="104" x2="500" y2="104" stroke="#e8e9d4" stroke-width="1" stroke-dasharray="4,4"/>
         <line x1="60" y1="146" x2="500" y2="146" stroke="#e8e9d4" stroke-width="1" stroke-dasharray="4,4"/>
         <line x1="60" y1="188" x2="500" y2="188" stroke="#e8e9d4" stroke-width="1" stroke-dasharray="4,4"/>
-        <!-- Y labels: 0, 100, 200, 300, 400 -->
         <text x="52" y="234" text-anchor="end" font-size="11" fill="#bec092">0</text>
         <text x="52" y="192" text-anchor="end" font-size="11" fill="#bec092">100</text>
         <text x="52" y="150" text-anchor="end" font-size="11" fill="#bec092">200</text>
         <text x="52" y="108" text-anchor="end" font-size="11" fill="#bec092">300</text>
         <text x="52" y="66" text-anchor="end" font-size="11" fill="#bec092">400</text>
         <line x1="60" y1="230" x2="500" y2="230" stroke="#bec092" stroke-width="1.5"/>
-        <!-- Puntos: 2020=400, 2021=480, 2022=456, 2023=540 -->
-        <!-- Escala: 0->y230, 400->y62. Cada 100 = 42px. Valor y = 230 - (valor/100)*42 -->
-        <!-- 400: y=230-168=62 -->
-        <!-- 480: y=230-201.6=28.4 → clip to 30 -->
-        <!-- 456: y=230-191.5=38.5 -->
-        <!-- 540: y=230-226.8=3.2 → clip to 10 -->
-        <!-- Ajustemos escala: max 600, cada 100 = 35px. Valor y = 230 - (val/100)*35 -->
-        <!-- 400: 230-140=90 -->
-        <!-- 480: 230-168=62 -->
-        <!-- 456: 230-159.6=70 -->
-        <!-- 540: 230-189=41 -->
-        <!-- Línea de tendencia -->
         <polyline points="120,90 240,62 360,70 480,41" fill="none" stroke="#5a6133" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <!-- Área bajo la línea -->
         <polygon points="120,90 240,62 360,70 480,41 480,230 120,230" fill="#5a6133" opacity="0.08"/>
-        <!-- Puntos -->
         <circle cx="120" cy="90" r="6" fill="#fff" stroke="#5a6133" stroke-width="2.5"/>
         <circle cx="240" cy="62" r="6" fill="#fff" stroke="#5a6133" stroke-width="2.5"/>
         <circle cx="360" cy="70" r="6" fill="#fff" stroke="#5a6133" stroke-width="2.5"/>
         <circle cx="480" cy="41" r="6" fill="#fff" stroke="#3e6b3a" stroke-width="2.5"/>
-        <!-- Etiquetas puntos -->
         <text x="120" y="82" text-anchor="middle" font-size="11" font-weight="700" fill="#272b00">400</text>
         <text x="240" y="54" text-anchor="middle" font-size="11" font-weight="700" fill="#272b00">480</text>
         <text x="360" y="62" text-anchor="middle" font-size="11" font-weight="700" fill="#272b00">456</text>
         <text x="480" y="33" text-anchor="middle" font-size="11" font-weight="700" fill="#3e6b3a">540</text>
-        <!-- X labels -->
         <text x="120" y="248" text-anchor="middle" font-size="12" font-weight="600" fill="#272b00">2020</text>
         <text x="240" y="248" text-anchor="middle" font-size="12" font-weight="600" fill="#272b00">2021</text>
         <text x="360" y="248" text-anchor="middle" font-size="12" font-weight="600" fill="#272b00">2022</text>
         <text x="480" y="248" text-anchor="middle" font-size="12" font-weight="600" fill="#272b00">2023</text>
-        <!-- Anotación 2020->2021 -->
         <text x="180" y="42" text-anchor="middle" font-size="10" font-weight="700" fill="#c9a227">+20%</text>
-        <!-- Anotación 2021->2022 -->
         <text x="300" y="50" text-anchor="middle" font-size="10" font-weight="700" fill="#b85c38">-5%</text>
-        <!-- Anotación 2022->2023 -->
         <text x="420" y="36" text-anchor="middle" font-size="10" font-weight="700" fill="#3e6b3a">+18.4%</text>
         <text x="280" y="14" text-anchor="middle" font-size="13" font-weight="700" fill="#5a6133">Evolucion de ventas (2020-2023)</text>
     </svg>
@@ -842,7 +839,6 @@ function buildContent(){
     </section>
     </div>`;
 
-    /* Renderizar KaTeX y construir sesiones */
     setTimeout(()=>{
         tex(document.getElementById('f1'),'\\text{Valor Final} = \\text{Valor Inicial} \\times (1 + r)');
         tex(document.getElementById('f2'),'\\text{Valor Final} = \\text{Valor Inicial} \\times (1 - r)');
