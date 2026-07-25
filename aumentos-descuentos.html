@@ -218,6 +218,20 @@
         .toast.show{transform:translateY(0);opacity:1;}
         .toast i{color:var(--dorado);font-size:1rem;}
 
+        /* ===== OVERLAY DE MISIÓN COMPLETADA ===== */
+        .mission-overlay{position:fixed;inset:0;background:rgba(39,43,0,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:7000;display:none;place-items:center;padding:20px;}
+        .mission-overlay.active{display:grid;}
+        .mission-box{background:#fff;border-radius:var(--radius);padding:40px 32px 32px;max-width:400px;width:100%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.3);animation:missionPop .45s cubic-bezier(.2,.8,.3,1.2);}
+        @keyframes missionPop{from{opacity:0;transform:scale(.7) translateY(30px)}to{opacity:1;transform:scale(1) translateY(0)}}
+        .mission-box .mi-icon{width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,var(--dorado),#e8c84a);display:grid;place-items:center;margin:0 auto 20px;font-size:2rem;color:var(--oliva-oscuro);box-shadow:0 6px 24px rgba(201,162,39,.35);}
+        .mission-box h3{font-family:'Patrick Hand',cursive;font-size:1.6rem;color:var(--oliva-oscuro);margin-bottom:6px;}
+        .mission-box .mi-desc{font-size:.92rem;color:#555;margin-bottom:4px;line-height:1.4;}
+        .mission-box .mi-pts{font-family:'Orbitron',monospace;font-size:2.2rem;font-weight:700;color:var(--dorado);margin:16px 0 4px;text-shadow:0 2px 8px rgba(201,162,39,.2);}
+        .mission-box .mi-label{font-size:.78rem;color:var(--oliva-claro);margin-bottom:24px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;}
+        .mission-box .mi-btn{padding:12px 40px;border-radius:28px;background:var(--oliva-oscuro);color:var(--crema);font-size:.92rem;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;gap:8px;}
+        .mission-box .mi-btn:hover{background:var(--oliva-medio);transform:translateY(-2px);box-shadow:0 4px 16px rgba(39,43,0,.25);}
+        .mission-box .mi-counter{font-size:.72rem;color:var(--oliva-claro);margin-top:14px;}
+
         .loading-spinner{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 0;gap:16px;}
         .spinner{width:32px;height:32px;border:3px solid var(--oliva-super);border-top-color:var(--oliva-medio);border-radius:50%;animation:spin .7s linear infinite;}
         @keyframes spin{to{transform:rotate(360deg)}}
@@ -298,12 +312,25 @@
     </div>
 </div>
 
+<!-- OVERLAY DE MISIÓN COMPLETADA -->
+<div class="mission-overlay" id="mission-overlay">
+    <div class="mission-box">
+        <div class="mi-icon"><i class="fas fa-trophy"></i></div>
+        <h3 id="mi-title">Misión completada</h3>
+        <p class="mi-desc" id="mi-desc"></p>
+        <div class="mi-pts" id="mi-pts">+0</div>
+        <div class="mi-label">puntos de estrellas</div>
+        <button class="mi-btn" id="mi-close">Continuar <i class="fas fa-arrow-right"></i></button>
+        <div class="mi-counter" id="mi-counter"></div>
+    </div>
+</div>
+
 <div class="toast" id="toast"><i class="fas fa-trophy"></i><span id="toast-text"></span></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
 const app = initializeApp({apiKey:"AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",projectId:"skopia-aa786",storageBucket:"skopia-aa786.firebasestorage.app",messagingSenderId:"719823055099",appId:"1:719823055099:web:7d91ea29e4b2dcbb9b685e",authDomain:"skopia-aa786.firebaseapp.com"});
 const auth = getAuth(app);
@@ -326,7 +353,7 @@ renderMenu();initSearch();initSidebar();
 
 /* ===== TOAST ===== */
 let toastTimer=null;
-function showToast(msg){const t=document.getElementById('toast');document.getElementById('toast-text').textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),4500);}
+function showToast(msg){const t=document.getElementById('toast');document.getElementById('toast-text').textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),4000);}
 
 /* ===== POPUP ===== */
 function openPopup(title,sub,html){document.getElementById('popup-title').textContent=title;document.getElementById('popup-sub').textContent=sub;document.getElementById('popup-body').innerHTML=html;document.getElementById('popup-overlay').classList.add('active');usedNoEntiendo=true;}
@@ -351,32 +378,32 @@ function checkEx1(){
     if(isNaN(val)){fb.className='ex-feedback wrong';fb.style.display='block';fb.textContent='Escribe un valor numérico.';return;}
     if(Math.abs(val-100000)<100){
         fb.className='ex-feedback correct';fb.style.display='block';
-        fb.innerHTML='<i class="fas fa-check-circle" style="margin-right:6px;"></i> Asi es! $80.000 x 1,25 = $100.000.';
+        fb.innerHTML='<i class="fas fa-check-circle" style="margin-right:6px;"></i> Asi es! $80.000 x 1,25 = $100.000. Ahora lo entiendes? Multiplicar por 1,25 es lo mismo que sumar el 25%.';
         sol.style.display='none';
     } else {
         fb.className='ex-feedback wrong';fb.style.display='block';
-        fb.innerHTML='<i class="fas fa-times-circle" style="margin-right:6px;"></i> Oww, te explico paso a paso.';
+        fb.innerHTML='<i class="fas fa-times-circle" style="margin-right:6px;"></i> Oww, no te preocupes, te explico paso a paso.';
         sol.className='ex-solution show';
-        sol.innerHTML='<strong>Paso a paso:</strong><br>1. El 25% en decimal es 0,25.<br>2. Factor de aumento: 1 + 0,25 = <strong>1,25</strong>.<br>3. Multiplicamos: $80.000 x 1,25 = <strong>$100.000</strong>.';
+        sol.innerHTML='<strong>Paso a paso:</strong><br>1. El 25% en decimal es 0,25.<br>2. Factor de aumento: 1 + 0,25 = <strong>1,25</strong>.<br>3. Multiplicamos: $80.000 x 1,25 = <strong>$100.000</strong>.<br><br>Piensa tambien: el 25% de 80.000 es 20.000. Entonces 80.000 + 20.000 = 100.000.';
     }
 }
 window.checkEx1=checkEx1;
 
 /* ===== POPUPS ===== */
 const POPUPS={
-    aumento:{title:'Aumento: otra forma de verlo',sub:'Explicacion alternativa con ejemplo ICFES',html:'<p><strong>Si algo sube el 20%, queda al 120%.</strong></p><div class="popup-example"><h4><i class="fas fa-graduation-cap"></i> Ejemplo</h4><p>1.500.000 x 1,12 = <strong>$1.680.000</strong></p></div>'},
-    descuento:{title:'Descuento: otra forma de verlo',sub:'Piensa en lo que queda',html:'<p><strong>Si tiene 30% descuento, pagas el 70%.</strong></p><div class="popup-example"><h4><i class="fas fa-graduation-cap"></i> Ejemplo</h4><p>120.000 x 0,75 = <strong>$90.000</strong></p></div>'},
-    inverso:{title:'Proceso inverso',sub:'Cuando tienes el resultado',html:'<p><strong>Correcto:</strong> dividir entre el factor.</p><div id="pop-inv"></div><div class="popup-example"><p>95.000 / 0,95 = <strong>$100.000</strong></p></div>'},
-    variacion:{title:'Variacion porcentual',sub:'Que tanto cambio',html:'<div class="popup-example"><p>(9.200 - 8.000) / 8.000 x 100 = <strong>15%</strong></p></div>'},
-    sucesivos:{title:'Sucesivos: explicacion detallada',sub:'Paso a paso',html:'<div class="popup-example"><p>200.000 x 1,20 = 240.000 → 240.000 x 0,85 = <strong>204.000</strong></p></div>'},
-    promociones:{title:'Comparacion de promociones',sub:'Descuento real',html:'<div class="popup-example"><p>"3 por 2" = 33,33%. "30% off" = 30%. <strong>3 por 2 es mejor.</strong></p></div>'},
-    tablas:{title:'Datos desde tablas',sub:'Valor base',html:'<div class="popup-example"><p>(480 - 400) / 400 x 100 = <strong>20%</strong></p></div>'},
-    encadenamiento:{title:'Encadenamiento',sub:'No se anulan',html:'<p>50.000 x 1,20 = 60.000 → 60.000 x 0,80 = <strong>48.000</strong>. Menos que el original.</p>'},
-    'base-gravable':{title:'Base gravable',sub:'IVA inverso',html:'<p>238.000 / 1,19 = <strong>$200.000</strong>. IVA = $38.000.</p>'},
-    graficas:{title:'Graficas de barras',sub:'El truco',html:'<div class="popup-example"><p>Tienda A: 30/100 = 30%. Tienda B: 25/50 = 50%. <strong>B tuvo mayor %.</strong></p></div>'},
-    recibos:{title:'Recibos',sub:'Desglosando',html:'<p>El IVA se calcula sobre el <strong>subtotal</strong>, no sobre el total.</p>'}
+    aumento:{title:'Aumento: otra forma de verlo',sub:'Explicacion alternativa con ejemplo ICFES',html:'<p><strong>Si algo sube el 20%, queda al 120% de lo que era.</strong> El 100% es lo que ya tenia, mas el 20% = 120% = 1,20.</p><div class="popup-example"><h4><i class="fas fa-graduation-cap"></i> Ejemplo tipo ICFES</h4><p>Salario de $1.500.000 con aumento del 12%.</p><p>1.500.000 x 1,12 = <strong>$1.680.000</strong></p><p>Comprueba: 12% de 1.500.000 = 180.000. Sumado: 1.680.000. Coincide.</p></div>'},
+    descuento:{title:'Descuento: otra forma de verlo',sub:'Piensa en lo que queda, no en lo que quitas',html:'<p><strong>Si algo tiene 30% de descuento, pagas el 70%.</strong> No reste el 30% al precio. Multiplique por 0,70.</p><div class="popup-example"><h4><i class="fas fa-graduation-cap"></i> Ejemplo tipo ICFES</h4><p>Camisa de $120.000 con 25% de descuento.</p><p>120.000 x 0,75 = <strong>$90.000</strong></p><p>Comprueba: 25% de 120.000 = 30.000. 120.000 - 30.000 = 90.000.</p></div>'},
+    inverso:{title:'Proceso inverso: otra forma de verlo',sub:'Cuando tienes el resultado y quieres el inicio',html:'<p>Si pagaste $95.000 con descuento del 5%, el precio final es el 95% del original.</p><p><strong>Error comun:</strong> calcular el 5% de 95.000 y sumarlo. Eso da $99.750 (incorrecto).</p><p><strong>Correcto:</strong> dividir entre 0,95.</p><div id="pop-inv"></div><div class="popup-example"><p>95.000 / 0,95 = <strong>$100.000</strong>. Ese era el original.</p></div>'},
+    variacion:{title:'Variacion porcentual: otra forma',sub:'Que tanto cambio respecto a lo que era',html:'<p>Si algo paso de 200 a 250, subio 50. Pero 50 respecto a 200 es el 25%.</p><p>Positivo = aumento. Negativo = disminucion.</p><div class="popup-example"><h4><i class="fas fa-graduation-cap"></i> Ejemplo</h4><p>Poblacion: 8.000 a 9.200.</p><p>(9.200 - 8.000) / 8.000 x 100 = <strong>15%</strong></p></div>'},
+    sucesivos:{title:'Sucesivos: explicacion detallada',sub:'Paso a paso con numeros claros',html:'<p><strong>Cada porcentaje se aplica sobre el resultado anterior.</strong></p><div class="popup-example"><h4><i class="fas fa-graduation-cap"></i> Ejemplo ICFES</h4><p>Producto de $200.000 sube 20% y baja 15%.</p><p>Paso 1: 200.000 x 1,20 = 240.000</p><p>Paso 2: 240.000 x 0,85 = <strong>204.000</strong></p><p>El descuento del 15% se aplico sobre 240.000, no sobre 200.000.</p></div><p><strong>Distractor:</strong> $200.000 (asumiendo que se anulan) o $210.000 (sumando/restando porcentajes). Ambos incorrectos.</p>'},
+    promociones:{title:'Comparacion de promociones',sub:'Como calcular el descuento real',html:'<p><strong>"Lleve 3 pague 2"</strong> = descuento de 1/3 = 33,33%.</p><p><strong>"Lleve 4 pague 3"</strong> = 1/4 = 25%.</p><p><strong>"2x1"</strong> = 50%.</p><div class="popup-example"><h4><i class="fas fa-graduation-cap"></i> Ejemplo ICFES</h4><p>Producto: $15.000. Promo A: "lleve 3 pague 2". Promo B: 30% descuento.</p><p>Promo A: pagas 30.000 por 3 = $10.000/unidad (33,33% descuento).</p><p>Promo B: 15.000 x 0,70 = $10.500/unidad (30% descuento).</p><p><strong>Promo A es mejor</strong> ($500 menos por unidad).</p></div>'},
+    tablas:{title:'Datos desde tablas y graficas',sub:'Como identificar el valor base',html:'<p>En una tabla, el valor base suele ser la primera fila o "Año base".</p><p>En una grafica de barras, el enunciado te dice cual es la barra base.</p><div class="popup-example"><h4><i class="fas fa-graduation-cap"></i> Ejemplo</h4><p>Barra 2020: 400. Barra 2021: 480.</p><p>(480 - 400) / 400 x 100 = <strong>20%</strong></p><p><strong>Distractor:</strong> decir que crecio 80 unidades sin convertir a porcentaje.</p></div>'},
+    encadenamiento:{title:'Encadenamiento: otra explicacion',sub:'Con numeros diferentes',html:'<p>Precio de $50.000 sube 20% y luego baja 20%.</p><p>Paso 1: 50.000 x 1,20 = 60.000</p><p>Paso 2: 60.000 x 0,80 = 48.000</p><p>Termino en $48.000, <strong>menos que el original</strong>. El descuento se calculo sobre 60.000 (mas grande), asi que quito mas de lo que sumo el aumento.</p><p><strong>Un aumento y descuento del mismo % NUNCA se anulan si primero sube y luego baja.</strong></p>'},
+    'base-gravable':{title:'Base gravable: otra explicacion',sub:'Con un recibo real',html:'<p>Total con IVA: $238.000.</p><p><strong>Error:</strong> 238.000 x 0,19 = 45.220. Base = 192.780. <span style="color:var(--rojo-suave)">INCORRECTO.</span></p><p><strong>Correcto:</strong> 238.000 / 1,19 = <strong>$200.000</strong></p><p>IVA = 200.000 x 0,19 = <strong>$38.000</strong></p><p>Comprobacion: 200.000 + 38.000 = 238.000.</p>'},
+    graficas:{title:'Graficas de barras: otra explicacion',sub:'El truco para no caer en distractores',html:'<p><strong>Siempre calcula el porcentaje</strong>, nunca compares absolutos.</p><div class="popup-example"><h4><i class="fas fa-graduation-cap"></i> Ejemplo trampa</h4><p>Tienda A: 100 a 130 (aumento de 30 unidades).</p><p>Tienda B: 50 a 75 (aumento de 25 unidades).</p><p>Tienda A: 30/100 = 30%.</p><p>Tienda B: 25/50 = 50%.</p><p><strong>Tienda B tuvo mayor aumento porcentual</strong> aunque subio menos en absoluto. "Tienda A" es el distractor.</p></div>'},
+    recibos:{title:'Recibos: otra explicacion',sub:'Desglosando un recibo',html:'<p>Un recibo muestra: consumo anterior, consumo actual, tarifa por kWh, subtotal, IVA (19% del subtotal), total.</p><p>El IVA se calcula sobre el <strong>subtotal</strong>, no sobre el total.</p><p>Si te dan el total y piden el IVA, divide entre 1,19 primero.</p>'}
 };
-function openNoEntiendo(key){const p=POPUPS[key];if(!p)return;openPopup(p.title,p.sub,p.html);setTimeout(()=>{const el=document.getElementById('pop-inv');if(el)tex(el,'\\dfrac{95.000}{0{,}95} = 100.000');},150);}
+function openNoEntiendo(key){const p=POPUPS[key];if(!p)return;openPopup(p.title,p.sub,p.html);setTimeout(()=>{const el=document.getElementById('pop-inv');if(el)tex(el,'\\text{Valor Inicial} = \\dfrac{\\text{Valor Final}}{1 - r} = \\dfrac{95.000}{0{,}95} = 100.000');},150);}
 window.openNoEntiendo=openNoEntiendo;
 
 /* ===== PREGUNTAS SESIÓN 1 ===== */
@@ -388,7 +415,7 @@ const S1_QS=[
     {q:'Descuento del 40% en $500.000. Precio final?',opts:['$300.000','$280.000','$320.000','$200.000'],correct:0,exp:'500.000 x 0,60 = 300.000'},
     {q:'Un precio de $150.000 sube a $180.000. Que porcentaje de aumento hubo?',opts:['15%','20%','25%','30%'],correct:1,exp:'(180.000-150.000)/150.000 x 100 = 20%'},
     {q:'Cual es el factor multiplicativo para un descuento del 12%?',opts:['1,12','0,88','0,12','1,88'],correct:1,exp:'1 - 0,12 = 0,88'},
-    {q:'Un laptop de $3.000.000 tiene 8% de descuento. Cuanto se ahorra?',opts:['$240.000','$220.000','$200.000','$280.000'],correct:0,exp:'3.000.000 x 0,08 = 240.000'},
+    {q:'Un laptop de $3.000.000 tiene 8% de descuento. Cuanto se ahorra?',opts:['$240.000','$220.000','$200.000','$280.000'],correct:0,exp:'3.000.000 x 0,08 = 240.000 de ahorro'},
     {q:'Si un precio pasa de $80 a $100, cual es la variacion porcentual?',opts:['20%','25%','30%','15%'],correct:1,exp:'(100-80)/80 x 100 = 25%'},
     {q:'Un servicio de $25.000 aumenta 18%. Nuevo precio?',opts:['$28.500','$29.000','$29.500','$30.000'],correct:2,exp:'25.000 x 1,18 = 29.500'}
 ];
@@ -400,11 +427,11 @@ const S2_QS=[
     {q:'Un precio sube 25% y luego sube otro 20%. Original: $80.000. Final?',opts:['$120.000','$116.000','$124.000','$118.000'],correct:0,exp:'80.000 x 1,25 = 100.000. Luego 100.000 x 1,20 = 120.000'},
     {q:'Despues de un descuento del 30%, un producto cuesta $42.000. Cual era el original?',opts:['$56.000','$60.000','$54.000','$65.000'],correct:1,exp:'42.000 / 0,70 = 60.000'},
     {q:'Un precio de $200.000 baja 15% y luego sube 15%. Valor final?',opts:['$200.000','$195.500','$197.750','$204.500'],correct:1,exp:'200.000 x 0,85 = 170.000. Luego 170.000 x 1,15 = 195.500'},
-    {q:'Un total con IVA 19% es $71.400. Cuanto corresponde al IVA?',opts:['$13.400','$11.400','$14.000','$12.500'],correct:1,exp:'Base = 71.400 / 1,19 = 60.000. IVA = 11.400'},
-    {q:'"Lleve 4 pague 3" equivale a un descuento de:',opts:['20%','25%','30%','33%'],correct:1,exp:'1 de 4 = 25%'},
+    {q:'Un total con IVA 19% es $71.400. Cuanto corresponde al IVA?',opts:['$13.400','$11.400','$14.000','$12.500'],correct:1,exp:'Base = 71.400 / 1,19 = 60.000. IVA = 71.400 - 60.000 = 11.400'},
+    {q:'"Lleve 4 pague 3" equivale a un descuento de:',opts:['20%','25%','30%','33%'],correct:1,exp:'1 de 4 = 25% de descuento'},
     {q:'Un producto sube 50% y luego baja 50%. Original: $40.000. Final?',opts:['$40.000','$30.000','$35.000','$25.000'],correct:1,exp:'40.000 x 1,50 = 60.000. Luego 60.000 x 0,50 = 30.000'},
     {q:'Despues de un aumento del 40%, un salario es $280.000. Cual era el original?',opts:['$190.000','$200.000','$210.000','$195.000'],correct:1,exp:'280.000 / 1,40 = 200.000'},
-    {q:'Producto de $50.000: A) 35% descuento, B) "lleve 2 pague 1". Que es mas conveniente?',opts:['A: $32.500 vs B: $25.000 por unidad -> B','A: $32.500 vs B: $50.000 -> A','Son iguales','No se puede comparar'],correct:0,exp:'A: 32.500. B: 25.000/unidad. B es mejor.'}
+    {q:'Producto de $50.000: A) 35% descuento, B) "lleve 2 pague 1". Que es mas conveniente?',opts:['A: $32.500 vs B: $25.000 por unidad -> B','A: $32.500 vs B: $50.000 -> A','Son iguales','No se puede comparar'],correct:0,exp:'A: 50.000 x 0,65 = 32.500. B: por cada 2 pagas 1, entonces $25.000/unidad. B es mejor si necesitas 2 o mas.'}
 ];
 
 /* ===== ESTADO DE SESIONES ===== */
@@ -461,20 +488,16 @@ function nextQ(cid,qi){
 }
 window.nextQ=nextQ;
 
-/* ===== SALTAR SESIÓN ===== */
 function skipSession(cid){
     const{state,qs,resId,navId,cntId}=getState(cid);
     qs.forEach((_,i)=>{const el=document.getElementById(`${cid}-q${i}`);if(el)el.classList.remove('active');});
     document.getElementById(navId).style.display='flex';
     document.getElementById(cntId).textContent=`${qs.length} / ${qs.length}`;
-    state.done=true;state.score=0;
     showResults(cid,0,0,qs.length);
     window.scrollTo({top:document.getElementById(resId).offsetTop-120,behavior:'smooth'});
-    saveTheoryComplete(0,0,qs.length);
 }
 window.skipSession=skipSession;
 
-/* ===== TERMINAR SESIÓN ===== */
 function finishSession(cid){
     const{state,qs,resId,navId,cntId}=getState(cid);
     let cor=0;qs.forEach((q,i)=>{if(state.answers[i]===q.correct)cor++;});
@@ -485,7 +508,9 @@ function finishSession(cid){
     state.done=true;state.score=score;
     showResults(cid,score,cor,qs.length);
     window.scrollTo({top:document.getElementById(resId).offsetTop-120,behavior:'smooth'});
-    saveTheoryComplete(score,cor,qs.length);
+    if(s1.done&&s2.done)saveTheoryComplete(Math.round((s1.score+s2.score)/2),s1.score+s2.score,20);
+    else if(cid==='s1q'&&s2.done)saveTheoryComplete(s2.score,s2.score,10);
+    else if(cid==='s2q'&&s1.done)saveTheoryComplete(s1.score,s1.score,10);
 }
 window.finishSession=finishSession;
 
@@ -503,131 +528,181 @@ function showResults(cid,score,cor,total){
 }
 
 /* ============================================================
-   FIREBASE: MISMO PATRÓN QUE TU PÁGINA QUE SÍ FUNCIONA
-   setDoc con {merge:true} individual, SIN batch.
+   FIREBASE — GUARDADO DE TEORÍA + MISIONES CON NOTIFICACIÓN
    ============================================================ */
 
-const MC={3:{title:'Lee toda la teoria de una leccion',pts:40},9:{title:'Acumula tus primeras 200 estrellas',pts:30},10:{title:'Completa 3 misiones seguidas',pts:50},14:{title:'Termina una teoria con ejemplo practico',pts:40},17:{title:'Obtén 500 estrellas acumuladas',pts:50},24:{title:'Lee toda la teoria sin usar pistas',pts:40},26:{title:'Suma 1000 estrellas totales',pts:50},44:{title:'Estudia 10 dias seguidos',pts:130},45:{title:'Completa 10 misiones',pts:140}};
-
-const STAR_THRESHOLDS=[{id:9,n:200},{id:17,n:500},{id:26,n:1000}];
-const MISSION_COUNT_THRESHOLDS=[{id:45,n:10}];
-const STREAK_THRESHOLDS=[{id:44,n:10}];
-
-async function saveStats(updates){
-    if(!uid)return;
-    try{await setDoc(doc(db,'users',uid,'stats','main'),updates,{merge:true});}
-    catch(e){console.warn('Error guardando stats',e);}
-}
-
-async function completeMissionInDB(id){
-    if(!uid||missionData[`mission_${id}`])return;
-    missionData[`mission_${id}`]=true;
-    try{await setDoc(doc(db,'users',uid,'missions','mission_'+id),{completed:true,completedAt:serverTimestamp()});}
-    catch(e){console.warn('Error guardando misión',e);}
-}
+/* --- Info de las misiones que pueden completarse aquí --- */
+const MISSION_INFO={
+    3:{title:'Lee toda la teoría de una lección',points:40},
+    9:{title:'Acumula tus primeras 200 estrellas',points:30},
+    10:{title:'Completa 3 misiones seguidas',points:50},
+    14:{title:'Termina una teoría con ejemplo práctico',points:40},
+    17:{title:'Obtén 500 estrellas acumuladas',points:50},
+    24:{title:'Lee toda la teoría sin usar pistas',points:40},
+    26:{title:'Suma 1000 estrellas totales',points:50},
+    44:{title:'Estudia 10 días seguidos',points:130},
+    45:{title:'Completa 10 misiones',points:140}
+};
 
 function getTodayKey(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 
+/* --- Cuenta cuántas misiones están completadas hasta ahora --- */
+function getCompletedCount(){
+    return Object.keys(missionData).filter(k=>missionData[k]&&missionData[k].completed).length;
+}
+
+/* --- Guardar progreso de la teoría y disparar verificación de misiones --- */
 async function saveTheoryComplete(score,correct,total){
     if(!uid)return;
     try{
-        await setDoc(doc(db,'users',uid,'theoryProgress','aumentos-descuentos'),{completed:true,score,correct,total,completedAt:new Date().toISOString(),usedNoEntiendo},{merge:true});
-        await checkAndCompleteMissions(score);
-    }catch(e){console.error('Error guardando teoria:',e);}
+        await setDoc(doc(db,'users',uid,'theoryProgress','aumentos-descuentos'),{
+            completed:true,score,correct,total,
+            completedAt:new Date().toISOString(),
+            usedNoEntiendo
+        },{merge:true});
+        await checkTheoryMissions(score);
+    }catch(e){
+        console.error('Error guardando teoría:',e);
+    }
 }
 
-async function updateStreak(){
-    if(!uid)return;const today=getTodayKey();const last=userData?.lastStudyDate||null;
-    let newStreak=userData?.currentStreak||0;
-    if(last===today){}else{const y=new Date();y.setDate(y.getDate()-1);const yk=getTodayKey();if(last===yk){newStreak++;}else{newStreak=1;}}
-    return{currentStreak:newStreak,lastStudyDate:today};
-}
-
-async function checkAndCompleteMissions(score){
+/* --- Verificar y completar misiones, mostrando overlay por cada una --- */
+async function checkTheoryMissions(score){
     if(!uid)return;
-    const newMissions=[];
-    let newStars=userData?.totalStars||0;
-    const completedCount=Object.keys(missionData).length;
 
-    /* Mision 3: Lee toda la teoria */
-    if(!missionData.mission_3){newMissions.push(3);}
-    /* Mision 14: Termina teoria con ejemplo practico (score > 0) */
-    if(score>0&&!missionData.mission_14){newMissions.push(14);}
-    /* Mision 24: Lee sin usar pistas */
-    if(!usedNoEntiendo&&!missionData.mission_24){newMissions.push(24);}
+    const stars=userData?.stars||0;
+    const streak=userData?.streak||{current:0,lastDate:''};
+    const today=getTodayKey();
+    let sc=streak.current||0;
+    if(streak.lastDate!==today)sc++;
 
-    /* Calcular puntos de estas misiones */
-    let missionPts=0;
-    newMissions.forEach(id=>{if(MC[id])missionPts+=MC[id].pts;});
-    newStars+=missionPts;
+    /* Definir qué misiones revisar.
+       Las que dependen del conteo (10, 45) se reevalúan DENTRO del loop,
+       así si varias se completan en la misma sesión se detectan bien. */
+    const checks=[
+        {id:3,  cond:true},
+        {id:9,  cond:stars>=200},
+        {id:10, cond:false}, /* se reevalúa abajo */
+        {id:14, cond:score>0},
+        {id:17, cond:stars>=500},
+        {id:24, cond:!usedNoEntiendo},
+        {id:26, cond:stars>=1000},
+        {id:44, cond:sc>=10},
+        {id:45, cond:false}  /* se reevalúa abajo */
+    ];
 
-    /* Verificar umbrales de estrellas */
-    STAR_THRESHOLDS.forEach(t=>{
-        if(newStars>=t.n&&!missionData[`mission_${t.id}`]){
-            newMissions.push(t.id);
-            missionPts+=MC[t.id].pts;
-            newStars+=MC[t.id].pts;
+    let newMissions=[];
+    let totalNewPoints=0;
+
+    for(const c of checks){
+        /* Reevaluar condiciones que dependen del conteo actualizado */
+        if(c.id===10) c.cond = getCompletedCount()>=2;
+        if(c.id===45) c.cond = getCompletedCount()>=9;
+
+        /* Ya completada o condición no cumplida → saltar */
+        if(missionData[c.id]?.completed || !c.cond) continue;
+
+        const info=MISSION_INFO[c.id]||{title:'Misión '+c.id,points:0};
+
+        /* Marcar en memoria local */
+        missionData[c.id]={completed:true,completedAt:new Date().toISOString()};
+
+        /* Guardar en Firebase: users/{uid}/missions/mission_X */
+        try{
+            await setDoc(doc(db,'users',uid,'missions','mission_'+c.id),{
+                completed:true,
+                completedAt:new Date().toISOString()
+            },{merge:true});
+        }catch(e){
+            console.error('Error guardando misión '+c.id+':',e);
         }
-    });
 
-    /* Verificar umbrales de conteo de misiones */
-    let newTotalMissions=completedCount+newMissions.length;
-    MISSION_COUNT_THRESHOLDS.forEach(t=>{
-        if(newTotalMissions>=t.n&&!missionData[`mission_${t.id}`]){
-            newMissions.push(t.id);
-            missionPts+=MC[t.id].pts;
-            newStars+=MC[t.id].pts;
-            newTotalMissions++;
-        }
-    });
-
-    /* Rachas */
-    const streakData=await updateStreak();
-    STREAK_THRESHOLDS.forEach(t=>{
-        if((streakData?.currentStreak||0)>=t.n&&!missionData[`mission_${t.id}`]){
-            newMissions.push(t.id);
-            missionPts+=MC[t.id].pts;
-            newStars+=MC[t.id].pts;
-            newTotalMissions++;
-        }
-    });
-
-    /* Recalcular total final de misiones */
-    newTotalMissions=completedCount+newMissions.length;
-
-    /* Guardar stats con setDoc + merge (MISMO PATRON QUE TU OTRA PAGINA) */
-    await saveStats({
-        totalStars:newStars,
-        totalMissionsCompleted:newTotalMissions,
-        ...(streakData||{})
-    });
-
-    /* Guardar cada misión individual con setDoc + merge (MISMO PATRON) */
-    for(const mid of newMissions){
-        await completeMissionInDB(mid);
-        const m=MC[mid];
-        if(m){
-            showToast('Misión completada: "'+m.title+'" +'+m.pts+' pts');
-            await new Promise(r=>setTimeout(r,800));
-        }
+        totalNewPoints+=(info.points||0);
+        newMissions.push(info);
     }
 
-    /* Actualizar estrellas en pantalla */
-    document.getElementById('top-stars').textContent=newStars;
+    /* Si hubo al menos una misión nueva, actualizar estrellas y stats */
+    if(newMissions.length>0){
+        const newStars=(userData.stars||0)+totalNewPoints;
+        userData.stars=newStars;
+
+        /* Actualizar estrellas en el documento del usuario */
+        try{
+            await setDoc(doc(db,'users',uid),{stars:newStars},{merge:true});
+        }catch(e){
+            console.error('Error actualizando estrellas:',e);
+        }
+
+        /* Actualizar totalMissionsCompleted y totalStars en stats/main
+           (esto es lo que lee el dashboard para mostrar la tarjeta) */
+        try{
+            await setDoc(doc(db,'users',uid,'stats','main'),{
+                totalMissionsCompleted:getCompletedCount(),
+                totalStars:newStars
+            },{merge:true});
+        }catch(e){
+            console.error('Error actualizando stats/main:',e);
+        }
+
+        /* Actualizar el contador en el topbar */
+        document.getElementById('top-stars').textContent=newStars;
+
+        /* Mostrar notificaciones de misión una por una */
+        showMissionNotifications(newMissions);
+    }
 }
+
+/* ============================================================
+   SISTEMA DE NOTIFICACIÓN DE MISIONES (overlay secuencial)
+   ============================================================ */
+let pendingMissionQueue=[];
+let isShowingMission=false;
+
+function showMissionNotifications(missions){
+    pendingMissionQueue=[...missions];
+    if(!isShowingMission) showNextMission();
+}
+
+function showNextMission(){
+    if(pendingMissionQueue.length===0){
+        isShowingMission=false;
+        return;
+    }
+    isShowingMission=true;
+    const m=pendingMissionQueue[0];
+    const isLast=pendingMissionQueue.length===1;
+
+    document.getElementById('mi-desc').textContent=m.title;
+    document.getElementById('mi-pts').textContent='+'+m.points;
+    document.getElementById('mi-close').innerHTML=isLast?'Continuar <i class="fas fa-check"></i>':'Siguiente <i class="fas fa-arrow-right"></i>';
+    document.getElementById('mi-counter').textContent=isLast?'':'Misión '+(pendingMissionQueue.length>1?pendingMissionQueue.length+' pendientes':'')+'';
+
+    document.getElementById('mission-overlay').classList.add('active');
+}
+
+/* Cerrar misión actual y mostrar la siguiente (si hay) */
+document.getElementById('mi-close').addEventListener('click',()=>{
+    document.getElementById('mission-overlay').classList.remove('active');
+    pendingMissionQueue.shift();
+    setTimeout(showNextMission,350);
+});
+
+/* Cerrar con clic fuera */
+document.getElementById('mission-overlay').addEventListener('click',(e)=>{
+    if(e.target===e.currentTarget){
+        document.getElementById('mission-overlay').classList.remove('active');
+        pendingMissionQueue.shift();
+        setTimeout(showNextMission,350);
+    }
+});
 
 /* ===== TIEMPO ACTIVO ===== */
 const TK='skopia_active_time';
 function stTick(){if(document.hidden)return;const k=getTodayKey(),d=(()=>{try{return JSON.parse(localStorage.getItem(TK))||{};}catch{return {};}})();d[k]=(d[k]||0)+10;localStorage.setItem(TK,JSON.stringify(d));}
 setInterval(stTick,10000);
 
-/* ===== RACHA (guardar en documento de usuario) ===== */
-async function updateStreak(){
-    if(!uid)return;const today=getTodayKey();const last=userData?.lastStudyDate||null;
-    let newStreak=userData?.currentStreak||0;
-    if(last===today){}else{const y=new Date();y.setDate(y.getDate()-1);const yk=getTodayKey();if(last===yk){newStreak++;}else{newStreak=1;}}
-    return{currentStreak:newStreak,lastStudyDate:today};
-}
+/* ===== RACHA ===== */
+async function updateStreak(){if(!uid)return;const today=getTodayKey();const s=userData.streak||{current:0,lastDate:'',totalDays:0};if(s.lastDate===today)return;const y=new Date();y.setDate(y.getDate()-1);const yk=`${y.getFullYear()}-${String(y.getMonth()+1).padStart(2,'0')}-${String(y.getDate()).padStart(2,'0')}`;if(s.lastDate===yk)s.current=(s.current||0)+1;else if(s.lastDate!==today)s.current=1;s.lastDate=today;s.totalDays=(s.totalDays||0)+1;userData.streak=s;try{await updateDoc(doc(db,'users',uid),{streak});}catch(e){console.error('Error actualizando racha:',e);}}
 
 /* ===== GRÁFICOS SVG ===== */
 const GRAFICO_BARRAS = `
@@ -662,9 +737,9 @@ const GRAFICO_BARRAS = `
         <text x="280" y="14" text-anchor="middle" font-size="13" font-weight="700" fill="#5a6133">Ventas por tienda: valor absoluto vs porcentaje</text>
     </svg>
     <div class="grafico-leyenda">
-        <div class="grafico-leyenda-item"><span style="background:#bec092;opacity:.7;"></span> Valor base</div>
-        <div class="grafico-leyenda-item"><span style="background:#5a6133;"></span> Tienda A final</div>
-        <div class="grafico-leyenda-item"><span style="background:#3e6b3a;"></span> Tienda B final</div>
+        <div class="grafico-leyenda-item"><span style="background:#bec092;opacity:.7;"></span> Valor base (año anterior)</div>
+        <div class="grafico-leyenda-item"><span style="background:#5a6133;"></span> Tienda A - valor final</div>
+        <div class="grafico-leyenda-item"><span style="background:#3e6b3a;"></span> Tienda B - valor final</div>
     </div>
     <p class="grafico-nota"><i class="fas fa-exclamation-triangle" style="margin-right:4px;"></i> La Tienda A subio 30 unidades pero solo 30%. La Tienda B subio 25 unidades pero 50%. La base importa.</p>
 </div>`;
@@ -699,12 +774,13 @@ const GRAFICO_COMPARACION = `
         <text x="152" y="240" text-anchor="middle" font-size="12" font-weight="600" fill="#272b00">3 por 2</text>
         <text x="302" y="240" text-anchor="middle" font-size="12" font-weight="600" fill="#272b00">4 por 3</text>
         <text x="450" y="240" text-anchor="middle" font-size="12" font-weight="600" fill="#272b00">30% off</text>
-        <text x="280" y="14" text-anchor="middle" font-size="13" font-weight="700" fill="#5a6133">Comparacion de promociones</text>
+        <text x="280" y="14" text-anchor="middle" font-size="13" font-weight="700" fill="#5a6133">Comparacion de promociones: que porcentaje pagas realmente</text>
     </svg>
     <div class="grafico-leyenda">
         <div class="grafico-leyenda-item"><span style="background:#3e6b3a;"></span> Lo que pagas</div>
-        <div class="grafico-leyenda-item"><span style="background:#b85c38;opacity:.35;"></span> Descuento</div>
+        <div class="grafico-leyenda-item"><span style="background:#b85c38;opacity:.35;"></span> Lo que te descuentan</div>
     </div>
+    <p class="grafico-nota"><i class="fas fa-lightbulb" style="margin-right:4px;"></i> "3 por 2" parece mejor que "30% off" (pagas 66,7% vs 70%), pero solo si necesitas 3 unidades.</p>
 </div>`;
 
 const RECIBO_VISUAL = `
@@ -725,8 +801,8 @@ const RECIBO_VISUAL = `
             <p style="font-size:.84rem;line-height:1.5;color:#444;margin-top:8px;">$18.000 x 0,19 = $3.420 de IVA.</p>
         </div>
         <div style="background:rgba(184,92,56,.06);border-radius:var(--radius-sm);padding:16px 18px;border:1px solid rgba(184,92,56,.12);">
-            <p style="font-size:.85rem;line-height:1.6;color:var(--rojo-suave);"><i class="fas fa-times-circle" style="margin-right:6px;"></i> <strong>Error comun:</strong> 21.420 x 0,19 = $4.070. INCORRECTO.</p>
-            <p style="font-size:.84rem;line-height:1.5;color:#444;margin-top:8px;">Correcto: 21.420 / 1,19 = <strong>$18.000</strong>. IVA = <strong>$3.420</strong>.</p>
+            <p style="font-size:.85rem;line-height:1.6;color:var(--rojo-suave);"><i class="fas fa-times-circle" style="margin-right:6px;"></i> <strong>Error comun:</strong> Si te dan solo el total ($21.420) y preguntas "cuanto es el IVA?", NO hagas 21.420 x 0,19 = $4.070. Eso esta mal.</p>
+            <p style="font-size:.84rem;line-height:1.5;color:#444;margin-top:8px;">Primero saca la base: 21.420 / 1,19 = <strong>$18.000</strong>. Luego: 21.420 - 18.000 = <strong>$3.420</strong>.</p>
         </div>
     </div>
 </div>`;
@@ -765,11 +841,11 @@ const GRAFICO_LINEA = `
         <text x="280" y="14" text-anchor="middle" font-size="13" font-weight="700" fill="#5a6133">Evolucion de ventas (2020-2023)</text>
     </svg>
     <div class="grafico-leyenda">
-        <div class="grafico-leyenda-item"><span style="background:#5a6133;width:20px;height:3px;border-radius:2px;"></span> Tendencia</div>
+        <div class="grafico-leyenda-item"><span style="background:#5a6133;width:20px;height:3px;border-radius:2px;"></span> Tendencia de ventas</div>
         <div class="grafico-leyenda-item"><span style="background:#c9a227;font-size:10px;width:auto;height:auto;border-radius:0;">+%</span> Aumento</div>
         <div class="grafico-leyenda-item"><span style="background:#b85c38;font-size:10px;width:auto;height:auto;border-radius:0;">-%</span> Disminucion</div>
     </div>
-    <p class="grafico-nota"><i class="fas fa-exclamation-triangle" style="margin-right:4px;"></i> En 2022 las ventas BAJARON (456 &lt; 480). Porcentaje negativo: -5%.</p>
+    <p class="grafico-nota"><i class="fas fa-exclamation-triangle" style="margin-right:4px;"></i> En 2022 las ventas BAJARON (456 &lt; 480). El porcentaje es negativo: (456-480)/480 x 100 = -5%. No te confundas con el valor absoluto.</p>
 </div>`;
 
 /* ===== CONSTRUIR PÁGINA ===== */
@@ -783,7 +859,7 @@ function buildContent(){
     </section>
 
     <section class="theory-section" data-section="1">
-        <div class="panda-msg"><div class="panda-mini">${PM}</div><p><strong>Paso 1:</strong> Antes de resolver problemas, domina estas 4 formulas.</p></div>
+        <div class="panda-msg"><div class="panda-mini">${PM}</div><p><strong>Paso 1:</strong> Antes de resolver problemas, domina estas 4 formulas. Son la base de todo.</p></div>
         <div class="formula-card"><h3><i class="fas fa-arrow-up" style="color:var(--verde)"></i> Factor multiplicativo de aumento</h3><div id="f1"></div><p class="formula-note">Ejemplo: un aumento del 20% se calcula multiplicando por 1,20.</p><button class="no-entiendo-btn" onclick="openNoEntiendo('aumento')"><i class="fas fa-question-circle"></i> No entiendo</button></div>
         <div class="formula-card"><h3><i class="fas fa-arrow-down" style="color:var(--rojo-suave)"></i> Factor multiplicativo de descuento</h3><div id="f2"></div><p class="formula-note">Ejemplo: un descuento del 30% se calcula multiplicando por 0,70.</p><button class="no-entiendo-btn" onclick="openNoEntiendo('descuento')"><i class="fas fa-question-circle"></i> No entiendo</button></div>
         <div class="formula-card"><h3><i class="fas fa-undo" style="color:var(--dorado)"></i> Calculo del valor inicial (proceso inverso)</h3><div id="f3"></div><p class="formula-note">Usalo cuando conoces el precio final y necesitas el original.</p><button class="no-entiendo-btn" onclick="openNoEntiendo('inverso')"><i class="fas fa-question-circle"></i> No entiendo</button></div>
@@ -794,16 +870,16 @@ function buildContent(){
 
     <section class="theory-section" data-section="2">
         <div class="panda-msg"><div class="panda-mini">${PM}</div><p><strong>Paso 2:</strong> El ICFES no te da la formula directa. Te presenta situaciones como estas.</p></div>
-        <div class="type-card"><h4><i class="fas fa-layer-group"></i> Aumentos y descuentos sucesivos</h4><p>Se aplican porcentajes uno tras otro sobre el resultado anterior. <strong>Error comun:</strong> sumar los porcentajes directamente.</p><button class="no-entiendo-btn" onclick="openNoEntiendo('sucesivos')"><i class="fas fa-question-circle"></i> No entiendo</button></div>
-        <div class="type-card"><h4><i class="fas fa-balance-scale"></i> Comparacion de promociones</h4><p>"Lleve 3 pague 2" equivale a un descuento del 33,33%, no del 50%.</p><button class="no-entiendo-btn" onclick="openNoEntiendo('promociones')"><i class="fas fa-question-circle"></i> No entiendo</button></div>
-        <div class="type-card"><h4><i class="fas fa-table"></i> Extraccion de datos desde tablas o graficas</h4><p>Identificar correctamente cual es el valor base (el 100%) antes de aplicar cualquier variacion.</p><button class="no-entiendo-btn" onclick="openNoEntiendo('tablas')"><i class="fas fa-question-circle"></i> No entiendo</button></div>
+        <div class="type-card"><h4><i class="fas fa-layer-group"></i> Aumentos y descuentos sucesivos</h4><p>Se aplican porcentajes uno tras otro sobre el resultado anterior. <strong>Error comun:</strong> sumar los porcentajes directamente. Si sube 10% y luego baja 10%, NO vuelve al precio original.</p><button class="no-entiendo-btn" onclick="openNoEntiendo('sucesivos')"><i class="fas fa-question-circle"></i> No entiendo</button></div>
+        <div class="type-card"><h4><i class="fas fa-balance-scale"></i> Comparacion de promociones</h4><p>"Lleve 3 pague 2" equivale a un descuento del 33,33%, no del 50%. Debes calcular el descuento real de cada esquema y compararlos.</p><button class="no-entiendo-btn" onclick="openNoEntiendo('promociones')"><i class="fas fa-question-circle"></i> No entiendo</button></div>
+        <div class="type-card"><h4><i class="fas fa-table"></i> Extraccion de datos desde tablas o graficas</h4><p>Identificar correctamente cual es el valor base (el 100%) antes de aplicar cualquier variacion. En graficas, el valor inicial es la barra de referencia.</p><button class="no-entiendo-btn" onclick="openNoEntiendo('tablas')"><i class="fas fa-question-circle"></i> No entiendo</button></div>
         <div class="nav-buttons"><button class="nav-btn secondary" onclick="goSection(1)"><i class="fas fa-arrow-left"></i> Atras</button><button class="nav-btn primary" onclick="goSection(3)"><i class="fas fa-arrow-right"></i> Trucos del Panda</button></div>
     </section>
 
     <section class="theory-section" data-section="3">
-        <div class="panda-msg"><div class="panda-mini">${PM}</div><p><strong>Muy bien, panda!</strong> Unos trucos de agilidad para el examen.</p></div>
-        <div class="formula-card"><h3><i class="fas fa-bolt"></i> Truco: Conversion instantanea</h3><p>Reemplaza directamente:</p><ul style="margin-top:10px;padding-left:18px;"><li style="list-style:disc;font-size:.88rem;line-height:1.8;color:#444;">Aumentar 15% → multiplica por <strong>1,15</strong></li><li style="list-style:disc;font-size:.88rem;line-height:1.8;color:#444;">Descontar 30% → multiplica por <strong>0,70</strong></li><li style="list-style:disc;font-size:.88rem;line-height:1.8;color:#444;">Aumentar 8% → multiplica por <strong>1,08</strong></li><li style="list-style:disc;font-size:.88rem;line-height:1.8;color:#444;">Descontar 12% → multiplica por <strong>0,88</strong></li></ul></div>
-        <div class="formula-card"><h3><i class="fas fa-lightbulb"></i> Truco: IVA inverso</h3><p>Si el precio incluye IVA del 19%, divide entre <strong>1,19</strong>. No restes el 19% al precio final.</p></div>
+        <div class="panda-msg"><div class="panda-mini">${PM}</div><p><strong>Muy bien, panda!</strong> Dejame ensenarte unos trucos de agilidad que te van a ahorrar tiempo en el examen.</p></div>
+        <div class="formula-card"><h3><i class="fas fa-bolt"></i> Truco: Conversion instantanea</h3><p>No necesitas calcular el porcentaje por separado. Simplemente reemplaza:</p><ul style="margin-top:10px;padding-left:18px;"><li style="list-style:disc;font-size:.88rem;line-height:1.8;color:#444;">Aumentar 15% → multiplica por <strong>1,15</strong></li><li style="list-style:disc;font-size:.88rem;line-height:1.8;color:#444;">Descontar 30% → multiplica por <strong>0,70</strong></li><li style="list-style:disc;font-size:.88rem;line-height:1.8;color:#444;">Aumentar 8% → multiplica por <strong>1,08</strong></li><li style="list-style:disc;font-size:.88rem;line-height:1.8;color:#444;">Descontar 12% → multiplica por <strong>0,88</strong></li></ul></div>
+        <div class="formula-card"><h3><i class="fas fa-lightbulb"></i> Truco: IVA inverso</h3><p>Si el precio incluye IVA del 19%, el precio sin IVA se obtiene dividiendo entre <strong>1,19</strong>. No restes el 19% al precio final, eso da un resultado incorrecto.</p></div>
         <div style="margin-top:28px;">
             <div class="practice-header"><h3><i class="fas fa-dumbbell"></i> Sesion 1: Calculo rapido de valores finales</h3><span class="practice-counter" id="s1cnt">1 / 10</span></div>
             <div id="s1q"></div>
@@ -813,9 +889,9 @@ function buildContent(){
     </section>
 
     <section class="theory-section" data-section="4">
-        <div class="panda-msg"><div class="panda-mini">${PM}</div><p><strong>Sesion 2:</strong> Encadenamientos y procesos inversos.</p></div>
-        <div class="formula-card"><h3><i class="fas fa-link"></i> Encadenamiento de porcentajes</h3><p style="font-size:.9rem;line-height:1.6;margin-bottom:10px;">Si un precio sube 10% y luego baja 10%, NO vuelve al original:</p><p style="font-size:.88rem;line-height:1.5;color:#444;">$100.000 x 1,10 = <strong>$110.000</strong></p><p style="font-size:.88rem;line-height:1.5;color:#444;">$110.000 x 0,90 = <strong>$99.000</strong></p><p style="font-size:.88rem;line-height:1.5;color:var(--rojo-suave);margin-top:6px;">El descuento se aplico sobre $110.000, no sobre $100.000.</p><button class="no-entiendo-btn" onclick="openNoEntiendo('encadenamiento')"><i class="fas fa-question-circle"></i> No entiendo</button></div>
-        <div class="formula-card"><h3><i class="fas fa-receipt"></i> Hallar la base gravable (IVA inverso)</h3><p style="font-size:.9rem;line-height:1.6;margin-bottom:10px;">Si un recibo dice $119.000 con IVA del 19%:</p><p style="font-size:.88rem;line-height:1.5;color:#444;">$119.000 / 1,19 = <strong>$100.000</strong></p><p style="font-size:.88rem;line-height:1.5;color:#444;">IVA = $119.000 - $100.000 = <strong>$19.000</strong></p><button class="no-entiendo-btn" onclick="openNoEntiendo('base-gravable')"><i class="fas fa-question-circle"></i> No entiendo</button></div>
+        <div class="panda-msg"><div class="panda-mini">${PM}</div><p><strong>Sesion 2:</strong> Ahora vamos a lo dificil: encadenamientos y procesos inversos. Te explico paso a paso y luego te examino.</p></div>
+        <div class="formula-card"><h3><i class="fas fa-link"></i> Encadenamiento de porcentajes</h3><p style="font-size:.9rem;line-height:1.6;margin-bottom:10px;">Si un precio sube 10% y luego baja 10%, NO vuelve al original:</p><p style="font-size:.88rem;line-height:1.5;color:#444;">Original: $100.000 → Aumento 10%: $100.000 x 1,10 = <strong>$110.000</strong></p><p style="font-size:.88rem;line-height:1.5;color:#444;">Descuento 10%: $110.000 x 0,90 = <strong>$99.000</strong></p><p style="font-size:.88rem;line-height:1.5;color:var(--rojo-suave);margin-top:6px;">El descuento se aplico sobre $110.000, no sobre $100.000.</p><button class="no-entiendo-btn" onclick="openNoEntiendo('encadenamiento')"><i class="fas fa-question-circle"></i> No entiendo</button></div>
+        <div class="formula-card"><h3><i class="fas fa-receipt"></i> Hallar la base gravable (IVA inverso)</h3><p style="font-size:.9rem;line-height:1.6;margin-bottom:10px;">Si un recibo dice $119.000 con IVA del 19%:</p><p style="font-size:.88rem;line-height:1.5;color:#444;">Factor: 1,19. Base = $119.000 / 1,19 = <strong>$100.000</strong></p><p style="font-size:.88rem;line-height:1.5;color:#444;">IVA = $119.000 - $100.000 = <strong>$19.000</strong></p><button class="no-entiendo-btn" onclick="openNoEntiendo('base-gravable')"><i class="fas fa-question-circle"></i> No entiendo</button></div>
         <div style="margin-top:28px;">
             <div class="practice-header"><h3><i class="fas fa-dumbbell"></i> Sesion 2: Variaciones compuestas e inversion</h3><span class="practice-counter" id="s2cnt">1 / 10</span></div>
             <div id="s2q"></div>
@@ -825,35 +901,17 @@ function buildContent(){
     </section>
 
     <section class="theory-section" data-section="5">
-        <div class="panda-msg"><div class="panda-mini">${PM}</div><p><strong>Ultima parte:</strong> Aprende a leer graficas, tablas financieras y recibos.</p></div>
-        <div class="formula-card">
-            <h3><i class="fas fa-chart-bar"></i> Graficas de barras: valor absoluto vs porcentaje</h3>
-            <p style="font-size:.9rem;line-height:1.6;">La barra mas alta no siempre representa el mayor aumento porcentual.</p>
-            ${GRAFICO_BARRAS}
-            <button class="no-entiendo-btn" onclick="openNoEntiendo('graficas')"><i class="fas fa-question-circle"></i> No entiendo</button>
-        </div>
-        <div class="formula-card">
-            <h3><i class="fas fa-chart-line"></i> Graficas de linea: variacion año a año</h3>
-            <p style="font-size:.9rem;line-height:1.6;">Cada punto es un periodo. La variacion se calcula entre punto y punto.</p>
-            ${GRAFICO_LINEA}
-        </div>
-        <div class="formula-card">
-            <h3><i class="fas fa-tags"></i> Comparacion visual de promociones</h3>
-            <p style="font-size:.9rem;line-height:1.6;">Zona clara = lo que pagas. Zona sombreada = descuento real.</p>
-            ${GRAFICO_COMPARACION}
-        </div>
-        <div class="formula-card">
-            <h3><i class="fas fa-file-invoice-dollar"></i> Tablas financieras y recibos</h3>
-            <p style="font-size:.9rem;line-height:1.6;">El IVA se aplica sobre el <strong>subtotal</strong>, no sobre el total.</p>
-            ${RECIBO_VISUAL}
-            <button class="no-entiendo-btn" onclick="openNoEntiendo('recibos')"><i class="fas fa-question-circle"></i> No entiendo</button>
-        </div>
-        <div class="formula-card"><h3><i class="fas fa-ghost"></i> Distractores comunes en el examen</h3><ul style="margin-top:8px;padding-left:18px;"><li style="list-style:disc;font-size:.88rem;line-height:1.8;color:#444;">Sumar porcentajes de operaciones sucesivas (10% + 10% = 20%). <strong>Incorrecto.</strong></li><li style="list-style:disc;font-size:.88rem;line-height:1.8;color:#444;">Restar el porcentaje al precio final para hallar el original. <strong>Incorrecto.</strong></li><li style="list-style:disc;font-size:.88rem;line-height:1.8;color:#444;">Confundir "3 por 2" con 50% de descuento. <strong>Es 33,33%.</strong></li><li style="list-style:disc;font-size:.88rem;line-height:1.8;color:#444;">Comparar valores absolutos cuando las bases difieren. <strong>No son comparables.</strong></li></ul></div>
+        <div class="panda-msg"><div class="panda-mini">${PM}</div><p><strong>Ultima parte:</strong> Aprende a leer graficas, tablas financieras y recibos para identificar variaciones porcentuales.</p></div>
+        <div class="formula-card"><h3><i class="fas fa-chart-bar"></i> Graficas de barras: valor absoluto vs porcentaje</h3><p style="font-size:.9rem;line-height:1.6;">La barra mas alta no siempre representa el mayor aumento porcentual. Debes calcular la variacion respecto al valor base de cada barra.</p>${GRAFICO_BARRAS}<button class="no-entiendo-btn" onclick="openNoEntiendo('graficas')"><i class="fas fa-question-circle"></i> No entiendo</button></div>
+        <div class="formula-card"><h3><i class="fas fa-chart-line"></i> Graficas de linea: variacion ano a ano</h3><p style="font-size:.9rem;line-height:1.6;">En una grafica de linea, cada punto representa un periodo. La variacion porcentual se calcula entre punto y punto, usando el anterior como base.</p>${GRAFICO_LINEA}</div>
+        <div class="formula-card"><h3><i class="fas fa-tags"></i> Comparacion visual de promociones</h3><p style="font-size:.9rem;line-height:1.6;">Asi se ven las promociones "por X" frente a descuentos porcentuales. La zona clara es lo que pagas, la zona sombreada es el descuento real.</p>${GRAFICO_COMPARACION}</div>
+        <div class="formula-card"><h3><i class="fas fa-file-invoice-dollar"></i> Tablas financieras y recibos</h3><p style="font-size:.9rem;line-height:1.6;">En un recibo, identifica: consumo anterior, consumo actual, tarifa, subtotal, IVA (19% del subtotal), total. El IVA se aplica sobre el <strong>subtotal</strong>, no sobre el total.</p>${RECIBO_VISUAL}<button class="no-entiendo-btn" onclick="openNoEntiendo('recibos')"><i class="fas fa-question-circle"></i> No entiendo</button></div>
+        <div class="formula-card"><h3><i class="fas fa-ghost"></i> Distractores comunes en el examen</h3><ul style="margin-top:8px;padding-left:18px;"><li style="list-style:disc;font-size:.88rem;line-height:1.8;color:#444;">Sumar porcentajes de operaciones sucesivas (10% + 10% = 20%). <strong>Incorrecto.</strong></li><li style="list-style:disc;font-size:.88rem;line-height:1.8;color:#444;">Restar el porcentaje al precio final para hallar el original. <strong>Incorrecto.</strong></li><li style="list-style:disc;font-size:.88rem;line-height:1.8;color:#444;">Confundir "3 por 2" con 50% de descuento. <strong>Es 33,33%.</strong></li><li style="list-style:disc;font-size:.88rem;line-height:1.8;color:#444;">Comparar valores absolutos cuando las bases difieren. <strong>No son comparables directamente.</strong></li></ul></div>
         <div class="nav-buttons"><button class="nav-btn secondary" onclick="goSection(4)"><i class="fas fa-arrow-left"></i> Atras</button><button class="nav-btn dorado" onclick="goSection(6)"><i class="fas fa-flag-checkered"></i> Finalizar teoria</button></div>
     </section>
 
     <section class="theory-section" data-section="6">
-        <div class="panda-msg"><div class="panda-mini">${PM}</div><p><strong>Estas preparado, panda?</strong> Ya vimos formulas, situaciones, trucos, variaciones y graficas.</p></div>
+        <div class="panda-msg"><div class="panda-mini">${PM}</div><p><strong>Estas preparado, panda?</strong> Ya vimos las formulas, las situaciones tipo ICFES, los trucos, las variaciones compuestas y la lectura de graficas.</p></div>
         <div style="display:flex;gap:14px;flex-wrap:wrap;"><button class="nav-btn dorado" onclick="window.location.href='aumentos-descuentos-examen.html'" style="font-size:1rem;padding:16px 36px;"><i class="fas fa-pen-alt"></i> Si, ir al examen</button><button class="nav-btn secondary" onclick="goSection(7)" style="font-size:1rem;padding:16px 36px;"><i class="fas fa-book"></i> No, repasar algo</button></div>
     </section>
 
@@ -886,25 +944,18 @@ onAuthStateChanged(auth,async(user)=>{
     uid=user.uid;
     try{
         const us=await getDoc(doc(db,'users',uid));
-        userData=us.exists()?us.data():{totalStars:0,currentStreak:0,lastStudyDate:null};
+        userData=us.exists()?us.data():{stars:0,streak:{current:0,lastDate:'',totalDays:0}};
         const ms=await getDocs(collection(db,'users',uid,'missions'));
-        ms.forEach(d=>{if(d.data().completed)missionData[d.id]=true;});
-        const st=await getDoc(doc(db,'users',uid,'stats','main'));
-        if(st.exists()){
-            const sd=st.data();
-            userData.totalStars=sd.totalStars||0;
-            userData.currentStreak=sd.currentStreak||0;
-            userData.lastStudyDate=sd.lastStudyDate||null;
-            userData.totalMissionsCompleted=sd.totalMissionsCompleted||0;
-        }
+        ms.forEach(d=>{missionData[parseInt(d.id.replace('mission_',''))]=d.data();});
         document.getElementById('sidebar-username').textContent=userData.name||userData.nombre||userData.displayName||'Estudiante';
         document.getElementById('sidebar-program').textContent=userData.program||userData.programa||'';
-        document.getElementById('top-stars').textContent=userData.totalStars||0;
-        const tp=await getDoc(doc(db,'users',uid,'theoryProgress','aumentos-descuentos'));
-        if(tp.exists()&&tp.data().completed)usedNoEntiendo=tp.data().usedNoEntiendo||false;
+        document.getElementById('top-stars').textContent=userData.stars||0;
+        const ts=await getDoc(doc(db,'users',uid,'theoryProgress','aumentos-descuentos'));
+        if(ts.exists()&&ts.data().completed)usedNoEntiendo=ts.data().usedNoEntiendo||false;
         buildContent();
+        await updateStreak();
     }catch(err){
-        console.error('Error:',err);
+        console.error('Error cargando página:',err);
         document.getElementById('page-content').innerHTML=`<div class="loading-spinner"><p style="color:var(--rojo-suave)">Error al cargar. Recarga la pagina.</p></div>`;
     }
 });
