@@ -514,7 +514,11 @@ async function updateStreak(){
 async function checkAndCompleteTheoryMissions(){
     const newMissions=[];
     let newStars=userStats.totalStars;
-    let newTotalMissions=userStats.totalMissionsCompleted||0;
+    
+    /* ===== FIX: Contar misiones REALES que existen en Firebase ===== */
+    const realCount = Object.keys(completedMissions).filter(k => completedMissions[k]).length;
+    let newTotalMissions = Math.max(realCount, userStats.totalMissionsCompleted || 0);
+    /* ===== FIN DEL FIX ===== */
 
     /* Misión 3: Lee toda la teoría de una lección */
     if(!completedMissions['mission_3']){newMissions.push(3);}
@@ -522,6 +526,8 @@ async function checkAndCompleteTheoryMissions(){
     if(!completedMissions['mission_14']){newMissions.push(14);}
     /* Misión 24: Lee toda la teoría sin usar pistas */
     if(!usedNoEntiendo&&!completedMissions['mission_24']){newMissions.push(24);}
+    /* Misión 10: En teoría = completa 3+ misiones en una sola sesión */
+    if(newMissions.length>=3&&!completedMissions['mission_10']){newMissions.push(10);}
 
     /* Calcular puntos de misiones base y sumar estrellas */
     let missionPts=0;
@@ -545,7 +551,7 @@ async function checkAndCompleteTheoryMissions(){
     if(newTotalMissions>=100&&!completedMissions['mission_95']){newMissions.push(95);missionPts+=MC[95].pts;newStars+=MC[95].pts;newTotalMissions++;}
     if(newTotalMissions>=100&&!completedMissions['mission_100']){newMissions.push(100);missionPts+=MC[100].pts;newStars+=MC[100].pts;newTotalMissions++;}
 
-    /* Guardar stats */
+    /* Guardar stats — ahora con el conteo real corregido */
     await saveStats({totalStars:newStars,totalMissionsCompleted:newTotalMissions,...(streakData||{})});
 
     /* Completar cada misión en DB y mostrar medalla */
@@ -554,7 +560,6 @@ async function checkAndCompleteTheoryMissions(){
     /* Actualizar topbar */
     $('top-stars').textContent=newStars;
 }
-
 /* ============================================================
    SISTEMA DE MEDALLAS — COPIA EXACTA DEL JUEGO QUE FUNCIONA
    ============================================================ */
