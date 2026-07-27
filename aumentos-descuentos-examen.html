@@ -405,48 +405,85 @@ async function saveExamResult(score,correct,timeUsed,timeUp){
     await updateDoc(doc(db,'users',uid),{lastStudyDate:new Date().toISOString().split('T')[0]}).catch(()=>{});
 }
 
-/* ===== MISIONES: lee estrellas actuales del usuario primero ===== */
-const MD={1:{title:'Completa tu primer examen',pts:50},2:{title:'Logra al menos 180/300 en un examen',pts:80},7:{title:'Repite un examen para mejorar tu nota',pts:50},9:{title:'Acumula tus primeras 200 estrellas',pts:30},10:{title:'Completa 3 misiones seguidas',pts:50},11:{title:'Logra 240/300 en un examen',pts:150},12:{title:'Completa un examen sin errores (300/300)',pts:200},17:{title:'Obtén 500 estrellas acumuladas',pts:50},18:{title:'Gana un examen con tiempo limitado',pts:80},21:{title:'Logra 270/300 en un examen',pts:180},22:{title:'Supera tu propia mejor nota',pts:60},26:{title:'Suma 1000 estrellas totales',pts:50},27:{title:'Gana un examen con tiempo limitado',pts:80},36:{title:'Obtén 2000 estrellas acumuladas',pts:60},40:{title:'Termina un examen con todos los tiempos perfectos',pts:150},45:{title:'Completa 10 misiones',pts:140},47:{title:'Termina un examen sin errores',pts:150},50:{title:'Completa un examen en menos de 25 minutos',pts:140},58:{title:'Crea una racha de 20 aciertos seguidos',pts:140}};
+/const MD={
+    1:{title:'Completa tu primer examen',pts:50},
+    2:{title:'Logra al menos 180/300 en un examen',pts:80},
+    7:{title:'Repite un examen para mejorar tu nota',pts:50},
+    9:{title:'Acumula tus primeras 200 estrellas',pts:30},
+    10:{title:'Completa 3 misiones seguidas',pts:50},
+    11:{title:'Logra 240/300 en un examen',pts:150},
+    12:{title:'Completa un examen sin errores (300/300)',pts:200},
+    17:{title:'Obtén 500 estrellas acumuladas',pts:50},
+    18:{title:'Gana un examen con tiempo limitado',pts:80},
+    21:{title:'Logra 270/300 en un examen',pts:180},
+    22:{title:'Supera tu propia mejor nota',pts:60},
+    26:{title:'Suma 1000 estrellas totales',pts:50},
+    27:{title:'Gana un examen con tiempo limitado',pts:80},
+    36:{title:'Obtén 2000 estrellas acumuladas',pts:60},
+    40:{title:'Termina un examen con todos los tiempos perfectos',pts:150},
+    45:{title:'Completa 10 misiones',pts:140},
+    47:{title:'Termina un examen sin errores',pts:150},
+    50:{title:'Completa un examen en menos de 25 minutos',pts:140},
+    58:{title:'Crea una racha de 20 aciertos seguidos',pts:140}
+};
 
 async function checkMissions(score,correct,timeUsed,timeUp,under25,perfectTime,perfectScore,maxStreak){
     if(!uid)return[];
     const prev=prevExamData||{bestScore:0,attempts:0};
-    const improved=score>(prev.bestScore||0),repeated=(prev.attempts||0)>0,finishedInTime=!timeUp;
+    const improved=score>(prev.bestScore||0);
+    const repeated=(prev.attempts||0)>0;
+    const finishedInTime=!timeUp;
 
-    /* Leer estrellas actuales del documento del usuario para no sobreescribir */
-    let baseStars=userData?.stars||0;
-
-    /* Sumar puntos de misiones ya completadas que esten en MD */
-    for(const[mid,m]of Object.entries(missionData)){
-        if(m.completed && MD[parseInt(mid)]) baseStars+=MD[parseInt(mid)].pts||0;
-    }
+    /* Leer TODAS las misiones de Firestore y recalcular estrellas reales */
+    const allMS=await getDocs(collection(db,'users',uid,'missions'));
+    let runningStars=0;
+    allMS.forEach(d=>{
+        const mid=parseInt(d.id.replace('mission_',''));
+        if(d.data().completed){
+            missionData[mid]={completed:true,completedAt:d.data().completedAt};
+            if(MD[mid]) runningStars+=MD[mid].pts||0;
+        }
+    });
 
     const ck=[
-        {id:1,cond:true},{id:2,cond:score>=180},{id:7,cond:repeated&&improved},
-        {id:11,cond:score>=240},{id:12,cond:perfectScore},{id:18,cond:finishedInTime},
-        {id:21,cond:score>=270},{id:22,cond:improved&&(prev.bestScore||0)>0},
-        {id:27,cond:finishedInTime},{id:40,cond:perfectTime},{id:47,cond:perfectScore},
-        {id:50,cond:under25&&finishedInTime},{id:58,cond:maxStreak>=20}
+        {id:1,cond:true},
+        {id:2,cond:score>=180},
+        {id:7,cond:repeated&&improved},
+        {id:11,cond:score>=240},
+        {id:12,cond:perfectScore},
+        {id:18,cond:finishedInTime},
+        {id:21,cond:score>=270},
+        {id:22,cond:improved&&(prev.bestScore||0)>0},
+        {id:27,cond:finishedInTime},
+        {id:40,cond:perfectTime},
+        {id:47,cond:perfectScore},
+        {id:50,cond:under25&&finishedInTime},
+        {id:58,cond:maxStreak>=20}
     ];
-    const batch=writeBatch(db);const done=[];
-    let runningStars=baseStars;
+    const batch=writeBatch(db);
+    const done=[];
 
     for(const c of ck){
-        if(missionData[c.id]?.completed)continue;if(!c.cond)continue;
+        if(missionData[c.id]?.completed)continue;
+        if(!c.cond)continue;
         missionData[c.id]={completed:true,completedAt:new Date().toISOString()};
         batch.set(doc(db,'users',uid,'missions','mission_'+c.id),{completed:true,completedAt:new Date().toISOString()});
-        done.push(c.id);runningStars+=(MD[c.id]?.pts||0);
+        done.push(c.id);
+        runningStars+=(MD[c.id]?.pts||0);
     }
 
-    /* Misiones por estrellas - pueden desencadenar en cadena */
+    /* Misiones por estrellas: 3 pasadas para cadenas */
     for(let pass=0;pass<3;pass++){
         const starC=[{id:9,t:200},{id:17,t:500},{id:26,t:1000},{id:36,t:2000}];
         let anyNew=false;
         for(const c of starC){
-            if(missionData[c.id]?.completed)continue;if(runningStars>=c.t){
+            if(missionData[c.id]?.completed)continue;
+            if(runningStars>=c.t){
                 missionData[c.id]={completed:true,completedAt:new Date().toISOString()};
                 batch.set(doc(db,'users',uid,'missions','mission_'+c.id),{completed:true,completedAt:new Date().toISOString()});
-                done.push(c.id);runningStars+=(MD[c.id]?.pts||0);anyNew=true;
+                done.push(c.id);
+                runningStars+=(MD[c.id]?.pts||0);
+                anyNew=true;
             }
         }
         if(!anyNew)break;
@@ -455,10 +492,12 @@ async function checkMissions(score,correct,timeUsed,timeUp,under25,perfectTime,p
     /* Misiones por conteo */
     const nc=Object.keys(missionData).filter(k=>missionData[k].completed).length;
     [{id:10,t:3},{id:45,t:10}].forEach(c=>{
-        if(missionData[c.id]?.completed)return;if(nc>=c.t){
+        if(missionData[c.id]?.completed)return;
+        if(nc>=c.t){
             missionData[c.id]={completed:true,completedAt:new Date().toISOString()};
             batch.set(doc(db,'users',uid,'missions','mission_'+c.id),{completed:true,completedAt:new Date().toISOString()});
-            done.push(c.id);runningStars+=(MD[c.id]?.pts||0);
+            done.push(c.id);
+            runningStars+=(MD[c.id]?.pts||0);
         }
     });
 
