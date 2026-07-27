@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Examen — Aumentos y Descuentos | Skopia</title>
+<link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+<style>
+:root{--desk:#7a5c38;--desk-dark:#5c4328;--desk-light:#9e7a52;--wall:#e8e2d4;--wall-low:#d4cfc2;--paper:#fffef8;--paper-line:#c8d8e4;--ink:#1a1a2e;--red-ink:#c0392b;--blue-ink:#2471a3;--gold:#c9a227;--gold-light:#f5e6a3;--green:#27ae60;--red:#c0392b;--dark:#1a1a1a;--overlay:rgba(0,0,0,.82)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Source Sans 3',sans-serif;overflow:hidden;height:100vh;width:100vw;background:#111;color:var(--dark);user-select:none}
+/* ===== LOADING ===== */
+#loading-screen{position:fixed;inset:0;z-index:9999;background:var(--dark);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity .6s}
+#loading-screen.hide{opacity:0;pointer-events:none}
+.loader-ring{width:60px;height:60px;border:4px solid #333;border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#load-text{color:#888;font-size:14px;letter-spacing:1px}
+/* ===== INTRO SCREEN ===== */
+#intro-screen{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--wall);background-image:linear-gradient(180deg,var(--wall) 0%,var(--wall-low) 70%,#b8b0a0 100%)}
+.intro-board{background:#2c3e50;border-radius:8px;padding:30px 50px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3);max-width:500px}
+.intro-board h1{font-family:'Merriweather',serif;color:#fff;font-size:22px;margin-bottom:8px}
+.intro-board .sub{color:#95a5a6;font-size:14px;margin-bottom:20px}
+.intro-board .info-row{display:flex;justify-content:space-between;color:#bdc3c7;font-size:13px;padding:6px 0;border-bottom:1px solid #34495e}
+.intro-board .info-row span:last-child{color:#fff;font-weight:600}
+.intro-board .warn{color:var(--gold);font-size:12px;margin-top:16px}
+#start-btn{margin-top:24px;padding:14px 48px;background:var(--gold);color:var(--dark);border:none;border-radius:6px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:all .2s}
+#start-btn:hover{background:var(--gold-light);transform:scale(1.03)}
+/* ===== EXAM ROOM ===== */
+#exam-room{position:fixed;inset:0;z-index:50;display:none;overflow:hidden}
+.room-bg{position:absolute;inset:0;background:linear-gradient(180deg,var(--wall) 0%,var(--wall-low) 60%,var(--desk-dark) 60.5%,var(--desk) 61%,var(--desk-light) 80%,var(--desk) 100%)}
+.desk-edge{position:absolute;bottom:0;left:0;right:0;height:40%;background:linear-gradient(180deg,var(--desk-light) 0%,var(--desk) 30%,var(--desk-dark) 100%);border-top:3px solid var(--desk-dark)}
+.desk-grain{position:absolute;bottom:0;left:0;right:0;height:40%;background:repeating-linear-gradient(90deg,transparent,transparent 80px,rgba(0,0,0,.03) 80px,rgba(0,0,0,.03) 82px);pointer-events:none}
+/* Reloj */
+#analog-clock{position:absolute;top:12px;right:24px;width:100px;height:100px;z-index:60}
+.clock-face{width:100%;height:100%;border-radius:50%;background:#f5f0e0;border:4px solid #2c3e50;box-shadow:2px 4px 12px rgba(0,0,0,.3);position:relative}
+.clock-center{position:absolute;top:50%;left:50%;width:8px;height:8px;background:#2c3e50;border-radius:50%;transform:translate(-50%,-50%);z-index:3}
+.clock-hand{position:absolute;bottom:50%;left:50%;transform-origin:bottom center;border-radius:2px}
+.hand-hour{width:4px;height:28px;background:#2c3e50;margin-left:-2px;z-index:2}
+.hand-minute{width:3px;height:36px;background:#2c3e50;margin-left:-1.5px;z-index:2}
+.hand-second{width:1.5px;height:40px;background:var(--red-ink);margin-left:-.75px;z-index:3}
+.clock-mark{position:absolute;top:4px;left:50%;width:2px;height:8px;background:#2c3e50;transform-origin:center 46px;margin-left:-1px}
+.clock-mark.major{height:12px;width:3px;margin-left:-1.5px}
+.clock-num{position:absolute;font-size:11px;font-weight:700;color:#2c3e50;font-family:'Merriweather',serif}
+/* Timer digital */
+#digital-timer{position:absolute;top:120px;right:20px;background:rgba(0,0,0,.7);color:#fff;padding:6px 14px;border-radius:4px;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;z-index:60;letter-spacing:2px}
+#digital-timer.urgent{color:var(--red);animation:pulse-timer 1s infinite}
+@keyframes pulse-timer{0%,100%{opacity:1}50%{opacity:.5}}
+/* Info bar */
+#exam-info{position:absolute;top:12px;left:16px;z-index:60;display:flex;flex-direction:column;gap:6px}
+#exam-info .badge{background:rgba(0,0,0,.65);color:#fff;padding:4px 12px;border-radius:4px;font-size:12px;font-weight:600}
+/* Papel base */
+.exam-paper{position:absolute;background:var(--paper);box-shadow:0 4px 20px rgba(0,0,0,.25);cursor:grab;z-index:10;transition:box-shadow .2s}
+.exam-paper:active{cursor:grabbing;box-shadow:0 8px 32px rgba(0,0,0,.35)}
+.exam-paper .paper-header{padding:8px 12px;border-bottom:2px solid #ccc;font-family:'Merriweather',serif;font-size:11px;font-weight:700;color:#444;text-align:center;background:linear-gradient(180deg,#f9f6ef,var(--paper))}
+/* Cuadernillo */
+#cuadernillo{width:520px;max-height:420px;overflow-y:auto;overflow-x:hidden;bottom:60px;left:40px}
+#cuadernillo::-webkit-scrollbar{width:6px}
+#cuadernillo::-webkit-scrollbar-thumb{background:#bbb;border-radius:3px}
+.q-block{padding:10px 14px;border-bottom:1px solid #e0e0e0;page-break-inside:avoid}
+.q-num{font-weight:700;color:var(--blue-ink);font-size:13px;margin-bottom:4px}
+.q-text{font-size:13px;line-height:1.5;color:var(--ink);margin-bottom:6px}
+.q-text img{max-width:100%;height:auto;border-radius:4px;margin:6px 0;display:block}
+.q-opts{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px}
+.q-opt{font-size:12px;padding:3px 0;color:#333}
+.q-opt span{font-weight:700;color:var(--blue-ink);margin-right:4px}
+/* Hoja de respuestas */
+#hoja-respuestas{width:380px;bottom:60px;right:60px}
+.hr-grid{padding:8px 12px}
+.hr-row{display:grid;grid-template-columns:30px repeat(4,1fr);align-items:center;padding:4px 0;border-bottom:1px solid #eee;font-size:12px}
+.hr-num{font-weight:700;text-align:center;color:#666}
+.hr-bubble{width:22px;height:22px;border:2px solid #999;border-radius:50%;margin:0 auto;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:transparent;transition:all .15s}
+.hr-bubble:hover{border-color:var(--blue-ink);background:rgba(36,113,163,.08)}
+.hr-bubble.filled{background:var(--ink);border-color:var(--ink);color:#fff}
+.hr-bubble.filled:hover{background:#333}
+.hr-labels{display:grid;grid-template-columns:30px repeat(4,1fr);font-size:11px;font-weight:700;color:#888;text-align:center;padding:2px 0 6px;border-bottom:2px solid #ccc;margin-bottom:4px}
+/* Hoja de borradores */
+#hoja-borradores{width:400px;height:340px;bottom:70px;left:50%;transform:translateX(-50%)}
+#hoja-borradores .paper-header{display:flex;justify-content:space-between;align-items:center}
+#hoja-borradores .paper-header button{background:none;border:1px solid #ccc;padding:2px 8px;border-radius:3px;font-size:10px;cursor:pointer}
+#hoja-borradores .paper-header button:hover{background:#f0f0f0}
+#scratch-canvas{width:100%;height:calc(100% - 36px);cursor:crosshair;background:#fff}
+/* ===== END ANIMATION ===== */
+#end-overlay{position:fixed;inset:0;z-index:200;display:none;background:var(--overlay);flex-direction:column;align-items:center;justify-content:center}
+#end-overlay.active{display:flex}
+.collecting-text{color:var(--gold);font-family:'Merriweather',serif;font-size:20px;animation:fadeInUp .5s ease}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+/* ===== RESULTS SCREEN ===== */
+#results-screen{position:fixed;inset:0;z-index:300;display:none;overflow-y:auto;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);color:#fff}
+#results-screen.active{display:block}
+.results-container{max-width:750px;margin:0 auto;padding:40px 20px}
+.res-header{text-align:center;margin-bottom:36px}
+.res-score{font-family:'Merriweather',serif;font-size:80px;font-weight:900;color:var(--gold);line-height:1}
+.res-score small{font-size:24px;color:#aaa;font-weight:400}
+.res-level{text-align:center;margin:8px 0 24px}
+.level-badge{display:inline-block;padding:6px 24px;border-radius:20px;font-weight:700;font-size:16px;letter-spacing:1px}
+.level-1{background:#c0392b;color:#fff}
+.level-2{background:#e67e22;color:#fff}
+.level-3{background:var(--gold);color:var(--dark)}
+.level-4{background:var(--green);color:#fff}
+.res-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
+.stat-card{background:rgba(255,255,255,.08);border-radius:10px;padding:16px;text-align:center;border:1px solid rgba(255,255,255,.1)}
+.stat-card .val{font-size:28px;font-weight:700;color:var(--gold)}
+.stat-card .lbl{font-size:12px;color:#aaa;margin-top:4px}
+/* Misiones cumplidas */
+.res-missions{background:rgba(201,162,39,.1);border:1px solid rgba(201,162,39,.25);border-radius:10px;padding:20px;margin-bottom:32px}
+.res-missions h3{color:var(--gold);font-size:16px;margin-bottom:12px}
+.rm-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px}
+.rm-item i{color:var(--gold)}
+.rm-item .rm-pts{margin-left:auto;color:var(--gold);font-weight:700}
+/* Preguntas fallidas */
+.res-failed{margin-bottom:32px}
+.res-failed h3{font-size:16px;margin-bottom:12px;color:var(--red)}
+.rf-card{background:rgba(255,255,255,.06);border-radius:8px;padding:16px;margin-bottom:12px;border-left:3px solid var(--red)}
+.rf-card .rf-q{font-size:14px;line-height:1.5;margin-bottom:8px}
+.rf-card .rf-your{font-size:13px;color:var(--red);margin-bottom:4px}
+.rf-card .rf-correct{font-size:13px;color:var(--green);margin-bottom:8px}
+.rf-card .rf-explain{font-size:12px;color:#aaa;line-height:1.5;background:rgba(0,0,0,.2);padding:8px 10px;border-radius:6px}
+.rf-card .rf-trick{font-size:12px;color:var(--gold);margin-top:6px;font-style:italic}
+/* Preguntas correctas resumen */
+.res-correct-summary{margin-bottom:32px}
+.res-correct-summary h3{font-size:16px;margin-bottom:12px;color:var(--green)}
+.rc-item{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;color:#aaa}
+.rc-item i{color:var(--green);font-size:11px}
+/* Botones */
+.res-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:24px}
+.res-btn{padding:14px 32px;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;text-decoration:none}
+.res-btn:hover{transform:translateY(-2px)}
+.res-btn.primary{background:var(--gold);color:var(--dark)}
+.res-btn.secondary{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)}
+.res-btn.secondary:hover{background:rgba(255,255,255,.15)}
+/* Toast */
+#toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(100px);background:rgba(0,0,0,.85);color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;z-index:9999;transition:transform .3s;pointer-events:none}
+#toast.show{transform:translateX(-50%) translateY(0)}
+/* Hidden */
+.hidden{display:none!important}
+/* Responsive */
+@media(max-width:900px){
+#cuadernillo{width:90vw;left:5vw;max-height:50vh}
+#hoja-respuestas{width:90vw;right:5vw}
+#hoja-borradores{width:90vw;height:50vh}
+.q-opts{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading-screen">
+<div class="loader-ring"></div>
+<div id="load-text">Preparando examen...</div>
+</div>
+
+<!-- Intro -->
+<div id="intro-screen" class="hidden">
+<div class="intro-board">
+<h1>Examen de Razonamiento Cuantitativo</h1>
+<p class="sub">Aumentos y Descuentos</p>
+<div class="info-row"><span>Componente</span><span>Razonamiento Cuantitativo</span></div>
+<div class="info-row"><span>Tema</span><span>Aumentos y Descuentos</span></div>
+<div class="info-row"><span>Preguntas</span><span>35</span></div>
+<div class="info-row"><span>Puntaje maximo</span><span>300</span></div>
+<div class="info-row"><span>Tiempo</span><span>55 minutos</span></div>
+<div class="info-row"><span>Aprobacion</span><span>21 / 35 correctas</span></div>
+<p class="warn"><i class="fas fa-exclamation-triangle"></i> No podras salir ni retroceder una vez iniciado.</p>
+<button id="start-btn">INICIAR EXAMEN</button>
+</div>
+</div>
+
+<!-- Exam Room -->
+<div id="exam-room">
+<div class="room-bg"></div>
+<div class="desk-edge"></div>
+<div class="desk-grain"></div>
+<!-- Reloj analógico -->
+<div id="analog-clock">
+<div class="clock-face" id="clock-face">
+<div class="clock-center"></div>
+<div class="clock-hand hand-hour" id="hand-hour"></div>
+<div class="clock-hand hand-minute" id="hand-minute"></div>
+<div class="clock-hand hand-second" id="hand-second"></div>
+</div>
+</div>
+<div id="digital-timer">55:00</div>
+<div id="exam-info">
+<div class="badge"><i class="fas fa-file-alt"></i> Aumentos y Descuentos</div>
+<div class="badge" id="answered-count">Respondidas: 0/35</div>
+</div>
+<!-- Papeles (se crean dinámicamente) -->
+</div>
+
+<!-- End Overlay -->
+<div id="end-overlay">
+<div class="collecting-text" id="collecting-msg">Recolectando materiales...</div>
+</div>
+
+<!-- Results -->
+<div id="results-screen">
+<div class="results-container" id="results-container"></div>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+const fbConfig = {
+    apiKey: "AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+    projectId: "skopia-aa786",
+    storageBucket: "skopia-aa786.firebasestorage.app",
+    messagingSenderId: "719823055099",
+    appId: "1:719823055099:web:7d91ea29e4b2dcbb9b685e",
+    authDomain: "skopia-aa786.firebaseapp.com"
+};
+const app = initializeApp(fbConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const SUBTOPIC_ID = 'aumentos-descuentos';
+const TOTAL_Q = 35;
+const MAX_SCORE = 300;
+const PASS_THRESHOLD = 21;
+const EXAM_TIME = 55 * 60; // segundos
+
+let uid = null, userData = null, missionData = {}, prevExamData = null;
+let questions = [], answers = {}, timeLeft = EXAM_TIME, timerInterval = null;
+let examStartTime = 0, streakCurrent = 0, currentZ = 20;
+let scratchCtx = null, isDrawing = false, lastX = 0, lastY = 0;
+
+/* ===== TOAST ===== */
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
+
+/* ===== CREAR RELOJ ANALÓGICO ===== */
+function buildClock(){
+    const face=document.getElementById('clock-face');
+    for(let i=0;i<60;i++){
+        const mark=document.createElement('div');
+        mark.className='clock-mark'+(i%5===0?' major':'');
+        mark.style.transform=`rotate(${i*6}deg)`;
+        face.appendChild(mark);
+    }
+    const nums=[12,1,2,3,4,5,6,7,8,9,10,11];
+    const r=38;
+    nums.forEach((n,i)=>{
+        const angle=(i*30-90)*Math.PI/180;
+        const x=50+r*Math.cos(angle), y=50+r*Math.sin(angle);
+        const el=document.createElement('div');
+        el.className='clock-num';
+        el.textContent=n;
+        el.style.left=x+'%';el.style.top=y+'%';
+        el.style.transform='translate(-50%,-50%)';
+        face.appendChild(el);
+    });
+}
+function updateClock(){
+    if(timeLeft<=0)return;
+    const elapsed=EXAM_TIME-timeLeft;
+    const mins=elapsed/60, secs=elapsed%60;
+    const hourAngle=(mins/60)*360;
+    const minAngle=(secs/60)*360;
+    const secAngle=(secs)*6;
+    document.getElementById('hand-hour').style.transform=`rotate(${hourAngle}deg)`;
+    document.getElementById('hand-minute').style.transform=`rotate(${minAngle}deg)`;
+    document.getElementById('hand-second').style.transform=`rotate(${secAngle}deg)`;
+    const m=Math.floor(timeLeft/60), s=timeLeft%60;
+    const dt=document.getElementById('digital-timer');
+    dt.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    dt.classList.toggle('urgent',timeLeft<=120);
+}
+function updateAnsweredCount(){
+    const c=Object.keys(answers).length;
+    document.getElementById('answered-count').textContent=`Respondidas: ${c}/${TOTAL_Q}`;
+}
+
+/* ===== DRAG & DROP CON LÍMITES ===== */
+function makeDraggable(el, container){
+    let isDragging=false, startX=0, startY=0, origLeft=0, origTop=0;
+    const getPos=(e)=>{const t=e.touches?e.touches[0]:e;return{x:t.clientX,y:t.clientY};};
+    const onDown=(e)=>{
+        if(e.target.closest('.hr-bubble')||e.target.closest('button')||e.target.tagName==='CANVAS')return;
+        isDragging=true;
+        const p=getPos(e);
+        startX=p.x;startY=p.y;
+        const r=el.getBoundingClientRect();
+        origLeft=r.left;origTop=r.top;
+        el.style.transition='none';
+        el.style.zIndex=++currentZ;
+        e.preventDefault();
+    };
+    const onMove=(e)=>{
+        if(!isDragging)return;
+        const p=getPos(e);
+        const dx=p.x-startX, dy=p.y-startY;
+        let newLeft=origLeft+dx, newTop=origTop+dy;
+        const cr=container.getBoundingClientRect();
+        const er=el.getBoundingClientRect();
+        const ew=er.width, eh=er.height;
+        const minY=cr.top+10, maxY=cr.bottom-eh-10;
+        const minX=cr.left+10, maxX=cr.right-ew-10;
+        newTop=Math.max(minY,Math.min(maxY,newTop));
+        newLeft=Math.max(minX,Math.min(maxX,newLeft));
+        el.style.position='fixed';
+        el.style.left=newLeft+'px';
+        el.style.top=newTop+'px';
+        el.style.bottom='auto';
+        el.style.right='auto';
+        el.style.transform='none';
+        e.preventDefault();
+    };
+    const onUp=()=>{
+        if(!isDragging)return;
+        isDragging=false;
+        el.style.transition='box-shadow .2s';
+    };
+    el.addEventListener('mousedown',onDown);
+    el.addEventListener('touchstart',onDown,{passive:false});
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('touchmove',onMove,{passive:false});
+    document.addEventListener('mouseup',onUp);
+    document.addEventListener('touchend',onUp);
+}
+
+/* ===== CREAR CUADERNILLO ===== */
+function createCuadernillo(){
+    const el=document.createElement('div');
+    el.className='exam-paper';el.id='cuadernillo';
+    el.innerHTML=`<div class="paper-header">CUADERNILLO DE PREGUNTAS — Razonamiento Cuantitativo — Aumentos y Descuentos</div>
+    <div id="q-list">${questions.map((q,i)=>`
+        <div class="q-block">
+            <div class="q-num">${i+1}.</div>
+            <div class="q-text">${q.imagen?`<img src="${q.imagen}" alt="Imagen pregunta ${i+1}" onerror="this.style.display='none'">`:''}${q.pregunta}</div>
+            <div class="q-opts">${q.opciones.map((o,j)=>`<div class="q-opt"><span>${['A','B','C','D'][j]}.</span> ${o}</div>`).join('')}</div>
+        </div>`).join('')}</div>`;
+    document.getElementById('exam-room').appendChild(el);
+    makeDraggable(el, document.getElementById('exam-room'));
+}
+
+/* ===== CREAR HOJA DE RESPUESTAS ===== */
+function createHojaRespuestas(){
+    const el=document.createElement('div');
+    el.className='exam-paper';el.id='hoja-respuestas';
+    let rows='';
+    for(let i=0;i<TOTAL_Q;i++){
+        rows+=`<div class="hr-row"><div class="hr-num">${i+1}</div>
+        ${['A','B','C','D'].map(l=>`<div class="hr-bubble" data-q="${i}" data-opt="${l}" title="${l}">${l}</div>`).join('')}
+        </div>`;
+    }
+    el.innerHTML=`<div class="paper-header">HOJA DE RESPUESTAS</div>
+    <div class="hr-grid">
+        <div class="hr-labels"><div></div><div>A</div><div>B</div><div>C</div><div>D</div></div>
+        ${rows}
+    </div>`;
+    document.getElementById('exam-room').appendChild(el);
+    // Evento de marcado
+    el.querySelectorAll('.hr-bubble').forEach(b=>{
+        b.addEventListener('click',(e)=>{
+            e.stopPropagation();
+            const qi=parseInt(b.dataset.q), opt=b.dataset.opt;
+            // Desmarcar otras de la misma fila
+            el.querySelectorAll(`.hr-bubble[data-q="${qi}"]`).forEach(bb=>bb.classList.remove('filled'));
+            b.classList.add('filled');
+            answers[qi]=opt;
+            updateAnsweredCount();
+        });
+    });
+    makeDraggable(el, document.getElementById('exam-room'));
+}
+
+/* ===== CREAR HOJA DE BORRADORES ===== */
+function createHojaBorradores(){
+    const el=document.createElement('div');
+    el.className='exam-paper';el.id='hoja-borradores';
+    el.innerHTML=`<div class="paper-header"><span>HOJA DE BORRADORES</span><button id="clear-scratch"><i class="fas fa-eraser"></i> Borrar</button></div>
+    <canvas id="scratch-canvas"></canvas>`;
+    document.getElementById('exam-room').appendChild(el);
+    makeDraggable(el, document.getElementById('exam-room'));
+    // Canvas setup
+    setTimeout(()=>{
+        const canvas=document.getElementById('scratch-canvas');
+        const rect=canvas.parentElement.getBoundingClientRect();
+        canvas.width=rect.width;
+        canvas.height=rect.height-36;
+        scratchCtx=canvas.getContext('2d');
+        scratchCtx.lineCap='round';scratchCtx.lineJoin='round';scratchCtx.lineWidth=2;scratchCtx.strokeStyle='#1a1a2e';
+        canvas.addEventListener('mousedown',startDraw);canvas.addEventListener('touchstart',startDraw,{passive:false});
+        canvas.addEventListener('mousemove',draw);canvas.addEventListener('touchmove',draw,{passive:false});
+        canvas.addEventListener('mouseup',stopDraw);canvas.addEventListener('touchend',stopDraw);
+        canvas.addEventListener('mouseleave',stopDraw);
+    },100);
+    document.getElementById('clear-scratch').addEventListener('click',(e)=>{
+        e.stopPropagation();
+        const c=document.getElementById('scratch-canvas');
+        scratchCtx.clearRect(0,0,c.width,c.height);
+    });
+}
+function getCanvasPos(e){
+    const c=document.getElementById('scratch-canvas'), r=c.getBoundingClientRect();
+    const t=e.touches?e.touches[0]:e;
+    return{x:t.clientX-r.left, y:t.clientY-r.top};
+}
+function startDraw(e){e.stopPropagation();isDrawing=true;const p=getCanvasPos(e);lastX=p.x;lastY=p.y;}
+function draw(e){
+    if(!isDrawing)return;e.stopPropagation();
+    const p=getCanvasPos(e);
+    scratchCtx.beginPath();scratchCtx.moveTo(lastX,lastY);scratchCtx.lineTo(p.x,p.y);scratchCtx.stroke();
+    lastX=p.x;lastY=p.y;
+}
+function stopDraw(e){if(e)e.stopPropagation();isDrawing=false;}
+
+/* ===== POSICIONAR PAPELES ===== */
+function positionPapers(){
+    const room=document.getElementById('exam-room').getBoundingClientRect();
+    const cuad=document.getElementById('cuadernillo');
+    const hoja=document.getElementById('hoja-respuestas');
+    const borr=document.getElementById('hoja-borradores');
+    cuad.style.position='fixed';cuad.style.left='20px';cuad.style.top=(room.bottom*0.42)+'px';cuad.style.bottom='auto';cuad.style.right='auto';cuad.style.transform='rotate(-1deg)';
+    hoja.style.position='fixed';hoja.style.right='20px';hoja.style.top=(room.bottom*0.45)+'px';hoja.style.bottom='auto';hoja.style.left='auto';hoja.style.transform='rotate(0.5deg)';
+    borr.style.position='fixed';borr.style.left=(room.width*0.35)+'px';borr.style.top=(room.bottom*0.48)+'px';borr.style.bottom='auto';borr.style.right='auto';borr.style.transform='none';
+}
+
+/* ===== CARGAR PREGUNTAS ===== */
+async function loadQuestions(){
+    try{
+        const res=await fetch('preguntas.json');
+        if(!res.ok)throw new Error('No se encontro preguntas.json');
+        const all=await res.json();
+        const tagged=all.filter(q=>q.tags&&q.tags.includes('aumentos-y-descuentos'));
+        if(tagged.length<TOTAL_Q)throw new Error(`Solo hay ${tagged.length} preguntas con tag "aumentos-y-descuentos", se necesitan ${TOTAL_Q}`);
+        // Seleccionar 35 aleatorias
+        const shuffled=tagged.sort(()=>Math.random()-0.5);
+        questions=shuffled.slice(0,TOTAL_Q);
+    }catch(err){
+        console.error('Error cargando preguntas:',err);
+        document.getElementById('load-text').textContent='Error: '+err.message+'. Asegurate de que preguntas.json este en la misma carpeta.';
+        throw err;
+    }
+}
+
+/* ===== TIMER ===== */
+function startTimer(){
+    examStartTime=Date.now();
+    timerInterval=setInterval(()=>{
+        timeLeft--;
+        updateClock();
+        if(timeLeft<=0){clearInterval(timerInterval);finishExam(true);}
+    },1000);
+}
+
+/* ===== FINALIZAR EXAMEN ===== */
+async function finishExam(timeUp=false){
+    clearInterval(timerInterval);
+    const overlay=document.getElementById('end-overlay');
+    overlay.classList.add('active');
+    document.getElementById('collecting-msg').textContent=timeUp?'Se agoto el tiempo. Recoleccionando materiales...':'Examen finalizado. Recolectando materiales...';
+    // Ocultar papeles con animación
+    const papers=document.querySelectorAll('.exam-paper');
+    papers.forEach((p,i)=>{
+        setTimeout(()=>{p.style.transition='all .5s ease-in';p.style.opacity='0';p.style.transform='translateY(80px) scale(0.9) rotate(5deg)';},i*200);
+    });
+    await new Promise(r=>setTimeout(r,2000));
+    overlay.classList.remove('active');
+    document.getElementById('exam-room').style.display='none';
+    await calculateAndShowResults(timeUp);
+}
+
+/* ===== CALCULAR RESULTADOS ===== */
+async function calculateAndShowResults(timeUp){
+    let correct=0;
+    const results=questions.map((q,i)=>{
+        const userAns=answers[i]||null;
+        const correctOpt=['A','B','C','D'][q.opciones.indexOf(q.respuestaCorrecta)]||null;
+        const isCorrect=userAns===correctOpt;
+        if(isCorrect)correct++;
+        return{...q, userAns, correctOpt, isCorrect, index:i};
+    });
+    const score=Math.round((correct/TOTAL_Q)*MAX_SCORE);
+    const percentile=estimatePercentile(correct);
+    const level=score<150?1:score<210?2:score<255?3:4;
+    const timeUsed=Math.floor((Date.now()-examStartTime)/1000);
+    const timeUpFlag=timeUp;
+    const finishedEarly=!timeUp&&timeUsed<EXAM_TIME;
+    const under25=timeUsed<=25*60;
+    const perfectTime=timeUsed>=EXAM_TIME-5&&timeUsed<=EXAM_TIME;
+    const perfectScore=correct===TOTAL_Q;
+
+    // Racha más larga de aciertos seguidos
+    let maxStreak=0, curStreak=0;
+    results.forEach(r=>{if(r.isCorrect){curStreak++;if(curStreak>maxStreak)maxStreak=curStreak;}else curStreak=0;});
+
+    // Guardar en Firebase
+    await saveExamResult(score, correct, timeUsed, timeUpFlag);
+
+    // Verificar misiones
+    const newMissions=await checkMissions(score, correct, timeUsed, timeUpFlag, under25, perfectTime, perfectScore, maxStreak);
+
+    // Mostrar resultados
+    showResultsScreen(results, score, correct, percentile, level, timeUsed, newMissions);
+}
+
+function estimatePercentile(correct){
+    const p=[5,8,12,15,18,21,24,26,28,30,31,32,33,34,35];
+    const v=[1,3,8,15,25,38,50,62,73,82,88,93,96,98,99];
+    for(let i=0;i<p.length;i++){if(correct<=p[i])return v[i];}
+    return 99;
+}
+
+/* ===== GUARDAR EN FIRESTORE ===== */
+async function saveExamResult(score, correct, timeUsed, timeUp){
+    if(!uid)return;
+    const prev=prevExamData||{bestScore:0,correct:0,attempts:0};
+    const newBest=Math.max(prev.bestScore||0, score);
+    const newAttempts=(prev.attempts||0)+1;
+    const improved=score>(prev.bestScore||0);
+    await setDoc(doc(db,'users',uid,'exams',SUBTOPIC_ID),{
+        bestScore:newBest, correct:Math.max(prev.correct||0, correct), attempts:newAttempts,
+        lastScore:score, lastCorrect:correct, lastTime:timeUsed, lastTimeUp:timeUp,
+        updatedAt:new Date().toISOString()
+    },{merge:true});
+    // Actualizar ruta
+    const routeSnap=await getDoc(doc(db,'users',uid,'routes','RC'));
+    const rcData=routeSnap.exists()?routeSnap.data():{};
+    rcData['aumentos-descuentos']={score:newBest,correct:Math.max(prev.correct||0,correct),attempts:newAttempts,passed:correct>=PASS_THRESHOLD};
+    // Recalcular promedio RC
+    const rcTopics=['aritmetica-basica','porcentajes-razones','algebra','funciones','geometria','medidas','razonamiento-logico-teoria','probabilidad','estadistica-descriptiva','interpretacion-datos'];
+    const avgs=rcTopics.filter(t=>rcData[t]&&rcData[t].avg>0).map(t=>rcData[t].avg);
+    // Nota: algunas rutas guardan avg directamente, otras score. Ajustamos:
+    const scoreKeys=rcTopics.filter(t=>rcData[t]&&rcData[t].score!==undefined);
+    const avgVals=scoreKeys.map(t=>rcData[t].score||0).filter(s=>s>0);
+    rcData.avg=avgVals.length>0?Math.round(avgVals.reduce((a,b)=>a+b,0)/avgVals.length):0;
+    rcData.completed=rcTopics.every(t=>rcData[t]&&rcData[t].passed);
+    await setDoc(doc(db,'users',uid,'routes','RC'),rcData,{merge:true});
+    // Actualizar lastStudyDate
+    await updateDoc(doc(db,'users',uid),{lastStudyDate:new Date().toISOString().split('T')[0]}).catch(()=>{});
+}
+
+/* ===== MISIONES ===== */
+const MISSION_DEFS={
+    1:{title:'Completa tu primer examen',pts:50},
+    2:{title:'Logra al menos 180/300 en un examen',pts:80},
+    7:{title:'Repite un examen para mejorar tu nota',pts:50},
+    9:{title:'Acumula tus primeras 200 estrellas',pts:30},
+    10:{title:'Completa 3 misiones seguidas',pts:50},
+    11:{title:'Logra 240/300 en un examen',pts:150},
+    12:{title:'Completa un examen sin errores (300/300)',pts:200},
+    17:{title:'Obtén 500 estrellas acumuladas',pts:50},
+    18:{title:'Gana un examen con tiempo limitado',pts:80},
+    21:{title:'Logra 270/300 en un examen',pts:180},
+    22:{title:'Supera tu propia mejor nota',pts:60},
+    26:{title:'Suma 1000 estrellas totales',pts:50},
+    27:{title:'Gana un examen con tiempo limitado',pts:80},
+    36:{title:'Obtén 2000 estrellas acumuladas',pts:60},
+    40:{title:'Termina un examen con todos los tiempos perfectos',pts:150},
+    45:{title:'Completa 10 misiones',pts:140},
+    47:{title:'Termina un examen sin errores',pts:150},
+    50:{title:'Completa un examen en menos de 25 minutos',pts:140},
+    58:{title:'Crea una racha de 20 aciertos seguidos',pts:140}
+};
+
+async function checkMissions(score, correct, timeUsed, timeUp, under25, perfectTime, perfectScore, maxStreak){
+    if(!uid)return[];
+    const prev=prevExamData||{bestScore:0,attempts:0};
+    const improved=score>(prev.bestScore||0);
+    const repeated=(prev.attempts||0)>0;
+    const finishedInTime=!timeUp;
+
+    // Calcular estrellas actuales (total de misiones completadas hasta ahora)
+    let currentStars=0;
+    for(const[mid,m]of Object.entries(missionData)){if(m.completed)currentStars+=(MISSION_DEFS[parseInt(mid)]?.pts||0);}
+    const completedCount=Object.keys(missionData).filter(k=>missionData[k].completed).length;
+
+    // Definir condiciones
+    const checks=[
+        {id:1,cond:true}, // primer examen (si estamos aquí, se completó)
+        {id:2,cond:score>=180},
+        {id:7,cond:repeated&&improved},
+        {id:9,cond:false}, // se evalúa después de sumar nuevas estrellas
+        {id:10,cond:false}, // se evalúa después
+        {id:11,cond:score>=240},
+        {id:12,cond:perfectScore},
+        {id:17,cond:false},
+        {id:18,cond:finishedInTime},
+        {id:21,cond:score>=270},
+        {id:22,cond:improved&&(prev.bestScore||0)>0},
+        {id:26,cond:false},
+        {id:27,cond:finishedInTime},
+        {id:36,cond:false},
+        {id:40,cond:perfectTime},
+        {id:45,cond:false},
+        {id:47,cond:perfectScore},
+        {id:50,cond:under25&&finishedInTime},
+        {id:58,cond:maxStreak>=20}
+    ];
+
+    const batch=writeBatch(db);
+    const newlyCompleted=[];
+
+    // Primera pasada: completar las que no dependen de estrellas
+    for(const c of checks){
+        if(missionData[c.id]?.completed)continue;
+        if(!c.cond)continue;
+        missionData[c.id]={completed:true,completedAt:new Date().toISOString()};
+        batch.set(doc(db,'users',uid,'missions','mission_'+c.id),{completed:true,completedAt:new Date().toISOString()});
+        newlyCompleted.push(c.id);
+        currentStars+=(MISSION_DEFS[c.id]?.pts||0);
+    }
+
+    // Segunda pasada: las que dependen de estrellas totales
+    const starChecks=[
+        {id:9,cond:()=>currentStars>=200},
+        {id:17,cond:()=>currentStars>=500},
+        {id:26,cond:()=>currentStars>=1000},
+        {id:36,cond:()=>currentStars>=2000}
+    ];
+    for(const c of starChecks){
+        if(missionData[c.id]?.completed)continue;
+        if(!c.cond())continue;
+        missionData[c.id]={completed:true,completedAt:new Date().toISOString()};
+        batch.set(doc(db,'users',uid,'missions','mission_'+c.id),{completed:true,completedAt:new Date().toISOString()});
+        newlyCompleted.push(c.id);
+        currentStars+=(MISSION_DEFS[c.id]?.pts||0);
+    }
+
+    // Tercera pasada: las que dependen de conteo de misiones
+    const newCount=Object.keys(missionData).filter(k=>missionData[k].completed).length;
+    const countChecks=[
+        {id:10,cond:newCount>=3},
+        {id:45,cond:newCount>=10}
+    ];
+    for(const c of countChecks){
+        if(missionData[c.id]?.completed)continue;
+        if(!c.cond)continue;
+        missionData[c.id]={completed:true,completedAt:new Date().toISOString()};
+        batch.set(doc(db,'users',uid,'missions','mission_'+c.id),{completed:true,completedAt:new Date().toISOString()});
+        newlyCompleted.push(c.id);
+        currentStars+=(MISSION_DEFS[c.id]?.pts||0);
+    }
+
+    if(newlyCompleted.length>0){
+        const finalCount=Object.keys(missionData).filter(k=>missionData[k].completed).length;
+        batch.update(doc(db,'users',uid),{stars:currentStars,totalMissionsCompleted:finalCount});
+        try{await batch.commit();}catch(e){console.error('Error guardando misiones:',e);}
+    }
+
+    return newlyCompleted.map(id=>({id,...MISSION_DEFS[id]}));
+}
+
+/* ===== PANTALLA DE RESULTADOS ===== */
+function showResultsScreen(results, score, correct, percentile, level, timeUsed, newMissions){
+    const screen=document.getElementById('results-screen');
+    const container=document.getElementById('results-container');
+    const failed=results.filter(r=>!r.isCorrect);
+    const passed=results.filter(r=>r.isCorrect);
+    const mins=Math.floor(timeUsed/60), secs=timeUsed%60;
+    const levelNames=['','Nivel 1 — Insuficiente','Nivel 2 — Mínimo','Nivel 3 — Satisfactorio','Nivel 4 — Avanzado'];
+
+    let html=`
+    <div class="res-header">
+        <p style="color:#888;margin-bottom:8px;font-size:14px">Aumentos y Descuentos — Resultados</p>
+        <div class="res-score">${score}<small> / ${MAX_SCORE}</small></div>
+        <div class="res-level"><span class="level-badge level-${level}">${levelNames[level]}</span></div>
+    </div>
+    <div class="res-stats">
+        <div class="stat-card"><div class="val">${correct}/${TOTAL_Q}</div><div class="lbl">Correctas</div></div>
+        <div class="stat-card"><div class="val">${percentile}%</div><div class="lbl">Percentil estimado</div></div>
+        <div class="stat-card"><div class="val">${mins}:${String(secs).padStart(2,'0')}</div><div class="lbl">Tiempo usado</div></div>
+    </div>`;
+
+    // Misiones cumplidas
+    if(newMissions.length>0){
+        html+=`<div class="res-missions"><h3><i class="fas fa-trophy"></i> Misiones completadas</h3>`;
+        newMissions.forEach(m=>{
+            html+=`<div class="rm-item"><i class="fas fa-check-circle"></i><span>${m.title}</span><span class="rm-pts">+${m.pts} estrellas</span></div>`;
+        });
+        html+=`</div>`;
+    }
+
+    // Preguntas fallidas
+    if(failed.length>0){
+        html+=`<div class="res-failed"><h3><i class="fas fa-times-circle"></i> Preguntas incorrectas (${failed.length})</h3>`;
+        failed.forEach(r=>{
+            html+=`<div class="rf-card">
+                <div class="rf-q"><strong>${r.index+1}.</strong> ${r.pregunta}</div>
+                ${r.userAns?`<div class="rf-your"><i class="fas fa-times"></i> Tu respuesta: ${r.userAns}</div>`:`<div class="rf-your"><i class="fas fa-times"></i> Sin responder</div>`}
+                <div class="rf-correct"><i class="fas fa-check"></i> Respuesta correcta: ${r.correctOpt}</div>
+                ${r.explicacion?`<div class="rf-explain"><strong>Explicacion:</strong> ${r.explicacion}</div>`:''}
+                ${r.truco?`<div class="rf-trick"><i class="fas fa-lightbulb"></i> Truco: ${r.truco}</div>`:''}
+            </div>`;
+        });
+        html+=`</div>`;
+    }
+
+    // Resumen correctas
+    if(passed.length>0){
+        html+=`<div class="res-correct-summary"><h3><i class="fas fa-check-circle"></i> Preguntas correctas (${passed.length})</h3>`;
+        passed.forEach(r=>{html+=`<div class="rc-item"><i class="fas fa-check"></i> Pregunta ${r.index+1} — ${r.correctOpt}</div>`;});
+        html+=`</div>`;
+    }
+
+    html+=`<div class="res-actions">
+        <button class="res-btn primary" id="retry-btn"><i class="fas fa-redo"></i> Repetir examen</button>
+        <a class="res-btn secondary" href="porcentajes-razones.html"><i class="fas fa-arrow-left"></i> Volver a la ruta</a>
+    </div>`;
+
+    container.innerHTML=html;
+    screen.classList.add('active');
+
+    document.getElementById('retry-btn').addEventListener('click',()=>{
+        screen.classList.remove('active');
+        location.reload();
+    });
+}
+
+/* ===== CARGAR DATOS DEL USUARIO ===== */
+async function loadUserData(){
+    if(!uid)return;
+    const userSnap=await getDoc(doc(db,'users',uid));
+    userData=userSnap.exists()?userSnap.data():{stars:0,totalQuestions:0};
+    const examSnap=await getDoc(doc(db,'users',uid,'exams',SUBTOPIC_ID));
+    prevExamData=examSnap.exists()?examSnap.data():null;
+    missionData={};
+    const ms=await getDocs(collection(db,'users',uid,'missions'));
+    ms.forEach(d=>{missionData[parseInt(d.id.replace('mission_',''))]=d.data();});
+}
+
+/* ===== INICIO ===== */
+async function init(){
+    try{
+        await loadQuestions();
+        buildClock();
+        document.getElementById('loading-screen').classList.add('hide');
+        document.getElementById('intro-screen').classList.remove('hidden');
+        document.getElementById('start-btn').addEventListener('click',startExam);
+    }catch(e){
+        document.getElementById('load-text').textContent='No se pudieron cargar las preguntas. Verifica que preguntas.json exista.';
+    }
+}
+
+async function startExam(){
+    document.getElementById('intro-screen').classList.add('hidden');
+    const room=document.getElementById('exam-room');
+    room.style.display='block';
+    createCuadernillo();
+    createHojaRespuestas();
+    createHojaBorradores();
+    positionPapers();
+    updateClock();
+    updateAnsweredCount();
+    startTimer();
+    // Botón de finalizar (escondido, se activa con doble clic en el reloj como truco, o con botón flotante)
+    const finishBtn=document.createElement('button');
+    finishBtn.style.cssText='position:fixed;bottom:16px;right:16px;z-index:100;background:rgba(192,57,43,.9);color:#fff;border:none;padding:10px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;';
+    finishBtn.innerHTML='<i class="fas fa-hand-paper"></i> Entregar examen';
+    finishBtn.addEventListener('click',()=>{if(Object.keys(answers).length>0||confirm('No has respondido ninguna pregunta. Entregar de todas formas?'))finishExam(false);});
+    room.appendChild(finishBtn);
+}
+
+onAuthStateChanged(auth,async(user)=>{
+    if(!user){window.location.href='index.html';return;}
+    uid=user.uid;
+    await loadUserData();
+    init();
+});
+</script>
+</body>
+</html>
