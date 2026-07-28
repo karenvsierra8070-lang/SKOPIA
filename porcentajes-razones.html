@@ -930,7 +930,6 @@ async function loadAllData(){
     missionData={};const ms=await getDocs(collection(db,'users',uid,'missions'));ms.forEach(d=>{missionData[parseInt(d.id.replace('mission_',''))]=d.data();});
     routeData={};for(const mod of ALL_MODULES){const r=await getDoc(doc(db,'users',uid,'routes',mod));if(r.exists())routeData[mod]=r.data();}
 }
-
 /* ===== GUARDAR ESTADO DE RUTA ===== */
 async function saveRouteState(){
     if(!uid)return;
@@ -941,10 +940,22 @@ async function saveRouteState(){
     const rcData=routeData.RC||{};
     rcData[ROUTE_ID]={avg,completed:count===5,allMax,subtopics:{}};
     SUBTOPICS.forEach(s=>{rcData[ROUTE_ID].subtopics[s.id]={score:examData[s.id]?.bestScore||0,correct:examData[s.id]?.correct||0,attempts:examData[s.id]?.attempts||0,passed:examData[s.id]?.correct>=PASS_THRESHOLD||false};});
-    const rcTopics=Object.keys(rcData).filter(k=>k!=='avg'&&k!=='completed');
-    const rcAvgs=rcTopics.map(k=>rcData[k].avg).filter(a=>a>0);
+    /* CORREGIDO: Promediar SOLO las rutas que tienen al menos 1 subtema completado.
+       Una ruta sin datos no cuenta en el promedio general. */
+    const routeKeys=Object.keys(rcData).filter(k=>k!=='avg'&&k!=='completed');
+    const routesWithProgress=routeKeys.filter(k=>{
+        const subs=rcData[k].subtopics;
+        if(!subs)return false;
+        return Object.values(subs).some(s=>s.passed);
+    });
+    const rcAvgs=routesWithProgress.map(k=>rcData[k].avg).filter(a=>a>0);
     rcData.avg=rcAvgs.length>0?Math.round(rcAvgs.reduce((a,b)=>a+b,0)/rcAvgs.length):0;
-    rcData.completed=RC_TOPICS.every(t=>rcData[t]?.completed);
+    /* CORREGIDO: rcData.completed solo es true si TODAS las rutas RC tienen al menos 1 subtema aprobado */
+    const allRCTopics=Object.keys(rcData).filter(k=>k!=='avg'&&k!=='completed');
+    rcData.completed=allRCTopics.length>0&&allRCTopics.every(k=>{
+        const subs=rcData[k].subtopics;
+        return subs&&Object.values(subs).some(s=>s.passed);
+    });
     await setDoc(doc(db,'users',uid,'routes','RC'),rcData,{merge:true});
     await updateDoc(doc(db,'users',uid),{lastStudyDate:getTodayKey()}).catch(()=>{});
 }
@@ -971,6 +982,7 @@ async function checkAndCompleteMissions(){
     const lcComplete=routeData.LC?.completed||false;
     const ccComplete=routeData.CC?.completed||false;
     let routesComplete=0;if(rcComplete)routesComplete++;if(lcComplete)routesComplete++;if(ccComplete)routesComplete++;
+    /* CORREGIDO: Leer el avg de RC desde routeData, ya que saveRouteState ahora lo calcula bien */
     const rcAvg=routeData.RC?.avg||0;
 
     const practiceCount=Object.keys(userData.practiceExams||{}).filter(k=>userData.practiceExams[k].completed).length;
@@ -1011,20 +1023,41 @@ async function checkAndCompleteMissions(){
     function evalConditions(){
         const s=userData.stars||0;
         const cm=Object.keys(missionData).filter(k=>missionData[k].completed).length;
-        checks[0].cond= count===5&&completed.every(x=>(examData[x.id].correct||0)>=PASS_THRESHOLD);
+        /* Misión 4: Ya no tiene condición real aquí, pero la dejamos por si acaso */
+        checks[0].cond=false;
         checks[1].cond= s>=200;
         checks[2].cond= s>=500;
         checks[3].cond= s>=2000;
         checks[4].cond= exams240>=5;
         checks[5].cond= s>=3000;
         checks[6].cond= s>=4000;
+        /* Misión 54: CORREGIDO - usar rcAvg de Firebase que ahora excluye rutas sin datos */
         checks[7].cond= rcAvg>=200;
         checks[8].cond= routes250>=3;
         checks[9].cond= s>=6000;
-        checks[10].cond= count===5&&completed.every(x=>(examData[x.id].bestScore||0)>=MAX_SCORE);
+        /* Misión 63: "Termina todos los niveles de una ruta (10/10)"
+           Esto significa completar TODOS los subtemas de UNA ruta.
+           RC tiene 10 temas, cada uno con 5 subtemas = 50 subtemas total.
+           Verificamos si hay alguna ruta con TODOS sus subtemas aprobados. */
+        let anyRouteFull=false;
+        for(const mod of ALL_MODULES){
+            const rd=routeData[mod];
+            if(!rd)continue;
+            const rTopics=Object.keys(rd).filter(k=>k!=='avg'&&k!=='completed');
+            const allSubsPassed=rTopics.every(tk=>{
+                const subs=rd[tk].subtopics;
+                if(!subs)return false;
+                /* Cada tema tiene 5 subtemas, verificar que los 5 estén aprobados */
+                const subKeys=Object.keys(subs);
+                return subKeys.length>=5&&subKeys.every(sk=>subs[sk].passed);
+            });
+            if(allSubsFull){anyRouteFull=true;break;}
+        }
+        checks[10].cond= anyRouteFull;
         checks[11].cond= totalQuestions>=1000;
         checks[12].cond= cm>=20;
-        checks[13].cond= avg>=250;
+        /* Misión 68: CORREGIDO - usar rcAvg de Firebase */
+        checks[13].cond= rcAvg>=250;
         checks[14].cond= exams250>=5;
         checks[15].cond= s>=8000;
         checks[16].cond= s>=10000;
@@ -1088,7 +1121,6 @@ async function checkAndCompleteMissions(){
         document.getElementById('top-stars').textContent=userData.stars||0;
     }
 }
-
 /* ===== TIEMPO ACTIVO ===== */
 const TIME_KEY='skopia_active_time';
 function getTodayKey(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
