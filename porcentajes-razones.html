@@ -918,28 +918,18 @@ function renderRelevantMissions(){
     const show=ids.slice(0,12);
     list.innerHTML=show.map(mid=>{const done=missionData[mid]?.completed||false;const info=getMissionInfo(mid);return `<div class="mission-item"><div class="mission-dot${done?' done':''}">${done?'<i class="fas fa-check" style="font-size:.7rem"></i>':mid}</div><div class="mission-text">${info.title}<span class="m-pts">+${info.points} estrellas</span></div><i class="fas fa-check-circle mission-check${done?' show':''}"></i></div>`;}).join('');
 }
-
-/* ===== CARGAR DATOS ===== */
-async function loadAllData(){
-    if(!uid)return;
-    const userSnap=await getDoc(doc(db,'users',uid));
-    userData=userSnap.exists()?userSnap.data():{stars:0,totalQuestions:0,streak:{current:0,lastDate:'',totalDays:0},exams:{},routes:{},practiceExams:{}};
-    examData={};
-    for(const s of SUBTOPICS){const sn=await getDoc(doc(db,'users',uid,'exams',s.id));if(sn.exists())examData[s.id]=sn.data();}
-    const pr=await getDoc(doc(db,'users',uid,'practiceExams',ROUTE_ID));if(pr.exists())practiceData[ROUTE_ID]=pr.data();
-    missionData={};const ms=await getDocs(collection(db,'users',uid,'missions'));ms.forEach(d=>{missionData[parseInt(d.id.replace('mission_',''))]=d.data();});
-    routeData={};for(const mod of ALL_MODULES){const r=await getDoc(doc(db,'users',uid,'routes',mod));if(r.exists())routeData[mod]=r.data();}
-}
 /* ===== GUARDAR ESTADO DE RUTA ===== */
 async function saveRouteState(){
     if(!uid)return;
-    const completed=SUBTOPICS.filter(s=>examData[s.id]&&examData[s.id].correct>=PASS_THRESHOLD);
-    const count=completed.length;
-    const avg=count>0?Math.round(completed.reduce((a,s)=>a+(examData[s.id].bestScore||0),0)/count):0;
-    const allMax=count===5&&completed.every(s=>(examData[s.id].bestScore||0)>=MAX_SCORE);
-    const rcData=routeData.RC||{};
-    rcData[ROUTE_ID]={avg,completed:count===5,allMax,subtopics:{}};
-    SUBTOPICS.forEach(s=>{rcData[ROUTE_ID].subtopics[s.id]={score:examData[s.id]?.bestScore||0,correct:examData[s.id]?.correct||0,attempts:examData[s.id]?.attempts||0,passed:examData[s.id]?.correct>=PASS_THRESHOLD||false};});
+    var completed=SUBTOPICS.filter(function(s){return examData[s.id]&&examData[s.id].correct>=PASS_THRESHOLD;});
+    var count=completed.length;
+    var avg=count>0?Math.round(completed.reduce(function(a,s){return a+(examData[s.id].bestScore||0);},0)/count):0;
+    var allMax=count===5&&completed.every(function(s){return(examData[s.id].bestScore||0)>=MAX_SCORE;});
+    var rcData=routeData.RC||{};
+    rcData[ROUTE_ID]={avg:avg,completed:count===5,allMax:allMax,subtopics:{}};
+    SUBTOPICS.forEach(function(s){rcData[ROUTE_ID].subtopics[s.id]={score:examData[s.id]?.bestScore||0,correct:examData[s.id]?.correct||0,attempts:examData[s.id]?.attempts||0,passed:examData[s.id]?.correct>=PASS_THRESHOLD||false};});
+    /* CORREGIDO: Filtrar solo temas que tengan al menos 1 subtema completado para promediar.
+       Si un tema no tiene ningún subtema aprobado, no cuenta en el promedio. */
     var routeKeys=Object.keys(rcData).filter(function(k){return k!=='avg'&&k!=='completed';});
     var routesWithProgress=routeKeys.filter(function(k){
         var subs=rcData[k].subtopics;
@@ -980,6 +970,7 @@ async function checkAndCompleteMissions(){
     var lcComplete=routeData.LC?.completed||false;
     var ccComplete=routeData.CC?.completed||false;
     var routesComplete=0;if(rcComplete)routesComplete++;if(lcComplete)routesComplete++;if(ccComplete)routesComplete++;
+    /* CORREGIDO: Leer avg desde Firebase que ahora solo cuenta temas con progreso */
     var rcAvg=routeData.RC?.avg||0;
 
     var practiceCount=Object.keys(userData.practiceExams||{}).filter(function(k){return userData.practiceExams[k].completed;}).length;
@@ -1007,7 +998,7 @@ async function checkAndCompleteMissions(){
         {id:89, cond:false, _was:false},
         {id:90, cond:false, _was:false},
         {id:91, cond:false, _was:false},
-        {id:92, cond: false, _was:false},
+        {id:92, cond:false, _was:false},
         {id:94, cond:false, _was:false},
         {id:95, cond:false, _was:false},
         {id:96, cond:false, _was:false},
@@ -1027,25 +1018,34 @@ async function checkAndCompleteMissions(){
         checks[4].cond= exams240>=5;
         checks[5].cond= s>=3000;
         checks[6].cond= s>=4000;
+        /* MISIÓN 68: Ahora usa rcAvg de Firebase que solo cuenta temas con progreso.
+           Si solo 1 de 10 temas tiene datos, promedia solo ese 1.
+           291/1 = 291, que ES >= 250, así que se completaba mal antes.
+           Con este fix, si solo 1 tema tiene progreso, el promedio es SOLO ese tema,
+           no se inventan los otros 9 temas con score 0. */
         checks[7].cond= rcAvg>=200;
         checks[8].cond= routes250>=3;
         checks[9].cond= s>=6000;
+        /* MISIÓN 63: "Completa todos los subniveles de un tema (5/5)"
+           Verifica que AL MENOS UN tema tenga exactamente 5 subtemas y los 5 aprobados.
+           Antes chequeaba count===5 (5 de ESTA ruta, no de un tema). */
         var anyRouteFull=false;
         for(var ri=0;ri<ALL_MODULES.length;ri++){
             var rd=routeData[ALL_MODULES[ri]];
             if(!rd)continue;
             var rTopics=Object.keys(rd).filter(function(k){return k!=='avg'&&k!=='completed';});
-            var allSubsPassed=rTopics.every(function(tk){
-                var subs=rd[tk].subtopics;
-                if(!subs)return false;
+            for(var ti=0;ti<rTopics.length;ti++){
+                var subs=rd[rTopics[ti]].subtopics;
+                if(!subs)continue;
                 var subKeys=Object.keys(subs);
-                return subKeys.length>=5&&subKeys.every(function(sk){return subs[sk].passed;});
-            });
-            if(allSubsPassed){anyRouteFull=true;break;}
+                if(subKeys.length>=5&&subKeys.every(function(sk){return subs[sk].passed;})){anyRouteFull=true;break;}
+            }
+            if(anyRouteFull)break;
         }
         checks[10].cond= anyRouteFull;
         checks[11].cond= totalQuestions>=1000;
         checks[12].cond= cm>=20;
+        /* MISIÓN 68 otra vez: usar rcAvg correcto */
         checks[13].cond= rcAvg>=250;
         checks[14].cond= exams250>=5;
         checks[15].cond= s>=8000;
@@ -1114,7 +1114,6 @@ async function checkAndCompleteMissions(){
         document.getElementById('top-stars').textContent=userData.stars||0;
     }
 }
-    
     /* ===== TIEMPO ACTIVO ===== */
 const TIME_KEY='skopia_active_time';
 function getTodayKey(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
