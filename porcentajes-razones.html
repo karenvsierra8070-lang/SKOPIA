@@ -940,54 +940,51 @@ async function saveRouteState(){
     const rcData=routeData.RC||{};
     rcData[ROUTE_ID]={avg,completed:count===5,allMax,subtopics:{}};
     SUBTOPICS.forEach(s=>{rcData[ROUTE_ID].subtopics[s.id]={score:examData[s.id]?.bestScore||0,correct:examData[s.id]?.correct||0,attempts:examData[s.id]?.attempts||0,passed:examData[s.id]?.correct>=PASS_THRESHOLD||false};});
-    /* CORREGIDO: Promediar SOLO las rutas que tienen al menos 1 subtema completado.
-       Una ruta sin datos no cuenta en el promedio general. */
-    const routeKeys=Object.keys(rcData).filter(k=>k!=='avg'&&k!=='completed');
-    const routesWithProgress=routeKeys.filter(k=>{
-        const subs=rcData[k].subtopics;
+    var routeKeys=Object.keys(rcData).filter(function(k){return k!=='avg'&&k!=='completed';});
+    var routesWithProgress=routeKeys.filter(function(k){
+        var subs=rcData[k].subtopics;
         if(!subs)return false;
-        return Object.values(subs).some(s=>s.passed);
+        return Object.values(subs).some(function(s){return s.passed;});
     });
-    const rcAvgs=routesWithProgress.map(k=>rcData[k].avg).filter(a=>a>0);
-    rcData.avg=rcAvgs.length>0?Math.round(rcAvgs.reduce((a,b)=>a+b,0)/rcAvgs.length):0;
-    /* CORREGIDO: rcData.completed solo es true si TODAS las rutas RC tienen al menos 1 subtema aprobado */
-    const allRCTopics=Object.keys(rcData).filter(k=>k!=='avg'&&k!=='completed');
-    rcData.completed=allRCTopics.length>0&&allRCTopics.every(k=>{
-        const subs=rcData[k].subtopics;
-        return subs&&Object.values(subs).some(s=>s.passed);
+    var rcAvgs=routesWithProgress.map(function(k){return rcData[k].avg;}).filter(function(a){return a>0;});
+    rcData.avg=rcAvgs.length>0?Math.round(rcAvgs.reduce(function(a,b){return a+b;},0)/rcAvgs.length):0;
+    var allRCTopics=Object.keys(rcData).filter(function(k){return k!=='avg'&&k!=='completed';});
+    rcData.completed=allRCTopics.length>0&&allRCTopics.every(function(k){
+        var subs=rcData[k].subtopics;
+        return subs&&Object.values(subs).some(function(s){return s.passed;});
     });
     await setDoc(doc(db,'users',uid,'routes','RC'),rcData,{merge:true});
-    await updateDoc(doc(db,'users',uid),{lastStudyDate:getTodayKey()}).catch(()=>{});
+    await updateDoc(doc(db,'users',uid),{lastStudyDate:getTodayKey()}).catch(function(){});
 }
 
 /* ===== VERIFICAR MISIONES ===== */
 async function checkAndCompleteMissions(){
     if(!uid)return;
-    const streak=userData.streak||{current:0};
-    const completed=SUBTOPICS.filter(s=>examData[s.id]&&examData[s.id].correct>=PASS_THRESHOLD);
-    const count=completed.length;
-    const avg=count>0?Math.round(completed.reduce((a,s)=>a+(examData[s.id].bestScore||0),0)/count):0;
+    var streak=userData.streak||{current:0};
+    var completed=SUBTOPICS.filter(function(s){return examData[s.id]&&examData[s.id].correct>=PASS_THRESHOLD;});
+    var count=completed.length;
+    var avg=count>0?Math.round(completed.reduce(function(a,s){return a+(examData[s.id].bestScore||0);},0)/count):0;
 
-    let allExamAttempts=0;
-    const allExams=userData.exams||{};
-    for(const key of Object.keys(allExams)){allExamAttempts+=(allExams[key].attempts||0);}
-    const totalQuestions=allExamAttempts*QUESTIONS_PER_EXAM;
+    var allExamAttempts=0;
+    var allExams=userData.exams||{};
+    var examKeys=Object.keys(allExams);
+    for(var ei=0;ei<examKeys.length;ei++){allExamAttempts+=(allExams[examKeys[ei]].attempts||0);}
+    var totalQuestions=allExamAttempts*QUESTIONS_PER_EXAM;
 
-    let exams240=0,exams250=0,exams300=0;
-    for(const key of Object.keys(allExams)){const ex=allExams[key];if((ex.bestScore||0)>=240)exams240++;if((ex.bestScore||0)>=250)exams250++;if((ex.bestScore||0)>=300)exams300++;}
+    var exams240=0,exams250=0,exams300=0;
+    for(var ei2=0;ei2<examKeys.length;ei2++){var ex=allExams[examKeys[ei2]];if((ex.bestScore||0)>=240)exams240++;if((ex.bestScore||0)>=250)exams250++;if((ex.bestScore||0)>=300)exams300++;}
 
-    let routes250=0;
-    for(const mod of ALL_MODULES){if(routeData[mod]&&routeData[mod].avg>=250)routes250++;}
-    const rcComplete=routeData.RC?.completed||false;
-    const lcComplete=routeData.LC?.completed||false;
-    const ccComplete=routeData.CC?.completed||false;
-    let routesComplete=0;if(rcComplete)routesComplete++;if(lcComplete)routesComplete++;if(ccComplete)routesComplete++;
-    /* CORREGIDO: Leer el avg de RC desde routeData, ya que saveRouteState ahora lo calcula bien */
-    const rcAvg=routeData.RC?.avg||0;
+    var routes250=0;
+    for(var mi=0;mi<ALL_MODULES.length;mi++){if(routeData[ALL_MODULES[mi]]&&routeData[ALL_MODULES[mi]].avg>=250)routes250++;}
+    var rcComplete=routeData.RC?.completed||false;
+    var lcComplete=routeData.LC?.completed||false;
+    var ccComplete=routeData.CC?.completed||false;
+    var routesComplete=0;if(rcComplete)routesComplete++;if(lcComplete)routesComplete++;if(ccComplete)routesComplete++;
+    var rcAvg=routeData.RC?.avg||0;
 
-    const practiceCount=Object.keys(userData.practiceExams||{}).filter(k=>userData.practiceExams[k].completed).length;
+    var practiceCount=Object.keys(userData.practiceExams||{}).filter(function(k){return userData.practiceExams[k].completed;}).length;
 
-    const checks=[
+    var checks=[
         {id:4, cond:false, _was:false},
         {id:9, cond:false, _was:false},
         {id:17, cond:false, _was:false},
@@ -1010,7 +1007,7 @@ async function checkAndCompleteMissions(){
         {id:89, cond:false, _was:false},
         {id:90, cond:false, _was:false},
         {id:91, cond:false, _was:false},
-        {id:92, cond:false, _was:false},
+        {id:92, cond: false, _was:false},
         {id:94, cond:false, _was:false},
         {id:95, cond:false, _was:false},
         {id:96, cond:false, _was:false},
@@ -1021,9 +1018,8 @@ async function checkAndCompleteMissions(){
     ];
 
     function evalConditions(){
-        const s=userData.stars||0;
-        const cm=Object.keys(missionData).filter(k=>missionData[k].completed).length;
-        /* Misión 4: Ya no tiene condición real aquí, pero la dejamos por si acaso */
+        var s=userData.stars||0;
+        var cm=Object.keys(missionData).filter(function(k){return missionData[k].completed;}).length;
         checks[0].cond=false;
         checks[1].cond= s>=200;
         checks[2].cond= s>=500;
@@ -1031,32 +1027,25 @@ async function checkAndCompleteMissions(){
         checks[4].cond= exams240>=5;
         checks[5].cond= s>=3000;
         checks[6].cond= s>=4000;
-        /* Misión 54: CORREGIDO - usar rcAvg de Firebase que ahora excluye rutas sin datos */
         checks[7].cond= rcAvg>=200;
         checks[8].cond= routes250>=3;
         checks[9].cond= s>=6000;
-        /* Misión 63: "Termina todos los niveles de una ruta (10/10)"
-           Esto significa completar TODOS los subtemas de UNA ruta.
-           RC tiene 10 temas, cada uno con 5 subtemas = 50 subtemas total.
-           Verificamos si hay alguna ruta con TODOS sus subtemas aprobados. */
-        let anyRouteFull=false;
-        for(const mod of ALL_MODULES){
-            const rd=routeData[mod];
+        var anyRouteFull=false;
+        for(var ri=0;ri<ALL_MODULES.length;ri++){
+            var rd=routeData[ALL_MODULES[ri]];
             if(!rd)continue;
-            const rTopics=Object.keys(rd).filter(k=>k!=='avg'&&k!=='completed');
-            const allSubsPassed=rTopics.every(tk=>{
-                const subs=rd[tk].subtopics;
+            var rTopics=Object.keys(rd).filter(function(k){return k!=='avg'&&k!=='completed';});
+            var allSubsPassed=rTopics.every(function(tk){
+                var subs=rd[tk].subtopics;
                 if(!subs)return false;
-                /* Cada tema tiene 5 subtemas, verificar que los 5 estén aprobados */
-                const subKeys=Object.keys(subs);
-                return subKeys.length>=5&&subKeys.every(sk=>subs[sk].passed);
+                var subKeys=Object.keys(subs);
+                return subKeys.length>=5&&subKeys.every(function(sk){return subs[sk].passed;});
             });
-            if(allSubsFull){anyRouteFull=true;break;}
+            if(allSubsPassed){anyRouteFull=true;break;}
         }
         checks[10].cond= anyRouteFull;
         checks[11].cond= totalQuestions>=1000;
         checks[12].cond= cm>=20;
-        /* Misión 68: CORREGIDO - usar rcAvg de Firebase */
         checks[13].cond= rcAvg>=250;
         checks[14].cond= exams250>=5;
         checks[15].cond= s>=8000;
@@ -1076,52 +1065,57 @@ async function checkAndCompleteMissions(){
         checks[29].cond= cm>=100&&routesComplete===3&&s>=30000;
     }
 
-    for(const c of checks){c._was=missionData[c.id]?.completed||false;}
+    for(var ci=0;ci<checks.length;ci++){checks[ci]._was=missionData[checks[ci].id]?.completed||false;}
     evalConditions();
 
-    const batch=writeBatch(db);
-    let newOnes=[];
-    for(const c of checks){
+    var batch=writeBatch(db);
+    var newOnes=[];
+    for(var di=0;di<checks.length;di++){
+        var c=checks[di];
         if(c._was)continue;
         if(!c.cond)continue;
-        const info=getMissionInfo(c.id);
+        var info=getMissionInfo(c.id);
         missionData[c.id]={completed:true,completedAt:new Date().toISOString()};
         batch.set(doc(db,'users',uid,'missions','mission_'+c.id),{completed:true,completedAt:new Date().toISOString()});
         newOnes.push({title:info.title,points:info.points||0});
     }
 
     if(newOnes.length>0){
-        let totalStars=0;
-        for(const mid of Object.keys(missionData)){if(missionData[mid].completed)totalStars+=(getMissionInfo(parseInt(mid)).points||0);}
+        var totalStars=0;
+        var mKeys=Object.keys(missionData);
+        for(var si=0;si<mKeys.length;si++){if(missionData[mKeys[si]].completed)totalStars+=(getMissionInfo(parseInt(mKeys[si])).points||0);}
         userData.stars=totalStars;
-        batch.update(doc(db,'users',uid),{stars:totalStars,totalMissionsCompleted:Object.keys(missionData).filter(k=>missionData[k].completed).length});
+        batch.update(doc(db,'users',uid),{stars:totalStars,totalMissionsCompleted:Object.keys(missionData).filter(function(k){return missionData[k].completed;}).length});
         try{await batch.commit();}catch(e){console.error('Error batch:',e);}
-        const toShow=newOnes.splice(0,3);
-        missionQueue.push(...newOnes);
+        var toShow=newOnes.splice(0,3);
+        missionQueue.push.apply(missionQueue, toShow);
         showMissionModal(toShow);
 
-        for(let i=0;i<3;i++){
+        for(var ii=0;ii<3;ii++){
             evalConditions();
-            let more=[];const batch2=writeBatch(db);
-            for(const c of checks){
-                if(missionData[c.id]?.completed)continue;if(!c.cond)continue;
-                const info=getMissionInfo(c.id);
-                missionData[c.id]={completed:true,completedAt:new Date().toISOString()};
-                batch2.set(doc(db,'users',uid,'missions','mission_'+c.id),{completed:true,completedAt:new Date().toISOString()});
-                userData.stars+=info.points||0;
-                more.push({title:info.title,points:info.points||0});
+            var more=[];var batch2=writeBatch(db);
+            for(var fi=0;fi<checks.length;fi++){
+                var c2=checks[fi];
+                if(missionData[c2.id]?.completed)continue;if(!c2.cond)continue;
+                var info2=getMissionInfo(c2.id);
+                missionData[c2.id]={completed:true,completedAt:new Date().toISOString()};
+                batch2.set(doc(db,'users',uid,'missions','mission_'+c2.id),{completed:true,completedAt:new Date().toISOString()});
+                userData.stars+=info2.points||0;
+                more.push({title:info2.title,points:info2.points||0});
             }
             if(more.length===0)break;
-            let totalS=0;for(const mid of Object.keys(missionData)){if(missionData[mid].completed)totalS+=(getMissionInfo(parseInt(mid)).points||0);}
+            var totalS=0;var mKeys2=Object.keys(missionData);
+            for(var si2=0;si2<mKeys2.length;si2++){if(missionData[mKeys2[si2]].completed)totalS+=(getMissionInfo(parseInt(mKeys2[si2])).points||0);}
             userData.stars=totalS;
-            batch2.update(doc(db,'users',uid),{stars:totalS,totalMissionsCompleted:Object.keys(missionData).filter(k=>missionData[k].completed).length});
+            batch2.update(doc(db,'users',uid),{stars:totalS,totalMissionsCompleted:Object.keys(missionData).filter(function(k){return missionData[k].completed;}).length});
             try{await batch2.commit();}catch(e){break;}
-            missionQueue.push(...more);
+            missionQueue.push.apply(missionQueue, more);
         }
         document.getElementById('top-stars').textContent=userData.stars||0;
     }
 }
-/* ===== TIEMPO ACTIVO ===== */
+    
+    /* ===== TIEMPO ACTIVO ===== */
 const TIME_KEY='skopia_active_time';
 function getTodayKey(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function getTimeData(){try{return JSON.parse(localStorage.getItem(TIME_KEY))||{};}catch{return {};}}
