@@ -918,7 +918,7 @@ function renderRelevantMissions(){
     const show=ids.slice(0,12);
     list.innerHTML=show.map(mid=>{const done=missionData[mid]?.completed||false;const info=getMissionInfo(mid);return `<div class="mission-item"><div class="mission-dot${done?' done':''}">${done?'<i class="fas fa-check" style="font-size:.7rem"></i>':mid}</div><div class="mission-text">${info.title}<span class="m-pts">+${info.points} estrellas</span></div><i class="fas fa-check-circle mission-check${done?' show':''}"></i></div>`;}).join('');
 }
-    /* ===== CARGAR DATOS ===== */
+/* ===== CARGAR DATOS ===== */
 async function loadAllData(){
     if(!uid)return;
     const userSnap=await getDoc(doc(db,'users',uid));
@@ -926,14 +926,16 @@ async function loadAllData(){
     examData={};
     for(const s of SUBTOPICS){const sn=await getDoc(doc(db,'users',uid,'exams',s.id));if(sn.exists())examData[s.id]=sn.data();}
     const pr=await getDoc(doc(db,'users',uid,'practiceExams',ROUTE_ID));if(pr.exists())practiceData[ROUTE_ID]=pr.data();
-    missionData={};const ms=await getDocs(collection(db,'users',uid,'missions'));ms.forEach(d=>{missionData[parseInt(d.id.replace('mission_',''))]=d.data();});
+    missionData={};const ms=await getDocs(collection(db,'users',uid,'missions'));ms.forEach(d=>{missionData[d.id]=d.data();});
     routeData={};for(const mod of ALL_MODULES){const r=await getDoc(doc(db,'users',uid,'routes',mod));if(r.exists())routeData[mod]=r.data();}
 }
-    
-/* ===== MAPA FIJO DE TEMAS Y SUBTEMAS RC =====
-   10 temas × 5 subtemas = 50 subtemas SIEMPRE.
-   Cada HTML de ruta solo conoce sus 5 subtemas,
-   pero el promedio se calcula sobre los 50. */
+
+/* ===== SISTEMA DE GUARDADO DE MISIONES (ADAPTADO AL TUYO) ===== */
+let completedMissions = {};
+async function saveStats(updates){if(!uid)return;try{await setDoc(doc(db,'users',uid,'stats','main'),updates,{merge:true});}catch(e){console.warn('Error guardando stats',e);}}
+async function completeMissionInDB(id){if(!uid||completedMissions[`mission_${id}`])return;completedMissions[`mission_${id}`]=true;try{await setDoc(doc(db,'users',uid,'missions',`mission_${id}`),{completed:true,completedAt:serverTimestamp()});}catch(e){console.warn('Error guardando misión',e);}}
+
+/* ===== MAPA FIJO DE TEMAS Y SUBTEMAS RC (10x5 = 50 SIEMPRE) ===== */
 const RC_FIXED_TOPICS = [
     { id: 'tema1_aritmetica-basica',       subs: ['sub1','sub2','sub3','sub4','sub5'] },
     { id: 'tema2_porcentajes-razones',     subs: ['sub1','sub2','sub3','sub4','sub5'] },
@@ -946,40 +948,29 @@ const RC_FIXED_TOPICS = [
     { id: 'tema9_estadistica-descriptiva', subs: ['sub1','sub2','sub3','sub4','sub5'] },
     { id: 'tema10_interpretacion-datos',   subs: ['sub1','sub2','sub3','sub4','sub5'] }
 ];
-
-/* Mapeo: subtopic ID de esta ruta → posición (0-4) dentro del tema 2 */
 const LOCAL_SUB_INDEX = {};
 SUBTOPICS.forEach((s, i) => { LOCAL_SUB_INDEX[s.id] = i; });
 
-/* Leer UN documento de tema RC, devolver {sub1:0,...,sub5:0} */
 async function readRCTopic(topicId) {
-    try {
-        const snap = await getDoc(doc(db, 'users', uid, 'examScores', 'RC', topicId, 'subs'));
-        if (snap.exists()) return snap.data();
-    } catch(e) {}
+    try { const snap = await getDoc(doc(db, 'users', uid, 'examScores', 'RC', topicId, 'subs')); if (snap.exists()) return snap.data(); } catch(e) {}
     return { sub1: 0, sub2: 0, sub3: 0, sub4: 0, sub5: 0 };
 }
 
-/* Leer TODOS los 10 temas RC y devolver array de 50 puntajes */
 async function loadAllRCSubscores() {
     const all = [];
     for (const topic of RC_FIXED_TOPICS) {
         const data = await readRCTopic(topic.id);
-        for (const s of topic.subs) {
-            all.push(data[s] || 0);
-        }
+        for (const s of topic.subs) { all.push(data[s] || 0); }
     }
-    return all; // longitud SIEMPRE 50
+    return all;
 }
 
-/* Guardar el puntaje de esta ruta en la posición correcta del tema 2 */
 async function saveToRCStructure(subtopicId, score) {
     const idx = LOCAL_SUB_INDEX[subtopicId];
     if (idx === undefined || !uid) return;
     const subKey = 'sub' + (idx + 1);
     const topicId = 'tema2_porcentajes-razones';
     const ref = doc(db, 'users', uid, 'examScores', 'RC', topicId, 'subs');
-
     const current = await readRCTopic(topicId);
     if ((current[subKey] || 0) < score) {
         current[subKey] = score;
@@ -987,7 +978,6 @@ async function saveToRCStructure(subtopicId, score) {
     }
 }
 
-/* Calcular promedio REAL sobre 50 subtemas */
 function calcRealRCAvg(scores50) {
     const total = scores50.reduce((a, b) => a + b, 0);
     return Math.round(total / 50);
@@ -996,28 +986,17 @@ function calcRealRCAvg(scores50) {
 /* ===== GUARDAR ESTADO DE RUTA ===== */
 async function saveRouteState() {
     if (!uid) return;
-
-    /* 1. Guardar cada subtema completado en la estructura RC fija */
     for (const s of SUBTOPICS) {
         const ex = examData[s.id];
-        if (ex && ex.bestScore > 0) {
-            await saveToRCStructure(s.id, ex.bestScore);
-        }
+        if (ex && ex.bestScore > 0) await saveToRCStructure(s.id, ex.bestScore);
     }
 
-    /* 2. Guardar estado visual de esta ruta (para el progress bar, etc.) */
     const completed = SUBTOPICS.filter(s => examData[s.id] && examData[s.id].correct >= PASS_THRESHOLD);
     const count = completed.length;
-    const avg = count > 0 ? Math.round(completed.reduce((a, s) => a + (examData[s.id].bestScore || 0), 0) / count) : 0;
     const allMax = count === 5 && completed.every(s => (examData[s.id].bestScore || 0) >= MAX_SCORE);
 
     const rcData = routeData.RC || {};
-    rcData[ROUTE_ID] = {
-        avg,
-        completed: count === 5,
-        allMax,
-        subtopics: {}
-    };
+    rcData[ROUTE_ID] = { completed: count === 5, allMax, subtopics: {} };
     SUBTOPICS.forEach(s => {
         rcData[ROUTE_ID].subtopics[s.id] = {
             score: examData[s.id]?.bestScore || 0,
@@ -1027,7 +1006,6 @@ async function saveRouteState() {
         };
     });
 
-    /* 3. Calcular promedio REAL de RC sobre los 50 subtemas */
     const all50 = await loadAllRCSubscores();
     const realRCAvg = calcRealRCAvg(all50);
     rcData.avg = realRCAvg;
@@ -1035,221 +1013,167 @@ async function saveRouteState() {
 
     await setDoc(doc(db, 'users', uid, 'routes', 'RC'), rcData, { merge: true });
     await updateDoc(doc(db, 'users', uid), { lastStudyDate: getTodayKey() }).catch(() => {});
-
-    /* Guardar el promedio real para usarlo en checkAndCompleteMissions */
     window._realRCAvg = realRCAvg;
     window._allRC50 = all50;
 }
 
-/* ===== VERIFICAR MISIONES (CORREGIDO) ===== */
-async function checkAndCompleteMissions() {
-    if (!uid) return;
+/* ===== MISIONES INFO ===== */
+function getMissionInfo(id){const m={4:{title:'Termina una sesión de estudio sin salir',points:50},9:{title:'Acumula tus primeras 200 estrellas',points:30},17:{title:'Obtén 500 estrellas acumuladas',points:50},36:{title:'Obtén 2000 estrellas acumuladas',points:60},41:{title:'Completa 5 examenes con mas de 240/300',points:150},43:{title:'Consigue 3000 estrellas',points:120},53:{title:'Gana 4000 estrellas',points:130},54:{title:'Termina la ruta RC con promedio >=200',points:140},57:{title:'Obtén 250 puntos o mas en tres rutas',points:150},61:{title:'Consigue 6000 estrellas',points:160},63:{title:'Termina todos los niveles de una ruta (10/10)',points:180},64:{title:'Contesta 1000 preguntas',points:160},67:{title:'Termina 20 misiones',points:160},68:{title:'Obtén promedio >=250 puntos en una ruta',points:180},69:{title:'Logra 5 examenes con 250 o mas puntos',points:170},73:{title:'Gana 8000 estrellas',points:160},81:{title:'Gana 10,000 estrellas',points:190},86:{title:'Gana 15,000 estrellas',points:200},88:{title:'Consigue 300 puntos en un examen',points:200},89:{title:'Termina 40 misiones',points:190},90:{title:'Completa todos los examenes de practica',points:190},91:{title:'Llega a 20,000 estrellas',points:200},92:{title:'Termina 50 misiones',points:190},94:{title:'Termina todas las rutas al 100%',points:200},95:{title:'Obtén todas las medallas',points:190},96:{title:'Consigue 25,000 estrellas',points:200},97:{title:'Cumple todas las misiones basicas e intermedias',points:190},98:{title:'Mantente activo 30 dias seguidos',points:200},99:{title:'Llega a 30,000 estrellas',points:200},100:{title:'Maestro del Saber Pro: completa todo el sistema',points:200}};return m[id]||{title:'Misión '+id,points:0};}
 
-    const streak = userData.streak || { current: 0 };
-    const completed = SUBTOPICS.filter(s => examData[s.id] && examData[s.id].correct >= PASS_THRESHOLD);
-    const count = completed.length;
-    const localAvg = count > 0 ? Math.round(completed.reduce((a, s) => a + (examData[s.id].bestScore || 0), 0) / count) : 0;
+/* ===== VERIFICAR MISIONES (CORREGIDO DEFINITIVO) ===== */
+async function checkAndCompleteMissions(){
+    if(!uid)return;
 
-    /* ★ PROMEDIO RC REAL: sobre 50 subtemas, no solo los completados ★ */
+    /* Llenar completedMissions local con lo que hay en Firebase */
+    for(const k of Object.keys(missionData)){ if(missionData[k].completed) completedMissions[k] = true; }
+
+    const streak = userData.streak || {current:0};
     const rcAvg = window._realRCAvg || 0;
 
-    let allExamAttempts = 0;
+    /* PROMEDIO DE ESTA RUTA SOBRE 5 SUBTEMAS (los no hechos = 0) */
+    let routeSum = 0;
+    for(const s of SUBTOPICS){ routeSum += (examData[s.id]?.bestScore || 0); }
+    const localRouteAvg = Math.round(routeSum / 5);
+
+    /* Total preguntas contestadas (attempts de TODOS los exámenes del usuario) */
+    let totalQuestions = 0;
     const allExams = userData.exams || {};
-    for (const key of Object.keys(allExams)) {
-        allExamAttempts += (allExams[key].attempts || 0);
-    }
-    const totalQuestions = allExamAttempts * QUESTIONS_PER_EXAM;
+    for(const key of Object.keys(allExams)){ totalQuestions += (allExams[key].attempts || 0) * QUESTIONS_PER_EXAM; }
 
-    let exams240 = 0, exams250 = 0, exams300 = 0;
-    for (const key of Object.keys(allExams)) {
-        const ex = allExams[key];
-        if ((ex.bestScore || 0) >= 240) exams240++;
-        if ((ex.bestScore || 0) >= 250) exams250++;
-        if ((ex.bestScore || 0) >= 300) exams300++;
+    /* Exámenes globales con >= 240 y >= 250 */
+    let exams240=0, exams250=0, exams300=0;
+    for(const key of Object.keys(allExams)){
+        const sc = allExams[key].bestScore || 0;
+        if(sc >= 240) exams240++;
+        if(sc >= 250) exams250++;
+        if(sc >= 300) exams300++;
     }
 
+    /* Exámenes de ESTA ruta con >= 240 */
+    let localExams240 = 0;
+    for(const s of SUBTOPICS){ if((examData[s.id]?.bestScore||0) >= 240) localExams240++; }
+
+    /* Rutas con promedio >= 250 */
     let routes250 = 0;
-    for (const mod of ALL_MODULES) {
-        if (routeData[mod] && routeData[mod].avg >= 250) routes250++;
+    for(const mod of ALL_MODULES){
+        if(routeData[mod] && routeData[mod].avg >= 250) routes250++;
     }
+
     const rcComplete = routeData.RC?.completed || false;
     const lcComplete = routeData.LC?.completed || false;
     const ccComplete = routeData.CC?.completed || false;
-    let routesComplete = 0;
-    if (rcComplete) routesComplete++;
-    if (lcComplete) routesComplete++;
-    if (ccComplete) routesComplete++;
+    let routesComplete=0; if(rcComplete)routesComplete++; if(lcComplete)routesComplete++; if(ccComplete)routesComplete++;
 
     const practiceCount = Object.keys(userData.practiceExams || {}).filter(k => userData.practiceExams[k].completed).length;
+    const s = userData.stars || 0;
+    const cm = Object.keys(missionData).filter(k => missionData[k].completed).length;
 
+    /* Mapeo de misiones con sus condiciones EXACTAS */
     const checks = [
-        { id: 4,  cond: false, _was: false },
-        { id: 9,  cond: false, _was: false },
-        { id: 17, cond: false, _was: false },
-        { id: 36, cond: false, _was: false },
-        { id: 41, cond: false, _was: false },
-        { id: 43, cond: false, _was: false },
-        { id: 53, cond: false, _was: false },
-        { id: 54, cond: false, _was: false },
-        { id: 57, cond: false, _was: false },
-        { id: 61, cond: false, _was: false },
-        { id: 63, cond: false, _was: false },
-        { id: 64, cond: false, _was: false },
-        { id: 67, cond: false, _was: false },
-        { id: 68, cond: false, _was: false },
-        { id: 69, cond: false, _was: false },
-        { id: 73, cond: false, _was: false },
-        { id: 81, cond: false, _was: false },
-        { id: 86, cond: false, _was: false },
-        { id: 88, cond: false, _was: false },
-        { id: 89, cond: false, _was: false },
-        { id: 90, cond: false, _was: false },
-        { id: 91, cond: false, _was: false },
-        { id: 92, cond: false, _was: false },
-        { id: 94, cond: false, _was: false },
-        { id: 95, cond: false, _was: false },
-        { id: 96, cond: false, _was: false },
-        { id: 97, cond: false, _was: false },
-        { id: 98, cond: false, _was: false },
-        { id: 99, cond: false, _was: false },
-        { id: 100, cond: false, _was: false }
+        { id:4,   cond: practiceData[ROUTE_ID]?.completed || false }, // Sesión de estudio sin salir (práctica general)
+        { id:9,   cond: s >= 200 },
+        { id:17,  cond: s >= 500 },
+        { id:36,  cond: s >= 2000 },
+        { id:41,  cond: localExams240 >= 5 }, // 5 exámenes de ESTA ruta con >240
+        { id:43,  cond: s >= 3000 },
+        { id:53,  cond: s >= 4000 },
+        { id:54,  cond: rcAvg >= 200 }, // Promedio RC real (50 subtemas)
+        { id:57,  cond: routes250 >= 3 }, // 3 rutas distintas con promedio >=250
+        { id:61,  cond: s >= 6000 },
+        { id:63,  cond: SUBTOPICS.every(st => (examData[st.id]?.correct || 0) >= PASS_THRESHOLD) }, // 5/5 completados
+        { id:64,  cond: totalQuestions >= 1000 },
+        { id:67,  cond: cm >= 20 },
+        { id:68,  cond: localRouteAvg >= 250 }, // Promedio ESTA ruta sobre 5 subtemas
+        { id:69,  cond: exams250 >= 5 },
+        { id:73,  cond: s >= 8000 },
+        { id:81,  cond: s >= 10000 },
+        { id:86,  cond: s >= 15000 },
+        { id:88,  cond: exams300 >= 1 },
+        { id:89,  cond: cm >= 40 },
+        { id:90,  cond: practiceCount >= 1 },
+        { id:91,  cond: s >= 20000 },
+        { id:92,  cond: cm >= 50 },
+        { id:94,  cond: routesComplete === 3 },
+        { id:95,  cond: cm >= 100 },
+        { id:96,  cond: s >= 25000 },
+        { id:97,  cond: cm >= 75 },
+        { id:98,  cond: (streak.current||0) >= 30 },
+        { id:99,  cond: s >= 30000 },
+        { id:100, cond: cm >= 100 && routesComplete === 3 && s >= 30000 }
     ];
 
-    function evalConditions() {
-        const s = userData.stars || 0;
-        const cm = Object.keys(missionData).filter(k => missionData[k].completed).length;
+    let newMissionsIds = [];
+    let totalMissionPts = 0;
 
-        checks[0].cond  = count === 5 && completed.every(x => (examData[x.id].correct || 0) >= PASS_THRESHOLD);
-        checks[1].cond  = s >= 200;
-        checks[2].cond  = s >= 500;
-        checks[3].cond  = s >= 2000;
-        checks[4].cond  = exams240 >= 5;
-        checks[5].cond  = s >= 3000;
-        checks[6].cond  = s >= 4000;
-        /* ★ Misión 54: promedio RC REAL >= 200 (sobre 50 subtemas) ★ */
-        checks[7].cond  = rcAvg >= 200;
-        checks[8].cond  = routes250 >= 3;
-        checks[9].cond  = s >= 6000;
-        checks[10].cond = count === 5 && completed.every(x => (examData[x.id].bestScore || 0) >= MAX_SCORE);
-        checks[11].cond = totalQuestions >= 1000;
-        checks[12].cond = cm >= 20;
-        /* ★ Misión 68: promedio de ESTA ruta (local) >= 250, no de todo RC ★ */
-        checks[13].cond = localAvg >= 250;
-        checks[14].cond = exams250 >= 5;
-        checks[15].cond = s >= 8000;
-        checks[16].cond = s >= 10000;
-        checks[17].cond = s >= 15000;
-        checks[18].cond = exams300 >= 1;
-        checks[19].cond = cm >= 40;
-        checks[20].cond = practiceCount >= 1;
-        checks[21].cond = s >= 20000;
-        checks[22].cond = cm >= 50;
-        checks[23].cond = routesComplete === 3;
-        checks[24].cond = cm >= 100;
-        checks[25].cond = s >= 25000;
-        checks[26].cond = cm >= 75;
-        checks[27].cond = (streak.current || 0) >= 30;
-        checks[28].cond = s >= 30000;
-        checks[29].cond = cm >= 100 && routesComplete === 3 && s >= 30000;
-    }
-
-    for (const c of checks) { c._was = missionData[c.id]?.completed || false; }
-    evalConditions();
-
-    const batch = writeBatch(db);
-    let newOnes = [];
-    for (const c of checks) {
-        if (c._was) continue;
-        if (!c.cond) continue;
+    /* Verificar y guardar usando TU sistema */
+    for(const c of checks){
+        if(completedMissions[`mission_${c.id}`]) continue;
+        if(!c.cond) continue;
+        
         const info = getMissionInfo(c.id);
-        missionData[c.id] = { completed: true, completedAt: new Date().toISOString() };
-        batch.set(doc(db, 'users', uid, 'missions', 'mission_' + c.id), { completed: true, completedAt: new Date().toISOString() });
-        newOnes.push({ title: info.title, points: info.points || 0 });
+        newMissionsIds.push(c.id);
+        totalMissionPts += info.points;
+        
+        /* Guardar en Firebase con tu función */
+        await completeMissionInDB(c.id);
     }
 
-    if (newOnes.length > 0) {
-        let totalStars = 0;
-        for (const mid of Object.keys(missionData)) {
-            if (missionData[mid].completed) totalStars += (getMissionInfo(parseInt(mid)).points || 0);
-        }
-        userData.stars = totalStars;
-        batch.update(doc(db, 'users', uid), {
-            stars: totalStars,
-            totalMissionsCompleted: Object.keys(missionData).filter(k => missionData[k].completed).length
+    /* Si hubo misiones nuevas, actualizar estrellas y mostrar modal */
+    if(newMissionsIds.length > 0){
+        const newStars = s + totalMissionPts;
+        const newMissionCount = cm + newMissionsIds.length;
+        
+        await saveStats({
+            stars: newStars,
+            totalMissionsCompleted: newMissionCount
         });
-        try { await batch.commit(); } catch(e) { console.error('Error batch:', e); }
-        const toShow = newOnes.splice(0, 3);
-        missionQueue.push(...newOnes);
-        showMissionModal(toShow);
+        
+        userData.stars = newStars;
+        document.getElementById('top-stars').textContent = newStars;
 
-        for (let i = 0; i < 3; i++) {
-            evalConditions();
-            let more = [];
-            const batch2 = writeBatch(db);
-            for (const c of checks) {
-                if (missionData[c.id]?.completed) continue;
-                if (!c.cond) continue;
-                const info = getMissionInfo(c.id);
-                missionData[c.id] = { completed: true, completedAt: new Date().toISOString() };
-                batch2.set(doc(db, 'users', uid, 'missions', 'mission_' + c.id), { completed: true, completedAt: new Date().toISOString() });
-                userData.stars += info.points || 0;
-                more.push({ title: info.title, points: info.points || 0 });
-            }
-            if (more.length === 0) break;
-            let totalS = 0;
-            for (const mid of Object.keys(missionData)) {
-                if (missionData[mid].completed) totalS += (getMissionInfo(parseInt(mid)).points || 0);
-            }
-            userData.stars = totalS;
-            batch2.update(doc(db, 'users', uid), {
-                stars: totalS,
-                totalMissionsCompleted: Object.keys(missionData).filter(k => missionData[k].completed).length
-            });
-            try { await batch2.commit(); } catch(e) { break; }
-            missionQueue.push(...more);
-        }
-        document.getElementById('top-stars').textContent = userData.stars || 0;
+        /* Encolar para el modal */
+        const toShow = newMissionsIds.slice(0, 3).map(id => {
+            const info = getMissionInfo(id);
+            return { title: info.title, points: info.points };
+        });
+        const rest = newMissionsIds.slice(3).map(id => {
+            const info = getMissionInfo(id);
+            return { title: info.title, points: info.points };
+        });
+        
+        missionQueue.push(...rest);
+        showMissionModal(toShow);
     }
 }
 
 /* ===== TIEMPO ACTIVO ===== */
-const TIME_KEY = 'skopia_active_time';
-function getTodayKey() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-function getTimeData() { try { return JSON.parse(localStorage.getItem(TIME_KEY)) || {}; } catch { return {}; } }
-function saveTimeTick() {
-    if (document.hidden) return;
-    const k = getTodayKey(), d = getTimeData();
-    d[k] = (d[k] || 0) + 10;
-    localStorage.setItem(TIME_KEY, JSON.stringify(d));
-}
-setInterval(saveTimeTick, 10000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) saveTimeTick(); });
+const TIME_KEY='skopia_active_time';
+function getTodayKey(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function getTimeData(){try{return JSON.parse(localStorage.getItem(TIME_KEY))||{};}catch{return {};}}
+function saveTimeTick(){if(document.hidden)return;const k=getTodayKey(),d=getTimeData();d[k]=(d[k]||0)+10;localStorage.setItem(TIME_KEY,JSON.stringify(d));}
+setInterval(saveTimeTick,10000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)saveTimeTick();});
 
 /* ===== RACHA ===== */
-async function updateStreak() {
-    if (!uid) return;
-    const today = getTodayKey();
-    const streak = userData.streak || { current: 0, lastDate: '', totalDays: 0 };
-    if (streak.lastDate === today) return;
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
-    if (streak.lastDate === yKey) streak.current = (streak.current || 0) + 1;
-    else if (streak.lastDate !== today) streak.current = 1;
-    streak.lastDate = today;
-    streak.totalDays = (streak.totalDays || 0) + 1;
-    userData.streak = streak;
-    try { await updateDoc(doc(db, 'users', uid), { streak }); } catch(e) {}
+async function updateStreak(){
+    if(!uid)return;
+    const today=getTodayKey();
+    const streak=userData.streak||{current:0,lastDate:'',totalDays:0};
+    if(streak.lastDate===today)return;
+    const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+    const yKey=`${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+    if(streak.lastDate===yKey)streak.current=(streak.current||0)+1;
+    else if(streak.lastDate!==today)streak.current=1;
+    streak.lastDate=today;streak.totalDays=(streak.totalDays||0)+1;
+    userData.streak=streak;
+    try{await updateDoc(doc(db,'users',uid),{streak});}catch(e){}
 }
 
 /* ===== INICIO ===== */
-onAuthStateChanged(auth, async(user) => {
-    if (!user) { window.location.href = 'index.html'; return; }
-    uid = user.uid;
-    try {
+onAuthStateChanged(auth,async(user)=>{
+    if(!user){window.location.href='index.html';return;}
+    uid=user.uid;
+    try{
         await loadAllData();
         document.getElementById('sidebar-username').textContent = userData.name || userData.nombre || userData.displayName || 'Estudiante';
         document.getElementById('sidebar-program').textContent = userData.program || userData.programa || '';
@@ -1257,12 +1181,11 @@ onAuthStateChanged(auth, async(user) => {
         await updateStreak();
         await saveRouteState();
         await checkAndCompleteMissions();
-    } catch(err) {
-        console.error('Error cargando datos:', err);
-        document.getElementById('page-content').innerHTML = `<div class="loading-spinner"><p style="color:var(--rojo-suave)">Error al cargar tus datos. Recarga la pagina.</p></div>`;
+    }catch(err){
+        console.error('Error cargando datos:',err);
+        document.getElementById('page-content').innerHTML=`<div class="loading-spinner"><p style="color:var(--rojo-suave)">Error al cargar tus datos. Recarga la pagina.</p></div>`;
     }
 });
 </script>
 </body>
 </html>
-
