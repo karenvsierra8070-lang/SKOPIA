@@ -918,6 +918,18 @@ function renderRelevantMissions(){
     const show=ids.slice(0,12);
     list.innerHTML=show.map(mid=>{const done=missionData[mid]?.completed||false;const info=getMissionInfo(mid);return `<div class="mission-item"><div class="mission-dot${done?' done':''}">${done?'<i class="fas fa-check" style="font-size:.7rem"></i>':mid}</div><div class="mission-text">${info.title}<span class="m-pts">+${info.points} estrellas</span></div><i class="fas fa-check-circle mission-check${done?' show':''}"></i></div>`;}).join('');
 }
+    /* ===== CARGAR DATOS ===== */
+async function loadAllData(){
+    if(!uid)return;
+    const userSnap=await getDoc(doc(db,'users',uid));
+    userData=userSnap.exists()?userSnap.data():{stars:0,totalQuestions:0,streak:{current:0,lastDate:'',totalDays:0},exams:{},routes:{},practiceExams:{}};
+    examData={};
+    for(const s of SUBTOPICS){const sn=await getDoc(doc(db,'users',uid,'exams',s.id));if(sn.exists())examData[s.id]=sn.data();}
+    const pr=await getDoc(doc(db,'users',uid,'practiceExams',ROUTE_ID));if(pr.exists())practiceData[ROUTE_ID]=pr.data();
+    missionData={};const ms=await getDocs(collection(db,'users',uid,'missions'));ms.forEach(d=>{missionData[parseInt(d.id.replace('mission_',''))]=d.data();});
+    routeData={};for(const mod of ALL_MODULES){const r=await getDoc(doc(db,'users',uid,'routes',mod));if(r.exists())routeData[mod]=r.data();}
+}
+    
 /* ===== MAPA FIJO DE TEMAS Y SUBTEMAS RC =====
    10 temas × 5 subtemas = 50 subtemas SIEMPRE.
    Cada HTML de ruta solo conoce sus 5 subtemas,
