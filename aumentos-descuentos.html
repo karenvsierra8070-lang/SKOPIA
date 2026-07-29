@@ -949,17 +949,54 @@ Al analizar la tabla de salarios de Textiles del Caribe, ¿cuál es el diagnóst
   exp: 'Identificamos a los empleados de "Textiles del Caribe" con salarios iguales o superiores a $1.600: corresponden a los empleados 10, 11, 12, 13 (con $1.600 cada uno) y los empleados 14 y 15 (con $2.000 cada uno). Total de empleados = 6. La suma de estos salarios es: (4 * 1.600) + (2 * 2.000) = 6.400 + 4.000 = $10.400. Calculamos la retención del 5%: $10.400 * 0,05 = $520. Dado que $520 es mayor a $500, la afirmación es correcta. La opción adecuada es la D (índice 3).'
 }
     
-];
+/* ===== ESTADO DE SESIONES ===== */
+function makeState(qs){return{current:0,answers:new Array(qs.length).fill(null),answered:new Array(qs.length).fill(false),done:false,score:0};}
+let s1=makeState(S1_QS),s2=makeState(S2_QS);
+    
+function getRandom15(arr) {
+    const shuffled = [...arr].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 15);
+}
+
 function buildSession(qs,state,cid){
     qs = getRandom15(qs);
     const c=$(cid);if(!c)return;const letters=['A','B','C','D'];let h='';
     
     qs.forEach((q,i)=>{
-        const imgTag = q.img ? `<div class="q-img"><img src="${q.img}" alt="Imagen de la pregunta"></div>` : '';
-
-        h+=`<div class="q-card${i===0?' active':''}" data-qi="${i}" id="${cid}-q${i}"><div class="q-num">Pregunta ${i+1} de ${qs.length}</div><div class="q-text">${q.q}</div>${imgTag}<div class="q-options">${q.opts.map((o,j)=>`<div class="q-opt" data-qi="${i}" data-oi="${j}" onclick="selOpt('${cid}',${i},${j})"><span class="opt-letter">${letters[j]}</span><span>${o}</span></div>`).join('')}</div><div class="q-explanation" id="${cid}-exp${i}"><i class="fas fa-lightbulb" style="color:var(--dorado);margin-right:6px;"></i>${q.exp}</div><div class="q-nav">${i<qs.length-1?`<button class="q-nav-btn skip" onclick="skipSession('${cid}')"><i class="fas fa-forward"></i> Saltar</button><button class="q-nav-btn next" id="${cid}-next${i}" disabled onclick="nextQ('${cid}',${i})">Siguiente <i class="fas fa-arrow-right"></i></button>`:`<button class="q-nav-btn skip" onclick="skipSession('${cid}')"><i class="fas fa-forward"></i> Saltar</button><button class="q-nav-btn next" id="${cid}-next${i}" disabled onclick="finishSession('${cid}')">Ver resultados <i class="fas fa-flag-checkered"></i></button>`}</div></div>`;
+        h+=`<div class="q-card${i===0?' active':''}" data-qi="${i}" id="${cid}-q${i}"><div class="q-num">Pregunta ${i+1} de ${qs.length}</div><div class="q-text">${q.q}</div>${q.img?`<div class="q-img"><img src="${q.img}" alt="Imagen de pregunta" style="max-width:100%;height:auto;display:block;margin:10px auto;border-radius:8px;"></div>`:''}<div class="q-options">${q.opts.map((o,j)=>`<div class="q-opt" data-qi="${i}" data-oi="${j}" onclick="selOpt('${cid}',${i},${j})"><span class="opt-letter">${letters[j]}</span><span>${o}</span></div>`).join('')}</div><div class="q-explanation" id="${cid}-exp${i}"><i class="fas fa-lightbulb" style="color:var(--dorado);margin-right:6px;"></i>${q.exp}</div><div class="q-nav">${i<qs.length-1?`<button class="q-nav-btn skip" onclick="skipSession('${cid}')"><i class="fas fa-forward"></i> Saltar</button><button class="q-nav-btn next" id="${cid}-next${i}" disabled onclick="nextQ('${cid}',${i})">Siguiente <i class="fas fa-arrow-right"></i></button>`:`<button class="q-nav-btn skip" onclick="skipSession('${cid}')"><i class="fas fa-forward"></i> Saltar</button><button class="q-nav-btn next" id="${cid}-next${i}" disabled onclick="finishSession('${cid}')">Ver resultados <i class="fas fa-flag-checkered"></i></button>`}</div></div>`;
     });c.innerHTML=h;
 }
+
+function getState(cid){
+    const isS1 = cid === 's1q';
+    return {
+        state: isS1 ? s1 : s2,
+        qs: isS1 ? S1_QS : S2_QS,
+        resId: isS1 ? 's1r' : 's2r',
+        scId: isS1 ? 's1sc' : 's2sc',
+        barId: isS1 ? 's1bar' : 's2bar',
+        msgId: isS1 ? 's1msg' : 's2msg',
+        corId: isS1 ? 's1cor' : 's2cor',
+        wrgId: isS1 ? 's1wrg' : 's2wrg',
+        pctId: isS1 ? 's1pct' : 's2pct',
+        cntId: isS1 ? 's1cnt' : 's2cnt',
+        navId: isS1 ? 's1nav' : 's2nav'
+    };
+}
+
+function selOpt(cid,qi,oi){const{state,qs}=getState(cid);if(state.answered[qi])return;state.answers[qi]=oi;state.answered[qi]=true;const correct=qs[qi].correct;document.querySelectorAll(`#${cid} [data-qi="${qi}"].q-opt`).forEach(el=>{const idx=parseInt(el.dataset.oi);el.style.pointerEvents='none';if(idx===correct)el.classList.add('correct-answer');else if(idx===oi)el.classList.add('wrong-answer');});$(`${cid}-exp${qi}`).classList.add('show');const nb=$(`${cid}-next${qi}`);if(nb)nb.disabled=false;}
+window.selOpt=selOpt;
+
+function nextQ(cid,qi){const{state,qs,cntId}=getState(cid);$(`${cid}-q${qi}`).classList.remove('active');state.current=qi+1;$(`${cid}-q${state.current}`).classList.add('active');$(cntId).textContent=`${state.current+1} / ${qs.length}`;window.scrollTo({top:$(`${cid}-q${state.current}`).offsetTop-120,behavior:'smooth'});}
+window.nextQ=nextQ;
+
+function skipSession(cid){const{state,qs,resId,navId,cntId}=getState(cid);qs.forEach((_,i)=>{const el=$(`${cid}-q${i}`);if(el)el.classList.remove('active');});$(navId).style.display='flex';$(cntId).textContent=`${qs.length} / ${qs.length}`;showResults(cid,0,0,qs.length);window.scrollTo({top:$(resId).offsetTop-120,behavior:'smooth'});}
+window.skipSession=skipSession;
+
+function finishSession(cid){const{state,qs,resId,navId,cntId}=getState(cid);let cor=0;qs.forEach((q,i)=>{if(state.answers[i]===q.correct)cor++;});qs.forEach((_,i)=>{const el=$(`${cid}-q${i}`);if(el)el.classList.remove('active');});$(navId).style.display='flex';$(cntId).textContent=`${qs.length} / ${qs.length}`;const score=Math.round(cor/qs.length*300);state.done=true;state.score=score;showResults(cid,score,cor,qs.length);window.scrollTo({top:$(resId).offsetTop-120,behavior:'smooth'});if(s1.done&&s2.done)saveTheoryComplete();else if(cid==='s1q'&&s2.done)saveTheoryComplete();else if(cid==='s2q'&&s1.done)saveTheoryComplete();}
+window.finishSession=finishSession;
+
+function showResults(cid,score,cor,total){const{resId,scId,barId,msgId,corId,wrgId,pctId}=getState(cid);const pct=Math.round(cor/total*100);$(corId).textContent=cor;$(wrgId).textContent=total-cor;$(pctId).textContent=pct+'%';const se=$(scId);se.textContent=score;se.className='results-score '+(score>=240?'good':score>=180?'mid':'low');$(msgId).textContent=score>=240?'Excelente rendimiento.':score>=180?'Buen trabajo, repasa los temas donde fallaste.':'Necesitas practicar mas.';$(resId).classList.add('active');setTimeout(()=>{const b=$(barId);b.style.width=pct+'%';b.style.background=score>=240?'var(--verde)':score>=180?'var(--dorado)':'var(--rojo-suave)';},200);}
 /* ============================================================
    FIREBASE — MISMO PATRÓN EXACTO QUE EL JUEGO QUE FUNCIONA
    ============================================================ */
