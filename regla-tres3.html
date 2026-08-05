@@ -71,8 +71,8 @@
         .topbar-stars i{font-size:.75rem;}
 
         /* === JUEGO === */
-        .game-wrap{position:relative;width:100%;height:calc(100vh - var(--topbar-h));overflow:hidden;}
-        .game-phase{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto;}
+        .game-wrap{position:relative;width:100%;min-height:calc(100vh - var(--topbar-h));overflow:hidden;}
+        .game-phase{position:absolute;top:0;left:0;right:0;bottom:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;overflow-y:auto;}
         .game-phase.active{display:flex;animation:gfIn .5s ease;}
         @keyframes gfIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
 
@@ -156,7 +156,7 @@
         .s3b-inventory{display:flex;gap:8px;pointer-events:auto;}
         .s3b-inv-item{width:40px;height:30px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:5px;display:grid;place-items:center;font-size:.6rem;color:rgba(255,255,255,.3);transition:all .3s;}
         .s3b-inv-item.filled{background:rgba(62,107,58,.25);border-color:rgba(62,107,58,.5);color:var(--verde);}
-        .s3b-intro{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.95);display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--crema);}
+        .s3b-intro{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.95);display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--crema);cursor:default;}
         .s3b-intro.active{display:flex;animation:gfIn .4s ease;}
         .s3b-intro h3{font-family:'Patrick Hand',cursive;font-size:1.8rem;color:var(--dorado);margin-bottom:16px;}
         .s3b-intro p{max-width:400px;font-size:.95rem;line-height:1.6;color:rgba(253,251,245,.7);margin-bottom:28px;}
@@ -324,7 +324,6 @@
             </div>
             <div class="s3b-area" id="s3b-area"></div>
             
-            <!-- Pantalla de instrucciones del laberinto -->
             <div class="s3b-intro" id="s3b-intro">
                 <h3><i class="fas fa-moon"></i> Laberinto Nocturno</h3>
                 <p>Estás en completa oscuridad. Solo una linterna sigue tu cursor. Busca y haz clic en los 4 sobres esparcidos por la sala para armar la pregunta. Tienes 3 minutos.</p>
@@ -351,10 +350,8 @@
     </main>
 </div>
 
-<!-- Overlays de efectos permanentes -->
 <div class="eye-loss-overlay" id="eye-loss-overlay"></div>
 
-<!-- Medalla -->
 <div class="medal-overlay" id="medal-overlay"><div class="medal-box"><div class="medal-icon"><i class="fas fa-trophy"></i></div><h3>Misión completada</h3><div class="medal-pts" id="medal-pts">+0 puntos</div><div class="medal-label" id="medal-name"></div><button class="medal-btn" id="medal-close">Continuar <i class="fas fa-arrow-right"></i></button></div></div>
 
 <script type="module">
@@ -368,38 +365,21 @@ const db = getFirestore(app);
 var uid = null, userStats = {}, completedMissions = {};
 var $ = function(id) { return document.getElementById(id); };
 
-/* ===== BANCO DE PREGUNTAS ===== */
 const Q_MULT = [
-    {
-        q: "Si 5 litros de gasolina cuestan $25.000, ¿cuánto cuestan 12 litros?",
-        full: "x = (12 × 25.000) ÷ 5 = $60.000. Proporción directa: a más litros, más costo.",
-        partial: "$60.000",
-        wrong: "x = 25.000 ÷ 12 ≈ $2.083",
-        ci: 0
-    },
-    {
-        q: "Si 8 obreros terminan una obra en 12 días, ¿cuántos días tardan 6 obreros?",
-        full: "x = (8 × 12) ÷ 6 = 16 días. Proporción inversa: a menos obreros, más días.",
-        partial: "16 días",
-        wrong: "x = (6 × 12) ÷ 8 = 9 días",
-        ci: 0
-    }
+    { q: "Si 5 litros de gasolina cuestan $25.000, ¿cuánto cuestan 12 litros?", full: "x = (12 × 25.000) ÷ 5 = $60.000. Proporción directa: a más litros, más costo.", partial: "$60.000", wrong: "x = 25.000 ÷ 12 ≈ $2.083", ci: 0 },
+    { q: "Si 8 obreros terminan una obra en 12 días, ¿cuántos días tardan 6 obreros?", full: "x = (8 × 12) ÷ 6 = 16 días. Proporción inversa: a menos obreros, más días.", partial: "16 días", wrong: "x = (6 × 12) ÷ 8 = 9 días", ci: 0 }
 ];
-
 const Q_NUM = [
     { q: "Si 4 cajas pesan 20 kg, ¿cuánto pesan 9 cajas?", answer: 45, unit: "kg" },
     { q: "Un auto recorre 180 km con 12 litros. ¿Cuántos km recorre con 20 litros?", answer: 300, unit: "km" }
 ];
-
 const Q_LAB = [
     { enun: "Si 3 obreros fabrican 15 sillas en 5 días, ¿cuántas sillas fabrican 7 obreros en 10 días?", A: "50 sillas", B: "70 sillas", C: "35 sillas", correct: "B" },
     { enun: "Un tanque se llena en 6 horas con 4 grifos. ¿En cuántas horas se llena con 6 grifos?", A: "3 horas", B: "5 horas", C: "4 horas", correct: "C" }
 ];
 
-/* ===== ESTADO DEL JUEGO ===== */
 var GS = { phase:'instr', punishments:{eye:false,dyslexia:false}, deathScene:null, s1q:null, s2q:null, s3aq:null, s3bq:null, s2time:120, s3btime:180, s3awater:0, s3bcollected:[], timerInterval:null, waterInterval:null, dyslexiaInterval:null };
 
-/* ===== MENÚ COMPLETO ===== */
 var M=[{g:'Contenido Genérico',i:'fa-book-open',c:[{t:'3.1 Razonamiento Cuantitativo',i:'fa-calculator',s:[{t:'3.1.1 Prácticas Interactivas',l:[{n:'Laboratorio lógico matemático',u:'lab-logico-matematico.html'},{n:'Razonamiento lógico matemático',u:'razonamiento-logico-matematico.html'},{n:'Laboratorio de análisis gráfico',u:'lab-analisis-grafico-rc.html'}]},{t:'3.1.2 Prácticas Teóricas',l:[{n:'Aritmética básica',u:'aritmetica-basica.html'},{n:'Porcentajes y Razones',u:'porcentajes-razones.html'},{n:'Regla de Tres',u:'regla-tres.html'},{n:'Aumentos y Descuentos',u:'aumentos-descuentos.html'},{n:'Álgebra',u:'algebra.html'},{n:'Funciones',u:'funciones.html'},{n:'Geometría',u:'geometria.html'},{n:'Medidas',u:'medidas.html'},{n:'Razonamiento lógico',u:'razonamiento-logico-teoria.html'},{n:'Probabilidad',u:'probabilidad.html'},{n:'Estadística descriptiva',u:'estadistica-descriptiva.html'},{n:'Interpretación de datos',u:'interpretacion-datos.html'}]}]},{t:'3.2 Lectura Crítica',i:'fa-book-reader',s:[{t:'3.2.1 Prácticas Interactivas',l:[{n:'Biblioteca',u:'biblioteca.html'},{n:'Talleres de escritura y análisis',u:'talleres-escritura-analisis.html'},{n:'Entrenador de velocidad de lectura',u:'velocidad-lectura.html'}]},{t:'3.2.2 Prácticas Teóricas',l:[{n:'Comprensión literal',u:'comprension-literal.html'},{n:'Comprensión inferencial',u:'comprension-inferencial.html'},{n:'Comprensión crítica',u:'comprension-critica.html'},{n:'Estructura del texto',u:'estructura-texto.html'},{n:'Textos narrativos',u:'textos-narrativos.html'},{n:'Textos expositivos',u:'textos-expositivos.html'},{n:'Textos argumentativos',u:'textos-argumentativos.html'},{n:'Textos científicos',u:'textos-cientificos.html'},{n:'Textos periodísticos',u:'textos-periodisticos.html'},{n:'Análisis intertextual',u:'analisis-intertextual.html'}]}]},{t:'3.3 Competencias Ciudadanas',i:'fa-balance-scale',s:[{t:'3.3.1 Prácticas Interactivas',l:[{n:'Dilemas + decisiones',u:'dilemas-decisiones.html'},{n:'Contextos sociales',u:'contextos-sociales.html'},{n:'Archivos de casos reales',u:'archivos-casos-reales.html'},{n:'Laboratorio de estrategias',u:'lab-estrategias.html'}]},{t:'3.3.2 Prácticas Teóricas',l:[{n:'Derechos humanos',u:'derechos-humanos.html'},{n:'Constitución política de Colombia',u:'constitucion-politica.html'},{n:'Democracia',u:'democracia.html'},{n:'Estado y gobierno',u:'estado-gobierno.html'},{n:'Justicia y equidad',u:'justicia-equidad.html'},{n:'Resolución pacífica de conflictos',u:'resolucion-pacifica.html'},{n:'Ética y responsabilidad social',u:'etica-responsabilidad.html'},{n:'Diversidad cultural',u:'diversidad-cultural.html'},{n:'Ciudadanía digital',u:'ciudadania-digital.html'},{n:'Sostenibilidad',u:'sostenibilidad.html'}]}]},{t:'3.4 Inglés',i:'fa-globe',s:[{t:'3.4.1 Prácticas Interactivas',l:[{n:'Comprensión lectora en inglés',u:'comprension-lectora-ingles.html'},{n:'Vocabulario en contexto',u:'vocabulario-contexto-ingles.html'},{n:'Cohesión en inglés',u:'cohesion-ingles.html'}]},{t:'3.4.2 Prácticas Teóricas',l:[{n:'Reading comprehension',u:'reading-comprehension.html'},{n:'Vocabulary in context',u:'vocabulary-context.html'},{n:'Grammar',u:'grammar.html'},{n:'Functional language',u:'functional-language.html'},{n:'Connectors and linking words',u:'connectors-linking.html'},{n:'Text types',u:'text-types.html'},{n:'Error identification',u:'error-identification.html'},{n:'Synonym replacement',u:'synonym-replacement.html'},{n:'Everyday situations',u:'everyday-situations.html'},{n:'Academic vocabulary',u:'academic-vocabulary.html'}]}]},{t:'3.5 Comunicación Escrita',i:'fa-pen-fancy',s:[{t:'Subtemas',l:[{n:'Planteamiento y Argumentación',u:'planteamiento-argumentacion.html'},{n:'Organizar el texto',u:'organizar-texto.html'},{n:'Forma de expresión',u:'forma-expresion.html'},{n:'Precisión Semántica y Claridad',u:'precision-semantica.html'},{n:'Gestión del Tiempo y de la Hoja de Borrador',u:'gestion-tiempo-borrador.html'},{n:'Pertinencia y Enfoque',u:'pertinencia-enfoque.html'}]}]}]}];
 
 function renderMenu(){var nav=$('sidebar-nav'),h='';M.forEach(function(g){h+='<div class="menu-group-label"><i class="fas '+g.i+'"></i> '+g.g+'</div>';g.c.forEach(function(c){h+='<div class="menu-cat"><button class="menu-cat-btn"><i class="cat-icon fas '+c.i+'"></i><span>'+c.t+'</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-cat-children">';if(c.s)c.s.forEach(function(s){h+='<div class="menu-sub"><button class="menu-sub-btn"><span>'+s.t+'</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-sub-children">';if(s.l)s.l.forEach(function(l){h+='<a href="'+l.u+'" class="menu-link'+(l.u==='regla-tres-juego.html'?' active':'')+'">'+l.n+'</a>';});h+='</div></div>';});h+='</div></div>';});});nav.innerHTML=h;nav.querySelectorAll('.menu-cat-btn').forEach(function(b){b.addEventListener('click',function(){var c=b.parentElement,w=c.classList.contains('open');c.classList.toggle('open',!w);});});nav.querySelectorAll('.menu-sub-btn').forEach(function(b){b.addEventListener('click',function(){var s=b.parentElement;s.classList.toggle('open');});});}
@@ -407,7 +387,6 @@ function renderMenu(){var nav=$('sidebar-nav'),h='';M.forEach(function(g){h+='<d
 function initSidebar(){var sb=$('sidebar'),ov=$('sidebar-overlay'),tb=$('topbar-toggle'),mw=$('main-wrap');tb.addEventListener('click',function(){if(window.innerWidth<=768){sb.classList.toggle('open');ov.classList.toggle('active');}else{sb.classList.toggle('collapsed');mw.classList.toggle('expanded');}});ov.addEventListener('click',function(){sb.classList.remove('open');ov.classList.remove('active');});$('logout-btn').addEventListener('click',async function(e){e.preventDefault();await signOut(auth);window.location.href='index.html';});window.addEventListener('resize',function(){if(window.innerWidth>768){sb.classList.remove('open');ov.classList.remove('active');}});}
 renderMenu();initSidebar();
 
-/* ===== FIREBASE ===== */
 async function loadFirebaseData(){if(!uid)return;try{var s=await getDoc(doc(db,'users',uid,'stats','main'));if(s.exists())userStats=s.data();}catch(e){}userStats.totalStars=userStats.totalStars||0;userStats.totalMissionsCompleted=userStats.totalMissionsCompleted||0;try{var s2=await getDocs(collection(db,'users',uid,'missions'));s2.forEach(function(d){if(d.data().completed)completedMissions[d.id]=true;});}catch(e){}}
 async function saveStats(updates){if(!uid)return;try{await setDoc(doc(db,'users',uid,'stats','main'),updates,{merge:true});}catch(e){}}
 async function completeMissionInDB(id){if(!uid||completedMissions['mission_'+id])return;completedMissions['mission_'+id]=true;try{await setDoc(doc(db,'users',uid,'missions','mission_'+id),{completed:true,completedAt:serverTimestamp()});}catch(e){}}
@@ -419,27 +398,22 @@ function showMedal(id){medalQueue.push(id);if(medalQueue.length===1)renderNextMe
 function renderNextMedal(){if(!medalQueue.length){$('medal-overlay').classList.remove('active');return;}var id=medalQueue[0],m=MC[id]||{title:'Misión completada',pts:0};$('medal-name').textContent=m.title;$('medal-pts').textContent='+'+m.pts+' puntos';$('medal-overlay').classList.add('active');}
  $('medal-close').addEventListener('click',function(){medalQueue.shift();renderNextMedal();});
 
-/* ===== UTILIDADES ===== */
 function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
 function clearAllTimers(){if(GS.timerInterval){clearInterval(GS.timerInterval);GS.timerInterval=null;}if(GS.waterInterval){clearInterval(GS.waterInterval);GS.waterInterval=null;}if(GS.dyslexiaInterval){clearInterval(GS.dyslexiaInterval);GS.dyslexiaInterval=null;}}
 function showPhase(id){document.querySelectorAll('.game-phase').forEach(function(p){p.classList.remove('active');});var el=$(id);if(el)el.classList.add('active');}
 function showFeedback(text,type){var fb=document.createElement('div');fb.className='game-feedback '+type;fb.textContent=text;document.body.appendChild(fb);setTimeout(function(){fb.remove();},1800);}
 
-/* ===== EFECTO: PERDER OJO ===== */
 function applyEyeLoss(){if(GS.punishments.eye)$('eye-loss-overlay').classList.add('active'); else $('eye-loss-overlay').classList.remove('active');}
 
-/* ===== EFECTO: DISLEXIA (CORREGIDO) ===== */
 function startDyslexia(){
     if(!GS.punishments.dyslexia)return;
     GS.dyslexiaInterval=setInterval(function(){
         var chars=document.querySelectorAll('.dys-char');
         if(!chars.length)return;
-        // Solo animar 3 letras a la vez para que no moleste too mucho
         var count=Math.min(3,chars.length);
         for(var i=0;i<count;i++){
             var idx=Math.floor(Math.random()*chars.length);
             chars[idx].classList.remove('dys-animating');
-            // Forzar reflow para reiniciar animación si se hace clic muy seguido
             void chars[idx].offsetWidth; 
             chars[idx].classList.add('dys-animating');
             (function(c){setTimeout(function(){c.classList.remove('dys-animating');},1000);})(chars[idx]);
@@ -449,12 +423,9 @@ function startDyslexia(){
 
 function wrapDyslexiaText(el){
     if(!el || !GS.punishments.dyslexia) return;
-    // Si ya fue procesado, no romper el texto
     if(el.querySelector('.dys-char')) return;
-    
-    var text=el.childNodes[0]; // El nodo de texto real
+    var text=el.childNodes[0]; 
     if(!text || text.nodeType !== Node.TEXT_NODE) return;
-    
     var str = text.nodeValue;
     var frag = document.createDocumentFragment();
     for(var i=0; i<str.length; i++){
@@ -467,73 +438,44 @@ function wrapDyslexiaText(el){
     el.insertBefore(frag, el.firstChild);
 }
 
-/* ===== INICIAR JUEGO ===== */
 window.startGame=function(){
     clearAllTimers();
     $('eye-loss-overlay').classList.remove('active');
-    GS.phase='s1';
-    GS.punishments={eye:false,dyslexia:false};
-    GS.deathScene=null;
-    GS.s3bcollected=[];
+    GS.phase='s1'; GS.punishments={eye:false,dyslexia:false}; GS.deathScene=null; GS.s3bcollected=[];
     initScenario1();
 };
 
-/* ===== ESCENARIO 1: LA ESCOTILLA ===== */
 function initScenario1(){
     GS.s1q=pick(Q_MULT);
-    var qEl=$('s1-question');
-    qEl.innerHTML=''; // Limpiar por si hace retry
-    qEl.textContent=GS.s1q.q;
-    wrapDyslexiaText(qEl);
-    
+    var qEl=$('s1-question'); qEl.innerHTML=''; qEl.textContent=GS.s1q.q; wrapDyslexiaText(qEl);
     var paths=$('s1-paths');
     var icons=['<i class="fas fa-archway"></i>','<i class="fas fa-dungeon"></i>','<i class="fas fa-door-closed"></i>'];
     var labels=['Camino Izquierdo','Camino Central','Camino Derecho'];
     var opts=[GS.s1q.full,GS.s1q.partial,GS.s1q.wrong];
     var html='';
-    for(var i=0;i<3;i++){
-        html+='<div class="s1-path" onclick="selectPath('+i+')">';
-        html+='<div class="s1-path-icon">'+icons[i]+'</div>';
-        html+='<div class="s1-path-label">'+labels[i]+'</div>';
-        html+='<div class="s1-path-text dyslexia-target">'+opts[i]+'</div>';
-        html+='</div>';
-    }
+    for(var i=0;i<3;i++){html+='<div class="s1-path" onclick="selectPath('+i+')"><div class="s1-path-icon">'+icons[i]+'</div><div class="s1-path-label">'+labels[i]+'</div><div class="s1-path-text dyslexia-target">'+opts[i]+'</div></div>';}
     paths.innerHTML=html;
     if(GS.punishments.dyslexia){paths.querySelectorAll('.dyslexia-target').forEach(wrapDyslexiaText);}
-    
-    showPhase('phase-s1');
-    applyEyeLoss();
-    startDyslexia();
+    showPhase('phase-s1'); applyEyeLoss(); startDyslexia();
 }
 
 window.selectPath=function(idx){
     clearAllTimers();
-    var q=GS.s1q;
-    if(idx===q.ci){showFeedback('Camino correcto','fb-bien');setTimeout(initScenario2,1200);}
+    if(idx===GS.s1q.ci){showFeedback('Camino correcto','fb-bien');setTimeout(initScenario2,1200);}
     else if(idx!==2){GS.punishments.eye=true;showFeedback('Castigo: Pierdes un ojo','fb-castigo');setTimeout(initScenario2,2000);}
     else{showFeedback('Has muerto','fb-muerte');GS.deathScene='escotilla';setTimeout(function(){showEnding('death');},2200);}
 };
 
-/* ===== ESCENARIO 2 ===== */
 function initScenario2(){
     GS.phase='s2'; GS.s2time=120;
     GS.s2q=pick(Q_MULT.filter(function(q){return q!==GS.s1q;}));
     if(!GS.s2q)GS.s2q=pick(Q_MULT);
-    
-    var qEl=$('s2-question');
-    qEl.innerHTML=''; qEl.textContent=GS.s2q.q; wrapDyslexiaText(qEl);
-    
+    var qEl=$('s2-question'); qEl.innerHTML=''; qEl.textContent=GS.s2q.q; wrapDyslexiaText(qEl);
     var colors=['red','blue','yellow'], opts=[GS.s2q.full,GS.s2q.partial,GS.s2q.wrong], html='';
-    for(var i=0;i<3;i++){
-        html+='<div class="s2-cable '+colors[i]+'" onclick="cutCable('+i+')">';
-        html+='<div class="s2-cable-wire"><i class="fas fa-plug"></i></div>';
-        html+='<div class="s2-cable-text dyslexia-target">'+opts[i]+'</div></div>';
-    }
+    for(var i=0;i<3;i++){html+='<div class="s2-cable '+colors[i]+'" onclick="cutCable('+i+')"><div class="s2-cable-wire"><i class="fas fa-plug"></i></div><div class="s2-cable-text dyslexia-target">'+opts[i]+'</div></div>';}
     $('s2-cables').innerHTML=html;
     if(GS.punishments.dyslexia){$('s2-cables').querySelectorAll('.dyslexia-target').forEach(wrapDyslexiaText);}
-    
-    showPhase('phase-s2'); applyEyeLoss(); startDyslexia();
-    updateS2Timer();
+    showPhase('phase-s2'); applyEyeLoss(); startDyslexia(); updateS2Timer();
     GS.timerInterval=setInterval(function(){GS.s2time--;updateS2Timer();if(GS.s2time<=0){clearAllTimers();showFeedback('La bomba estalló','fb-muerte');GS.deathScene='bomba';setTimeout(function(){showEnding('death');},2200);}},1000);
 }
 function updateS2Timer(){var m=Math.floor(GS.s2time/60),s=GS.s2time%60;$('s2-timer').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');if(GS.s2time<=30)$('s2-timer').classList.add('urgent');else $('s2-timer').classList.remove('urgent');}
@@ -545,7 +487,6 @@ window.cutCable=function(idx){
     else{showFeedback('La bomba estalló','fb-muerte');GS.deathScene='bomba';setTimeout(function(){showEnding('death');},2200);}
 };
 
-/* ===== ESCENARIO 3A: AGUA ===== */
 function initScenario3a(){
     GS.phase='s3a'; GS.s3awater=0; GS.s3aq=pick(Q_NUM);
     var qEl=$('s3a-question'); qEl.innerHTML=''; qEl.textContent=GS.s3aq.q; wrapDyslexiaText(qEl);
@@ -555,25 +496,18 @@ function initScenario3a(){
 }
 window.submitWater=function(){var val=parseInt($('s3a-input').value);if(isNaN(val))return;clearAllTimers();if(val===GS.s3aq.answer){showFeedback('Agua detenida','fb-bien');setTimeout(function(){showEnding('happy');},1200);}else{showFeedback('Respuesta incorrecta','fb-muerte');GS.deathScene='agua';setTimeout(function(){showEnding('death');},2200);}};
 
-/* ===== ESCENARIO 3B: LABERINTO ===== */
 function initScenario3b(){
     GS.phase='s3b'; GS.s3btime=180; GS.s3bcollected=[false,false,false,false]; GS.s3bq=pick(Q_LAB);
     for(var i=0;i<4;i++)$('inv-'+i).className='s3b-inv-item';
-    
-    // Mostrar pantalla de instrucciones primero
     $('s3b-intro').classList.add('active');
     $('s3b-assembled').classList.remove('active');
     $('s3b-area').innerHTML='';
-    showPhase('phase-s3b'); applyEyeLoss();
-    updateS3bTimer();
+    showPhase('phase-s3b'); applyEyeLoss(); updateS3bTimer();
 }
 
 window.startLabyrinth=function(){
     $('s3b-intro').classList.remove('active');
-    
-    var area=$('s3b-area');
-    area.innerHTML='';
-    var positions=[];
+    var area=$('s3b-area'); area.innerHTML=''; var positions=[];
     for(var i=0;i<4;i++){
         var x,y,valid;
         do{ x=10+Math.random()*70; y=15+Math.random()*65; valid=true;
@@ -585,10 +519,8 @@ window.startLabyrinth=function(){
         env.addEventListener('click',(function(idx){return function(){openEnvelope(idx);};})(i));
         area.appendChild(env);
     }
-    
     var fl=$('s3b-flashlight'); var gameArea=$('phase-s3b');
     gameArea.onmousemove=function(e){var r=gameArea.getBoundingClientRect();fl.style.setProperty('--mx',(e.clientX-r.left)+'px');fl.style.setProperty('--my',(e.clientY-r.top)+'px');};
-    
     GS.timerInterval=setInterval(function(){GS.s3btime--;updateS3bTimer();if(GS.s3btime<=0){clearAllTimers();showFeedback('El tiempo se agotó','fb-muerte');GS.deathScene='laberinto';setTimeout(function(){showEnding('death');},2200);}},1000);
 }
 
@@ -619,38 +551,25 @@ window.selectLabOpt=function(el,opt){
     else{el.classList.add('wrong');var correctBtn=$('s3b-assembled-q').querySelectorAll('.s3b-opt')[q.correct==='A'?0:q.correct==='B'?1:2];if(correctBtn)correctBtn.classList.add('correct');showFeedback('Respuesta incorrecta','fb-muerte');GS.deathScene='laberinto';setTimeout(function(){showEnding('death');},2200);}
 };
 
-/* ===== FINALES ===== */
 function showEnding(type){
     clearAllTimers(); GS.phase='end';
     var el=$('phase-end'); el.className='game-phase phase-end '+type;
     var icon=$('end-icon'),title=$('end-title'),sub=$('end-subtitle'),nar=$('end-narrative'),stats=$('end-stats');
     var pStr=[]; if(GS.punishments.eye)pStr.push('Ojo perdido'); if(GS.punishments.dyslexia)pStr.push('Dislexia');
-
-    if(type==='happy'){
-        icon.innerHTML='<i class="fas fa-sun" style="color:var(--dorado)"></i>';title.textContent='Final Feliz';title.style.color='var(--dorado)';sub.textContent='Sobreviviste ilesa';
-        nar.textContent='La escotilla se abre hacia la luz del día. Caminas sin una sola herida, con la claridad mental de quien dominó la regla de tres bajo presión. El aire fresco golpea tu rostro. Cada cálculo fue exacto, cada proporción fue justificada como el ICFES lo exige. No hay sombras en tu camino ni letras que se escapen. Sobreviviste a tu historia y el mundo real te espera con una nueva prueba: el examen Saber Pro.';
-    }else if(type==='painful'){
-        icon.innerHTML='<i class="fas fa-band-aid" style="color:var(--rojo-suave)"></i>';title.textContent='Final Doliente';title.style.color='var(--rojo-suave)';sub.textContent='Sobreviviste, pero a un costo';
-        var extra='';if(GS.punishments.eye)extra+='La mitad del mundo es ahora sombra permanente, un recordatorio de que la respuesta incompleta tiene consecuencias. ';if(GS.punishments.dyslexia)extra+='Las letras aún bailan en tu memoria, inquietas, cambiando de lugar cuando menos lo esperas. ';
-        nar.textContent='Lograste salir, pero el precio fue alto. '+extra+'Sobreviviste con cicatrices que te acompañarán en el examen real. Aún así, estás vivo. Y eso es suficiente para enfrentar lo que viene. La próxima vez, justifica cada paso.';
-    }else{
-        icon.innerHTML='<i class="fas fa-skull" style="color:#666"></i>';title.textContent='Final Trágico';title.style.color='#888';
+    if(type==='happy'){icon.innerHTML='<i class="fas fa-sun" style="color:var(--dorado)"></i>';title.textContent='Final Feliz';title.style.color='var(--dorado)';sub.textContent='Sobreviviste ilesa';nar.textContent='La escotilla se abre hacia la luz del día. Caminas sin una sola herida, con la claridad mental de quien dominó la regla de tres bajo presión. El aire fresco golpea tu rostro. Cada cálculo fue exacto, cada proporción fue justificada como el ICFES lo exige. No hay sombras en tu camino ni letras que se escapen. Sobreviviste a tu historia y el mundo real te espera con una nueva prueba: el examen Saber Pro.';}
+    else if(type==='painful'){icon.innerHTML='<i class="fas fa-band-aid" style="color:var(--rojo-suave)"></i>';title.textContent='Final Doliente';title.style.color='var(--rojo-suave)';sub.textContent='Sobreviviste, pero a un costo';var extra='';if(GS.punishments.eye)extra+='La mitad del mundo es ahora sombra permanente, un recordatorio de que la respuesta incompleta tiene consecuencias. ';if(GS.punishments.dyslexia)extra+='Las letras aún bailan en tu memoria, inquietas, cambiando de lugar cuando menos lo esperas. ';nar.textContent='Lograste salir, pero el precio fue alto. '+extra+'Sobreviviste con cicatrices que te acompañarán en el examen real. Aún así, estás vivo. Y eso es suficiente para enfrentar lo que viene. La próxima vez, justifica cada paso.';}
+    else{icon.innerHTML='<i class="fas fa-skull" style="color:#666"></i>';title.textContent='Final Trágico';title.style.color='#888';
         if(GS.deathScene==='escotilla'){sub.textContent='Muerte en la escotilla';nar.textContent='La pared se derrumba. El camino que elegiste no era el correcto y la escotilla se cierra para siempre. En la oscuridad, el eco de tu error se repite: debiste analizar mejor las proporciones, debiste justificar tu respuesta. Tu historia termina aquí, sepultada bajo piedras y tiza rota.';}
         else if(GS.deathScene==='bomba'){sub.textContent='Muerte en la explosión';nar.textContent='El destello. La onda expansiva. En fracciones de segundo, la bomba transforma todo en silencio. No hubo tiempo para un segundo intento. La regla de tres no perdonó tu imprecisión. El cable incorrecto brilló un instante antes de que todo desapareciera.';}
         else if(GS.deathScene==='agua'){sub.textContent='Muerte en la cámara de agua';nar.textContent='El agua fría te alcanza primero por los pies, luego por las rodillas. El número que escribiste no fue el correcto y el mecanismo no se detuvo. La última cosa que ves es la superficie alejándose arriba de ti. La proporción estaba ahí, justo frente a tus ojos, y no pudiste calcularla a tiempo.';}
         else{sub.textContent='Muerte en el laberinto';nar.textContent='La oscuridad te devora. El tiempo se agotó entre las sombras y los sobres que nunca encontraste. En el laberinto nocturno, sin luz y sin respuestas, la regla de tres se convirtió en tu laberinto final. Las piezas de la pregunta se quedaron perdidas en la noche eterna.';}
     }
-
     var scensCompleted=GS.deathScene?0:1;if(GS.deathScene==='escotilla')scensCompleted=0;else if(GS.deathScene==='bomba')scensCompleted=1;else if(GS.deathScene==='agua'||GS.deathScene==='laberinto')scensCompleted=2;
     stats.innerHTML='<div class="end-stat"><div class="end-stat-val" style="color:var(--dorado)">'+scensCompleted+'/3</div><div class="end-stat-label">Escenarios</div></div><div class="end-stat"><div class="end-stat-val" style="color:'+(pStr.length?'var(--rojo-suave)':'var(--verde)')+'">'+pStr.length+'</div><div class="end-stat-label">Castigos</div></div><div class="end-stat"><div class="end-stat-val" style="color:'+(type==='death'?'#888':'var(--dorado)')+'">'+(type==='happy'?'Ilesa':type==='painful'?'Herida':'Fallecida')+'</div><div class="end-stat-label">Condición</div></div>';
-
-    showPhase('phase-end');
-    wrapDyslexiaText(nar); startDyslexia(); applyEyeLoss();
-
+    showPhase('phase-end'); wrapDyslexiaText(nar); startDyslexia(); applyEyeLoss();
     if(type!=='death'){saveTodayInteraction();if(!completedMissions['mission_5']){completeMissionInDB(5);showMedal(5);var ns=userStats.totalStars||0;saveStats({totalStars:ns+50});$('top-stars').textContent=ns+50;}}else{saveTodayInteraction();}
 }
 
-/* ===== INICIO ===== */
 onAuthStateChanged(auth,async function(user){
     if(!user){window.location.href='index.html';return;}
     uid=user.uid;await loadFirebaseData();
