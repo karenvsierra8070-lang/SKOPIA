@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regla de Tres - Skopia</title>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --crema:#fdfbf5;--crema-mid:#f5f0e3;--oliva-oscuro:#272b00;--oliva-medio:#5a6133;
+            --oliva-claro:#bec092;--oliva-palido:#d4d6b0;--oliva-super:#e8e9d4;
+            --sombra:rgba(39,43,0,.08);--sombra-md:rgba(39,43,0,.12);
+            --sidebar-w:310px;--topbar-h:72px;--radius:14px;--radius-sm:8px;
+            --dorado:#c9a227;--dorado-claro:#f5e6a3;--rojo-suave:#b85c38;--verde:#3e6b3a;
+            --bronce:#8B6F47;--bronce-claro:#C4A97D;--teja:#a0522d;
+        }
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+        html{scroll-behavior:smooth;}
+        body{font-family:'Roboto',sans-serif;background:var(--crema);color:var(--oliva-oscuro);min-height:100vh;overflow-x:hidden;
+            background-image:radial-gradient(ellipse at 10% 20%,rgba(190,192,146,.18) 0%,transparent 50%),radial-gradient(ellipse at 90% 80%,rgba(90,97,51,.1) 0%,transparent 50%);}
+        a{text-decoration:none;color:inherit;}button{cursor:pointer;border:none;background:none;font-family:inherit;}
+        ul{list-style:none;}input{font-family:inherit;}
+
+        /* ===== SIDEBAR ===== */
+        .sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--oliva-oscuro);color:var(--crema);display:flex;flex-direction:column;z-index:900;transition:transform .35s cubic-bezier(.4,0,.2,1);overflow:hidden;}
+        .sidebar.collapsed{transform:translateX(calc(-1 * var(--sidebar-w)));}
+        .sidebar-header{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;}
+        .sidebar-logo{width:48px;height:48px;border-radius:50%;object-fit:cover;margin-bottom:8px;border:2px solid var(--oliva-claro);}
+        .sidebar-username{font-family:'Patrick Hand',cursive;font-size:1.25rem;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .sidebar-program{font-size:.75rem;color:var(--oliva-claro);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .sidebar-search{padding:12px 14px;flex-shrink:0;}
+        .sidebar-search input{width:100%;padding:9px 12px 9px 34px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:var(--crema);font-size:.85rem;outline:none;transition:border .2s;}
+        .sidebar-search input::placeholder{color:rgba(255,255,255,.35);}
+        .sidebar-search input:focus{border-color:var(--oliva-claro);}
+        .sidebar-search-wrap{position:relative;}
+        .sidebar-search-wrap i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.3);font-size:.8rem;}
+        .sidebar-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 0;scrollbar-width:thin;scrollbar-color:var(--oliva-medio) transparent;}
+        .sidebar-nav::-webkit-scrollbar{width:5px;}.sidebar-nav::-webkit-scrollbar-thumb{background:var(--oliva-medio);border-radius:3px;}
+        .menu-group-label{padding:14px 18px 6px;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--oliva-claro);display:flex;align-items:center;gap:8px;}
+        .menu-group-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08);}
+        .menu-cat{user-select:none;}
+        .menu-cat-btn{width:100%;padding:10px 18px;display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600;color:var(--crema);transition:background .2s;text-align:left;}
+        .menu-cat-btn:hover{background:rgba(255,255,255,.06);}
+        .menu-cat-btn i.cat-icon{width:18px;text-align:center;font-size:.82rem;color:var(--oliva-claro);}
+        .menu-cat-btn .chevron{margin-left:auto;font-size:.6rem;transition:transform .25s;color:var(--oliva-claro);}
+        .menu-cat.open>.menu-cat-btn .chevron{transform:rotate(90deg);}
+        .menu-cat-children{max-height:0;overflow:hidden;transition:max-height .35s ease;}
+        .menu-cat.open>.menu-cat-children{max-height:2000px;}
+        .menu-sub{user-select:none;}
+        .menu-sub-btn{width:100%;padding:8px 18px 8px 44px;display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:500;color:rgba(253,251,245,.75);transition:all .2s;text-align:left;}
+        .menu-sub-btn:hover{color:var(--crema);background:rgba(255,255,255,.04);}
+        .menu-sub-btn .chevron{margin-left:auto;font-size:.55rem;transition:transform .25s;opacity:.5;}
+        .menu-sub.open>.menu-sub-btn .chevron{transform:rotate(90deg);opacity:1;}
+        .menu-sub-children{max-height:0;overflow:hidden;transition:max-height .3s ease;}
+        .menu-sub.open>.menu-sub-children{max-height:800px;}
+        .menu-link{display:block;padding:7px 18px 7px 62px;font-size:.78rem;color:rgba(253,251,245,.55);transition:all .2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .menu-link:hover{color:var(--crema);background:rgba(255,255,255,.06);padding-left:68px;}
+        .menu-link::before{content:'›';margin-right:6px;color:var(--oliva-claro);font-weight:700;}
+        .menu-link.active{color:#fff;background:rgba(255,255,255,.1);padding-left:68px;}
+        .menu-link.hidden,.menu-cat.hidden,.menu-sub.hidden{display:none;}
+        .menu-no-result{padding:20px 18px;text-align:center;font-size:.8rem;color:rgba(255,255,255,.3);display:none;}
+        .menu-no-result.show{display:block;}
+        .menu-note{padding:8px 18px 8px 44px;font-size:.72rem;color:rgba(253,251,245,.35);font-style:italic;}
+        .sidebar-footer{flex-shrink:0;padding:10px 0;border-top:1px solid rgba(255,255,255,.08);}
+        .sidebar-footer a{display:flex;align-items:center;gap:10px;padding:9px 18px;font-size:.82rem;color:rgba(253,251,245,.6);transition:all .2s;}
+        .sidebar-footer a:hover{color:var(--crema);background:rgba(255,255,255,.06);}
+        .sidebar-footer a i{width:18px;text-align:center;font-size:.85rem;}
+        .sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:899;opacity:0;visibility:hidden;transition:all .3s;}
+        .sidebar-overlay.active{opacity:1;visibility:visible;}
+
+        /* ===== MAIN ===== */
+        .main-wrap{margin-left:var(--sidebar-w);min-height:100vh;transition:margin-left .35s cubic-bezier(.4,0,.2,1);}
+        .main-wrap.expanded{margin-left:0;}
+        .topbar{position:sticky;top:0;z-index:100;height:var(--topbar-h);background:rgba(253,251,245,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(39,43,0,.06);display:flex;align-items:center;padding:0 28px;gap:16px;}
+        .topbar-toggle{width:40px;height:40px;border-radius:var(--radius-sm);display:grid;place-items:center;font-size:1.1rem;color:var(--oliva-oscuro);transition:background .2s;flex-shrink:0;}
+        .topbar-toggle:hover{background:rgba(39,43,0,.06);}
+        .topbar-greeting{flex:1;min-width:0;}
+        .topbar-greeting h1{font-family:'Patrick Hand',cursive;font-size:1.5rem;line-height:1.2;}
+        .topbar-greeting .sub{font-size:.82rem;color:var(--oliva-medio);}
+        .topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+        .topbar-clock{font-family:'Orbitron',monospace;font-size:1.05rem;font-weight:700;color:var(--oliva-oscuro);letter-spacing:1px;}
+        .topbar-stars{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;background:rgba(201,162,39,.1);font-family:'Orbitron',monospace;font-size:.82rem;font-weight:700;color:var(--dorado);}
+        .topbar-stars i{font-size:.75rem;}
+
+        /* ===== CONTENIDO PRINCIPAL ===== */
+        .hub-content{padding:32px 36px 60px;max-width:1100px;margin:0 auto;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+        @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+
+        /* Panda */
+        .panda-msg{background:#fff;border-radius:var(--radius);padding:24px 28px;margin-bottom:32px;box-shadow:0 2px 12px var(--sombra);border-left:4px solid var(--dorado);display:flex;gap:18px;align-items:flex-start;animation:fadeUp .5s ease;}
+        .panda-msg img,.panda-mini{width:56px;height:64px;flex-shrink:0;}
+        .panda-msg p{font-size:.92rem;line-height:1.6;color:var(--oliva-oscuro);}
+        .panda-msg p strong{color:var(--oliva-medio);}
+
+        /* Título de sección */
+        .section-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:2.5px;color:var(--oliva-claro);margin-bottom:20px;display:flex;align-items:center;gap:10px;animation:fadeIn .6s ease .1s both;}
+        .section-label::after{content:'';flex:1;height:1px;background:var(--oliva-palido);}
+
+        /* Grid de caminos */
+        .paths-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:8px;}
+        .path-card{background:#fff;border-radius:var(--radius);overflow:hidden;box-shadow:0 2px 14px var(--sombra);transition:all .35s cubic-bezier(.4,0,.2,1);cursor:pointer;position:relative;border:2px solid transparent;opacity:0;animation:fadeUp .5s ease forwards;}
+        .path-card:nth-child(1){animation-delay:.15s;}
+        .path-card:nth-child(2){animation-delay:.3s;}
+        .path-card:nth-child(3){animation-delay:.45s;}
+        .path-card:hover{transform:translateY(-8px);box-shadow:0 12px 36px var(--sombra-md);border-color:var(--oliva-palido);}
+
+        .path-card-header{padding:36px 24px 28px;text-align:center;position:relative;overflow:hidden;}
+        .path-card-header::before{content:'';position:absolute;inset:0;opacity:.07;background-image:repeating-linear-gradient(45deg,transparent,transparent 12px,rgba(255,255,255,.3) 12px,rgba(255,255,255,.3) 24px);}
+        .path-card-header .path-icon{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;margin:0 auto 16px;font-size:1.6rem;color:#fff;position:relative;z-index:1;box-shadow:0 6px 20px rgba(0,0,0,.2);transition:transform .3s;}
+        .path-card:hover .path-icon{transform:scale(1.1);}
+        .path-card-header h3{font-family:'Patrick Hand',cursive;font-size:1.45rem;color:#fff;position:relative;z-index:1;text-shadow:0 1px 4px rgba(0,0,0,.15);}
+
+        /* Colores de cada tarjeta */
+        .path-card.lectura .path-card-header{background:linear-gradient(135deg,#3a4a1a,var(--oliva-medio));}
+        .path-card.lectura .path-icon{background:rgba(255,255,255,.2);backdrop-filter:blur(8px);border:2px solid rgba(255,255,255,.3);}
+        .path-card.lectura .path-cta{background:var(--oliva-medio);}
+        .path-card.lectura .path-cta:hover{background:#4a5228;}
+        .path-card.lectura:hover{border-color:var(--oliva-medio);}
+
+        .path-card.videos .path-card-header{background:linear-gradient(135deg,#6B4226,var(--bronce));}
+        .path-card.videos .path-icon{background:rgba(255,255,255,.2);backdrop-filter:blur(8px);border:2px solid rgba(255,255,255,.3);}
+        .path-card.videos .path-cta{background:var(--bronce);}
+        .path-card.videos .path-cta:hover{background:#7a5e3a;}
+        .path-card.videos:hover{border-color:var(--bronce);}
+
+        .path-card.juego .path-card-header{background:linear-gradient(135deg,#9a7a17,var(--dorado));}
+        .path-card.juego .path-icon{background:rgba(255,255,255,.2);backdrop-filter:blur(8px);border:2px solid rgba(255,255,255,.3);}
+        .path-card.juego .path-cta{background:var(--dorado);color:var(--oliva-oscuro);}
+        .path-card.juego .path-cta:hover{background:var(--dorado-claro);}
+        .path-card.juego:hover{border-color:var(--dorado);}
+
+        .path-card-body{padding:22px 24px 20px;}
+        .path-card-body p{font-size:.88rem;line-height:1.6;color:#555;margin-bottom:16px;}
+        .path-features{display:flex;flex-direction:column;gap:8px;}
+        .path-features li{font-size:.82rem;color:#666;display:flex;align-items:center;gap:10px;line-height:1.4;}
+        .path-features li i{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:.6rem;flex-shrink:0;}
+        .path-card.lectura .path-features li i{background:rgba(90,97,51,.1);color:var(--oliva-medio);}
+        .path-card.videos .path-features li i{background:rgba(139,111,71,.12);color:var(--bronce);}
+        .path-card.juego .path-features li i{background:rgba(201,162,39,.12);color:var(--dorado);}
+
+        .path-card-footer{padding:0 24px 24px;}
+        .path-cta{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px 20px;border-radius:var(--radius-sm);color:#fff;font-size:.9rem;font-weight:600;transition:all .25s;}
+        .path-cta i{font-size:.8rem;transition:transform .25s;}
+        .path-card:hover .path-cta i{transform:translateX(4px);}
+
+        /* Nota al pie */
+        .hub-footer-note{text-align:center;margin-top:40px;padding:20px;font-size:.8rem;color:var(--oliva-claro);line-height:1.5;animation:fadeIn .6s ease .6s both;}
+        .hub-footer-note i{margin-right:4px;}
+
+        /* Decoración de fondo sutil */
+        .bg-deco{position:fixed;pointer-events:none;z-index:0;}
+        .bg-deco-1{top:-80px;right:-80px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(190,192,146,.12),transparent 70%);}
+        .bg-deco-2{bottom:-60px;left:20%;width:250px;height:250px;border-radius:50%;background:radial-gradient(circle,rgba(201,162,39,.06),transparent 70%);}
+
+        /* Toast */
+        .toast{position:fixed;bottom:24px;right:24px;background:#fff;padding:14px 20px;border-radius:var(--radius-sm);border-left:4px solid var(--dorado);box-shadow:0 8px 24px var(--sombra-md);z-index:6000;font-size:.85rem;transform:translateY(100px);opacity:0;transition:all .35s ease;max-width:380px;display:flex;align-items:center;gap:10px;}
+        .toast.show{transform:translateY(0);opacity:1;}
+        .toast i{color:var(--dorado);font-size:1rem;}
+
+        /* Loading */
+        .loading-spinner{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 0;gap:16px;}
+        .spinner{width:32px;height:32px;border:3px solid var(--oliva-super);border-top-color:var(--oliva-medio);border-radius:50%;animation:spin .7s linear infinite;}
+        @keyframes spin{to{transform:rotate(360deg)}}
+
+        /* ===== RESPONSIVE ===== */
+        @media(max-width:1024px){
+            .paths-grid{grid-template-columns:1fr;max-width:460px;margin-left:auto;margin-right:auto;}
+        }
+        @media(max-width:768px){
+            .sidebar{transform:translateX(calc(-1 * var(--sidebar-w)));}.sidebar.open{transform:translateX(0);}
+            .main-wrap{margin-left:0 !important;}.topbar{padding:0 16px;}
+            .hub-content{padding:20px 16px 40px;}
+            .panda-msg{flex-direction:column;align-items:center;text-align:center;}
+            .path-card-header{padding:28px 20px 22px;}
+            .path-card-header .path-icon{width:60px;height:60px;font-size:1.3rem;}
+            .path-card-header h3{font-size:1.25rem;}
+        }
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0s !important;transition-duration:0s !important;}}
+    </style>
+</head>
+<body>
+
+<div class="bg-deco bg-deco-1"></div>
+<div class="bg-deco bg-deco-2"></div>
+
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <a href="dashboard.html"><img src="logo.jpeg" alt="Skopia" class="sidebar-logo"></a>
+        <span class="sidebar-username" id="sidebar-username">Cargando...</span>
+        <span class="sidebar-program" id="sidebar-program"></span>
+    </div>
+    <div class="sidebar-search"><div class="sidebar-search-wrap"><i class="fas fa-search"></i><input type="text" id="sidebar-search" placeholder="Buscar contenido..." aria-label="Buscar contenido"></div></div>
+    <nav class="sidebar-nav" id="sidebar-nav" aria-label="Menú de contenido"></nav>
+    <div class="sidebar-footer">
+        <a href="cuenta.html"><i class="fas fa-user-circle"></i> Mi Cuenta</a>
+        <a href="configuracion.html"><i class="fas fa-cog"></i> Configuración</a>
+        <a href="#" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+    </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<div class="main-wrap" id="main-wrap">
+    <header class="topbar">
+        <button class="topbar-toggle" id="topbar-toggle" aria-label="Abrir menú"><i class="fas fa-bars"></i></button>
+        <div class="topbar-greeting">
+            <h1>Regla de Tres</h1>
+            <p class="sub">Porcentajes y Razones <i class="fas fa-chevron-right" style="font-size:.5rem;margin:0 4px;opacity:.4"></i> Regla de Tres</p>
+        </div>
+        <div class="topbar-right">
+            <span class="topbar-clock" id="top-clock">00:00:00</span>
+            <div class="topbar-stars"><i class="fas fa-star"></i> <span id="top-stars">0</span></div>
+        </div>
+    </header>
+    <main id="page-content">
+        <div class="loading-spinner" id="loading"><div class="spinner"></div><p>Cargando...</p></div>
+    </main>
+</div>
+
+<div class="toast" id="toast"><i class="fas fa-check-circle"></i><span id="toast-text"></span></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+const app = initializeApp({
+    apiKey:"AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",
+    projectId:"skopia-aa786",
+    storageBucket:"skopia-aa786.firebasestorage.app",
+    messagingSenderId:"719823055099",
+    appId:"1:719823055099:web:7d91ea29e4b2dcbb9b685e",
+    authDomain:"skopia-aa786.firebaseapp.com"
+});
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let uid = null, userStats = {};
+const $ = id => document.getElementById(id);
+
+/* ===== RELOJ ===== */
+function updateClock(){ $('top-clock').textContent = new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+updateClock(); setInterval(updateClock, 1000);
+
+/* ===== TOAST ===== */
+let toastTimer = null;
+function showToast(msg){ const t=$('toast'); $('toast-text').textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3500); }
+
+/* ===== PANDA SVG ===== */
+const PM = `<svg viewBox="0 0 200 220" fill="none"><ellipse cx="100" cy="158" rx="48" ry="42" fill="white" stroke="#272b00" stroke-width="2.5"/><circle cx="100" cy="88" r="42" fill="white" stroke="#272b00" stroke-width="2.5"/><circle cx="64" cy="56" r="20" fill="#272b00"/><circle cx="136" cy="56" r="20" fill="#272b00"/><ellipse cx="80" cy="84" rx="16" ry="14" fill="#272b00"/><ellipse cx="120" cy="84" rx="16" ry="14" fill="#272b00"/><circle cx="84" cy="82" r="6" fill="white"/><circle cx="116" cy="82" r="6" fill="white"/><circle cx="85" cy="81" r="3" fill="#272b00"/><circle cx="117" cy="81" r="3" fill="#272b00"/><ellipse cx="100" cy="96" rx="6" ry="3.5" fill="#272b00"/><path d="M93 100 Q100 108 107 100" fill="none" stroke="#272b00" stroke-width="2" stroke-linecap="round"/><ellipse cx="52" cy="150" rx="14" ry="24" fill="#272b00" transform="rotate(-12 52 150)"/><ellipse cx="148" cy="150" rx="14" ry="24" fill="#272b00" transform="rotate(12 148 150)"/><ellipse cx="78" cy="196" rx="18" ry="12" fill="#272b00" transform="rotate(-5 78 196)"/><ellipse cx="122" cy="196" rx="18" ry="12" fill="#272b00" transform="rotate(5 122 196)"/></svg>`;
+
+/* ===== SIDEBAR — MENU COMPLETO ===== */
+const menuData = [
+    {group:'Contenido Genérico', icon:'fa-book-open', cats:[
+        {title:'3.1 Razonamiento Cuantitativo', icon:'fa-calculator', subs:[
+            {title:'3.1.1 Prácticas Interactivas', links:[
+                {label:'Laboratorio lógico matemático', url:'lab-logico-matematico.html'},
+                {label:'Razonamiento lógico matemático', url:'razonamiento-logico-matematico.html'},
+                {label:'Laboratorio de análisis gráfico', url:'lab-analisis-grafico-rc.html'}
+            ]},
+            {title:'3.1.2 Prácticas Teóricas', links:[
+                {label:'Aritmética básica', url:'aritmetica-basica.html'},
+                {label:'Porcentajes y Razones', url:'porcentajes-razones.html'},
+                {label:'Regla de Tres', url:'regla-tres.html'},
+                {label:'Aumentos y Descuentos', url:'aumentos-descuentos.html'},
+                {label:'Álgebra', url:'algebra.html'},
+                {label:'Funciones', url:'funciones.html'},
+                {label:'Geometría', url:'geometria.html'},
+                {label:'Medidas', url:'medidas.html'},
+                {label:'Razonamiento lógico', url:'razonamiento-logico-teoria.html'},
+                {label:'Probabilidad', url:'probabilidad.html'},
+                {label:'Estadística descriptiva', url:'estadistica-descriptiva.html'},
+                {label:'Interpretación de datos', url:'interpretacion-datos.html'}
+            ]}
+        ]},
+        {title:'3.2 Lectura Crítica', icon:'fa-book-reader', subs:[
+            {title:'3.2.1 Prácticas Interactivas', links:[
+                {label:'Biblioteca', url:'biblioteca.html'},
+                {label:'Talleres de escritura y análisis', url:'talleres-escritura-analisis.html'},
+                {label:'Entrenador de velocidad de lectura', url:'velocidad-lectura.html'}
+            ]},
+            {title:'3.2.2 Prácticas Teóricas', links:[
+                {label:'Comprensión literal', url:'comprension-literal.html'},
+                {label:'Comprensión inferencial', url:'comprension-inferencial.html'},
+                {label:'Comprensión crítica', url:'comprension-critica.html'},
+                {label:'Estructura del texto', url:'estructura-texto.html'},
+                {label:'Textos narrativos', url:'textos-narrativos.html'},
+                {label:'Textos expositivos', url:'textos-expositivos.html'},
+                {label:'Textos argumentativos', url:'textos-argumentativos.html'},
+                {label:'Textos científicos', url:'textos-cientificos.html'},
+                {label:'Textos periodísticos', url:'textos-periodisticos.html'},
+                {label:'Análisis intertextual', url:'analisis-intertextual.html'}
+            ]}
+        ]},
+        {title:'3.3 Competencias Ciudadanas', icon:'fa-balance-scale', subs:[
+            {title:'3.3.1 Prácticas Interactivas', links:[
+                {label:'Dilemas + decisiones', url:'dilemas-decisiones.html'},
+                {label:'Contextos sociales', url:'contextos-sociales.html'},
+                {label:'Archivos de casos reales', url:'archivos-casos-reales.html'},
+                {label:'Laboratorio de estrategias', url:'lab-estrategias.html'}
+            ]},
+            {title:'3.3.2 Prácticas Teóricas', links:[
+                {label:'Derechos humanos', url:'derechos-humanos.html'},
+                {label:'Constitución política de Colombia', url:'constitucion-politica.html'},
+                {label:'Democracia', url:'democracia.html'},
+                {label:'Estado y gobierno', url:'estado-gobierno.html'},
+                {label:'Justicia y equidad', url:'justicia-equidad.html'},
+                {label:'Resolución pacífica de conflictos', url:'resolucion-pacifica.html'},
+                {label:'Ética y responsabilidad social', url:'etica-responsabilidad.html'},
+                {label:'Diversidad cultural', url:'diversidad-cultural.html'},
+                {label:'Ciudadanía digital', url:'ciudadania-digital.html'},
+                {label:'Sostenibilidad', url:'sostenibilidad.html'}
+            ]}
+        ]},
+        {title:'3.4 Inglés', icon:'fa-globe', subs:[
+            {title:'3.4.1 Prácticas Interactivas', links:[
+                {label:'Comprensión lectora en inglés', url:'comprension-lectora-ingles.html'},
+                {label:'Vocabulario en contexto', url:'vocabulario-contexto-ingles.html'},
+                {label:'Cohesión en inglés', url:'cohesion-ingles.html'}
+            ]},
+            {title:'3.4.2 Prácticas Teóricas', links:[
+                {label:'Reading comprehension', url:'reading-comprehension.html'},
+                {label:'Vocabulary in context', url:'vocabulary-context.html'},
+                {label:'Grammar', url:'grammar.html'},
+                {label:'Functional language', url:'functional-language.html'},
+                {label:'Connectors and linking words', url:'connectors-linking.html'},
+                {label:'Text types', url:'text-types.html'},
+                {label:'Error identification', url:'error-identification.html'},
+                {label:'Synonym replacement', url:'synonym-replacement.html'},
+                {label:'Everyday situations', url:'everyday-situations.html'},
+                {label:'Academic vocabulary', url:'academic-vocabulary.html'}
+            ]}
+        ]},
+        {title:'3.5 Comunicación Escrita', icon:'fa-pen-fancy', subs:[
+            {title:'Subtemas', links:[
+                {label:'Planteamiento y Argumentación', url:'planteamiento-argumentacion.html'},
+                {label:'Organizar el texto', url:'organizar-texto.html'},
+                {label:'Forma de expresión', url:'forma-expresion.html'},
+                {label:'Precisión Semántica y Claridad', url:'precision-semantica.html'},
+                {label:'Gestión del Tiempo y de la Hoja de Borrador', url:'gestion-tiempo-borrador.html'},
+                {label:'Pertinencia y Enfoque', url:'pertinencia-enfoque.html'}
+            ]}
+        ]}
+    ]},
+    {group:'Contenido Específico', icon:'fa-graduation-cap', cats:[
+        {title:'4.1 Administración', icon:'fa-briefcase', subs:[{title:'Subtemas', links:[{label:'Formulación, Evaluación y Gestión de Proyectos', url:'formulacion-gestion-proyectos-admon.html'},{label:'Gestión de organizaciones', url:'gestion-organizaciones.html'},{label:'Gestión Financiera', url:'gestion-financiera-admon.html'}]}]},
+        {title:'4.2 Trabajo Social', icon:'fa-hands-helping', subs:[{title:'Subtemas', links:[{label:'Investigación en ciencias sociales', url:'investigacion-ciencias-sociales-ts.html'},{label:'Intervención en proyectos sociales', url:'intervencion-proyectos-sociales.html'}]}]},
+        {title:'4.3 Lic. Educación Infantil', icon:'fa-child', subs:[{title:'Subtemas', links:[{label:'Enseñar', url:'ensenar.html'},{label:'Formar', url:'formar.html'},{label:'Evaluar', url:'evaluar.html'}]}]},
+        {title:'4.4 Psicología', icon:'fa-brain', subs:[{title:'Subtemas', links:[{label:'Análisis de problemas psicológicos', url:'analisis-problemas-psicologicos.html'},{label:'Investigación en ciencias sociales', url:'investigacion-ciencias-sociales-psico.html'},{label:'Intervención en procesos sociales', url:'intervencion-procesos-sociales.html'}]}]},
+        {title:'4.5 Lic. Lenguas Extranjeras', icon:'fa-language', note:'Se cubre con Inglés genérico', links:[]},
+        {title:'4.6 Contaduría Pública', icon:'fa-file-invoice-dollar', subs:[{title:'Subtemas', links:[{label:'Información y control contable', url:'informacion-control-contable.html'},{label:'Gestión Financiera', url:'gestion-financiera-contaduria.html'}]}]},
+        {title:'4.7 Ing. Industrial', icon:'fa-industry', subs:[{title:'Subtemas', links:[{label:'Formulación de Proyectos de Ingeniería', url:'formulacion-proyectos-ing-industrial.html'},{label:'Diseño de Sistemas Productivos y Logísticos', url:'diseno-sistemas-productivos.html'},{label:'Pensamiento Científico Matemáticas y Estadística', url:'pensamiento-cientifico-mates-industrial.html'}]}]},
+        {title:'4.8 Diseño Gráfico', icon:'fa-palette', subs:[{title:'Subtemas', links:[{label:'Generación de Artefactos', url:'generacion-artefactos.html'}]}]},
+        {title:'4.9 Ing. Electrónica', icon:'fa-microchip', subs:[{title:'Subtemas', links:[{label:'Formulación de Proyectos de Ingeniería', url:'formulacion-proyectos-ing-electronica.html'},{label:'Diseño de Sistemas de Control', url:'diseno-sistemas-control.html'},{label:'Pensamiento Científico Ciencias Físicas', url:'pensamiento-cientifico-fisicas.html'},{label:'Pensamiento Científico Matemáticas y Estadística', url:'pensamiento-cientifico-mates-electronica.html'}]}]},
+        {title:'4.10 Tecnología e Informática', icon:'fa-laptop-code', subs:[{title:'Subtemas', links:[{label:'Pensamiento Científico Matemáticas y Estadística', url:'pensamiento-cientifico-mates-ti.html'}]}]},
+        {title:'4.11 Com. Social y Periodismo', icon:'fa-newspaper', subs:[{title:'Subtemas', links:[{label:'Procesos comunicativos', url:'procesos-comunicativos.html'}]}]},
+        {title:'4.12 Ing. de Sistemas', icon:'fa-server', subs:[{title:'Subtemas', links:[{label:'Formulación de Proyectos de Ingeniería', url:'formulacion-proyectos-ing-sistemas.html'},{label:'Diseño de software', url:'diseno-software.html'},{label:'Pensamiento Científico Matemáticas y Estadística', url:'pensamiento-cientifico-mates-sistemas.html'}]}]}
+    ]}
+];
+
+/* ===== RENDERIZAR MENU ===== */
+function renderMenu(){
+    const nav = $('sidebar-nav');
+    let h = '<div class="menu-no-result" id="menu-no-result">Sin resultados</div>';
+    menuData.forEach(g => {
+        h += `<div class="menu-group-label"><i class="fas ${g.icon}"></i> ${g.group}</div>`;
+        g.cats.forEach(c => {
+            h += `<div class="menu-cat" data-name="${c.title.toLowerCase()}"><button class="menu-cat-btn" aria-expanded="false"><i class="cat-icon fas ${c.icon}"></i><span>${c.title}</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-cat-children">`;
+            if(c.note) h += `<div class="menu-note">${c.note}</div>`;
+            if(c.subs) c.subs.forEach(s => {
+                h += `<div class="menu-sub" data-name="${s.title.toLowerCase()}"><button class="menu-sub-btn" aria-expanded="false"><span>${s.title}</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-sub-children">`;
+                if(s.links) s.links.forEach(l => {
+                    h += `<a href="${l.url}" class="menu-link${l.url==='regla-tres.html'?' active':''}" data-name="${l.label.toLowerCase()}">${l.label}</a>`;
+                });
+                h += '</div></div>';
+            });
+            if(c.links && c.links.length) c.links.forEach(l => {
+                h += `<a href="${l.url}" class="menu-link" data-name="${l.label.toLowerCase()}">${l.label}</a>`;
+            });
+            h += '</div></div>';
+        });
+    });
+    nav.innerHTML = h;
+
+    /* Acordeones de categorías */
+    nav.querySelectorAll('.menu-cat-btn').forEach(b => {
+        b.addEventListener('click', () => {
+            const c = b.parentElement, w = c.classList.contains('open');
+            c.parentElement.querySelectorAll(':scope>.menu-cat.open').forEach(s => { if(s!==c){ s.classList.remove('open'); s.querySelector('.menu-cat-btn').setAttribute('aria-expanded','false'); }});
+            c.classList.toggle('open', !w);
+            b.setAttribute('aria-expanded', String(!w));
+        });
+    });
+
+    /* Acordeones de subcategorías */
+    nav.querySelectorAll('.menu-sub-btn').forEach(b => {
+        b.addEventListener('click', () => {
+            const s = b.parentElement, w = s.classList.contains('open');
+            s.parentElement.querySelectorAll(':scope>.menu-sub.open').forEach(x => { if(x!==s) x.classList.remove('open'); });
+            s.classList.toggle('open', !w);
+        });
+    });
+}
+
+/* ===== BUSCAR EN MENU ===== */
+function initSearch(){
+    const inp = $('sidebar-search'), nr = $('menu-no-result');
+    inp.addEventListener('input', () => {
+        const q = inp.value.toLowerCase().trim();
+        let any = false;
+        document.querySelectorAll('.menu-cat').forEach(c => {
+            const cn = c.dataset.name || '';
+            let vis = cn.includes(q);
+            c.querySelectorAll('.menu-sub').forEach(s => {
+                const sn = s.dataset.name || '';
+                let sv = false;
+                s.querySelectorAll('.menu-link').forEach(l => {
+                    const ln = l.dataset.name || '';
+                    const sh = !q || ln.includes(q) || sn.includes(q) || cn.includes(q);
+                    l.classList.toggle('hidden', !sh);
+                    if(sh) sv = true;
+                });
+                s.classList.toggle('hidden', !sv && !!q && !sn.includes(q));
+                if(sv || sn.includes(q)) vis = true;
+            });
+            c.querySelectorAll(':scope>.menu-cat-children>.menu-link').forEach(l => {
+                const ln = l.dataset.name || '';
+                const sh = !q || ln.includes(q) || cn.includes(q);
+                l.classList.toggle('hidden', !sh);
+                if(sh) vis = true;
+            });
+            c.classList.toggle('hidden', !vis && !!q);
+            if(vis) any = true;
+        });
+        nr.classList.toggle('show', !any && !!q);
+    });
+}
+
+/* ===== SIDEBAR TOGGLE ===== */
+function initSidebar(){
+    const sb=$('sidebar'), ov=$('sidebar-overlay'), tb=$('topbar-toggle'), mw=$('main-wrap');
+    tb.addEventListener('click', () => {
+        if(window.innerWidth <= 768){ sb.classList.toggle('open'); ov.classList.toggle('active'); }
+        else { sb.classList.toggle('collapsed'); mw.classList.toggle('expanded'); }
+    });
+    ov.addEventListener('click', () => { sb.classList.remove('open'); ov.classList.remove('active'); });
+    $('logout-btn').addEventListener('click', async(e) => { e.preventDefault(); await signOut(auth); window.location.href='index.html'; });
+    window.addEventListener('resize', () => { if(window.innerWidth>768){ sb.classList.remove('open'); ov.classList.remove('active'); }});
+}
+
+renderMenu(); initSearch(); initSidebar();
+
+/* ===== FIREBASE: CARGAR DATOS ===== */
+async function loadUserData(){
+    if(!uid) return;
+    try{
+        const s = await getDoc(doc(db,'users',uid,'stats','main'));
+        if(s.exists()) userStats = s.data();
+    }catch(e){}
+    userStats.totalStars = userStats.totalStars || 0;
+}
+
+/* ===== FIREBASE: GUARDAR VISITA ===== */
+async function saveVisit(){
+    if(!uid) return;
+    const today = new Date().toISOString().split('T')[0];
+    try{
+        await setDoc(doc(db,'users',uid,'interactions',today), { secondsSpent:300 }, { merge:true });
+    }catch(e){}
+}
+
+/* ===== FIREBASE: GUARDAR ELECCIÓN DE CAMINO ===== */
+async function savePathChoice(path){
+    if(!uid) return;
+    try{
+        await setDoc(doc(db,'users',uid,'pathChoices','regla-de-tres'), {
+            chosenPath: path,
+            chosenAt: serverTimestamp()
+        }, { merge:true });
+    }catch(e){}
+}
+
+/* ===== ELEGIR CAMINO ===== */
+function choosePath(type, url){
+    savePathChoice(type);
+    showToast('Guardando tu elección...');
+    setTimeout(() => { window.location.href = url; }, 600);
+}
+window.choosePath = choosePath;
+
+/* ===== CONSTRUIR PÁGINA ===== */
+function buildPage(){
+    $('page-content').innerHTML = `
+    <div class="hub-content">
+        <div class="panda-msg">
+            <div class="panda-mini">${PM}</div>
+            <p><strong>¡Hola! Hoy vamos a dominar la regla de tres.</strong> Es una de las herramientas más útiles que vas a encontrar en el examen: te permite encontrar un valor desconocido cuando sabes cómo se relacionan otras cantidades. Lo mejor es que tiene solo un paso: una simple multiplicación y una división. ¿Cómo te gustaría aprenderla hoy?</p>
+        </div>
+
+        <div class="section-label"><i class="fas fa-route" style="font-size:.75rem;"></i> Elige tu forma de aprender</div>
+
+        <div class="paths-grid">
+            <div class="path-card lectura" onclick="choosePath('lectura','regla-tres1.html')" role="button" tabindex="0" aria-label="Aprender leyendo">
+                <div class="path-card-header">
+                    <div class="path-icon"><i class="fas fa-book-open"></i></div>
+                    <h3>Leyendo</h3>
+                </div>
+                <div class="path-card-body">
+                    <p>Aprende la regla de tres con explicaciones claras, fórmulas y ejemplos resueltos paso a paso a tu propio ritmo.</p>
+                    <ul class="path-features">
+                        <li><i class="fas fa-check"></i> Explicación completa de directa e inversa</li>
+                        <li><i class="fas fa-check"></i> Ejemplos resueltos con detalle</li>
+                        <li><i class="fas fa-check"></i> Ejercicios de práctica guiada</li>
+                    </ul>
+                </div>
+                <div class="path-card-footer">
+                    <button class="path-cta">Comenzar a leer <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <div class="path-card videos" onclick="choosePath('videos','regla-tres2.html')" role="button" tabindex="0" aria-label="Aprender viendo">
+                <div class="path-card-header">
+                    <div class="path-icon"><i class="fas fa-play-circle"></i></div>
+                    <h3>Viendo</h3>
+                </div>
+                <div class="path-card-body">
+                    <p>Visualiza cómo se aplica la regla de tres con diagramas, gráficos y animaciones que hacen el proceso intuitivo.</p>
+                    <ul class="path-features">
+                        <li><i class="fas fa-check"></i> Diagramas visuales paso a paso</li>
+                        <li><i class="fas fa-check"></i> Comparación directa vs inversa</li>
+                        <li><i class="fas fa-check"></i> Ejemplos tipo ICFES ilustrados</li>
+                    </ul>
+                </div>
+                <div class="path-card-footer">
+                    <button class="path-cta">Ver la explicación <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <div class="path-card juego" onclick="choosePath('juego','regla-tres3.html')" role="button" tabindex="0" aria-label="Aprender jugando">
+                <div class="path-card-header">
+                    <div class="path-icon"><i class="fas fa-gamepad"></i></div>
+                    <h3>Jugando</h3>
+                </div>
+                <div class="path-card-body">
+                    <p>Pon a prueba lo que sabes con retos interactivos, gana estrellas y desbloquea medallas mientras practicas.</p>
+                    <ul class="path-features">
+                        <li><i class="fas fa-check"></i> Retos progresivos de dificultad</li>
+                        <li><i class="fas fa-check"></i> Gana estrellas y medallas</li>
+                        <li><i class="fas fa-check"></i> Pistas y feedback en tiempo real</li>
+                    </ul>
+                </div>
+                <div class="path-card-footer">
+                    <button class="path-cta">¡Quiero jugar! <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="hub-footer-note">
+            <i class="fas fa-info-circle"></i> Tu elección se guarda automáticamente para sugerirte el formato que más usas.
+        </div>
+    </div>`;
+
+    /* Accesibilidad: permitir Enter/Space en las tarjetas */
+    document.querySelectorAll('.path-card').forEach(card => {
+        card.addEventListener('keydown', e => {
+            if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); card.click(); }
+        });
+    });
+}
+
+/* ===== TIEMPO ACTIVO ===== */
+const TK = 'skopia_active_time';
+function stTick(){
+    if(document.hidden) return;
+    const k = new Date().toISOString().split('T')[0];
+    let d; try{ d = JSON.parse(localStorage.getItem(TK)) || {}; }catch{ d = {}; }
+    d[k] = (d[k] || 0) + 10;
+    localStorage.setItem(TK, JSON.stringify(d));
+}
+setInterval(stTick, 10000);
+
+/* ===== INICIO ===== */
+onAuthStateChanged(auth, async(user) => {
+    if(!user){ window.location.href = 'index.html'; return; }
+    uid = user.uid;
+    await loadUserData();
+    $('sidebar-username').textContent = user.displayName || user.email || 'Estudiante';
+    $('top-stars').textContent = userStats.totalStars || 0;
+    saveVisit();
+    buildPage();
+});
+</script>
+</body>
+</html>
