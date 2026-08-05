@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sobrevive a tu Historia - Regla de Tres - Skopia</title>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root{--crema:#fdfbf5;--oliva-oscuro:#272b00;--oliva-medio:#5a6133;--oliva-claro:#bec092;--oliva-palido:#d4d6b0;--oliva-super:#e8e9d4;--sombra:rgba(39,43,0,.08);--sidebar-w:310px;--topbar-h:72px;--radius:14px;--radius-sm:8px;--dorado:#c9a227;--dorado-claro:#f5e6a3;--rojo-suave:#b85c38;--verde:#3e6b3a;}
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}html{scroll-behavior:smooth;}
+        body{font-family:'Roboto',sans-serif;background:var(--crema);color:var(--oliva-oscuro);min-height:100vh;overflow-x:hidden;}
+        a{text-decoration:none;color:inherit;}button{cursor:pointer;border:none;background:none;font-family:inherit;}ul{list-style:none;}input{font-family:inherit;}
+        .sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--oliva-oscuro);color:var(--crema);display:flex;flex-direction:column;z-index:900;transition:transform .35s cubic-bezier(.4,0,.2,1);overflow:hidden;}
+        .sidebar.collapsed{transform:translateX(calc(-1 * var(--sidebar-w)));}
+        .sidebar-header{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;}
+        .sidebar-logo{width:48px;height:48px;border-radius:50%;object-fit:cover;margin-bottom:8px;border:2px solid var(--oliva-claro);}
+        .sidebar-username{font-family:'Patrick Hand',cursive;font-size:1.25rem;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .sidebar-program{font-size:.75rem;color:var(--oliva-claro);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .sidebar-search{padding:12px 14px;flex-shrink:0;}
+        .sidebar-search input{width:100%;padding:9px 12px 9px 34px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:var(--crema);font-size:.85rem;outline:none;}
+        .sidebar-search input::placeholder{color:rgba(255,255,255,.35);}
+        .sidebar-search input:focus{border-color:var(--oliva-claro);}
+        .sidebar-search-wrap{position:relative;}
+        .sidebar-search-wrap i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.3);font-size:.8rem;}
+        .sidebar-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 0;scrollbar-width:thin;scrollbar-color:var(--oliva-medio) transparent;}
+        .sidebar-nav::-webkit-scrollbar{width:5px;}.sidebar-nav::-webkit-scrollbar-thumb{background:var(--oliva-medio);border-radius:3px;}
+        .menu-group-label{padding:14px 18px 6px;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--oliva-claro);display:flex;align-items:center;gap:8px;}
+        .menu-group-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08);}
+        .menu-cat{user-select:none;}
+        .menu-cat-btn{width:100%;padding:10px 18px;display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600;color:var(--crema);transition:background .2s;text-align:left;}
+        .menu-cat-btn:hover{background:rgba(255,255,255,.06);}
+        .menu-cat-btn i.cat-icon{width:18px;text-align:center;font-size:.82rem;color:var(--oliva-claro);}
+        .menu-cat-btn .chevron{margin-left:auto;font-size:.6rem;transition:transform .25s;color:var(--oliva-claro);}
+        .menu-cat.open>.menu-cat-btn .chevron{transform:rotate(90deg);}
+        .menu-cat-children{max-height:0;overflow:hidden;transition:max-height .35s ease;}
+        .menu-cat.open>.menu-cat-children{max-height:2000px;}
+        .menu-sub{user-select:none;}
+        .menu-sub-btn{width:100%;padding:8px 18px 8px 44px;display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:500;color:rgba(253,251,245,.75);transition:all .2s;text-align:left;}
+        .menu-sub-btn:hover{color:var(--crema);background:rgba(255,255,255,.04);}
+        .menu-sub-btn .chevron{margin-left:auto;font-size:.55rem;transition:transform .25s;opacity:.5;}
+        .menu-sub.open>.menu-sub-btn .chevron{transform:rotate(90deg);opacity:1;}
+        .menu-sub-children{max-height:0;overflow:hidden;transition:max-height .3s ease;}
+        .menu-sub.open>.menu-sub-children{max-height:800px;}
+        .menu-link{display:block;padding:7px 18px 7px 62px;font-size:.78rem;color:rgba(253,251,245,.55);transition:all .2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .menu-link:hover{color:var(--crema);background:rgba(255,255,255,.06);padding-left:68px;}
+        .menu-link::before{content:'›';margin-right:6px;color:var(--oliva-claro);font-weight:700;}
+        .menu-link.active{color:#fff;background:rgba(255,255,255,.1);padding-left:68px;}
+        .menu-link.hidden,.menu-cat.hidden,.menu-sub.hidden{display:none;}
+        .menu-no-result{padding:20px 18px;text-align:center;font-size:.8rem;color:rgba(255,255,255,.3);display:none;}
+        .menu-no-result.show{display:block;}
+        .menu-note{padding:8px 18px 8px 44px;font-size:.72rem;color:rgba(253,251,245,.35);font-style:italic;}
+        .sidebar-footer{flex-shrink:0;padding:10px 0;border-top:1px solid rgba(255,255,255,.08);}
+        .sidebar-footer a{display:flex;align-items:center;gap:10px;padding:9px 18px;font-size:.82rem;color:rgba(253,251,245,.6);transition:all .2s;}
+        .sidebar-footer a:hover{color:var(--crema);background:rgba(255,255,255,.06);}
+        .sidebar-footer a i{width:18px;text-align:center;font-size:.85rem;}
+        .sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:899;opacity:0;visibility:hidden;transition:all .3s;}
+        .sidebar-overlay.active{opacity:1;visibility:visible;}
+        .main-wrap{margin-left:var(--sidebar-w);min-height:100vh;transition:margin-left .35s cubic-bezier(.4,0,.2,1);}
+        .main-wrap.expanded{margin-left:0;}
+        .topbar{position:sticky;top:0;z-index:100;height:var(--topbar-h);background:rgba(253,251,245,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(39,43,0,.06);display:flex;align-items:center;padding:0 28px;gap:16px;}
+        .topbar-toggle{width:40px;height:40px;border-radius:var(--radius-sm);display:grid;place-items:center;font-size:1.1rem;color:var(--oliva-oscuro);transition:background .2s;flex-shrink:0;}
+        .topbar-toggle:hover{background:rgba(39,43,0,.06);}
+        .topbar-back{width:40px;height:40px;border-radius:var(--radius-sm);display:grid;place-items:center;font-size:1rem;color:var(--rojo-suave);transition:background .2s;flex-shrink:0;}
+        .topbar-back:hover{background:rgba(184,92,56,.1);}
+        .topbar-greeting{flex:1;min-width:0;}
+        .topbar-greeting h1{font-family:'Patrick Hand',cursive;font-size:1.4rem;line-height:1.2;}
+        .topbar-greeting .sub{font-size:.82rem;color:var(--oliva-medio);}
+        .topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+        .topbar-stars{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;background:rgba(201,162,39,.1);font-family:'Orbitron',monospace;font-size:.82rem;font-weight:700;color:var(--dorado);}
+        .topbar-stars i{font-size:.75rem;}
+
+        /* === JUEGO === */
+        .game-wrap{position:relative;width:100%;min-height:calc(100vh - var(--topbar-h));overflow:hidden;}
+        .game-phase{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+        .game-phase.active{display:flex;animation:gfIn .5s ease;}
+        @keyframes gfIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+
+        /* Instrucciones */
+        .phase-instr{background:linear-gradient(160deg,#1a1c10 0%,#2a2d18 40%,#1a1c10 100%);color:var(--crema);}
+        .instr-box{max-width:600px;text-align:center;}
+        .instr-box h2{font-family:'Patrick Hand',cursive;font-size:2.2rem;color:var(--dorado);margin-bottom:8px;text-shadow:0 0 30px rgba(201,162,39,.3);}
+        .instr-box .subtitle{font-size:.9rem;color:var(--oliva-claro);margin-bottom:28px;}
+        .instr-rules{text-align:left;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);padding:20px 24px;margin-bottom:28px;}
+        .instr-rules li{font-size:.85rem;line-height:1.7;color:rgba(253,251,245,.8);margin-bottom:6px;padding-left:20px;position:relative;}
+        .instr-rules li::before{content:'';position:absolute;left:0;top:9px;width:8px;height:8px;border-radius:50%;background:var(--dorado);}
+        .instr-rules li.danger{color:var(--rojo-suave);}
+        .instr-rules li.danger::before{background:var(--rojo-suave);}
+        .btn-start{padding:16px 48px;border-radius:var(--radius-sm);background:var(--dorado);color:var(--oliva-oscuro);font-size:1.05rem;font-weight:700;transition:all .25s;display:inline-flex;align-items:center;gap:10px;}
+        .btn-start:hover{background:var(--dorado-claro);transform:translateY(-2px);box-shadow:0 6px 24px rgba(201,162,39,.3);}
+
+        /* Escotilla - Escenario 1 */
+        .phase-s1{background:linear-gradient(180deg,#0d0e08 0%,#1a1c10 50%,#2a2210 100%);color:var(--crema);position:relative;overflow:hidden;}
+        .s1-cobweb{position:absolute;width:120px;height:120px;opacity:.15;pointer-events:none;}
+        .s1-cobweb.tl{top:0;left:0;}.s1-cobweb.tr{top:0;right:0;transform:scaleX(-1);}
+        .s1-cobweb.bl{bottom:0;left:0;transform:scaleY(-1);}.s1-cobweb.br{bottom:0;right:0;transform:scale(-1);}
+        .s1-cobweb svg{width:100%;height:100%;}
+        .s1-wall{background:rgba(0,0,0,.35);border:2px solid rgba(190,192,146,.15);border-radius:var(--radius);padding:28px 32px;max-width:680px;width:100%;margin-bottom:32px;position:relative;}
+        .s1-wall::before{content:'Pregunta en la pared';position:absolute;top:-12px;left:24px;background:#1a1c10;padding:0 12px;font-size:.7rem;text-transform:uppercase;letter-spacing:2px;color:var(--oliva-claro);}
+        .s1-question{font-family:'Patrick Hand',cursive;font-size:1.3rem;color:#e8e9d4;text-shadow:0 0 8px rgba(255,255,255,.15);line-height:1.5;margin-bottom:0;}
+        .s1-paths{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:760px;width:100%;}
+        .s1-path{background:rgba(255,255,255,.04);border:2px solid rgba(255,255,255,.1);border-radius:var(--radius);padding:20px 16px;text-align:center;cursor:pointer;transition:all .25s;position:relative;overflow:hidden;}
+        .s1-path:hover{border-color:var(--dorado);background:rgba(201,162,39,.08);transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.4);}
+        .s1-path-icon{font-size:2rem;margin-bottom:10px;opacity:.6;}
+        .s1-path-label{font-size:.65rem;text-transform:uppercase;letter-spacing:2px;color:var(--oliva-claro);margin-bottom:8px;}
+        .s1-path-text{font-size:.82rem;color:#e8e9d4;line-height:1.4;}
+
+        /* Cables - Escenario 2 */
+        .phase-s2{background:linear-gradient(180deg,#1a0a0a 0%,#2a1510 50%,#1a0a0a 100%);color:var(--crema);position:relative;overflow:hidden;}
+        .s2-bomb{font-size:4rem;margin-bottom:12px;animation:bombPulse 1s ease-in-out infinite;}
+        @keyframes bombPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+        .s2-timer{font-family:'Orbitron',monospace;font-size:2.4rem;font-weight:700;color:var(--rojo-suave);margin-bottom:8px;text-shadow:0 0 20px rgba(184,92,56,.4);}
+        .s2-timer.urgent{animation:timerFlash .5s ease infinite;}
+        @keyframes timerFlash{0%,100%{opacity:1}50%{opacity:.4}}
+        .s2-label{font-size:.75rem;text-transform:uppercase;letter-spacing:2px;color:var(--oliva-claro);margin-bottom:24px;}
+        .s2-question{background:rgba(0,0,0,.3);border:1px solid rgba(184,92,56,.2);border-radius:var(--radius-sm);padding:16px 20px;max-width:600px;width:100%;margin-bottom:28px;font-family:'Patrick Hand',cursive;font-size:1.1rem;color:#e8e9d4;text-align:center;line-height:1.5;}
+        .s2-cables{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;}
+        .s2-cable{width:140px;background:rgba(0,0,0,.3);border:2px solid rgba(255,255,255,.1);border-radius:var(--radius);padding:16px 12px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+        .s2-cable:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.5);}
+        .s2-cable.red{border-color:rgba(220,50,50,.4);}.s2-cable.red:hover{border-color:#dc3232;background:rgba(220,50,50,.1);}
+        .s2-cable.blue{border-color:rgba(50,120,220,.4);}.s2-cable.blue:hover{border-color:#3278dc;background:rgba(50,120,220,.1);}
+        .s2-cable.yellow{border-color:rgba(220,180,50,.4);}.s2-cable.yellow:hover{border-color:#dcb432;background:rgba(220,180,50,.1);}
+        .s2-cable-wire{height:40px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;}
+        .s2-cable-wire i{font-size:1.6rem;}
+        .s2-cable.red .s2-cable-wire i{color:#dc3232;}
+        .s2-cable.blue .s2-cable-wire i{color:#3278dc;}
+        .s2-cable.yellow .s2-cable-wire i{color:#dcb432;}
+        .s2-cable-text{font-size:.78rem;color:#e8e9d4;line-height:1.3;}
+
+        /* Llave de agua - Escenario 3a */
+        .phase-s3a{background:linear-gradient(180deg,#0a1520 0%,#102030 50%,#0a1520 100%);color:var(--crema);position:relative;overflow:hidden;}
+        .s3a-water{position:absolute;bottom:0;left:0;right:0;height:0;background:linear-gradient(to top,rgba(30,100,180,.85),rgba(60,150,220,.5));transition:height 1s linear;z-index:2;pointer-events:none;}
+        .s3a-water::before{content:'';position:absolute;top:-10px;left:0;right:0;height:20px;background:repeating-linear-gradient(90deg,transparent,transparent 30px,rgba(255,255,255,.1) 30px,rgba(255,255,255,.1) 60px);animation:waveMove 2s linear infinite;}
+        @keyframes waveMove{from{transform:translateX(0)}to{transform:translateX(60px)}}
+        .s3a-content{position:relative;z-index:3;text-align:center;max-width:600px;width:100%;}
+        .s3a-icon{font-size:3rem;margin-bottom:12px;}
+        .s3a-question{background:rgba(0,0,0,.35);border:1px solid rgba(60,150,220,.2);border-radius:var(--radius-sm);padding:20px 24px;margin-bottom:24px;font-family:'Patrick Hand',cursive;font-size:1.15rem;color:#e8e9d4;line-height:1.5;}
+        .s3a-input-row{display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap;}
+        .s3a-input{padding:14px 20px;border-radius:var(--radius-sm);border:2px solid rgba(60,150,220,.3);background:rgba(0,0,0,.3);color:#fff;font-family:'Orbitron',monospace;font-size:1.3rem;font-weight:700;width:200px;text-align:center;outline:none;}
+        .s3a-input:focus{border-color:var(--dorado);}
+        .s3a-unit{font-size:.9rem;color:var(--oliva-claro);}
+        .s3a-submit{padding:14px 32px;border-radius:var(--radius-sm);background:var(--verde);color:#fff;font-weight:700;font-size:.95rem;transition:all .2s;}
+        .s3a-submit:hover{background:#2d5228;transform:translateY(-2px);}
+
+        /* Laberinto nocturno - Escenario 3b */
+        .phase-s3b{background:#000;position:relative;overflow:hidden;cursor:none;}
+        .s3b-flashlight{position:absolute;inset:0;background:radial-gradient(circle 110px at var(--mx,50%) var(--my,50%),transparent 0%,rgba(0,0,0,.92) 60%,rgba(0,0,0,.98) 100%);z-index:10;pointer-events:none;}
+        .s3b-area{position:relative;width:100%;height:100%;z-index:1;}
+        .s3b-envelope{position:absolute;width:52px;height:38px;background:rgba(200,180,120,.15);border:1.5px solid rgba(200,180,120,.3);border-radius:6px;display:grid;place-items:center;cursor:pointer;transition:all .2s;z-index:5;}
+        .s3b-envelope:hover{background:rgba(200,180,120,.3);border-color:rgba(200,180,120,.6);transform:scale(1.1);}
+        .s3b-envelope.opened{background:rgba(62,107,58,.2);border-color:rgba(62,107,58,.5);pointer-events:none;}
+        .s3b-envelope i{font-size:1rem;color:rgba(200,180,120,.5);}
+        .s3b-envelope.opened i{color:var(--verde);}
+        .s3b-hud{position:absolute;top:16px;left:16px;right:16px;z-index:15;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none;}
+        .s3b-timer{font-family:'Orbitron',monospace;font-size:1.6rem;font-weight:700;color:var(--dorado);text-shadow:0 0 10px rgba(201,162,39,.4);}
+        .s3b-inventory{display:flex;gap:8px;pointer-events:auto;}
+        .s3b-inv-item{width:40px;height:30px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:5px;display:grid;place-items:center;font-size:.6rem;color:rgba(255,255,255,.3);transition:all .3s;}
+        .s3b-inv-item.filled{background:rgba(62,107,58,.25);border-color:rgba(62,107,58,.5);color:var(--verde);}
+        .s3b-assembled{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.95);display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;cursor:default;}
+        .s3b-assembled.active{display:flex;animation:gfIn .4s ease;}
+        .s3b-assembled-q{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius);padding:24px 28px;max-width:600px;width:100%;margin-bottom:24px;text-align:center;}
+        .s3b-assembled-q .enun{font-family:'Patrick Hand',cursive;font-size:1.2rem;color:#e8e9d4;margin-bottom:20px;line-height:1.5;}
+        .s3b-opt{display:block;width:100%;text-align:left;padding:14px 20px;margin-bottom:10px;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.1);border-radius:var(--radius-sm);color:#e8e9d4;font-size:.95rem;transition:all .2s;cursor:pointer;}
+        .s3b-opt:hover{border-color:var(--dorado);background:rgba(201,162,39,.08);}
+        .s3b-opt.correct{border-color:var(--verde);background:rgba(62,107,58,.15);color:#a5d6a0;}
+        .s3b-opt.wrong{border-color:var(--rojo-suave);background:rgba(184,92,56,.15);color:#ef9a9a;}
+
+        /* Final */
+        .phase-end{color:var(--crema);text-align:center;padding:40px 24px;}
+        .phase-end.happy{background:linear-gradient(160deg,#0d1a0d,#1a2d18,#0d1a0d);}
+        .phase-end.painful{background:linear-gradient(160deg,#1a1508,#2d2210,#1a1508);}
+        .phase-end.death{background:linear-gradient(160deg,#1a0808,#2d1010,#1a0808);}
+        .end-icon{font-size:4rem;margin-bottom:16px;}
+        .end-title{font-family:'Patrick Hand',cursive;font-size:2rem;margin-bottom:8px;}
+        .end-subtitle{font-size:.8rem;text-transform:uppercase;letter-spacing:3px;margin-bottom:28px;opacity:.6;}
+        .end-narrative{max-width:560px;font-size:.95rem;line-height:1.8;color:rgba(253,251,245,.8);margin-bottom:32px;text-align:left;border-left:3px solid var(--oliva-claro);padding-left:20px;}
+        .end-stats{display:flex;gap:20px;justify-content:center;margin-bottom:32px;flex-wrap:wrap;}
+        .end-stat{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-sm);padding:12px 20px;text-align:center;}
+        .end-stat-val{font-family:'Orbitron',monospace;font-size:1.3rem;font-weight:700;}
+        .end-stat-label{font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--oliva-claro);margin-top:4px;}
+        .btn-exam{padding:16px 40px;border-radius:var(--radius-sm);background:var(--dorado);color:var(--oliva-oscuro);font-size:1rem;font-weight:700;transition:all .25s;display:inline-flex;align-items:center;gap:10px;}
+        .btn-exam:hover{background:var(--dorado-claro);transform:translateY(-2px);box-shadow:0 6px 24px rgba(201,162,39,.3);}
+
+        /* === OVERLAYS DE EFECTOS === */
+        .eye-loss-overlay{position:fixed;top:0;right:0;width:50%;height:100%;background:rgba(0,0,0,.42);backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px);z-index:700;pointer-events:none;display:none;}
+        .eye-loss-overlay.active{display:block;animation:eyeFadeIn 1.5s ease;}
+        @keyframes eyeFadeIn{from{opacity:0}to{opacity:1}}
+
+        .dys-char{display:inline-block;transition:all .3s ease;}
+        .dys-animating{animation:dysFly .8s ease forwards;}
+        @keyframes dysFly{
+            0%{transform:translate(0,0) rotate(0);opacity:1}
+            25%{transform:translate(6px,-8px) rotate(12deg);opacity:.5}
+            50%{transform:translate(-4px,5px) rotate(-8deg);opacity:.3}
+            75%{transform:translate(3px,-3px) rotate(5deg);opacity:.7}
+            100%{transform:translate(0,0) rotate(0);opacity:1}
+        }
+
+        .medal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);z-index:8000;display:none;place-items:center;padding:20px;}
+        .medal-overlay.active{display:grid;}
+        .medal-box{background:#fff;border-radius:var(--radius);padding:40px 36px 32px;max-width:380px;width:100%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.35);animation:medalPop .45s cubic-bezier(.2,.8,.3,1.2);}
+        @keyframes medalPop{from{opacity:0;transform:scale(.65) translateY(30px)}to{opacity:1;transform:scale(1) translateY(0)}}
+        .medal-box .medal-icon{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--dorado),#e8c84a);display:grid;place-items:center;margin:0 auto 20px;font-size:2.2rem;color:var(--oliva-oscuro);box-shadow:0 8px 28px rgba(201,162,39,.4);}
+        .medal-box h3{font-family:'Patrick Hand',cursive;font-size:1.5rem;color:var(--oliva-oscuro);margin-bottom:4px;}
+        .medal-box .medal-pts{font-family:'Orbitron',monospace;font-size:2rem;font-weight:700;color:var(--dorado);margin:12px 0 4px;}
+        .medal-box .medal-label{font-size:.72rem;color:var(--oliva-claro);margin-bottom:24px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;}
+        .medal-box .medal-btn{padding:12px 40px;border-radius:28px;background:var(--oliva-oscuro);color:var(--crema);font-size:.92rem;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;gap:8px;}
+        .medal-box .medal-btn:hover{background:var(--oliva-medio);transform:translateY(-2px);}
+
+        .game-feedback{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:750;padding:20px 32px;border-radius:var(--radius);font-family:'Patrick Hand',cursive;font-size:1.3rem;font-weight:700;text-align:center;animation:fbPop .4s ease;pointer-events:none;}
+        @keyframes fbPop{from{opacity:0;transform:translate(-50%,-50%) scale(.8)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+        .fb-castigo{background:rgba(184,92,56,.95);color:#fff;box-shadow:0 8px 32px rgba(184,92,56,.4);}
+        .fb-bien{background:rgba(62,107,58,.95);color:#fff;box-shadow:0 8px 32px rgba(62,107,58,.4);}
+        .fb-muerte{background:rgba(30,10,10,.95);color:var(--rojo-suave);box-shadow:0 8px 32px rgba(0,0,0,.6);font-size:1.6rem;}
+
+        @media(max-width:768px){
+            .sidebar{transform:translateX(calc(-1 * var(--sidebar-w)));}.sidebar.open{transform:translateX(0);}
+            .main-wrap{margin-left:0!important;}.topbar{padding:0 16px;}
+            .s1-paths{grid-template-columns:1fr;max-width:400px;}
+            .s2-cables{flex-direction:column;align-items:center;}
+            .s3b-envelope{width:44px;height:32px;}
+        }
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;}}
+    </style>
+</head>
+<body>
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <a href="dashboard.html"><img src="logo.jpeg" alt="Skopia" class="sidebar-logo"></a>
+        <span class="sidebar-username" id="sidebar-username">Cargando...</span>
+        <span class="sidebar-program" id="sidebar-program"></span>
+    </div>
+    <div class="sidebar-search"><div class="sidebar-search-wrap"><i class="fas fa-search"></i><input type="text" id="sidebar-search" placeholder="Buscar contenido..." aria-label="Buscar contenido"></div></div>
+    <nav class="sidebar-nav" id="sidebar-nav" aria-label="Menú de contenido"></nav>
+    <div class="sidebar-footer">
+        <a href="cuenta.html"><i class="fas fa-user-circle"></i> Mi Cuenta</a>
+        <a href="configuracion.html"><i class="fas fa-cog"></i> Configuración</a>
+        <a href="#" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+    </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<div class="main-wrap" id="main-wrap">
+    <header class="topbar">
+        <button class="topbar-toggle" id="topbar-toggle" aria-label="Menú"><i class="fas fa-bars"></i></button>
+        <a href="regla-tres.html" class="topbar-back" aria-label="Atrás"><i class="fas fa-arrow-left"></i></a>
+        <div class="topbar-greeting">
+            <h1>Sobrevive a tu Historia</h1>
+            <p class="sub">Regla de Tres <i class="fas fa-chevron-right" style="font-size:.5rem;margin:0 4px;opacity:.4"></i> Juego de Supervivencia</p>
+        </div>
+        <div class="topbar-right">
+            <div class="topbar-stars"><i class="fas fa-star"></i> <span id="top-stars">0</span></div>
+        </div>
+    </header>
+    <main class="game-wrap" id="game-wrap">
+        <!-- INSTRUCCIONES -->
+        <div class="game-phase phase-instr active" id="phase-instr">
+            <div class="instr-box">
+                <h2><i class="fas fa-skull-crossbones"></i> Sobrevive a tu Historia</h2>
+                <p class="subtitle">Un juego de supervivencia con regla de tres</p>
+                <ul class="instr-rules">
+                    <li>En cada sala encontrarás una pregunta con 3 opciones.</li>
+                    <li>La respuesta <strong>completa y justificada</strong> te lleva sin daño al siguiente escenario.</li>
+                    <li>La respuesta <strong>correcta pero incompleta</strong> te avanza, pero con un castigo permanente.</li>
+                    <li class="danger">La respuesta <strong>incorrecta</strong> significa la muerte en esa sala.</li>
+                    <li>Castigos: <strong>Perder un ojo</strong> (mitad de pantalla oscura) o <strong>Dislexia</strong> (las letras se mueven).</li>
+                    <li>Revisa cada ruta con cuidado. El ICFES premia la precisión.</li>
+                </ul>
+                <button class="btn-start" onclick="startGame()"><i class="fas fa-door-open"></i> Entrar a la escotilla</button>
+            </div>
+        </div>
+
+        <!-- ESCENARIO 1: LA ESCOTILLA -->
+        <div class="game-phase phase-s1" id="phase-s1">
+            <div class="s1-cobweb tl"><svg viewBox="0 0 120 120"><path d="M0,0 Q60,40 120,0" fill="none" stroke="white" stroke-width=".8"/><path d="M0,0 Q40,60 0,120" fill="none" stroke="white" stroke-width=".6"/><path d="M0,0 Q30,30 60,60" fill="none" stroke="white" stroke-width=".5"/><path d="M0,0 Q50,50 120,120" fill="none" stroke="white" stroke-width=".4"/><path d="M0,0 Q20,50 0,120" fill="none" stroke="white" stroke-width=".5"/></svg></div>
+            <div class="s1-cobweb tr"><svg viewBox="0 0 120 120"><path d="M0,0 Q60,40 120,0" fill="none" stroke="white" stroke-width=".8"/><path d="M120,0 Q80,60 120,120" fill="none" stroke="white" stroke-width=".6"/><path d="M120,0 Q90,30 60,60" fill="none" stroke="white" stroke-width=".5"/></svg></div>
+            <div class="s1-wall">
+                <div class="s1-question dyslexia-target" id="s1-question"></div>
+            </div>
+            <div class="s1-paths" id="s1-paths"></div>
+        </div>
+
+        <!-- ESCENARIO 2: ELECCIÓN DEL TRAYECTO -->
+        <div class="game-phase phase-s2" id="phase-s2">
+            <div class="s2-bomb"><i class="fas fa-bomb"></i></div>
+            <div class="s2-timer" id="s2-timer">02:00</div>
+            <div class="s2-label">Corta el cable correcto para desactivar la bomba</div>
+            <div class="s2-question dyslexia-target" id="s2-question"></div>
+            <div class="s2-cables" id="s2-cables"></div>
+        </div>
+
+        <!-- ESCENARIO 3A: LLAVE DE AGUA -->
+        <div class="game-phase phase-s3a" id="phase-s3a">
+            <div class="s3a-water" id="s3a-water"></div>
+            <div class="s3a-content">
+                <div class="s3a-icon"><i class="fas fa-water"></i></div>
+                <div class="s2-label">Escribe el resultado exacto para detener el agua</div>
+                <div class="s3a-question dyslexia-target" id="s3a-question"></div>
+                <div class="s3a-input-row">
+                    <input type="number" class="s3a-input" id="s3a-input" placeholder="?" aria-label="Respuesta numérica">
+                    <span class="s3a-unit" id="s3a-unit"></span>
+                    <button class="s3a-submit" onclick="submitWater()"><i class="fas fa-lock-open"></i> Detener</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ESCENARIO 3B: LABERINTO NOCTURNO -->
+        <div class="game-phase phase-s3b" id="phase-s3b">
+            <div class="s3b-flashlight" id="s3b-flashlight"></div>
+            <div class="s3b-hud">
+                <div class="s3b-timer" id="s3b-timer">03:00</div>
+                <div class="s3b-inventory" id="s3b-inventory">
+                    <div class="s3b-inv-item" id="inv-0"><i class="fas fa-envelope"></i></div>
+                    <div class="s3b-inv-item" id="inv-1"><i class="fas fa-envelope"></i></div>
+                    <div class="s3b-inv-item" id="inv-2"><i class="fas fa-envelope"></i></div>
+                    <div class="s3b-inv-item" id="inv-3"><i class="fas fa-envelope"></i></div>
+                </div>
+            </div>
+            <div class="s3b-area" id="s3b-area"></div>
+            <div class="s3b-assembled" id="s3b-assembled">
+                <div class="s3b-assembled-q" id="s3b-assembled-q"></div>
+            </div>
+        </div>
+
+        <!-- FINAL -->
+        <div class="game-phase phase-end" id="phase-end">
+            <div class="end-icon" id="end-icon"></div>
+            <div class="end-title" id="end-title"></div>
+            <div class="end-subtitle" id="end-subtitle"></div>
+            <div class="end-narrative dyslexia-target" id="end-narrative"></div>
+            <div class="end-stats" id="end-stats"></div>
+            <a href="regla-tres-examen.html" class="btn-exam"><i class="fas fa-pen-alt"></i> Probar el examen tipo ICFES</a>
+        </div>
+    </main>
+</div>
+
+<!-- Overlays de efectos permanentes -->
+<div class="eye-loss-overlay" id="eye-loss-overlay"></div>
+
+<!-- Medalla -->
+<div class="medal-overlay" id="medal-overlay"><div class="medal-box"><div class="medal-icon"><i class="fas fa-trophy"></i></div><h3>Misión completada</h3><div class="medal-pts" id="medal-pts">+0 puntos</div><div class="medal-label" id="medal-name"></div><button class="medal-btn" id="medal-close">Continuar <i class="fas fa-arrow-right"></i></button></div></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+const app = initializeApp({apiKey:"AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",projectId:"skopia-aa786",storageBucket:"skopia-aa786.firebasestorage.app",messagingSenderId:"719823055099",appId:"1:719823055099:web:7d91ea29e4b2dcbb9b685e",authDomain:"skopia-aa786.firebaseapp.com"});
+const auth = getAuth(app);
+const db = getFirestore(app);
+var uid = null, userStats = {}, completedMissions = {};
+var $ = function(id) { return document.getElementById(id); };
+
+/* ===== BANCO DE PREGUNTAS ===== */
+/* Poner pocas para probar, tú sigues añadiendo igual */
+const Q_MULT = [
+    {
+        q: "Si 5 litros de gasolina cuestan $25.000, ¿cuánto cuestan 12 litros?",
+        full: "x = (12 × 25.000) ÷ 5 = $60.000. Proporción directa: a más litros, más costo.",
+        partial: "$60.000",
+        wrong: "x = 25.000 ÷ 12 ≈ $2.083",
+        ci: 0
+    },
+    {
+        q: "Si 8 obreros terminan una obra en 12 días, ¿cuántos días tardan 6 obreros?",
+        full: "x = (8 × 12) ÷ 6 = 16 días. Proporción inversa: a menos obreros, más días.",
+        partial: "16 días",
+        wrong: "x = (6 × 12) ÷ 8 = 9 días",
+        ci: 0
+    }
+];
+
+const Q_NUM = [
+    {
+        q: "Si 4 cajas pesan 20 kg, ¿cuánto pesan 9 cajas?",
+        answer: 45,
+        unit: "kg"
+    },
+    {
+        q: "Un auto recorre 180 km con 12 litros. ¿Cuántos km recorre con 20 litros?",
+        answer: 300,
+        unit: "km"
+    }
+];
+
+const Q_LAB = [
+    {
+        enun: "Si 3 obreros fabrican 15 sillas en 5 días, ¿cuántas sillas fabrican 7 obreros en 10 días?",
+        A: "50 sillas",
+        B: "70 sillas",
+        C: "35 sillas",
+        correct: "B"
+    },
+    {
+        enun: "Un tanque se llena en 6 horas con 4 grifos abiertos. ¿En cuántas horas se llena con 6 grifos?",
+        A: "3 horas",
+        B: "5 horas",
+        C: "4 horas",
+        correct: "C"
+    }
+];
+
+/* ===== ESTADO DEL JUEGO ===== */
+var GS = {
+    phase: 'instr',
+    punishments: { eye: false, dyslexia: false },
+    deathScene: null,
+    s1q: null,
+    s2q: null,
+    s3aq: null,
+    s3bq: null,
+    s2time: 120,
+    s3btime: 180,
+    s3awater: 0,
+    s3bcollected: [],
+    s3benvelopes: [],
+    timerInterval: null,
+    waterInterval: null,
+    dyslexiaInterval: null
+};
+
+/* ===== SIDEBAR (mismo patrón) ===== */
+var M=[{g:'Contenido Genérico',i:'fa-book-open',c:[{t:'3.1 Razonamiento Cuantitativo',i:'fa-calculator',s:[{t:'3.1.2 Prácticas Teóricas',l:[{n:'Porcentajes y Razones',u:'porcentajes-razones.html'},{n:'Regla de Tres',u:'regla-tres.html'},{n:'Aumentos y Descuentos',u:'aumentos-descuentos.html'}]}]}]}];
+
+function renderMenu(){var nav=$('sidebar-nav'),h='';M.forEach(function(g){h+='<div class="menu-group-label"><i class="fas '+g.i+'"></i> '+g.g+'</div>';g.c.forEach(function(c){h+='<div class="menu-cat"><button class="menu-cat-btn"><i class="cat-icon fas '+c.i+'"></i><span>'+c.t+'</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-cat-children">';if(c.s)c.s.forEach(function(s){h+='<div class="menu-sub"><button class="menu-sub-btn"><span>'+s.t+'</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-sub-children">';if(s.l)s.l.forEach(function(l){h+='<a href="'+l.u+'" class="menu-link'+(l.u==='regla-tres-juego.html'?' active':'')+'">'+l.n+'</a>';});h+='</div></div>';});h+='</div></div>';});});nav.innerHTML=h;nav.querySelectorAll('.menu-cat-btn').forEach(function(b){b.addEventListener('click',function(){var c=b.parentElement,w=c.classList.contains('open');c.classList.toggle('open',!w);});});nav.querySelectorAll('.menu-sub-btn').forEach(function(b){b.addEventListener('click',function(){var s=b.parentElement;s.classList.toggle('open');});});}
+function initSidebar(){var sb=$('sidebar'),ov=$('sidebar-overlay'),tb=$('topbar-toggle'),mw=$('main-wrap');tb.addEventListener('click',function(){if(window.innerWidth<=768){sb.classList.toggle('open');ov.classList.toggle('active');}else{sb.classList.toggle('collapsed');mw.classList.toggle('expanded');}});ov.addEventListener('click',function(){sb.classList.remove('open');ov.classList.remove('active');});$('logout-btn').addEventListener('click',async function(e){e.preventDefault();await signOut(auth);window.location.href='index.html';});window.addEventListener('resize',function(){if(window.innerWidth>768){sb.classList.remove('open');ov.classList.remove('active');}});}
+renderMenu();initSidebar();
+
+/* ===== FIREBASE ===== */
+async function loadFirebaseData(){if(!uid)return;try{var s=await getDoc(doc(db,'users',uid,'stats','main'));if(s.exists())userStats=s.data();}catch(e){}userStats.totalStars=userStats.totalStars||0;userStats.totalMissionsCompleted=userStats.totalMissionsCompleted||0;try{var s2=await getDocs(collection(db,'users',uid,'missions'));s2.forEach(function(d){if(d.data().completed)completedMissions[d.id]=true;});}catch(e){}}
+async function saveStats(updates){if(!uid)return;try{await setDoc(doc(db,'users',uid,'stats','main'),updates,{merge:true});}catch(e){}}
+async function completeMissionInDB(id){if(!uid||completedMissions['mission_'+id])return;completedMissions['mission_'+id]=true;try{await setDoc(doc(db,'users',uid,'missions','mission_'+id),{completed:true,completedAt:serverTimestamp()});}catch(e){}}
+async function saveTodayInteraction(){if(!uid)return;var today=new Date().toISOString().split('T')[0];try{await setDoc(doc(db,'users',uid,'interactions',today),{secondsSpent:1800},{merge:true});}catch(e){}}
+
+var MC={5:{title:'Gana tu primer juego',pts:50},13:{title:'Gana 3 juegos distintos',pts:60}};
+var medalQueue=[];
+function showMedal(id){medalQueue.push(id);if(medalQueue.length===1)renderNextMedal();}
+function renderNextMedal(){if(!medalQueue.length){$('medal-overlay').classList.remove('active');return;}var id=medalQueue[0],m=MC[id]||{title:'Misión completada',pts:0};$('medal-name').textContent=m.title;$('medal-pts').textContent='+'+m.pts+' puntos';$('medal-overlay').classList.add('active');}
+ $('medal-close').addEventListener('click',function(){medalQueue.shift();renderNextMedal();});
+
+/* ===== UTILIDADES ===== */
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function clearAllTimers(){if(GS.timerInterval){clearInterval(GS.timerInterval);GS.timerInterval=null;}if(GS.waterInterval){clearInterval(GS.waterInterval);GS.waterInterval=null;}if(GS.dyslexiaInterval){clearInterval(GS.dyslexiaInterval);GS.dyslexiaInterval=null;}}
+function showPhase(id){document.querySelectorAll('.game-phase').forEach(function(p){p.classList.remove('active');});var el=$(id);if(el)el.classList.add('active');}
+function showFeedback(text,type){var fb=document.createElement('div');fb.className='game-feedback '+type;fb.textContent=text;document.body.appendChild(fb);setTimeout(function(){fb.remove();},1800);}
+
+/* ===== EFECTO: PERDER OJO ===== */
+function applyEyeLoss(){if(GS.punishments.eye)$('eye-loss-overlay').classList.add('active');}
+
+/* ===== EFECTO: DISLEXIA ===== */
+function startDyslexia(){
+    if(!GS.punishments.dyslexia)return;
+    GS.dyslexiaInterval=setInterval(function(){
+        var chars=document.querySelectorAll('.dys-char');
+        if(!chars.length)return;
+        var count=Math.min(4,chars.length);
+        for(var i=0;i<count;i++){
+            var idx=Math.floor(Math.random()*chars.length);
+            chars[idx].classList.add('dys-animating');
+            (function(c){setTimeout(function(){c.classList.remove('dys-animating');},900);})(chars[idx]);
+        }
+    },2200);
+}
+function wrapDyslexiaText(el){
+    if(!el||!GS.punishments.dyslexia)return;
+    var text=el.textContent;
+    el.innerHTML='';
+    for(var i=0;i<text.length;i++){
+        var span=document.createElement('span');
+        span.textContent=text[i];
+        span.className='dys-char';
+        el.appendChild(span);
+    }
+}
+
+/* ===== INICIAR JUEGO ===== */
+window.startGame=function(){
+    GS.phase='s1';
+    GS.punishments={eye:false,dyslexia:false};
+    GS.deathScene=null;
+    GS.s3bcollected=[];
+    initScenario1();
+};
+
+/* ===== ESCENARIO 1: LA ESCOTILLA ===== */
+function initScenario1(){
+    GS.s1q=pick(Q_MULT);
+    $('s1-question').textContent=GS.s1q.q;
+    wrapDyslexiaText($('s1-question'));
+    var paths=$('s1-paths');
+    var icons=['<i class="fas fa-archway"></i>','<i class="fas fa-dungeon"></i>','<i class="fas fa-door-closed"></i>'];
+    var labels=['Camino Izquierdo','Camino Central','Camino Derecho'];
+    var opts=[GS.s1q.full,GS.s1q.partial,GS.s1q.wrong];
+    var html='';
+    for(var i=0;i<3;i++){
+        html+='<div class="s1-path" onclick="selectPath('+i+')">';
+        html+='<div class="s1-path-icon">'+icons[i]+'</div>';
+        html+='<div class="s1-path-label">'+labels[i]+'</div>';
+        html+='<div class="s1-path-text dyslexia-target">'+opts[i]+'</div>';
+        html+='</div>';
+    }
+    paths.innerHTML=html;
+    /* Aplicar dislexia a las opciones si aplica */
+    if(GS.punishments.dyslexia){
+        paths.querySelectorAll('.dyslexia-target').forEach(wrapDyslexiaText);
+    }
+    showPhase('phase-s1');
+    applyEyeLoss();
+    startDyslexia();
+}
+
+window.selectPath=function(idx){
+    clearAllTimers();
+    var q=GS.s1q;
+    if(idx===q.ci){
+        /* Correcta completa: sin castigo */
+        showFeedback('Camino correcto','fb-bien');
+        setTimeout(initScenario2,1200);
+    }else if(idx!==q.ci && idx!==2){
+        /* Correcta incompleta: castigo perder ojo */
+        GS.punishments.eye=true;
+        showFeedback('Castigo: Pierdes un ojo','fb-castigo');
+        setTimeout(initScenario2,2000);
+    }else{
+        /* Incorrecta: muerte */
+        showFeedback('Has muerto','fb-muerte');
+        GS.deathScene='escotilla';
+        setTimeout(function(){showEnding('death');},2200);
+    }
+};
+
+/* ===== ESCENARIO 2: ELECCIÓN DEL TRAYECTO ===== */
+function initScenario2(){
+    GS.phase='s2';
+    GS.s2time=120;
+    GS.s2q=pick(Q_MULT.filter(function(q){return q!==GS.s1q;}));
+    if(!GS.s2q)GS.s2q=pick(Q_MULT);
+    $('s2-question').textContent=GS.s2q.q;
+    wrapDyslexiaText($('s2-question'));
+    var colors=['red','blue','yellow'];
+    var wireIcons=['fa-plug','fa-plug','fa-plug'];
+    var opts=[GS.s2q.full,GS.s2q.partial,GS.s2q.wrong];
+    var html='';
+    for(var i=0;i<3;i++){
+        html+='<div class="s2-cable '+colors[i]+'" onclick="cutCable('+i+')">';
+        html+='<div class="s2-cable-wire"><i class="fas '+wireIcons[i]+'"></i></div>';
+        html+='<div class="s2-cable-text dyslexia-target">'+opts[i]+'</div>';
+        html+='</div>';
+    }
+    $('s2-cables').innerHTML=html;
+    if(GS.punishments.dyslexia){
+        $('s2-cables').querySelectorAll('.dyslexia-target').forEach(wrapDyslexiaText);
+    }
+    showPhase('phase-s2');
+    applyEyeLoss();
+    startDyslexia();
+    /* Temporizador bomba */
+    updateS2Timer();
+    GS.timerInterval=setInterval(function(){
+        GS.s2time--;
+        updateS2Timer();
+        if(GS.s2time<=0){
+            clearAllTimers();
+            showFeedback('La bomba estalló','fb-muerte');
+            GS.deathScene='bomba';
+            setTimeout(function(){showEnding('death');},2200);
+        }
+    },1000);
+}
+
+function updateS2Timer(){
+    var m=Math.floor(GS.s2time/60),s=GS.s2time%60;
+    $('s2-timer').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    if(GS.s2time<=30)$('s2-timer').classList.add('urgent');
+    else $('s2-timer').classList.remove('urgent');
+}
+
+window.cutCable=function(idx){
+    clearAllTimers();
+    var q=GS.s2q;
+    if(idx===q.ci){
+        /* Correcta completa → Llave de agua */
+        showFeedback('Bomba desactivada','fb-bien');
+        setTimeout(initScenario3a,1200);
+    }else if(idx!==q.ci && idx!==2){
+        /* Correcta incompleta → Dislexia + Laberinto */
+        GS.punishments.dyslexia=true;
+        showFeedback('Castigo: Dislexia','fb-castigo');
+        setTimeout(initScenario3b,2000);
+    }else{
+        /* Incorrecta → Boom */
+        showFeedback('La bomba estalló','fb-muerte');
+        GS.deathScene='bomba';
+        setTimeout(function(){showEnding('death');},2200);
+    }
+};
+
+/* ===== ESCENARIO 3A: LLAVE DE AGUA ===== */
+function initScenario3a(){
+    GS.phase='s3a';
+    GS.s3awater=0;
+    GS.s3aq=pick(Q_NUM);
+    $('s3a-question').textContent=GS.s3aq.q;
+    $('s3a-unit').textContent=GS.s3aq.unit;
+    $('s3a-input').value='';
+    $('s3a-water').style.height='0%';
+    wrapDyslexiaText($('s3a-question'));
+    showPhase('phase-s3a');
+    applyEyeLoss();
+    startDyslexia();
+    /* Agua subiendo */
+    GS.waterInterval=setInterval(function(){
+        GS.s3awater+=1.5;
+        $('s3a-water').style.height=Math.min(GS.s3awater,100)+'%';
+        if(GS.s3awater>=100){
+            clearAllTimers();
+            showFeedback('Te ahogaste','fb-muerte');
+            GS.deathScene='agua';
+            setTimeout(function(){showEnding('death');},2200);
+        }
+    },1000);
+}
+
+window.submitWater=function(){
+    var val=parseInt($('s3a-input').value);
+    if(isNaN(val))return;
+    clearAllTimers();
+    if(val===GS.s3aq.answer){
+        showFeedback('Agua detenida','fb-bien');
+        setTimeout(function(){showEnding('happy');},1200);
+    }else{
+        showFeedback('Respuesta incorrecta','fb-muerte');
+        GS.deathScene='agua';
+        setTimeout(function(){showEnding('death');},2200);
+    }
+};
+
+/* ===== ESCENARIO 3B: LABERINTO NOCTURNO ===== */
+function initScenario3b(){
+    GS.phase='s3b';
+    GS.s3btime=180;
+    GS.s3bcollected=[false,false,false,false];
+    GS.s3bq=pick(Q_LAB);
+    /* Reiniciar inventario */
+    for(var i=0;i<4;i++)$('inv-'+i).className='s3b-inv-item';
+    /* Crear sobres en posiciones aleatorias */
+    var area=$('s3b-area');
+    area.innerHTML='';
+    var labels=['Enunciado','Opción A','Opción B','Opción C'];
+    var positions=[];
+    for(var i=0;i<4;i++){
+        var x,y,valid;
+        /* Generar posiciones que no se superpongan mucho */
+        do{
+            x=10+Math.random()*70;
+            y=15+Math.random()*65;
+            valid=true;
+            for(var j=0;j<positions.length;j++){
+                var dx=x-positions[j].x,dy=y-positions[j].y;
+                if(Math.sqrt(dx*dx+dy*dy)<15){valid=false;break;}
+            }
+        }while(!valid);
+        positions.push({x:x,y:y});
+        var env=document.createElement('div');
+        env.className='s3b-envelope';
+        env.id='env-'+i;
+        env.style.left=x+'%';
+        env.style.top=y+'%';
+        env.title=labels[i];
+        env.innerHTML='<i class="fas fa-envelope"></i>';
+        env.addEventListener('click',(function(idx){return function(){openEnvelope(idx);};})(i));
+        area.appendChild(env);
+    }
+    /* Ocultar panel ensamblado */
+    $('s3b-assembled').classList.remove('active');
+    showPhase('phase-s3b');
+    applyEyeLoss();
+    /* Linterna sigue cursor */
+    var fl=$('s3b-flashlight');
+    var gameArea=$('phase-s3b');
+    gameArea.addEventListener('mousemove',function(e){
+        var r=gameArea.getBoundingClientRect();
+        fl.style.setProperty('--mx',(e.clientX-r.left)+'px');
+        fl.style.setProperty('--my',(e.clientY-r.top)+'px');
+    });
+    /* Temporizador */
+    updateS3bTimer();
+    GS.timerInterval=setInterval(function(){
+        GS.s3btime--;
+        updateS3bTimer();
+        if(GS.s3btime<=0){
+            clearAllTimers();
+            showFeedback('El tiempo se agotó','fb-muerte');
+            GS.deathScene='laberinto';
+            setTimeout(function(){showEnding('death');},2200);
+        }
+    },1000);
+}
+
+function updateS3bTimer(){
+    var m=Math.floor(GS.s3btime/60),s=GS.s3btime%60;
+    $('s3b-timer').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+
+function openEnvelope(idx){
+    if(GS.s3bcollected[idx])return;
+    GS.s3bcollected[idx]=true;
+    var env=$('env-'+idx);
+    env.classList.add('opened');
+    env.innerHTML='<i class="fas fa-check"></i>';
+    $('inv-'+idx).classList.add('filled');
+    /* Verificar si recolectó todos */
+    var allCollected=GS.s3bcollected.every(function(c){return c;});
+    if(allCollected){
+        clearAllTimers();
+        setTimeout(showAssembledQuestion,600);
+    }
+}
+
+function showAssembledQuestion(){
+    var q=GS.s3bq;
+    var html='<div class="enun">'+q.enun+'</div>';
+    html+='<button class="s3b-opt" onclick="selectLabOpt(this,\'A\')"><strong>A.</strong> '+q.A+'</button>';
+    html+='<button class="s3b-opt" onclick="selectLabOpt(this,\'B\')"><strong>B.</strong> '+q.B+'</button>';
+    html+='<button class="s3b-opt" onclick="selectLabOpt(this,\'C\')"><strong>C.</strong> '+q.C+'</button>';
+    $('s3b-assembled-q').innerHTML=html;
+    $('s3b-assembled').classList.add('active');
+}
+
+window.selectLabOpt=function(el,opt){
+    var q=GS.s3bq;
+    /* Deshabilitar todos */
+    $('s3b-assembled-q').querySelectorAll('.s3b-opt').forEach(function(b){b.style.pointerEvents='none';});
+    if(opt===q.correct){
+        el.classList.add('correct');
+        showFeedback('Respuesta correcta','fb-bien');
+        setTimeout(function(){showEnding('happy');},1200);
+    }else{
+        el.classList.add('wrong');
+        /* Mostrar la correcta */
+        var correctBtn=$('s3b-assembled-q').querySelectorAll('.s3b-opt')[q.correct==='A'?0:q.correct==='B'?1:2];
+        if(correctBtn)correctBtn.classList.add('correct');
+        showFeedback('Respuesta incorrecta','fb-muerte');
+        GS.deathScene='laberinto';
+        setTimeout(function(){showEnding('death');},2200);
+    }
+};
+
+/* ===== FINALES ===== */
+function showEnding(type){
+    clearAllTimers();
+    GS.phase='end';
+    var el=$('phase-end');
+    el.className='game-phase phase-end '+type;
+    var icon=$('end-icon'),title=$('end-title'),sub=$('end-subtitle'),nar=$('end-narrative'),stats=$('end-stats');
+    var pStr=[];
+    if(GS.punishments.eye)pStr.push('Ojo perdido');
+    if(GS.punishments.dyslexia)pStr.push('Dislexia');
+
+    if(type==='happy'){
+        icon.innerHTML='<i class="fas fa-sun" style="color:var(--dorado)"></i>';
+        title.textContent='Final Feliz';
+        title.style.color='var(--dorado)';
+        sub.textContent='Sobreviviste ilesa';
+        nar.textContent='La escotilla se abre hacia la luz del día. Caminas sin una sola herida, con la claridad mental de quien dominó la regla de tres bajo presión. El aire fresco golpea tu rostro. Cada cálculo fue exacto, cada proporción fue justificada como el ICFES lo exige. No hay sombras en tu camino ni letras que se escapen. Sobreviviste a tu historia y el mundo real te espera con una nueva prueba: el examen Saber Pro.';
+    }else if(type==='painful'){
+        icon.innerHTML='<i class="fas fa-band-aid" style="color:var(--rojo-suave)"></i>';
+        title.textContent='Final Doliente';
+        title.style.color='var(--rojo-suave)';
+        sub.textContent='Sobreviviste, pero a un costo';
+        var extra='';
+        if(GS.punishments.eye)extra+='La mitad del mundo es ahora sombra permanente, un recordatorio de que la respuesta incompleta tiene consecuencias. ';
+        if(GS.punishments.dyslexia)extra+='Las letras aún bailan en tu memoria, inquietas, cambiando de lugar cuando menos lo esperas. ';
+        nar.textContent='Lograste salir, pero el precio fue alto. '+extra+'Sobreviviste con cicatrices que te acompañarán en el examen real. Aún así, estás vivo. Y eso es suficiente para enfrentar lo que viene. La próxima vez, justifica cada paso.';
+    }else{
+        icon.innerHTML='<i class="fas fa-skull" style="color:#666"></i>';
+        title.textContent='Final Trágico';
+        title.style.color='#888';
+        var scene=GS.deathScene;
+        if(scene==='escotilla'){
+            sub.textContent='Muerte en la escotilla';
+            nar.textContent='La pared se derrumba. El camino que elegiste no era el correcto y la escotilla se cierra para siempre. En la oscuridad, el eco de tu error se repite: debiste analizar mejor las proporciones, debiste justificar tu respuesta. Tu historia termina aquí, sepultada bajo piedras y tiza rota.';
+        }else if(scene==='bomba'){
+            sub.textContent='Muerte en la explosión';
+            nar.textContent='El destello. La onda expansiva. En fracciones de segundo, la bomba transforma todo en silencio. No hubo tiempo para un segundo intento. La regla de tres no perdonó tu imprecisión. El cable incorrecto brilló un instante antes de que todo desapareciera.';
+        }else if(scene==='agua'){
+            sub.textContent='Muerte en la cámara de agua';
+            nar.textContent='El agua fría te alcanza primero por los pies, luego por las rodillas. El número que escribiste no fue el correcto y el mecanismo no se detuvo. La última cosa que ves es la superficie alejándose arriba de ti. La proporción estaba ahí, justo frente a tus ojos, y no pudiste calcularla a tiempo.';
+        }else{
+            sub.textContent='Muerte en el laberinto';
+            nar.textContent='La oscuridad te devora. El tiempo se agotó entre las sombras y los sobres que nunca encontraste. En el laberinto nocturno, sin luz y sin respuestas, la regla de tres se convirtió en tu laberinto final. Las piezas de la pregunta se quedaron perdidas en la noche eterna.';
+        }
+    }
+
+    /* Estadísticas */
+    var scensCompleted=GS.deathScene?0:1;
+    if(GS.deathScene==='escotilla')scensCompleted=0;
+    else if(GS.deathScene==='bomba')scensCompleted=1;
+    else if(GS.deathScene==='agua'||GS.deathScene==='laberinto')scensCompleted=2;
+    stats.innerHTML='<div class="end-stat"><div class="end-stat-val" style="color:var(--dorado)">'+scensCompleted+'/3</div><div class="end-stat-label">Escenarios</div></div>'+
+        '<div class="end-stat"><div class="end-stat-val" style="color:'+(pStr.length?'var(--rojo-suave)':'var(--verde)')+'">'+pStr.length+'</div><div class="end-stat-label">Castigos</div></div>'+
+        '<div class="end-stat"><div class="end-stat-val" style="color:'+(type==='death'?'#888':'var(--dorado)')+'">'+(type==='happy'?'Ilesa':type==='painful'?'Herida':'Fallecida')+'</div><div class="end-stat-label">Condición</div></div>';
+
+    showPhase('phase-end');
+    wrapDyslexiaText(nar);
+    startDyslexia();
+    applyEyeLoss();
+
+    /* Guardar interacción y misión si sobrevivió */
+    if(type!=='death'){
+        saveTodayInteraction();
+        if(!completedMissions['mission_5']){
+            completeMissionInDB(5);
+            showMedal(5);
+            var ns=userStats.totalStars||0;
+            saveStats({totalStars:ns+50});
+            $('top-stars').textContent=ns+50;
+        }
+    }else{
+        saveTodayInteraction();
+    }
+}
+
+/* ===== INICIO ===== */
+onAuthStateChanged(auth,async function(user){
+    if(!user){window.location.href='index.html';return;}
+    uid=user.uid;
+    await loadFirebaseData();
+    $('sidebar-username').textContent=user.displayName||user.email||'Estudiante';
+    $('top-stars').textContent=userStats.totalStars||0;
+});
+</script>
+</body>
+</html>
