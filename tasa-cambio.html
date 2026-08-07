@@ -2574,8 +2574,10 @@ function spawnNextDoc(){
 }
 
 function buildFillDoc(doc){
-  var chartHtml = doc.chartData ? '<div class="my-2"><canvas id="doc-chart" width="280" height="140"></canvas></div>' : '';
-  
+  var chartHtml = doc.chartData 
+    ? '<div style="text-align:center; margin:10px 0;"><canvas id="doc-chart" width="310" height="150" style="background:#f9f6f0; border:1px solid #c2b29d; border-radius:4px; max-width:100%; box-shadow: inset 0 0 5px rgba(0,0,0,0.05);"></canvas></div>' 
+    : '';
+
   return '<div class="p-4 sm:p-5" style="min-width:300px;max-width:380px">'
     +'<div class="flex items-center justify-between mb-3 pb-2" style="border-bottom:2px solid var(--beige-dark)">'
     +'<div class="text-[9px] font-bold uppercase tracking-widest" style="color:var(--brown)">Formulario — Exp-'+rand(1000,9999)+'</div>'
@@ -2589,8 +2591,10 @@ function buildFillDoc(doc){
 }
 
 function buildValidateDoc(doc){
-  var chartHtml = doc.chartData ? '<div class="my-2"><canvas id="doc-chart" width="280" height="140"></canvas></div>' : '';
-  
+  var chartHtml = doc.chartData 
+    ? '<div style="text-align:center; margin:10px 0;"><canvas id="doc-chart" width="310" height="150" style="background:#f9f6f0; border:1px solid #c2b29d; border-radius:4px; max-width:100%; box-shadow: inset 0 0 5px rgba(0,0,0,0.05);"></canvas></div>' 
+    : '';
+
   return '<div class="p-4 sm:p-5" style="min-width:300px;max-width:380px">'
     +'<div class="flex items-center justify-between mb-3 pb-2" style="border-bottom:2px solid var(--beige-dark)">'
     +'<div class="text-[9px] font-bold uppercase tracking-widest" style="color:var(--brown)">Informe — Exp-'+rand(1000,9999)+'</div>'
@@ -2599,37 +2603,116 @@ function buildValidateDoc(doc){
     +chartHtml
     +'<div class="text-[9px] italic" style="color:var(--brown)"><i class="fas fa-hand-pointer mr-1"></i> Carpeta = correcto | Papelera = incorrecto</div></div>';
 }
-  function renderLinearChart(canvasId, data){
+  
+function renderLinearChart(canvasId, data){
   var canvas = document.getElementById(canvasId);
   if(!canvas) return;
   var ctx = canvas.getContext('2d');
   
-  /* Limpiar área */
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  var w = canvas.width;
+  var h = canvas.height;
   
-  /* Estilos del gráfico */
-  ctx.strokeStyle = '#2b2118';
-  ctx.lineWidth = 2;
-  
-  /* Dibuja ejes x, y */
-  ctx.beginPath();
-  ctx.moveTo(30, 10);
-  ctx.lineTo(30, 120);
-  ctx.lineTo(270, 120);
-  ctx.stroke();
-  
-  /* Dibuja los puntos conectados de la curva */
-  if(data && data.length > 0){
+  ctx.clearRect(0, 0, w, h);
+  if(!data || data.length === 0) return;
+
+  /* Margen interno para los números de los ejes */
+  var padLeft = 45;
+  var padBottom = 25;
+  var padTop = 15;
+  var padRight = 15;
+
+  var graphW = w - padLeft - padRight;
+  var graphH = h - padTop - padBottom;
+
+  /* Rango de valores */
+  var xVals = data.map(function(d){ return d.x; });
+  var yVals = data.map(function(d){ return d.y; });
+
+  var minX = 0;
+  var maxX = Math.max.apply(null, xVals) * 1.1 || 1;
+  var minY = 0;
+  var maxY = Math.max.apply(null, yVals) * 1.15 || 1;
+
+  /* 1. Cuadrícula de fondo y etiquetas Eje Y */
+  ctx.strokeStyle = '#e2d7c5';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 3]);
+
+  var stepsY = 4;
+  for(var i = 0; i <= stepsY; i++){
+    var yVal = (maxY / stepsY) * i;
+    var yPos = padTop + graphH - (i / stepsY) * graphH;
+    
     ctx.beginPath();
-    ctx.strokeStyle = '#8b0000'; // Color de la línea (rojo tinta)
-    data.forEach(function(pt, idx){
-      var x = 30 + pt.x * 20; 
-      var y = 120 - pt.y * 10;
-      if(idx === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
+    ctx.moveTo(padLeft, yPos);
+    ctx.lineTo(w - padRight, yPos);
     ctx.stroke();
+
+    ctx.fillStyle = '#6b5443';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(yVal >= 10 ? yVal.toFixed(0) : yVal.toFixed(1), padLeft - 6, yPos);
   }
+
+  /* 2. Cuadrícula de fondo y etiquetas Eje X */
+  var stepsX = 4;
+  for(var j = 0; j <= stepsX; j++){
+    var xVal = (maxX / stepsX) * j;
+    var xPos = padLeft + (j / stepsX) * graphW;
+
+    ctx.beginPath();
+    ctx.moveTo(xPos, padTop);
+    ctx.lineTo(xPos, padTop + graphH);
+    ctx.stroke();
+
+    ctx.fillStyle = '#6b5443';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(xVal.toFixed(0), xPos, padTop + graphH + 4);
+  }
+
+  ctx.setLineDash([]);
+
+  /* 3. Ejes principales */
+  ctx.strokeStyle = '#3d2e24';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(padLeft, padTop);
+  ctx.lineTo(padLeft, padTop + graphH);
+  ctx.lineTo(w - padRight, padTop + graphH);
+  ctx.stroke();
+
+  /* 4. Trazo de la función lineal */
+  ctx.strokeStyle = '#8b261d';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+
+  data.forEach(function(pt, idx){
+    var cx = padLeft + ((pt.x - minX) / (maxX - minX)) * graphW;
+    var cy = padTop + graphH - ((pt.y - minY) / (maxY - minY)) * graphH;
+
+    if(idx === 0) ctx.moveTo(cx, cy);
+    else ctx.lineTo(cx, cy);
+  });
+  ctx.stroke();
+
+  /* 5. Puntos en cada coordenada */
+  data.forEach(function(pt){
+    var cx = padLeft + ((pt.x - minX) / (maxX - minX)) * graphW;
+    var cy = padTop + graphH - ((pt.y - minY) / (maxY - minY)) * graphH;
+
+    ctx.fillStyle = '#8b261d';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3.5, 0, 2 * Math.PI);
+    ctx.fill();
+
+    ctx.fillStyle = '#f4f1ea';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 1.5, 0, 2 * Math.PI);
+    ctx.fill();
+  });
 }
 
 /* ===== DRAG & DROP (funciona siempre, mouse + touch) ===== */
