@@ -93,6 +93,20 @@ a{text-decoration:none;color:inherit;}button{cursor:pointer;border:none;backgrou
 .exercise-table th{background-color:var(--oliva-medio);color:white;font-weight:600;font-size:.88rem;}
 .exercise-table tr:nth-child(even){background-color:var(--crema);}
 .exercise-table td{font-size:.9rem;}
+    .exercise-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    align-items: start;
+    max-width: 1250px; /* Aprovecha el espacio vacio a los lados */
+    width: 100%;
+    margin: 0 auto;
+    transition: all 0.4s ease;
+}
+
+.exercise-grid.has-explanation {
+    grid-template-columns: 1.1fr 0.9fr; /* Le da un poco mas de presencia a la pregunta */
+}
 .options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}
 .opt-btn{background:#fff;border:2px solid var(--oliva-palido);border-radius:10px;padding:14px 16px;font-size:.92rem;color:var(--oliva-oscuro);transition:all .2s;display:flex;align-items:flex-start;gap:10px;text-align:left;line-height:1.4;}
 .opt-btn:hover:not(:disabled):not(.correct):not(.incorrect){border-color:var(--oliva-claro);background:var(--crema);transform:translateY(-2px);}
@@ -632,7 +646,6 @@ async function startGame(){
     pandaSay(pandaMsgs.start[Math.floor(Math.random()*pandaMsgs.start.length)]);
     loadExercise();await saveTodayInteraction();
 }
-
 function loadExercise(){
     const ex=exercises[curIdx];
     $('ex-num').textContent=`Ejercicio ${curIdx+1} de ${exercises.length}`;
@@ -641,46 +654,78 @@ function loadExercise(){
     $('ex-context').textContent=ex.context;$('ex-question').textContent=ex.question;
     $('ex-table').innerHTML=ex.image;$('hint-box').classList.remove('show');$('hint-box').textContent=ex.strategy;$('hint-btn').disabled=false;
     const optCont=$('options');optCont.innerHTML='';
-    ex.options.forEach((opt,i)=>{const btn=document.createElement('button');btn.className='opt-btn';btn.innerHTML=`<span class="opt-letter">${opt.letter}</span><span>${opt.text}</span>`;btn.addEventListener('click',()=>selectAnswer(i));optCont.appendChild(btn);});
-    $('feedback').classList.remove('show','ok','fail');$('next-btn').disabled=true;answered=false;
+    ex.options.forEach((opt,i)=>{const btn=document.createElement('button');btn.className='opt-btn';btn.innerHTML=`<span class="opt-letter">${opt.letter}</span><span>${opt.text}</span>`;btn.addEventListener('click',()=>selectAnswer(i,ex.correctAnswer));optCont.appendChild(btn);});
+    
+    // Ocultar panel lateral al cargar nuevo ejercicio
+    $('exercise-grid').classList.remove('has-explanation');
+    $('explanation-panel').classList.remove('show');
+    $('next-btn').disabled=true;answered=false;
 }
 
- $('hint-btn').addEventListener('click',()=>{$('hint-box').classList.add('show');$('hint-btn').disabled=true;usedHints=true;pandaSay(pandaMsgs.hint[Math.floor(Math.random()*pandaMsgs.hint.length)]);});
-
-function selectAnswer(idx){
+function selectAnswer(selected,correct){
     if(answered)return;answered=true;
-    const ex=exercises[curIdx];const btns=$('options').querySelectorAll('.opt-btn');
-    btns.forEach((b,i)=>{b.disabled=true;if(i===ex.correctAnswer)b.classList.add('correct');if(i===idx&&i!==ex.correctAnswer)b.classList.add('incorrect');});
-    const fb=$('feedback');
-    if(idx===ex.correctAnswer){score++;fb.classList.add('show','ok');$('fb-title').textContent='Respuesta correcta';$('fb-text').textContent=ex.solution;pandaSay(pandaMsgs.correct[Math.floor(Math.random()*pandaMsgs.correct.length)]);}else{fb.classList.add('show','fail');$('fb-title').textContent='Respuesta incorrecta';$('fb-text').textContent=ex.solution;pandaSay(pandaMsgs.incorrect[Math.floor(Math.random()*pandaMsgs.incorrect.length)]);}
-    $('ex-score').textContent=`${score} / ${exercises.length}`;$('next-btn').disabled=false;
+    const btns=document.querySelectorAll('.opt-btn');btns.forEach(b=>b.disabled=true);btns[correct].classList.add('correct');
+    const ex=exercises[curIdx];
+    const isCorrect = selected === correct;
+    
+    if(isCorrect){
+        score++;
+        $('ex-score').textContent=`${score} / ${exercises.length}`;
+        pandaSay(pandaMsgs.correct[Math.floor(Math.random()*pandaMsgs.correct.length)]);
+    } else {
+        btns[selected].classList.add('incorrect');
+        pandaSay(pandaMsgs.incorrect[Math.floor(Math.random()*pandaMsgs.incorrect.length)]);
+    }
+    
+    // Inyectar la explicación estructurada en el panel lateral
+    const tagHtml = isCorrect 
+        ? `<span class="exp-tag ok"><i class="fas fa-check-circle"></i> ¡Respuesta Correcta!</span>`
+        : `<span class="exp-tag fail"><i class="fas fa-times-circle"></i> Respuesta Incorrecta</span>`;
+
+    $('exp-body').innerHTML = `
+        ${tagHtml}
+        <div class="exp-divider"></div>
+        <div>${ex.solution}</div>
+    `;
+
+    // Desplegar panel a la derecha
+    $('exercise-grid').classList.add('has-explanation');
+    $('explanation-panel').classList.add('show');
+
+    $('next-btn').disabled=false;
+    $('hint-btn').disabled=true;
 }
 
- $('next-btn').addEventListener('click',()=>{
-    curIdx++;
-    if(curIdx<exercises.length){loadExercise();}else{showResults();}
-});
+function nextExercise(){curIdx++;if(curIdx<exercises.length){loadExercise();}else{showResults();}}
 
 async function showResults(){
-    $('exercise-section').style.display='none';$('results-section').style.display='block';
-    $('progress-fill').style.width='100%';
-    const lvl=icfesMsg[score];$('icfes-level').textContent=lvl.level;$('icfes-level').className='icfes-level '+lvl.cls;
-    $('res-title').textContent=lvl.title;$('res-score').textContent=`${score} / ${exercises.length}`;$('icfes-msg').textContent=lvl.msg;
-    if(score>=3){pandaSay(pandaMsgs.goodEnd[Math.floor(Math.random()*pandaMsgs.goodEnd.length)]);}else{pandaSay(pandaMsgs.badEnd[Math.floor(Math.random()*pandaMsgs.badEnd.length)]);}
+    $('exercise-section').style.display='none';
+    
+    // Ocultar el panel de explicaciones al mostrar los resultados finales
+    $('exercise-grid').classList.remove('has-explanation');
+    $('explanation-panel').classList.remove('show');
+
+    $('results-section').style.display='block';$('progress-fill').style.width='100%';
+    const info=icfesMsg[score];$('icfes-level').className=`icfes-level ${info.cls}`;$('icfes-level').textContent=info.level;$('res-title').textContent=info.title;$('res-score').textContent=`${score} / 5`;$('icfes-msg').textContent=info.msg;
+    // FIX: Checkear misiones ANTES de guardar el nuevo score,
+    // así gameBest sigue siendo el valor anterior y la lógica funciona bien
+    const missionData=await checkAndCompleteMissions(score,usedHints);
+    // Ahora sí guardar el nuevo score
     await saveGameScore(score,usedHints);
-    const res=await checkAndCompleteMissions(score,usedHints);
     $('res-pts').textContent = `+${missionData.ptsPreguntas} pts preguntas, +${missionData.missionPts} pts misiones (Total: ${missionData.newStars} estrellas)`;
+    if(score>=4){pandaSay(pandaMsgs.goodEnd[Math.floor(Math.random()*pandaMsgs.goodEnd.length)]);}else{pandaSay(pandaMsgs.badEnd[Math.floor(Math.random()*pandaMsgs.badEnd.length)]);}
 }
 
  $('start-btn').addEventListener('click',startGame);
+ $('next-btn').addEventListener('click',nextExercise);
+ $('hint-btn').addEventListener('click',()=>{$('hint-box').classList.add('show');$('hint-btn').disabled=true;usedHints=true;pandaSay(pandaMsgs.hint[Math.floor(Math.random()*pandaMsgs.hint.length)]);});
  $('restart-btn').addEventListener('click',startGame);
+ $('logout-btn').addEventListener('click',async()=>{try{await signOut(auth);window.location.href='index.html';}catch(e){console.error(e);}});
 
-onAuthStateChanged(auth,user=>{
-    if(user){uid=user.uid;$('sidebar-username').textContent=user.displayName||user.email||'Usuario';(async()=>{await loadFirebaseData();const p=user.displayName||'';const parts=p.split(' - ');if(parts.length>=2)$('sidebar-program').textContent=parts.slice(1).join(' - ');})();}
-    else{uid=null;$('sidebar-username').textContent='Invitado';$('sidebar-program').textContent='';}
+onAuthStateChanged(auth,async(user)=>{
+    if(user){uid=user.uid;$('sidebar-username').textContent=user.displayName||user.email||'Usuario';await loadFirebaseData();}
+    else{window.location.href='index.html';}
 });
-
- $('logout-btn').addEventListener('click',async e=>{e.preventDefault();try{await signOut(auth);window.location.href='index.html';}catch(e){toast('Error al cerrar sesión');}});
 </script>
 </body>
 </html>
