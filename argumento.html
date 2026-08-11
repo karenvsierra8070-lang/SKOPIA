@@ -256,6 +256,9 @@ a{text-decoration:none;color:inherit;}button{cursor:pointer;border:none;backgrou
                     <button class="btn-check" id="btn-refresh-audits" style="background:var(--oliva-oscuro);padding:12px 24px;font-size:.95rem;">
                         <i class="fas fa-sync-alt"></i> Cargar Nuevos Casos
                     </button>
+                                      <button class="btn-check" id="btn-repeat" style="background:#f57c00;padding:12px 24px;font-size:.95rem;">
+                        <i class="fas fa-redo"></i> Repetir Actividad
+                    </button>
                     <button class="btn-finish" id="btn-finish">
                         <i class="fas fa-flag-checkered"></i> Terminar Ejercicios
                     </button>
@@ -318,6 +321,7 @@ let uid=null,scoreLupa=0,scoreConverse=0,scoreAudit=0;
 let lupaDone=false,converseDone=false,auditsDone=false;
 let currentAuditSelections=[];
 let finished=false;
+let alreadyCompleted=false;
 
 /* === SIDEBAR === */
 function renderMenu(){const nav=$('sidebar-nav');let h='<div class="menu-no-result" id="menu-no-result">Sin resultados</div>';menuData.forEach(g=>{h+=`<div class="menu-group-label"><i class="fas ${g.icon}"></i> ${g.group}</div>`;g.cats.forEach(cat=>{h+=`<div class="menu-cat" data-name="${cat.title.toLowerCase()}"><button class="menu-cat-btn" aria-expanded="false"><i class="cat-icon fas ${cat.icon}"></i><span>${cat.title}</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-cat-children">`;if(cat.note)h+=`<div class="menu-note">${cat.note}</div>`;if(cat.subs)cat.subs.forEach(sub=>{h+=`<div class="menu-sub" data-name="${sub.title.toLowerCase()}"><button class="menu-sub-btn" aria-expanded="false"><span>${sub.title}</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-sub-children">`;if(sub.links)sub.links.forEach(lk=>{h+=`<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;});h+='</div></div>';});if(cat.links&&cat.links.length)cat.links.forEach(lk=>{h+=`<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;});h+='</div></div>';});});nav.innerHTML=h;nav.querySelectorAll('.menu-cat-btn').forEach(b=>{b.addEventListener('click',()=>{const c=b.parentElement,w=c.classList.contains('open');c.parentElement.querySelectorAll(':scope>.menu-cat.open').forEach(s=>{if(s!==c)s.classList.remove('open');});c.classList.toggle('open',!w);b.setAttribute('aria-expanded',String(!w));});});nav.querySelectorAll('.menu-sub-btn').forEach(b=>{b.addEventListener('click',()=>{const s=b.parentElement,w=s.classList.contains('open');s.parentElement.querySelectorAll(':scope>.menu-sub.open').forEach(x=>{if(x!==s)x.classList.remove('open');});s.classList.toggle('open',!w);b.setAttribute('aria-expanded',String(!w));});});nav.querySelectorAll('.menu-link').forEach(lk=>{if(lk.getAttribute('href')==='argumento.html')lk.classList.add('active');});}
@@ -342,6 +346,23 @@ function updateScoreUI(){
     $('score-total').classList.toggle('done',t>=PASS);
 }
 
+    /* === RESET PARA REPETIR === */
+function resetActivity(){
+    scoreLupa=0;scoreConverse=0;scoreAudit=0;
+    lupaDone=false;converseDone=false;auditsDone=false;
+    currentAuditSelections=[];
+    finished=false;
+    updateScoreUI();
+    $('completion-banner').classList.remove('show');
+    $('fail-banner').classList.remove('show');
+    $('btn-finish').style.opacity='1';
+    $('btn-finish').style.pointerEvents='auto';
+    loadProof();
+    loadConverse();
+    loadAudits();
+    $('game-wrapper').scrollIntoView({behavior:'smooth',block:'start'});
+    toast('Actividad reiniciada — ¡intenta de nuevo!','success');
+}
 /* Guarda en Firebase como in_progress siempre (solo el botón Terminar lo cambia a completed) */
 async function saveProgress(score,status){
     if(!uid)return;
@@ -377,18 +398,23 @@ async function saveProgress(score,status){
     $('completion-banner').classList.remove('show');
     $('fail-banner').classList.remove('show');
 
-    if(missing.length===0 && t>=PASS){
-        /* ¡TODO COMPLETO Y PUNTUACIÓN SUFICIENTE! */
-        finished=true;
-        $('final-score-display').textContent=t+' / '+MAX_SCORE;
-        $('completion-banner').classList.add('show');
-        $('completion-banner').scrollIntoView({behavior:'smooth',block:'center'});
-        saveProgress(t,'completed');
-        toast('Actividad completada','success');
-
-        /* Deshabilitar botón terminar para que no se pueda volver a clicar */
-        $('btn-finish').style.opacity='0.5';
-        $('btn-finish').style.pointerEvents='none';
+     if(missing.length===0 && t>=PASS){
+        if(alreadyCompleted){
+            /* Ya estaba completada: solo actualiza puntaje, SIN banner, SIN deshabilitar */
+            saveProgress(t,'completed');
+            toast('Puntaje actualizado: '+t+' / '+MAX_SCORE,'success');
+        }else{
+            /* Primera vez que completa: muestra banner y marca como completada */
+            finished=true;
+            alreadyCompleted=true;
+            $('final-score-display').textContent=t+' / '+MAX_SCORE;
+            $('completion-banner').classList.add('show');
+            $('completion-banner').scrollIntoView({behavior:'smooth',block:'center'});
+            saveProgress(t,'completed');
+            toast('Actividad completada','success');
+            $('btn-finish').style.opacity='0.5';
+            $('btn-finish').style.pointerEvents='none';
+        }
 
     }else{
         /* Faltan cosas */
@@ -412,6 +438,15 @@ async function saveProgress(score,status){
  $('btn-dismiss-fail').addEventListener('click',()=>{
     $('fail-banner').classList.remove('show');
     $('fail-banner').scrollIntoView({behavior:'smooth',block:'start'});
+     
+});
+    /* Repetir actividad */
+ $('btn-repeat').addEventListener('click',()=>{
+    if(!finished && !alreadyCompleted){
+        /* Aún no ha terminado ni estaba completada: confirmar */
+        if(!confirm('¿Seguro que quieres reiniciar? Perderás el progreso actual.'))return;
+    }
+    resetActivity();
 });
 
 /* === GAME DATA === */
@@ -678,11 +713,19 @@ async function loadPreviousProgress(){
 onAuthStateChanged(auth,user=>{
     if(!user){window.location.href='index.html';return;}
     uid=user.uid;
+    /* ← justo después de uid = user.uid; agrega esto: */
+try{
+    const progSnap=await getDoc(doc(db,'users',uid,'progress',GAME_ID));
+    if(progSnap.exists()&&progSnap.data().status==='completed'){
+        alreadyCompleted=true;
+    }
+}catch(e){console.warn('[argumento] leyendo progreso',e);}
     $('sidebar-username').textContent=user.displayName||'Estudiante';
     try{
         getDoc(doc(db,'users',user.uid,'profile','main')).then(s=>{
             if(s.exists()){$('sidebar-program').textContent=s.data().program||'';}
         });
+        
     }catch(e){}
     loadPreviousProgress();
     $('logout-btn').addEventListener('click',e=>{e.preventDefault();signOut(auth).then(()=>window.location.href='index.html');});
