@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dilemas + Decisiones - Skopia</title>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root{
+            --crema:#fdfbf5;--crema-mid:#f5f0e3;
+            --oliva-oscuro:#272b00;--oliva-medio:#5a6133;
+            --oliva-claro:#bec092;--oliva-palido:#d4d6b0;
+            --oliva-super:#e8e9d4;
+            --sombra:rgba(39,43,0,0.08);--sombra-md:rgba(39,43,0,0.12);
+            --sidebar-w:310px;--topbar-h:72px;--radius:14px;--radius-sm:8px;
+        }
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+        html{scroll-behavior:smooth;}
+        body{font-family:'Roboto',sans-serif;background:var(--crema);color:var(--oliva-oscuro);min-height:100vh;overflow-x:hidden;
+            background-image:radial-gradient(ellipse at 10% 20%,rgba(190,192,146,0.18) 0%,transparent 50%),radial-gradient(ellipse at 90% 80%,rgba(90,97,51,0.1) 0%,transparent 50%);}
+        a{text-decoration:none;color:inherit;}button{cursor:pointer;border:none;background:none;font-family:inherit;}ul{list-style:none;}input{font-family:inherit;}
+
+        /* Sidebar */
+        .sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--oliva-oscuro);color:var(--crema);display:flex;flex-direction:column;z-index:900;transition:transform .35s cubic-bezier(.4,0,.2,1);overflow:hidden;}
+        .sidebar.collapsed{transform:translateX(calc(-1 * var(--sidebar-w)));}
+        .sidebar-header{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;}
+        .sidebar-logo{width:48px;height:48px;border-radius:50%;object-fit:cover;margin-bottom:8px;border:2px solid var(--oliva-claro);}
+        .sidebar-username{font-family:'Patrick Hand',cursive;font-size:1.25rem;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .sidebar-program{font-size:.75rem;color:var(--oliva-claro);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .sidebar-search{padding:12px 14px;flex-shrink:0;}
+        .sidebar-search input{width:100%;padding:9px 12px 9px 34px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);color:var(--crema);font-size:.85rem;outline:none;transition:border .2s;}
+        .sidebar-search input::placeholder{color:rgba(255,255,255,0.35);}
+        .sidebar-search input:focus{border-color:var(--oliva-claro);}
+        .sidebar-search-wrap{position:relative;}
+        .sidebar-search-wrap i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.3);font-size:.8rem;}
+        .sidebar-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 0;scrollbar-width:thin;scrollbar-color:var(--oliva-medio) transparent;}
+        .sidebar-nav::-webkit-scrollbar{width:5px;}.sidebar-nav::-webkit-scrollbar-thumb{background:var(--oliva-medio);border-radius:3px;}
+        .menu-group-label{padding:14px 18px 6px;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--oliva-claro);display:flex;align-items:center;gap:8px;}
+        .menu-group-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.08);}
+        .menu-cat{user-select:none;}
+        .menu-cat-btn{width:100%;padding:10px 18px;display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600;color:var(--crema);transition:background .2s;text-align:left;}
+        .menu-cat-btn:hover{background:rgba(255,255,255,0.06);}
+        .menu-cat-btn i.cat-icon{width:18px;text-align:center;font-size:.82rem;color:var(--oliva-claro);}
+        .menu-cat-btn .chevron{margin-left:auto;font-size:.6rem;transition:transform .25s;color:var(--oliva-claro);}
+        .menu-cat.open>.menu-cat-btn .chevron{transform:rotate(90deg);}
+        .menu-cat-children{max-height:0;overflow:hidden;transition:max-height .35s ease;}
+        .menu-cat.open>.menu-cat-children{max-height:2000px;}
+        .menu-sub{user-select:none;}
+        .menu-sub-btn{width:100%;padding:8px 18px 8px 44px;display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:500;color:rgba(253,251,245,0.75);transition:all .2s;text-align:left;}
+        .menu-sub-btn:hover{color:var(--crema);background:rgba(255,255,255,0.04);}
+        .menu-sub-btn .chevron{margin-left:auto;font-size:.55rem;transition:transform .25s;opacity:.5;}
+        .menu-sub.open>.menu-sub-btn .chevron{transform:rotate(90deg);opacity:1;}
+        .menu-sub-children{max-height:0;overflow:hidden;transition:max-height .3s ease;}
+        .menu-sub.open>.menu-sub-children{max-height:800px;}
+        .menu-link{display:block;padding:7px 18px 7px 62px;font-size:.78rem;color:rgba(253,251,245,0.55);transition:all .2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .menu-link:hover{color:var(--crema);background:rgba(255,255,255,0.06);padding-left:68px;}
+        .menu-link::before{content:'›';margin-right:6px;color:var(--oliva-claro);font-weight:700;}
+        .menu-link.active{color:#fff;background:rgba(255,255,255,0.1);padding-left:68px;}
+        .menu-link.hidden,.menu-cat.hidden,.menu-sub.hidden{display:none;}
+        .menu-note{padding:8px 18px 8px 44px;font-size:.72rem;color:rgba(253,251,245,0.35);font-style:italic;}
+        .menu-no-result{padding:20px 18px;text-align:center;font-size:.8rem;color:rgba(255,255,255,0.3);display:none;}
+        .menu-no-result.show{display:block;}
+        .sidebar-footer{flex-shrink:0;padding:10px 0;border-top:1px solid rgba(255,255,255,0.08);}
+        .sidebar-footer a{display:flex;align-items:center;gap:10px;padding:9px 18px;font-size:.82rem;color:rgba(253,251,245,0.6);transition:all .2s;}
+        .sidebar-footer a:hover{color:var(--crema);background:rgba(255,255,255,0.06);}
+        .sidebar-footer a i{width:18px;text-align:center;font-size:.85rem;}
+        .sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:899;opacity:0;visibility:hidden;transition:all .3s;}
+        .sidebar-overlay.active{opacity:1;visibility:visible;}
+
+        /* Main */
+        .main-wrap{margin-left:var(--sidebar-w);min-height:100vh;transition:margin-left .35s cubic-bezier(.4,0,.2,1);}
+        .main-wrap.expanded{margin-left:0;}
+
+        /* Topbar */
+        .topbar{position:sticky;top:0;z-index:100;height:var(--topbar-h);background:rgba(253,251,245,0.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(39,43,0,0.06);display:flex;align-items:center;padding:0 28px;gap:16px;}
+        .topbar-toggle{width:40px;height:40px;border-radius:var(--radius-sm);display:grid;place-items:center;font-size:1.1rem;color:var(--oliva-oscuro);transition:background .2s;flex-shrink:0;}
+        .topbar-toggle:hover{background:rgba(39,43,0,0.06);}
+        .topbar-breadcrumb{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--oliva-medio);flex-wrap:wrap;}
+        .topbar-breadcrumb a{color:var(--oliva-medio);transition:color .2s;}.topbar-breadcrumb a:hover{color:var(--oliva-oscuro);}
+        .topbar-breadcrumb .sep{opacity:.4;}
+        .topbar-breadcrumb .current{color:var(--oliva-oscuro);font-weight:600;}
+        .topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+        .topbar-datetime{text-align:right;margin-right:6px;}
+        .topbar-date{font-size:.72rem;color:var(--oliva-medio);display:block;}
+        .topbar-clock{font-family:'Orbitron',monospace;font-size:1.15rem;font-weight:700;color:var(--oliva-oscuro);letter-spacing:1px;}
+
+        /* Page Content */
+        .page-content{padding:28px 28px 40px;}
+        .page-header{margin-bottom:28px;}
+        .page-header h1{font-family:'Patrick Hand',cursive;font-size:2rem;line-height:1.2;margin-bottom:6px;}
+        .page-header p{font-size:.92rem;color:var(--oliva-medio);max-width:600px;line-height:1.5;}
+
+        /* Carrusel */
+        .carousel-wrap{margin-bottom:28px;border-radius:var(--radius);overflow:hidden;box-shadow:0 4px 20px var(--sombra-md);background:#fff;position:relative;}
+        .carousel-track{display:flex;transition:transform .55s cubic-bezier(.4,0,.2,1);will-change:transform;}
+        .carousel-slide{min-width:100%;position:relative;}
+        .carousel-slide img{width:100%;height:260px;object-fit:cover;display:block;}
+        .carousel-slide-overlay{position:absolute;inset:0;background:linear-gradient(0deg,rgba(39,43,0,0.55) 0%,rgba(39,43,0,0.1) 50%,transparent 100%);display:flex;align-items:flex-end;padding:24px 28px;}
+        .carousel-slide-text h3{font-family:'Patrick Hand',cursive;font-size:1.4rem;color:#fff;margin-bottom:4px;}
+        .carousel-slide-text p{font-size:.85rem;color:rgba(255,255,255,0.8);max-width:500px;line-height:1.4;}
+        .carousel-arrow{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.9);color:var(--oliva-oscuro);display:grid;place-items:center;font-size:.9rem;z-index:5;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,0.15);cursor:pointer;border:none;}
+        .carousel-arrow:hover{background:#fff;transform:translateY(-50%) scale(1.08);}
+        .carousel-arrow.prev{left:14px;}
+        .carousel-arrow.next{right:14px;}
+        .carousel-dots{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:5;}
+        .carousel-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.4);cursor:pointer;transition:all .3s;border:none;padding:0;}
+        .carousel-dot.active{background:#fff;transform:scale(1.25);}
+
+        /* Stats mini */
+        .mini-stats{display:flex;gap:16px;margin-bottom:28px;flex-wrap:wrap;}
+        .mini-stat{background:#fff;border-radius:var(--radius-sm);padding:14px 20px;box-shadow:0 2px 8px var(--sombra);display:flex;align-items:center;gap:12px;flex:1;min-width:150px;}
+        .mini-stat-icon{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:.9rem;}
+        .mini-stat-icon.green{background:rgba(90,97,51,0.1);color:var(--oliva-medio);}
+        .mini-stat-icon.dark{background:rgba(39,43,0,0.07);color:var(--oliva-oscuro);}
+        .mini-stat-icon.light{background:rgba(190,192,146,0.2);color:var(--oliva-claro);}
+        .mini-stat-val{font-family:'Orbitron',monospace;font-size:1.3rem;font-weight:700;line-height:1;}
+        .mini-stat-label{font-size:.72rem;color:var(--oliva-medio);margin-top:2px;}
+
+        /* Activity Grid */
+        .activity-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+        .activity-card{background:#fff;border-radius:var(--radius);padding:24px;box-shadow:0 2px 12px var(--sombra);transition:transform .25s,box-shadow .25s;position:relative;overflow:hidden;opacity:0;transform:translateY(14px);animation:cardIn .45s forwards;}
+        .activity-card:nth-child(1){animation-delay:.05s;}
+        .activity-card:nth-child(2){animation-delay:.1s;}
+        .activity-card:nth-child(3){animation-delay:.15s;}
+        .activity-card:nth-child(4){animation-delay:.2s;}
+        .activity-card:nth-child(5){animation-delay:.25s;}
+        .activity-card:nth-child(6){animation-delay:.3s;}
+        .activity-card:nth-child(7){animation-delay:.35s;}
+        .activity-card:nth-child(8){animation-delay:.4s;}
+        .activity-card:nth-child(9){animation-delay:.45s;}
+        .activity-card:nth-child(10){animation-delay:.5s;}
+        @keyframes cardIn{to{opacity:1;transform:translateY(0);}}
+        @keyframes medalPop{from{opacity:0;transform:scale(.85);}to{opacity:1;transform:scale(1);}}
+        @keyframes medalSpin{from{transform:rotate(-30deg) scale(0);}to{transform:rotate(0) scale(1);}}
+        .activity-card:hover{transform:translateY(-6px);box-shadow:0 10px 28px var(--sombra-md);}
+        .activity-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;}
+        .activity-card:nth-child(1)::before{background:linear-gradient(90deg,#8B7355,#A08B65);}
+        .activity-card:nth-child(2)::before{background:linear-gradient(90deg,#5B7B5E,#7B9B7E);}
+        .activity-card:nth-child(3)::before{background:linear-gradient(90deg,#8B5E5E,#A87A7A);}
+        .activity-card:nth-child(4)::before{background:linear-gradient(90deg,#6B5E8B,#8A7DAA);}
+        .activity-card:nth-child(5)::before{background:linear-gradient(90deg,#A06830,#C08848);}
+        .activity-card:nth-child(6)::before{background:linear-gradient(90deg,#4A6B7B,#6A8B9B);}
+        .activity-card:nth-child(7)::before{background:linear-gradient(90deg,#4B7B52,#6B9B72);}
+        .activity-card:nth-child(8)::before{background:linear-gradient(90deg,#5A4B32,#7A6B52);}
+        .activity-card:nth-child(9)::before{background:linear-gradient(90deg,#7B5E3A,#9B7E5A);}
+        .activity-card:nth-child(10)::before{background:linear-gradient(90deg,#4B5E7B,#6B7E9B);}
+
+        /* Figura decorativa SVG en cada tarjeta */
+        .card-deco{position:absolute;top:-10px;right:-10px;width:120px;height:120px;opacity:.06;pointer-events:none;z-index:0;}
+        .activity-card-top,.activity-status,.activity-bar,.activity-btn{position:relative;z-index:1;}
+
+        /* Iconos con gradiente */
+        .activity-icon{width:56px;height:56px;border-radius:14px;display:grid;place-items:center;font-size:1.35rem;flex-shrink:0;}
+        .icon-g1{background:linear-gradient(135deg,#F5EDE0,#E8D8C0);color:#8B7355;}
+        .icon-g2{background:linear-gradient(135deg,#E0EBE1,#C8DCC9);color:#5B7B5E;}
+        .icon-g3{background:linear-gradient(135deg,#EBE0E0,#DCC8C8);color:#8B5E5E;}
+        .icon-g4{background:linear-gradient(135deg,#E4E0EB,#D0C8DC);color:#6B5E8B;}
+        .icon-g5{background:linear-gradient(135deg,#F0E4D4,#E4D0B8);color:#A06830;}
+        .icon-g6{background:linear-gradient(135deg,#DEE8EC,#C8D8E0);color:#4A6B7B;}
+        .icon-g7{background:linear-gradient(135deg,#E0EBE1,#C8DCC9);color:#4B7B52;}
+        .icon-g8{background:linear-gradient(135deg,#E8E3D8,#D8D0C0);color:#5A4B32;}
+        .icon-g9{background:linear-gradient(135deg,#EDE4D8,#E0D4C0);color:#7B5E3A;}
+        .icon-g10{background:linear-gradient(135deg,#DEE2EB,#C8D0E0);color:#4B5E7B;}
+
+        .activity-card-top{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px;}
+        .activity-info{flex:1;min-width:0;}
+        .activity-info h3{font-family:'Patrick Hand',cursive;font-size:1.2rem;line-height:1.2;margin-bottom:4px;}
+        .activity-info .activity-desc{font-size:.78rem;color:var(--oliva-medio);line-height:1.4;}
+        .activity-status{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;font-weight:600;padding:3px 10px;border-radius:20px;margin-bottom:14px;}
+        .activity-status.not-started{background:var(--oliva-super);color:var(--oliva-claro);}
+        .activity-status.in-progress{background:rgba(90,97,51,0.12);color:var(--oliva-medio);}
+        .activity-status.completed{background:rgba(39,43,0,0.08);color:var(--oliva-oscuro);}
+        .activity-status i{font-size:.6rem;}
+        .activity-bar{width:100%;height:4px;border-radius:2px;background:var(--oliva-super);margin-bottom:14px;overflow:hidden;}
+        .activity-bar-fill{height:100%;border-radius:2px;transition:width .6s ease;}
+        .activity-bar-fill.zero{width:0;background:var(--oliva-claro);}
+        .activity-bar-fill.half{width:50%;background:var(--oliva-medio);}
+        .activity-bar-fill.full{width:100%;background:var(--oliva-oscuro);}
+        .activity-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 20px;border-radius:24px;font-size:.82rem;font-weight:600;transition:all .2s;}
+        .activity-btn.start{background:var(--oliva-oscuro);color:var(--crema);}
+        .activity-btn.start:hover{background:var(--oliva-medio);transform:scale(1.03);}
+        .activity-btn.continue{background:var(--oliva-medio);color:var(--crema);}
+        .activity-btn.continue:hover{background:var(--oliva-oscuro);transform:scale(1.03);}
+        .activity-btn.review{background:transparent;color:var(--oliva-medio);border:1.5px solid var(--oliva-claro);}
+        .activity-btn.review:hover{border-color:var(--oliva-oscuro);color:var(--oliva-oscuro);}
+
+        /* Toast */
+        .toast{position:fixed;bottom:24px;right:24px;background:#fff;padding:14px 20px;border-radius:var(--radius-sm);border-left:4px solid var(--oliva-medio);box-shadow:0 8px 24px var(--sombra-md);z-index:6000;font-size:.88rem;transform:translateY(100px);opacity:0;transition:all .35s ease;max-width:380px;}
+        .toast.show{transform:translateY(0);opacity:1;}
+
+        @media(max-width:1100px){.activity-grid{grid-template-columns:repeat(2,1fr);}}
+        @media(max-width:768px){
+            .sidebar{transform:translateX(calc(-1 * var(--sidebar-w)));}
+            .sidebar.open{transform:translateX(0);}
+            .main-wrap{margin-left:0 !important;}
+            .topbar{padding:0 16px;}
+            .page-content{padding:16px;}
+            .activity-grid{grid-template-columns:1fr;}
+            .mini-stats{flex-direction:column;}
+            .carousel-slide img{height:180px;}
+            .carousel-slide-text h3{font-size:1.1rem;}
+            .carousel-slide-text p{font-size:.78rem;}
+        }
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0s !important;transition-duration:0s !important;}}
+    </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <a href="dashboard.html"><img src="logo.jpeg" alt="Skopia" class="sidebar-logo"></a>
+        <span class="sidebar-username" id="sidebar-username">Cargando...</span>
+        <span class="sidebar-program" id="sidebar-program"></span>
+    </div>
+    <div class="sidebar-search">
+        <div class="sidebar-search-wrap">
+            <i class="fas fa-search"></i>
+            <input type="text" id="sidebar-search" placeholder="Buscar contenido..." aria-label="Buscar contenido">
+        </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav" aria-label="Menú de contenido"></nav>
+    <div class="sidebar-footer">
+        <a href="cuenta.html"><i class="fas fa-user-circle"></i> Mi Cuenta</a>
+        <a href="configuracion.html"><i class="fas fa-cog"></i> Configuración</a>
+        <a href="#" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+    </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<!-- MAIN -->
+<div class="main-wrap" id="main-wrap">
+    <header class="topbar">
+        <button class="topbar-toggle" id="topbar-toggle" aria-label="Abrir menú"><i class="fas fa-bars"></i></button>
+        <div class="topbar-breadcrumb">
+            <a href="dashboard.html">Dashboard</a>
+            <span class="sep"><i class="fas fa-chevron-right" style="font-size:.55rem"></i></span>
+            <a href="#">Competencias Ciudadanas</a>
+            <span class="sep"><i class="fas fa-chevron-right" style="font-size:.55rem"></i></span>
+            <span class="current">Dilemas + Decisiones</span>
+        </div>
+        <div class="topbar-right">
+            <div class="topbar-datetime">
+                <span class="topbar-date" id="top-date"></span>
+                <span class="topbar-clock" id="top-clock">00:00:00</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="page-content">
+        <div class="page-header">
+            <h1>Dilemas + Decisiones</h1>
+            <p>Fortalece tu pensamiento ciudadano enfrentando dilemas morales, debatiendo posturas y tomando decisiones éticas fundamentadas. Cada actividad te acerca a una ciudadanía más consciente.</p>
+        </div>
+
+        <!-- Carrusel de imágenes -->
+        <div class="carousel-wrap" id="carousel">
+            <div class="carousel-track" id="carousel-track">
+                <div class="carousel-slide">
+                    <img src="https://picsum.photos/seed/dilema-etico/900/400.jpg" alt="Dilemas éticos">
+                    <div class="carousel-slide-overlay">
+                        <div class="carousel-slide-text">
+                            <h3>Explora tu brújula moral</h3>
+                            <p>Cada dilema te enfrenta a decisiones sin respuesta única. Aprende a argumentar y reflexionar sobre las consecuencias de tus elecciones.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="carousel-slide">
+                    <img src="https://picsum.photos/seed/debate-ciudadano/900/400.jpg" alt="Debate ciudadano">
+                    <div class="carousel-slide-overlay">
+                        <div class="carousel-slide-text">
+                            <h3>Construye argumentos sólidos</h3>
+                            <p>En los debates simulados practicas la escucha activa, el respeto por opiniones diversas y la fundamentación de tus posturas.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="carousel-slide">
+                    <img src="https://picsum.photos/seed/justicia-social/900/400.jpg" alt="Justicia social">
+                    <div class="carousel-slide-overlay">
+                        <div class="carousel-slide-text">
+                            <h3>Comprende la justicia desde múltiples ángulos</h3>
+                            <p>Los casos reales y simulaciones te permiten vivir la complejidad de la justicia, la equidad y los derechos humanos en contexto.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button class="carousel-arrow prev" id="carousel-prev" aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>
+            <button class="carousel-arrow next" id="carousel-next" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></button>
+            <div class="carousel-dots" id="carousel-dots">
+                <button class="carousel-dot active" data-index="0" aria-label="Slide 1"></button>
+                <button class="carousel-dot" data-index="1" aria-label="Slide 2"></button>
+                <button class="carousel-dot" data-index="2" aria-label="Slide 3"></button>
+            </div>
+        </div>
+
+        <div class="mini-stats">
+            <div class="mini-stat">
+                <div class="mini-stat-icon green"><i class="fas fa-check-circle"></i></div>
+                <div><div class="mini-stat-val" id="ms-done">0</div><div class="mini-stat-label">Completadas</div></div>
+            </div>
+            <div class="mini-stat">
+                <div class="mini-stat-icon dark"><i class="fas fa-spinner"></i></div>
+                <div><div class="mini-stat-val" id="ms-wip">0</div><div class="mini-stat-label">En progreso</div></div>
+            </div>
+            <div class="mini-stat">
+                <div class="mini-stat-icon light"><i class="fas fa-circle"></i></div>
+                <div><div class="mini-stat-val" id="ms-none">0</div><div class="mini-stat-label">Sin iniciar</div></div>
+            </div>
+        </div>
+
+        <div class="activity-grid" id="activity-grid"></div>
+    </div>
+</div>
+
+<!-- Overlay de medallas -->
+<div class="medal-overlay" id="medal-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:5000;display:none;place-items:center;">
+    <div style="background:#fff;border-radius:14px;padding:36px 32px;max-width:380px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:medalPop .4s ease;">
+        <div style="font-size:3.5rem;color:#f9a825;margin-bottom:14px;animation:medalSpin .6s ease .2s both;"><i class="fas fa-medal"></i></div>
+        <h3 style="font-family:'Patrick Hand',cursive;font-size:1.6rem;color:var(--oliva-oscuro);margin-bottom:8px;">Misión Completada</h3>
+        <p id="medal-mission-name" style="font-size:1rem;color:#555;margin-bottom:6px;"></p>
+        <p id="medal-mission-pts" style="font-family:'Orbitron',monospace;font-size:1.3rem;font-weight:700;color:var(--oliva-medio);margin-bottom:22px;"></p>
+        <button id="medal-close-btn" style="background:var(--oliva-oscuro);color:var(--crema);padding:10px 32px;border-radius:24px;font-size:.92rem;font-weight:600;cursor:pointer;border:none;">Gracias</button>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, collection, getDocs, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+const fbConfig={apiKey:"AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",projectId:"skopia-aa786",storageBucket:"skopia-aa786.firebasestorage.app",messagingSenderId:"719823055099",appId:"1:719823055099:web:7d91ea29e4b2dcbb9b685e",authDomain:location.hostname==="localhost"||location.hostname==="127.0.0.1"?"localhost":"skopia-aa786.firebaseapp.com"};
+const app=initializeApp(fbConfig);const auth=getAuth(app);const db=getFirestore(app);
+
+/* === SVGs decorativos para cada tarjeta === */
+const cardDecos = [
+    /* 1. Balanza de justicia */
+    `<svg class="card-deco" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="60" r="50" stroke="currentColor" stroke-width="2" opacity=".3"/><line x1="60" y1="20" x2="60" y2="80" stroke="currentColor" stroke-width="2.5"/><line x1="30" y1="45" x2="90" y2="45" stroke="currentColor" stroke-width="2.5"/><circle cx="30" cy="60" r="14" stroke="currentColor" stroke-width="2"/><circle cx="90" cy="55" r="14" stroke="currentColor" stroke-width="2"/><polygon points="55,80 65,80 60,90" fill="currentColor" opacity=".4"/></svg>`,
+    /* 2. Libro abierto */
+    `<svg class="card-deco" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M60 30 C45 25 25 28 15 32 L15 90 C25 86 45 83 60 88 C75 83 95 86 105 90 L105 32 C95 28 75 25 60 30Z" stroke="currentColor" stroke-width="2"/><line x1="60" y1="30" x2="60" y2="88" stroke="currentColor" stroke-width="2"/><line x1="30" y1="42" x2="50" y2="40" stroke="currentColor" stroke-width="1.5" opacity=".5"/><line x1="30" y1="52" x2="50" y2="50" stroke="currentColor" stroke-width="1.5" opacity=".5"/><line x1="70" y1="40" x2="90" y2="42" stroke="currentColor" stroke-width="1.5" opacity=".5"/><line x1="70" y1="50" x2="90" y2="52" stroke="currentColor" stroke-width="1.5" opacity=".5"/></svg>`,
+    /* 3. Piezas de rompecabezas */
+    `<svg class="card-deco" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M25 25 L50 25 C50 25 50 35 55 35 C60 35 60 25 60 25 L85 25 L85 50 C85 50 75 50 75 55 C75 60 85 60 85 60 L85 85 L60 85 C60 85 60 75 55 75 C50 75 50 85 50 85 L25 85 L25 60 C25 60 35 60 35 55 C35 50 25 50 25 50 Z" stroke="currentColor" stroke-width="2"/></svg>`,
+    /* 4. Signo de interrogación con burbuja */
+    `<svg class="card-deco" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="20" y="25" width="70" height="55" rx="16" stroke="currentColor" stroke-width="2"/><polygon points="40,80 55,80 35,100" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><text x="55" y="65" font-family="Patrick Hand,cursive" font-size="36" fill="currentColor" text-anchor="middle" opacity=".6">?</text></svg>`,
+    /* 5. Llama/antorcha ética */
+    `<svg class="card-deco" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M60 15 C60 15 35 45 35 65 C35 82 46 95 60 95 C74 95 85 82 85 65 C85 45 60 15 60 15Z" stroke="currentColor" stroke-width="2"/><path d="M60 45 C60 45 48 60 48 70 C48 78 53 85 60 85 C67 85 72 78 72 70 C72 60 60 45 60 45Z" stroke="currentColor" stroke-width="1.5" opacity=".5"/><line x1="60" y1="95" x2="60" y2="108" stroke="currentColor" stroke-width="2.5"/><line x1="48" y1="108" x2="72" y2="108" stroke="currentColor" stroke-width="2.5"/></svg>`,
+    /* 6. Lupa con gráfico */
+    `<svg class="card-deco" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="30" stroke="currentColor" stroke-width="2.5"/><line x1="73" y1="73" x2="100" y2="100" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><polyline points="30,65 42,48 55,58 68,35" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".6"/></svg>`,
+    /* 7. Grupo de personas */
+    `<svg class="card-deco" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="60" cy="35" r="12" stroke="currentColor" stroke-width="2"/><circle cx="30" cy="45" r="10" stroke="currentColor" stroke-width="2" opacity=".6"/><circle cx="90" cy="45" r="10" stroke="currentColor" stroke-width="2" opacity=".6"/><path d="M38 70 C38 58 48 52 60 52 C72 52 82 58 82 70 L82 85 L38 85 Z" stroke="currentColor" stroke-width="2"/><path d="M15 78 C15 68 22 63 30 63 C35 63 39 65 42 68" stroke="currentColor" stroke-width="1.5" opacity=".5"/><path d="M105 78 C105 68 98 63 90 63 C85 63 81 65 78 68" stroke="currentColor" stroke-width="1.5" opacity=".5"/></svg>`,
+    /* 8. Martillo de juez */
+    `<svg class="card-deco" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="25" y="30" width="45" height="22" rx="4" stroke="currentColor" stroke-width="2"/><rect x="70" y="35" width="20" height="12" rx="3" stroke="currentColor" stroke-width="2"/><line x1="48" y1="52" x2="48" y2="95" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><line x1="35" y1="95" x2="60" y2="95" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+    /* 9. Burbujas de diálogo */
+    `<svg class="card-deco" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="20" width="65" height="35" rx="12" stroke="currentColor" stroke-width="2"/><polygon points="30,55 40,55 25,70" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="40" y="50" width="60" height="35" rx="12" stroke="currentColor" stroke-width="2" opacity=".6"/><polygon points="80,85 90,85 75,100" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" opacity=".6"/><line x1="25" y1="37" x2="68" y2="37" stroke="currentColor" stroke-width="1.5" opacity=".4"/><line x1="25" y1="45" x2="55" y2="45" stroke="currentColor" stroke-width="1.5" opacity=".3"/></svg>`,
+    /* 10. Urna de votación */
+    `<svg class="card-deco" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="40" width="60" height="55" rx="4" stroke="currentColor" stroke-width="2"/><rect x="25" y="35" width="70" height="10" rx="3" stroke="currentColor" stroke-width="2"/><rect x="48" y="20" width="24" height="20" rx="3" stroke="currentColor" stroke-width="2"/><line x1="60" y1="40" x2="60" y2="25" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 3" opacity=".5"/><polyline points="45,65 55,75 75,55" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/></svg>`
+];
+
+/* === Actividades de esta página === */
+const activities=[
+    {id:'simulador-dilemas-morales',title:'Simulador de dilemas morales',desc:'Enfrenta situaciones éticas complejas donde no hay respuesta única. Toma decisiones y analiza las consecuencias de cada camino.',icon:'fa-scale-balanced',iconClass:'icon-g1',url:'simulador-dilemas-morales.html'},
+    {id:'historias-interactivas',title:'Historias interactivas',desc:'Sumérgete en narrativas ramificadas donde tus elecciones moldean el desenlace y revelan tus valores profundos.',icon:'fa-book-open',iconClass:'icon-g2',url:'historias-interactivas.html'},
+    {id:'reconstruccion-conflictos',title:'Reconstrucción de conflictos',desc:'Analiza situaciones de conflicto desde múltiples perspectivas y reconstruye los hechos para entender la raíz del problema.',icon:'fa-puzzle-piece',iconClass:'icon-g3',url:'reconstruccion-conflictos.html'},
+    {id:'que-harias-tu',title:'¿Qué harías tú?',desc:'Ponte en el lugar de otros y decide qué acción tomarías ante dilemas reales de la vida cotidiana.',icon:'fa-person-questioning',iconClass:'icon-g4',url:'que-harias-tu.html'},
+    {id:'retos-eticos',title:'Retos éticos',desc:'Pon a prueba tu brújula moral con desafíos que cuestionan tus principios y te obligan a justificar tus decisiones.',icon:'fa-fire-flame-curved',iconClass:'icon-g5',url:'retos-eticos.html'},
+    {id:'estudio-casos-reales',title:'Estudio de casos reales',desc:'Examina casos documentados de la realidad colombiana y mundial para extraer lecciones sobre justicia y ciudadanía.',icon:'fa-magnifying-glass-chart',iconClass:'icon-g6',url:'estudio-casos-reales.html'},
+    {id:'simulacion-grupal',title:'Simulación grupal',desc:'Participa en dinámicas simuladas donde debes negociar, persuadir y llegar a consensos con otros actores.',icon:'fa-people-group',iconClass:'icon-g7',url:'simulacion-grupal.html'},
+    {id:'juzgado-ciudadano',title:'Juzgado ciudadano',desc:'Asume el rol de juez, fiscal o defensor en casos simulados y emite veredictos fundamentados en la ley.',icon:'fa-gavel',iconClass:'icon-g8',url:'juzgado-ciudadano.html'},
+    {id:'panel-debate-simulado',title:'Panel de debate simulado',desc:'Defiende una postura en debates estructurados, aprendiendo a argumentar con solidez y respeto.',icon:'fa-comments',iconClass:'icon-g9',url:'panel-debate-simulado.html'},
+    {id:'simulacion-votacion',title:'Simulación de votación',desc:'Experimenta el proceso democrático simulando votaciones, analizando campañas y sus consecuencias.',icon:'fa-check-to-slot',iconClass:'icon-g10',url:'simulacion-votacion.html'}
+];
+
+/* === Menú lateral (idéntico al dashboard) === */
+const menuData=[
+    {group:'Contenido Genérico',icon:'fa-book-open',cats:[
+        {title:'3.1 Razonamiento Cuantitativo',icon:'fa-calculator',subs:[
+            {title:'3.1.1 Prácticas Interactivas',links:[
+                {label:'Laboratorio lógico matemático',url:'lab-logico-matematico.html'},
+                {label:'Razonamiento lógico matemático',url:'razonamiento-logico-matematico.html'},
+                {label:'Laboratorio de análisis gráfico',url:'lab-analisis-grafico-rc.html'}
+            ]},
+            {title:'3.1.2 Prácticas Teóricas',links:[
+                {label:'Aritmética básica',url:'aritmetica-basica.html'},{label:'Porcentajes y Razones',url:'porcentajes-razones.html'},
+                {label:'Álgebra',url:'algebra.html'},{label:'Funciones',url:'funciones.html'},{label:'Geometría',url:'geometria.html'},
+                {label:'Medidas',url:'medidas.html'},{label:'Razonamiento lógico',url:'razonamiento-logico-teoria.html'},
+                {label:'Probabilidad',url:'probabilidad.html'},{label:'Estadística descriptiva',url:'estadistica-descriptiva.html'},
+                {label:'Interpretación de datos',url:'interpretacion-datos.html'}
+            ]}
+        ]},
+        {title:'3.2 Lectura Crítica',icon:'fa-book-reader',subs:[
+            {title:'3.2.1 Prácticas Interactivas',links:[
+                {label:'Biblioteca',url:'biblioteca.html'},{label:'Talleres de escritura y análisis',url:'talleres-escritura-analisis.html'},
+                {label:'Entrenador de velocidad de lectura',url:'velocidad-lectura.html'}
+            ]},
+            {title:'3.2.2 Prácticas Teóricas',links:[
+                {label:'Comprensión literal',url:'comprension-literal.html'},{label:'Comprensión inferencial',url:'comprension-inferencial.html'},
+                {label:'Comprensión crítica',url:'comprension-critica.html'},{label:'Estructura del texto',url:'estructura-texto.html'},
+                {label:'Textos narrativos',url:'textos-narrativos.html'},{label:'Textos expositivos',url:'textos-expositivos.html'},
+                {label:'Textos argumentativos',url:'textos-argumentativos.html'},{label:'Textos científicos',url:'textos-cientificos.html'},
+                {label:'Textos periodísticos',url:'textos-periodisticos.html'},{label:'Análisis intertextual',url:'analisis-intertextual.html'}
+            ]}
+        ]},
+        {title:'3.3 Competencias Ciudadanas',icon:'fa-balance-scale',subs:[
+            {title:'3.3.1 Prácticas Interactivas',links:[
+                {label:'Dilemas + decisiones',url:'dilemas-decisiones.html'},{label:'Contextos sociales',url:'contextos-sociales.html'},
+                {label:'Archivos de casos reales',url:'archivos-casos-reales.html'},{label:'Laboratorio de estrategias',url:'lab-estrategias.html'}
+            ]},
+            {title:'3.3.2 Prácticas Teóricas',links:[
+                {label:'Derechos humanos',url:'derechos-humanos.html'},{label:'Constitución política de Colombia',url:'constitucion-politica.html'},
+                {label:'Democracia',url:'democracia.html'},{label:'Estado y gobierno',url:'estado-gobierno.html'},
+                {label:'Justicia y equidad',url:'justicia-equidad.html'},{label:'Resolución pacífica de conflictos',url:'resolucion-pacifica.html'},
+                {label:'Ética y responsabilidad social',url:'etica-responsabilidad.html'},{label:'Diversidad cultural',url:'diversidad-cultural.html'},
+                {label:'Ciudadanía digital',url:'ciudadania-digital.html'},{label:'Sostenibilidad',url:'sostenibilidad.html'}
+            ]}
+        ]},
+        {title:'3.4 Inglés',icon:'fa-globe',subs:[
+            {title:'3.4.1 Prácticas Interactivas',links:[
+                {label:'Comprensión lectora en inglés',url:'comprension-lectora-ingles.html'},
+                {label:'Vocabulario en contexto',url:'vocabulario-contexto-ingles.html'},{label:'Cohesión en inglés',url:'cohesion-ingles.html'}
+            ]},
+            {title:'3.4.2 Prácticas Teóricas',links:[
+                {label:'Reading comprehension',url:'reading-comprehension.html'},{label:'Vocabulary in context',url:'vocabulary-context.html'},
+                {label:'Grammar',url:'grammar.html'},{label:'Functional language',url:'functional-language.html'},
+                {label:'Connectors and linking words',url:'connectors-linking.html'},{label:'Text types',url:'text-types.html'},
+                {label:'Error identification',url:'error-identification.html'},{label:'Synonym replacement',url:'synonym-replacement.html'},
+                {label:'Everyday situations',url:'everyday-situations.html'},{label:'Academic vocabulary',url:'academic-vocabulary.html'}
+            ]}
+        ]},
+        {title:'3.5 Comunicación Escrita',icon:'fa-pen-fancy',subs:[{title:'Subtemas',links:[
+            {label:'Planteamiento y Argumentación',url:'planteamiento-argumentacion.html'},{label:'Organizar el texto',url:'organizar-texto.html'},
+            {label:'Forma de expresión',url:'forma-expresion.html'},{label:'Precisión Semántica y Claridad',url:'precision-semantica.html'},
+            {label:'Gestión del Tiempo y de la Hoja de Borrador',url:'gestion-tiempo-borrador.html'},{label:'Pertinencia y Enfoque',url:'pertinencia-enfoque.html'}
+        ]}]}
+    ]},
+    {group:'Contenido Específico',icon:'fa-graduation-cap',cats:[
+        {title:'4.1 Administración',icon:'fa-briefcase',subs:[{title:'Subtemas',links:[{label:'Formulación, Evaluación y Gestión de Proyectos',url:'formulacion-gestion-proyectos-admon.html'},{label:'Gestión de organizaciones',url:'gestion-organizaciones.html'},{label:'Gestión Financiera',url:'gestion-financiera-admon.html'}]}]},
+        {title:'4.2 Trabajo Social',icon:'fa-hands-helping',subs:[{title:'Subtemas',links:[{label:'Investigación en ciencias sociales',url:'investigacion-ciencias-sociales-ts.html'},{label:'Intervención en proyectos sociales',url:'intervencion-proyectos-sociales.html'}]}]},
+        {title:'4.3 Licenciatura Educación Infantil',icon:'fa-child',subs:[{title:'Subtemas',links:[{label:'Enseñar',url:'ensenar.html'},{label:'Formar',url:'formar.html'},{label:'Evaluar',url:'evaluar.html'}]}]},
+        {title:'4.4 Psicología',icon:'fa-brain',subs:[{title:'Subtemas',links:[{label:'Análisis de problemas psicológicos',url:'analisis-problemas-psicologicos.html'},{label:'Investigación en ciencias sociales',url:'investigacion-ciencias-sociales-psico.html'},{label:'Intervención en procesos sociales',url:'intervencion-procesos-sociales.html'}]}]},
+        {title:'4.5 Licenciatura Lenguas Extranjeras',icon:'fa-language',note:'Se cubre con Inglés genérico',links:[]},
+        {title:'4.6 Contaduría Pública',icon:'fa-file-invoice-dollar',subs:[{title:'Subtemas',links:[{label:'Información y control contable',url:'informacion-control-contable.html'},{label:'Gestión Financiera',url:'gestion-financiera-contaduria.html'}]}]},
+        {title:'4.7 Ingeniería Industrial',icon:'fa-industry',subs:[{title:'Subtemas',links:[{label:'Formulación de Proyectos de Ingeniería',url:'formulacion-proyectos-ing-industrial.html'},{label:'Diseño de Sistemas Productivos y Logísticos',url:'diseno-sistemas-productivos.html'},{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-industrial.html'}]}]},
+        {title:'4.8 Diseño Gráfico',icon:'fa-palette',subs:[{title:'Subtemas',links:[{label:'Generación de Artefactos',url:'generacion-artefactos.html'}]}]},
+        {title:'4.9 Ingeniería Electrónica',icon:'fa-microchip',subs:[{title:'Subtemas',links:[{label:'Formulación de Proyectos de Ingeniería',url:'formulacion-proyectos-ing-electronica.html'},{label:'Diseño de Sistemas de Control',url:'diseno-sistemas-control.html'},{label:'Pensamiento Científico Ciencias Físicas',url:'pensamiento-cientifico-fisicas.html'},{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-electronica.html'}]}]},
+        {title:'4.10 Tecnología e Informática',icon:'fa-laptop-code',subs:[{title:'Subtemas',links:[{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-ti.html'}]}]},
+        {title:'4.11 Comunicación Social y Periodismo',icon:'fa-newspaper',subs:[{title:'Subtemas',links:[{label:'Procesos comunicativos',url:'procesos-comunicativos.html'}]}]},
+        {title:'4.12 Ingeniería de Sistemas',icon:'fa-server',subs:[{title:'Subtemas',links:[{label:'Formulación de Proyectos de Ingeniería',url:'formulacion-proyectos-ing-sistemas.html'},{label:'Diseño de software',url:'diseno-software.html'},{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-sistemas.html'}]}]}
+    ]}
+];
+
+/* === Render menú === */
+function renderMenu(){
+    const nav=document.getElementById('sidebar-nav');
+    let h='<div class="menu-no-result" id="menu-no-result">Sin resultados</div>';
+    menuData.forEach(g=>{
+        h+=`<div class="menu-group-label"><i class="fas ${g.icon}"></i> ${g.group}</div>`;
+        g.cats.forEach(cat=>{
+            h+=`<div class="menu-cat" data-name="${cat.title.toLowerCase()}"><button class="menu-cat-btn" aria-expanded="false"><i class="cat-icon fas ${cat.icon}"></i><span>${cat.title}</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-cat-children">`;
+            if(cat.note) h+=`<div class="menu-note">${cat.note}</div>`;
+            if(cat.subs) cat.subs.forEach(sub=>{
+                h+=`<div class="menu-sub" data-name="${sub.title.toLowerCase()}"><button class="menu-sub-btn" aria-expanded="false"><span>${sub.title}</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-sub-children">`;
+                if(sub.links) sub.links.forEach(lk=>{
+                    h+=`<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;
+                });
+                h+='</div></div>';
+            });
+            if(cat.links&&cat.links.length) cat.links.forEach(lk=>{h+=`<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;});
+            h+='</div></div>';
+        });
+    });
+    nav.innerHTML=h;
+    nav.querySelectorAll('.menu-cat-btn').forEach(btn=>{btn.addEventListener('click',()=>{const c=btn.parentElement,w=c.classList.contains('open');c.parentElement.querySelectorAll(':scope>.menu-cat.open').forEach(s=>{if(s!==c)s.classList.remove('open');});c.classList.toggle('open',!w);btn.setAttribute('aria-expanded',String(!w));});});
+    nav.querySelectorAll('.menu-sub-btn').forEach(btn=>{btn.addEventListener('click',()=>{const s=btn.parentElement,w=s.classList.contains('open');s.parentElement.querySelectorAll(':scope>.menu-sub.open').forEach(x=>{if(x!==s)x.classList.remove('open');});s.classList.toggle('open',!w);btn.setAttribute('aria-expanded',String(!w));});});
+    /* Marcar link activo de ESTA página */
+    nav.querySelectorAll('.menu-link').forEach(lk=>{if(lk.getAttribute('href')==='dilemas-decisiones.html')lk.classList.add('active');});
+}
+
+/* === Buscar === */
+function initSearch(){const i=document.getElementById('sidebar-search'),nr=document.getElementById('menu-no-result');i.addEventListener('input',()=>{const q=i.value.toLowerCase().trim(),nav=document.getElementById('sidebar-nav'),cats=nav.querySelectorAll('.menu-cat');let any=false;cats.forEach(cat=>{const cn=cat.dataset.name||'';const subs=cat.querySelectorAll('.menu-sub');const dl=cat.querySelectorAll(':scope>.menu-cat-children>.menu-link');let cm=cn.includes(q),sh=false;subs.forEach(sub=>{const sn=sub.dataset.name||'';const lks=sub.querySelectorAll('.menu-link');let sm=sn.includes(q),lv=false;lks.forEach(lk=>{const ln=lk.dataset.name||'';const show=!q||ln.includes(q)||sm||cm;lk.classList.toggle('hidden',!show);if(show)lv=true;});sub.classList.toggle('hidden',!lv&&!sm&&!cm&&q);if(sm||lv)sh=true;if(sm||lv)sub.classList.add('open');else sub.classList.remove('open');});dl.forEach(lk=>{const ln=lk.dataset.name||'';const show=!q||ln.includes(q)||cm;lk.classList.toggle('hidden',!show);if(show)sh=true;});cat.classList.toggle('hidden',!sh&&!cm&&q);if(cm||sh)any=true;if(cm||sh)cat.classList.add('open');});nr.classList.toggle('show',!any&&q.length>0);});}
+
+/* === Sidebar toggle === */
+function initSidebar(){const sb=document.getElementById('sidebar'),ov=document.getElementById('sidebar-overlay'),tg=document.getElementById('topbar-toggle'),mw=document.getElementById('main-wrap'),mob=()=>window.innerWidth<=768;function open(){if(mob()){sb.classList.add('open');ov.classList.add('active');}else{sb.classList.remove('collapsed');mw.classList.remove('expanded');}}function close(){if(mob()){sb.classList.remove('open');ov.classList.remove('active');}else{sb.classList.add('collapsed');mw.classList.add('expanded');}}tg.addEventListener('click',()=>{const o=mob()?sb.classList.contains('open'):!sb.classList.contains('collapsed');o?close():open();});ov.addEventListener('click',close);if(!mob())sb.classList.remove('collapsed');window.addEventListener('resize',()=>{if(!mob()){ov.classList.remove('active');sb.classList.remove('open');}});}
+
+/* === Reloj === */
+function updateClock(){const n=new Date(),h=String(n.getHours()).padStart(2,'0'),m=String(n.getMinutes()).padStart(2,'0'),s=String(n.getSeconds()).padStart(2,'0');document.getElementById('top-clock').textContent=`${h}:${m}:${s}`;const d=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],me=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];document.getElementById('top-date').textContent=`${d[n.getDay()]}, ${n.getDate()} ${me[n.getMonth()]}`;}
+
+/* === Carrusel === */
+function initCarousel(){
+    const track=document.getElementById('carousel-track');
+    const dots=document.querySelectorAll('.carousel-dot');
+    const prevBtn=document.getElementById('carousel-prev');
+    const nextBtn=document.getElementById('carousel-next');
+    let current=0;
+    const total=3;
+    let autoTimer;
+
+    function goTo(index){
+        current=((index%total)+total)%total;
+        track.style.transform=`translateX(-${current*100}%)`;
+        dots.forEach((d,i)=>d.classList.toggle('active',i===current));
+    }
+
+    function startAuto(){autoTimer=setInterval(()=>goTo(current+1),5000);}
+    function stopAuto(){clearInterval(autoTimer);}
+
+    prevBtn.addEventListener('click',()=>{stopAuto();goTo(current-1);startAuto();});
+    nextBtn.addEventListener('click',()=>{stopAuto();goTo(current+1);startAuto();});
+    dots.forEach(d=>d.addEventListener('click',()=>{stopAuto();goTo(parseInt(d.dataset.index));startAuto();}));
+
+    /* Pausar al pasar el mouse */
+    const wrap=document.getElementById('carousel');
+    wrap.addEventListener('mouseenter',stopAuto);
+    wrap.addEventListener('mouseleave',startAuto);
+
+    /* Soporte táctil */
+    let touchStartX=0;
+    wrap.addEventListener('touchstart',e=>{touchStartX=e.touches[0].clientX;stopAuto();},{passive:true});
+    wrap.addEventListener('touchend',e=>{const diff=touchStartX-e.changedTouches[0].clientX;if(Math.abs(diff)>50){diff>0?goTo(current+1):goTo(current-1);}startAuto();},{passive:true});
+
+    startAuto();
+}
+
+/* === Renderizar actividades === */
+function renderActivities(progressMap={}){
+    const grid=document.getElementById('activity-grid');
+    let done=0,wip=0,none=0;
+    grid.innerHTML=activities.map((a,i)=>{
+        const st=progressMap[a.id]||'not_started';
+        if(st==='completed')done++;else if(st==='in_progress')wip++;else none++;
+        const statusClass=st==='completed'?'completed':st==='in_progress'?'in-progress':'not-started';
+        const statusLabel=st==='completed'?'Completada':st==='in_progress'?'En progreso':'Sin iniciar';
+        const statusIcon=st==='completed'?'fa-check':st==='in_progress'?'fa-circle-half-stroke':'fa-circle';
+        const barClass=st==='completed'?'full':st==='in_progress'?'half':'zero';
+        const btnClass=st==='completed'?'review':st==='in_progress'?'continue':'start';
+        const btnLabel=st==='completed'?'Repasar':st==='in_progress'?'Continuar':'Iniciar';
+        const btnIcon=st==='completed'?'fa-eye':st==='in_progress'?'fa-play':'fa-arrow-right';
+        return `<div class="activity-card">
+            ${cardDecos[i]}
+            <div class="activity-card-top">
+                <div class="activity-icon ${a.iconClass}"><i class="fas ${a.icon}"></i></div>
+                <div class="activity-info"><h3>${a.title}</h3><p class="activity-desc">${a.desc}</p></div>
+            </div>
+            <div class="activity-status ${statusClass}"><i class="fas ${statusIcon}"></i> ${statusLabel}</div>
+            <div class="activity-bar"><div class="activity-bar-fill ${barClass}"></div></div>
+            <a href="${a.url}" class="activity-btn ${btnClass}"><i class="fas ${btnIcon}"></i> ${btnLabel}</a>
+        </div>`;
+    }).join('');
+    document.getElementById('ms-done').textContent=done;
+    document.getElementById('ms-wip').textContent=wip;
+    document.getElementById('ms-none').textContent=none;
+}
+
+/* ============================================================
+   SISTEMA DE MISIONES DE RESPALDO (DILEMAS + DECISIONES)
+   Verifica misiones que los juegos individuales podrían no haber
+   registrado por bug, y las completa con medalla individual.
+   NOTA: Solo suma los pts de la misión misma, NO los pts de preguntas.
+   ============================================================ */
+const DD_MISSION_NAMES = {
+    9:  "Acumula tus primeras 200 estrellas",
+    10: "Completa 3 misiones seguidas",
+    13: "Gana 3 juegos distintos",
+    17: "Obtén 500 estrellas acumuladas",
+    23: "Termina 5 juegos de práctica",
+    26: "Suma 1000 estrellas totales",
+    45: "Completa todos los juegos de Dilemas + Decisiones",
+    36: "Obtén 2000 estrellas acumuladas",
+    39: "Completa 10 misiones seguidas sin fallar",
+    43: "Consigue 3000 estrellas",
+    44: "Estudia 10 días seguidos"
+};
+
+let _medalQueue = [];
+
+function _showNextMedal() {
+    const overlay = document.getElementById('medal-overlay');
+    if (!overlay) return;
+    if (!_medalQueue.length) {
+        overlay.style.display = 'none';
+        return;
+    }
+    const m = _medalQueue[0];
+    document.getElementById('medal-mission-name').textContent = m.name;
+    document.getElementById('medal-mission-pts').textContent = `+${m.pts} puntos`;
+    overlay.style.display = 'grid';
+}
+
+async function checkDDMissionsBackup(uid) {
+    if (!uid) return;
+    try {
+        const statsSnap = await getDoc(doc(db, 'users', uid, 'stats', 'main'));
+        const stats = statsSnap.exists() ? statsSnap.data() : {};
+        const totalStars = stats.totalStars || 0;
+        const totalMissionsCompleted = stats.totalMissionsCompleted || 0;
+        const currentStreak = stats.currentStreak || 0;
+        const consecutiveSuccesses = stats.consecutiveSuccesses || 0;
+
+        const missionsSnap = await getDocs(collection(db, 'users', uid, 'missions'));
+        const completed = {};
+        missionsSnap.forEach(d => { if (d.data().completed) completed[d.id] = true; });
+
+        const progressSnap = await getDocs(collection(db, 'users', uid, 'progress'));
+        const progressMap = {};
+        progressSnap.forEach(d => { progressMap[d.id] = d.data().status || 'not_started'; });
+
+        /* Juegos de ESTE módulo: Dilemas + Decisiones */
+        const DD_GAMES = [
+            'simulador-dilemas-morales', 'historias-interactivas', 'reconstruccion-conflictos',
+            'que-harias-tu', 'retos-eticos', 'estudio-casos-reales',
+            'simulacion-grupal', 'juzgado-ciudadano', 'panel-debate-simulado', 'simulacion-votacion'
+        ];
+
+        const ddCompletedCount = DD_GAMES.filter(g => progressMap[g] === 'completed').length;
+        const allCompletedGames = Object.values(progressMap).filter(s => s === 'completed').length;
+
+        const DD_MISSIONS = [
+            { id: 9,  check: () => totalStars >= 200,                    pts: 30  },
+            { id: 10, check: () => consecutiveSuccesses >= 3,            pts: 50  },
+            { id: 13, check: () => allCompletedGames >= 3,               pts: 60  },
+            { id: 17, check: () => totalStars >= 500,                    pts: 50  },
+            { id: 23, check: () => allCompletedGames >= 5,               pts: 50  },
+            { id: 26, check: () => totalStars >= 1000,                   pts: 50  },
+            { id: 45, check: () => ddCompletedCount >= 10,               pts: 100 },
+            { id: 36, check: () => totalStars >= 2000,                   pts: 60  },
+            { id: 39, check: () => consecutiveSuccesses >= 10,           pts: 100 },
+            { id: 43, check: () => totalStars >= 3000,                   pts: 120 },
+            { id: 44, check: () => currentStreak >= 10,                  pts: 130 }
+        ];
+
+        _medalQueue = [];
+        let totalMissionPts = 0;
+
+        for (const m of DD_MISSIONS) {
+            const missionKey = `mission_${m.id}`;
+            if (!completed[missionKey] && m.check()) {
+                completed[missionKey] = true;
+                totalMissionPts += m.pts;
+                _medalQueue.push({
+                    name: DD_MISSION_NAMES[m.id] || `Misión ${m.id}`,
+                    pts: m.pts
+                });
+                await setDoc(doc(db, 'users', uid, 'missions', missionKey), {
+                    completed: true,
+                    completedAt: serverTimestamp(),
+                    source: 'dd-backup'
+                });
+            }
+        }
+
+        if (_medalQueue.length > 0) {
+            await setDoc(doc(db, 'users', uid, 'stats', 'main'), {
+                totalStars: totalStars + totalMissionPts,
+                totalMissionsCompleted: totalMissionsCompleted + _medalQueue.length
+            }, { merge: true });
+            _showNextMedal();
+        }
+    } catch (e) {
+        console.warn('Error en checkDDMissionsBackup:', e);
+    }
+}
+
+/* Botón de cerrar medalla */
+document.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'medal-close-btn') {
+        _medalQueue.shift();
+        _showNextMedal();
+    }
+});
+
+/* === Cargar progreso de Firebase === */
+async function loadProgress(uid){
+    const progressMap={};
+    try{
+        const snap=await getDocs(collection(db,'users',uid,'progress'));
+        snap.forEach(d=>{
+            const id=d.id;
+            if(activities.find(a=>a.id===id)){
+                progressMap[id]=d.data().status||'not_started';
+            }
+        });
+    }catch(e){console.warn('Progress no disponible');}
+    renderActivities(progressMap);
+}
+
+/* === Init === */
+onAuthStateChanged(auth,async(user)=>{
+    if(!user){window.location.href='index.html';return;}
+    document.getElementById('sidebar-username').textContent=user.displayName||'Estudiante';
+    try{const s=await getDoc(doc(db,'users',user.uid,'profile','main'));if(s.exists()){const d=s.data();document.getElementById('sidebar-program').textContent=d.program||'';}}catch(e){}
+    await loadProgress(user.uid);
+    /* RESPALDO DE MISIONES específico de Dilemas + Decisiones */
+    await checkDDMissionsBackup(user.uid);
+    document.getElementById('logout-btn').addEventListener('click',e=>{e.preventDefault();signOut(auth).then(()=>window.location.href='index.html');});
+});
+
+renderMenu();initSearch();initSidebar();initCarousel();
+updateClock();setInterval(updateClock,1000);
+/* Si no hay Firebase, renderizar vacío */
+renderActivities();
+</script>
+</body>
+</html>
