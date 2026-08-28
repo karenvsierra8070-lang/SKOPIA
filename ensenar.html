@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enseñar - Licenciatura Educación Infantil - Skopia</title>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root{
+            --crema:#fdfbf5;--crema-mid:#f5f0e3;
+            --oliva-oscuro:#272b00;--oliva-medio:#5a6133;
+            --oliva-claro:#bec092;--oliva-palido:#d4d6b0;
+            --oliva-super:#e8e9d4;
+            --sombra:rgba(39,43,0,0.08);--sombra-md:rgba(39,43,0,0.12);
+            --sidebar-w:310px;--topbar-h:72px;--radius:14px;--radius-sm:8px;
+        }
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+        html{scroll-behavior:smooth;}
+        body{font-family:'Roboto',sans-serif;background:var(--crema);color:var(--oliva-oscuro);min-height:100vh;overflow-x:hidden;
+            background-image:radial-gradient(ellipse at 10% 20%,rgba(190,192,146,0.18) 0%,transparent 50%),radial-gradient(ellipse at 90% 80%,rgba(90,97,51,0.1) 0%,transparent 50%);}
+        a{text-decoration:none;color:inherit;}button{cursor:pointer;border:none;background:none;font-family:inherit;}ul{list-style:none;}input{font-family:inherit;}
+
+        .sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--oliva-oscuro);color:var(--crema);display:flex;flex-direction:column;z-index:900;transition:transform .35s cubic-bezier(.4,0,.2,1);overflow:hidden;}
+        .sidebar.collapsed{transform:translateX(calc(-1 * var(--sidebar-w)));}
+        .sidebar-header{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;}
+        .sidebar-logo{width:48px;height:48px;border-radius:50%;object-fit:cover;margin-bottom:8px;border:2px solid var(--oliva-claro);}
+        .sidebar-username{font-family:'Patrick Hand',cursive;font-size:1.25rem;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .sidebar-program{font-size:.75rem;color:var(--oliva-claro);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .sidebar-search{padding:12px 14px;flex-shrink:0;}
+        .sidebar-search input{width:100%;padding:9px 12px 9px 34px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.06);color:var(--crema);font-size:.85rem;outline:none;transition:border .2s;}
+        .sidebar-search input::placeholder{color:rgba(255,255,255,0.35);}
+        .sidebar-search input:focus{border-color:var(--oliva-claro);}
+        .sidebar-search-wrap{position:relative;}
+        .sidebar-search-wrap i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.3);font-size:.8rem;}
+        .sidebar-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 0;scrollbar-width:thin;scrollbar-color:var(--oliva-medio) transparent;}
+        .sidebar-nav::-webkit-scrollbar{width:5px;}.sidebar-nav::-webkit-scrollbar-thumb{background:var(--oliva-medio);border-radius:3px;}
+        .menu-group-label{padding:14px 18px 6px;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--oliva-claro);display:flex;align-items:center;gap:8px;}
+        .menu-group-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.08);}
+        .menu-cat{user-select:none;}
+        .menu-cat-btn{width:100%;padding:10px 18px;display:flex;align-items:center;gap:10px;font-size:.88rem;font-weight:600;color:var(--crema);transition:background .2s;text-align:left;}
+        .menu-cat-btn:hover{background:rgba(255,255,255,0.06);}
+        .menu-cat-btn i.cat-icon{width:18px;text-align:center;font-size:.82rem;color:var(--oliva-claro);}
+        .menu-cat-btn .chevron{margin-left:auto;font-size:.6rem;transition:transform .25s;color:var(--oliva-claro);}
+        .menu-cat.open>.menu-cat-btn .chevron{transform:rotate(90deg);}
+        .menu-cat-children{max-height:0;overflow:hidden;transition:max-height .35s ease;}
+        .menu-cat.open>.menu-cat-children{max-height:2000px;}
+        .menu-sub{user-select:none;}
+        .menu-sub-btn{width:100%;padding:8px 18px 8px 44px;display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:500;color:rgba(253,251,245,0.75);transition:all .2s;text-align:left;}
+        .menu-sub-btn:hover{color:var(--crema);background:rgba(255,255,255,0.04);}
+        .menu-sub-btn .chevron{margin-left:auto;font-size:.55rem;transition:transform .25s;opacity:.5;}
+        .menu-sub.open>.menu-sub-btn .chevron{transform:rotate(90deg);opacity:1;}
+        .menu-sub-children{max-height:0;overflow:hidden;transition:max-height .3s ease;}
+        .menu-sub.open>.menu-sub-children{max-height:800px;}
+        .menu-link{display:block;padding:7px 18px 7px 62px;font-size:.78rem;color:rgba(253,251,245,0.55);transition:all .2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .menu-link:hover{color:var(--crema);background:rgba(255,255,255,0.06);padding-left:68px;}
+        .menu-link::before{content:'›';margin-right:6px;color:var(--oliva-claro);font-weight:700;}
+        .menu-link.active{color:#fff;background:rgba(255,255,255,0.1);padding-left:68px;}
+        .menu-link.hidden,.menu-cat.hidden,.menu-sub.hidden{display:none;}
+        .menu-note{padding:8px 18px 8px 44px;font-size:.72rem;color:rgba(253,251,245,0.35);font-style:italic;}
+        .menu-no-result{padding:20px 18px;text-align:center;font-size:.8rem;color:rgba(255,255,255,0.3);display:none;}
+        .menu-no-result.show{display:block;}
+        .sidebar-footer{flex-shrink:0;padding:10px 0;border-top:1px solid rgba(255,255,255,0.08);}
+        .sidebar-footer a{display:flex;align-items:center;gap:10px;padding:9px 18px;font-size:.82rem;color:rgba(253,251,245,0.6);transition:all .2s;}
+        .sidebar-footer a:hover{color:var(--crema);background:rgba(255,255,255,0.06);}
+        .sidebar-footer a i{width:18px;text-align:center;font-size:.85rem;}
+        .sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:899;opacity:0;visibility:hidden;transition:all .3s;}
+        .sidebar-overlay.active{opacity:1;visibility:visible;}
+
+        .main-wrap{margin-left:var(--sidebar-w);min-height:100vh;transition:margin-left .35s cubic-bezier(.4,0,.2,1);}
+        .main-wrap.expanded{margin-left:0;}
+
+        .topbar{position:sticky;top:0;z-index:100;height:var(--topbar-h);background:rgba(253,251,245,0.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(39,43,0,0.06);display:flex;align-items:center;padding:0 28px;gap:16px;}
+        .topbar-toggle{width:40px;height:40px;border-radius:var(--radius-sm);display:grid;place-items:center;font-size:1.1rem;color:var(--oliva-oscuro);transition:background .2s;flex-shrink:0;}
+        .topbar-toggle:hover{background:rgba(39,43,0,0.06);}
+        .topbar-breadcrumb{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--oliva-medio);flex-wrap:wrap;}
+        .topbar-breadcrumb a{color:var(--oliva-medio);transition:color .2s;}.topbar-breadcrumb a:hover{color:var(--oliva-oscuro);}
+        .topbar-breadcrumb .sep{opacity:.4;}
+        .topbar-breadcrumb .current{color:var(--oliva-oscuro);font-weight:600;}
+        .topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+        .topbar-datetime{text-align:right;margin-right:6px;}
+        .topbar-date{font-size:.72rem;color:var(--oliva-medio);display:block;}
+        .topbar-clock{font-family:'Orbitron',monospace;font-size:1.15rem;font-weight:700;color:var(--oliva-oscuro);letter-spacing:1px;}
+
+        .page-content{padding:28px 28px 40px;}
+        .page-header{margin-bottom:28px;display:flex;align-items:flex-start;gap:20px;}
+        .page-header-icon{width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#9d174d,#db2777);display:grid;place-items:center;font-size:1.6rem;color:#fff;flex-shrink:0;box-shadow:0 4px 16px rgba(157,23,77,0.3);}
+        .page-header-text h1{font-family:'Patrick Hand',cursive;font-size:2rem;line-height:1.2;margin-bottom:6px;}
+        .page-header-text p{font-size:.92rem;color:var(--oliva-medio);max-width:640px;line-height:1.5;}
+
+        .mini-stats{display:flex;gap:16px;margin-bottom:28px;flex-wrap:wrap;}
+        .mini-stat{background:#fff;border-radius:var(--radius-sm);padding:14px 20px;box-shadow:0 2px 8px var(--sombra);display:flex;align-items:center;gap:12px;flex:1;min-width:150px;}
+        .mini-stat-icon{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:.9rem;}
+        .mini-stat-icon.green{background:rgba(90,97,51,0.1);color:var(--oliva-medio);}
+        .mini-stat-icon.dark{background:rgba(39,43,0,0.07);color:var(--oliva-oscuro);}
+        .mini-stat-icon.light{background:rgba(190,192,146,0.2);color:var(--oliva-claro);}
+        .mini-stat-val{font-family:'Orbitron',monospace;font-size:1.3rem;font-weight:700;line-height:1;}
+        .mini-stat-label{font-size:.72rem;color:var(--oliva-medio);margin-top:2px;}
+
+        /* =============================================
+           DISEÑO 7: PIZARRA ESCOLAR / AULA
+           Tarjetas con borde superior grueso,
+           cinta adhesiva decorativa, fondo tiza
+           y tipografía tipo pizarrón
+           ============================================= */
+        .activity-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+
+        .activity-card{
+            background:#fff;
+            border-radius:var(--radius);
+            padding:0;
+            box-shadow:0 2px 12px var(--sombra);
+            transition:transform .28s cubic-bezier(.4,0,.2,1),box-shadow .28s;
+            position:relative;
+            overflow:visible;
+            opacity:0;transform:translateY(16px);
+            animation:cardIn .5s forwards;
+        }
+        .activity-card:nth-child(1){animation-delay:.04s;}
+        .activity-card:nth-child(2){animation-delay:.09s;}
+        .activity-card:nth-child(3){animation-delay:.14s;}
+        .activity-card:nth-child(4){animation-delay:.19s;}
+        .activity-card:nth-child(5){animation-delay:.24s;}
+        .activity-card:nth-child(6){animation-delay:.29s;}
+        .activity-card:nth-child(7){animation-delay:.34s;}
+        @keyframes cardIn{to{opacity:1;transform:translateY(0);}}
+        @keyframes medalPop{from{opacity:0;transform:scale(.85);}to{opacity:1;transform:scale(1);}}
+        @keyframes medalSpin{from{transform:rotate(-30deg) scale(0);}to{transform:rotate(0) scale(1);}}
+        .activity-card:hover{transform:translateY(-7px);box-shadow:0 14px 36px var(--sombra-md);}
+
+        /* Borde superior grueso de color */
+        .card-top-border{height:6px;border-radius:var(--radius) var(--radius) 0 0;}
+        .card-top-border.cb1{background:linear-gradient(90deg,#9d174d,#ec4899);}
+        .card-top-border.cb2{background:linear-gradient(90deg,#b45309,#fbbf24);}
+        .card-top-border.cb3{background:linear-gradient(90deg,#1e40af,#60a5fa);}
+        .card-top-border.cb4{background:linear-gradient(90deg,#065f46,#34d399);}
+        .card-top-border.cb5{background:linear-gradient(90deg,#7e22ce,#a78bfa);}
+        .card-top-border.cb6{background:linear-gradient(90deg,#0369a1,#38bdf8);}
+        .card-top-border.cb7{background:linear-gradient(90deg,#b91c1c,#f87171);}
+
+        /* Cinta adhesiva decorativa */
+        .tape{
+            position:absolute;
+            top:-8px;
+            left:50%;
+            transform:translateX(-50%) rotate(-2deg);
+            width:72px;height:22px;
+            background:rgba(255,235,180,0.7);
+            border:1px solid rgba(200,180,120,0.3);
+            border-radius:2px;
+            z-index:5;
+            box-shadow:0 1px 3px rgba(0,0,0,0.06);
+        }
+        .tape::after{
+            content:'';position:absolute;inset:3px;
+            background:repeating-linear-gradient(90deg,transparent,transparent 3px,rgba(255,255,255,0.35) 3px,rgba(255,255,255,0.35) 5px);
+            border-radius:1px;
+        }
+        .activity-card:nth-child(even) .tape{transform:translateX(-50%) rotate(1.5deg);}
+        .activity-card:nth-child(3n) .tape{transform:translateX(-50%) rotate(-3deg);}
+
+        /* Zona tipo pizarrón */
+        .chalkboard{
+            margin:0 16px;
+            padding:18px 18px 16px;
+            background:linear-gradient(170deg,#2d3a1e 0%,#3a4a28 40%,#354525 100%);
+            border-radius:0 0 10px 10px;
+            position:relative;
+            overflow:hidden;
+        }
+        /* Textura de tiza */
+        .chalkboard::before{
+            content:'';position:absolute;inset:0;
+            background-image:
+                radial-gradient(ellipse at 20% 30%,rgba(255,255,255,0.04) 0%,transparent 50%),
+                radial-gradient(ellipse at 80% 70%,rgba(255,255,255,0.03) 0%,transparent 40%);
+            pointer-events:none;z-index:0;
+        }
+        /* Borde inferior de madera */
+        .chalkboard::after{
+            content:'';position:absolute;bottom:0;left:0;right:0;height:4px;
+            background:linear-gradient(90deg,#8B6914,#A67C1A,#8B6914);
+            border-radius:0 0 10px 10px;z-index:1;
+        }
+
+        .chalkboard>*{position:relative;z-index:2;}
+
+        /* Icono en círculo tipo tiza */
+        .chalk-icon{
+            width:44px;height:44px;border-radius:50%;
+            display:grid;place-items:center;
+            font-size:1.05rem;color:#fff;
+            margin:0 auto 14px;
+            border:2px solid rgba(255,255,255,0.25);
+            background:rgba(255,255,255,0.08);
+            backdrop-filter:blur(2px);
+            transition:transform .3s,background .3s;
+        }
+        .activity-card:hover .chalk-icon{transform:scale(1.1);background:rgba(255,255,255,0.15);}
+
+        .chalkboard h3{
+            font-family:'Patrick Hand',cursive;
+            font-size:1.12rem;color:#fff;text-align:center;
+            line-height:1.25;margin-bottom:8px;
+            text-shadow:0 1px 3px rgba(0,0,0,0.3);
+        }
+        .chalkboard .activity-desc{
+            font-size:.73rem;color:rgba(255,255,255,0.6);text-align:center;
+            line-height:1.5;margin-bottom:14px;min-height:36px;
+            display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+        }
+
+        /* Estado y barra sobre fondo oscuro */
+        .activity-status{display:inline-flex;align-items:center;gap:5px;font-size:.66rem;font-weight:600;padding:3px 10px;border-radius:20px;margin-bottom:8px;}
+        .activity-status.not-started{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.5);}
+        .activity-status.in-progress{background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.75);}
+        .activity-status.completed{background:rgba(255,255,255,0.2);color:#fff;}
+        .activity-status i{font-size:.55rem;}
+        .status-wrap{text-align:center;}
+
+        .activity-bar{width:100%;height:3px;border-radius:2px;background:rgba(255,255,255,0.1);margin-bottom:12px;overflow:hidden;}
+        .activity-bar-fill{height:100%;border-radius:2px;transition:width .6s ease;}
+        .activity-bar-fill.zero{width:0;background:rgba(255,255,255,0.3);}
+        .activity-bar-fill.half{width:50%;background:rgba(255,255,255,0.55);}
+        .activity-bar-fill.full{width:100%;background:rgba(255,255,255,0.8);}
+
+        /* Área blanca inferior para el botón */
+        .card-bottom{
+            margin:0 16px 16px;
+            padding:12px 18px 14px;
+            background:#fff;
+            border-radius:0 0 var(--radius) var(--radius);
+            display:flex;align-items:center;justify-content:space-between;
+        }
+        .activity-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:24px;font-size:.8rem;font-weight:600;transition:all .22s;}
+        .activity-btn.start{background:var(--oliva-oscuro);color:var(--crema);}
+        .activity-btn.start:hover{background:var(--oliva-medio);transform:scale(1.04);}
+        .activity-btn.continue{background:var(--oliva-medio);color:var(--crema);}
+        .activity-btn.continue:hover{background:var(--oliva-oscuro);transform:scale(1.04);}
+        .activity-btn.review{background:transparent;color:var(--oliva-medio);border:1.5px solid var(--oliva-claro);}
+        .activity-btn.review:hover{border-color:var(--oliva-oscuro);color:var(--oliva-oscuro);}
+
+        /* Etiqueta temática */
+        .topic-tag{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;padding:3px 10px;border-radius:8px;white-space:nowrap;}
+        .topic-tag.tt1{background:rgba(157,23,77,0.08);color:#9d174d;}
+        .topic-tag.tt2{background:rgba(180,83,9,0.08);color:#b45309;}
+        .topic-tag.tt3{background:rgba(30,64,175,0.08);color:#1e40af;}
+        .topic-tag.tt4{background:rgba(6,95,70,0.08);color:#065f46;}
+        .topic-tag.tt5{background:rgba(126,34,206,0.08);color:#7e22ce;}
+        .topic-tag.tt6{background:rgba(3,105,161,0.08);color:#0369a1;}
+        .topic-tag.tt7{background:rgba(185,28,28,0.08);color:#b91c1c;}
+
+        .toast{position:fixed;bottom:24px;right:24px;background:#fff;padding:14px 20px;border-radius:var(--radius-sm);border-left:4px solid var(--oliva-medio);box-shadow:0 8px 24px var(--sombra-md);z-index:6000;font-size:.88rem;transform:translateY(100px);opacity:0;transition:all .35s ease;max-width:380px;}
+        .toast.show{transform:translateY(0);opacity:1;}
+
+        @media(max-width:1100px){.activity-grid{grid-template-columns:repeat(2,1fr);}}
+        @media(max-width:768px){
+            .sidebar{transform:translateX(calc(-1 * var(--sidebar-w)));}
+            .sidebar.open{transform:translateX(0);}
+            .main-wrap{margin-left:0 !important;}
+            .topbar{padding:0 16px;}
+            .page-content{padding:16px;}
+            .activity-grid{grid-template-columns:1fr;}
+            .mini-stats{flex-direction:column;}
+            .page-header{flex-direction:column;gap:12px;}
+        }
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0s !important;transition-duration:0s !important;}}
+    </style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <a href="dashboard.html"><img src="logo.jpeg" alt="Skopia" class="sidebar-logo"></a>
+        <span class="sidebar-username" id="sidebar-username">Cargando...</span>
+        <span class="sidebar-program" id="sidebar-program"></span>
+    </div>
+    <div class="sidebar-search">
+        <div class="sidebar-search-wrap">
+            <i class="fas fa-search"></i>
+            <input type="text" id="sidebar-search" placeholder="Buscar contenido..." aria-label="Buscar contenido">
+        </div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav" aria-label="Menú de contenido"></nav>
+    <div class="sidebar-footer">
+        <a href="cuenta.html"><i class="fas fa-user-circle"></i> Mi Cuenta</a>
+        <a href="configuracion.html"><i class="fas fa-cog"></i> Configuración</a>
+        <a href="#" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+    </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<div class="main-wrap" id="main-wrap">
+    <header class="topbar">
+        <button class="topbar-toggle" id="topbar-toggle" aria-label="Abrir menú"><i class="fas fa-bars"></i></button>
+        <div class="topbar-breadcrumb">
+            <a href="dashboard.html">Dashboard</a>
+            <span class="sep"><i class="fas fa-chevron-right" style="font-size:.55rem"></i></span>
+            <a href="#">Lic. Educación Infantil</a>
+            <span class="sep"><i class="fas fa-chevron-right" style="font-size:.55rem"></i></span>
+            <span class="current">Enseñar</span>
+        </div>
+        <div class="topbar-right">
+            <div class="topbar-datetime">
+                <span class="topbar-date" id="top-date"></span>
+                <span class="topbar-clock" id="top-clock">00:00:00</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="page-content">
+        <div class="page-header">
+            <div class="page-header-icon"><i class="fas fa-chalkboard-user"></i></div>
+            <div class="page-header-text">
+                <h1>Enseñar</h1>
+                <p>Construye tu identidad como docente: domina teorías pedagógicas, diseña clases efectivas y aprende a gestionar el aula con sentido formativo.</p>
+            </div>
+        </div>
+
+        <div class="mini-stats">
+            <div class="mini-stat">
+                <div class="mini-stat-icon green"><i class="fas fa-check-circle"></i></div>
+                <div><div class="mini-stat-val" id="ms-done">0</div><div class="mini-stat-label">Completadas</div></div>
+            </div>
+            <div class="mini-stat">
+                <div class="mini-stat-icon dark"><i class="fas fa-spinner"></i></div>
+                <div><div class="mini-stat-val" id="ms-wip">0</div><div class="mini-stat-label">En progreso</div></div>
+            </div>
+            <div class="mini-stat">
+                <div class="mini-stat-icon light"><i class="fas fa-circle"></i></div>
+                <div><div class="mini-stat-val" id="ms-none">0</div><div class="mini-stat-label">Sin iniciar</div></div>
+            </div>
+        </div>
+
+        <div class="activity-grid" id="activity-grid"></div>
+    </div>
+</div>
+
+<div class="medal-overlay" id="medal-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:5000;display:none;place-items:center;">
+    <div style="background:#fff;border-radius:14px;padding:36px 32px;max-width:380px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:medalPop .4s ease;">
+        <div style="font-size:3.5rem;color:#f9a825;margin-bottom:14px;animation:medalSpin .6s ease .2s both;"><i class="fas fa-medal"></i></div>
+        <h3 style="font-family:'Patrick Hand',cursive;font-size:1.6rem;color:var(--oliva-oscuro);margin-bottom:8px;">Misión Completada</h3>
+        <p id="medal-mission-name" style="font-size:1rem;color:#555;margin-bottom:6px;"></p>
+        <p id="medal-mission-pts" style="font-family:'Orbitron',monospace;font-size:1.3rem;font-weight:700;color:var(--oliva-medio);margin-bottom:22px;"></p>
+        <button id="medal-close-btn" style="background:var(--oliva-oscuro);color:var(--crema);padding:10px 32px;border-radius:24px;font-size:.92rem;font-weight:600;cursor:pointer;border:none;">Gracias</button>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, collection, getDocs, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+const fbConfig={apiKey:"AIzaSyBGEwwuGLP0ULmsJkAhwwmNSlWAotGu_wY",projectId:"skopia-aa786",storageBucket:"skopia-aa786.firebasestorage.app",messagingSenderId:"719823055099",appId:"1:719823055099:web:7d91ea29e4b2dcbb9b685e",authDomain:location.hostname==="localhost"||location.hostname==="127.0.0.1"?"localhost":"skopia-aa786.firebaseapp.com"};
+const app=initializeApp(fbConfig);const auth=getAuth(app);const db=getFirestore(app);
+
+/* === 7 Actividades === */
+const activities=[
+    {id:'modelos-pedagogicos-teorias',title:'Modelos Pedagógicos y Teorías del Aprendizaje',desc:'Compara conductismo, constructivismo, aprendizaje significativo y enfoque sociocultural aplicados a la primera infancia.',icon:'fa-sitemap',cb:'cb1',tt:'tt1',tag:'Pedagogía',url:'modelos-pedagogicos-teorias-aprendizaje.html'},
+    {id:'transposicion-didactica',title:'Transposición Didáctica',desc:'Comprende cómo el saber sabio se transforma en saber enseñado adaptándolo al nivel de desarrollo infantil.',icon:'fa-arrows-spin',cb:'cb2',tt:'tt2',tag:'Didáctica',url:'transposicion-didactica.html'},
+    {id:'tipologia-contenidos-curriculares',title:'Tipología de Contenidos Curriculares',desc:'Clasifica y organiza contenidos conceptuales, procedimentales y actitudinales en planes de clase.',icon:'fa-layer-group',cb:'cb3',tt:'tt3',tag:'Currículo',url:'tipologia-contenidos-curriculares.html'},
+    {id:'diseno-curricular-planeacion',title:'Diseño Curricular y Planeación Didáctica',desc:'Elabora planes de clase coherentes con objetivos, competencias, actividades y criterios de evaluación.',icon:'fa-compass-drafting',cb:'cb4',tt:'tt4',tag:'Planeación',url:'diseno-curricular-planeacion-didactica.html'},
+    {id:'estilos-aprendizaje-diversidad',title:'Estilos de Aprendizaje y Diversidad Cognitiva',desc:'Identifica perfiles de aprendizaje y diseña estrategias inclusivas para la diversidad en el aula.',icon:'fa-brain',cb:'cb5',tt:'tt5',tag:'Diversidad',url:'estilos-aprendizaje-diversidad-cognitiva.html'},
+    {id:'gestion-aula',title:'Gestión de Aula',desc:'Desarrolla habilidades para organizar tiempos, espacios, rutinas y normas en ambientes de educación infantil.',icon:'fa-children',cb:'cb6',tt:'tt6',tag:'Gestión',url:'gestion-aula.html'},
+    {id:'clima-escolar-evaluacion-formativa',title:'Clima Escolar y Evaluación Formativa',desc:'Construye un ambiente de confianza y utiliza la evaluación como herramienta de mejora continua.',icon:'fa-heart-circle-check',cb:'cb7',tt:'tt7',tag:'Evaluación',url:'clima-escolar-evaluacion-formativa.html'}
+];
+
+/* === Menú lateral === */
+const menuData=[
+    {group:'Contenido Genérico',icon:'fa-book-open',cats:[
+        {title:'3.1 Razonamiento Cuantitativo',icon:'fa-calculator',subs:[
+            {title:'3.1.1 Prácticas Interactivas',links:[
+                {label:'Laboratorio lógico matemático',url:'lab-logico-matematico.html'},
+                {label:'Razonamiento lógico matemático',url:'razonamiento-logico-matematico.html'},
+                {label:'Laboratorio de análisis gráfico',url:'lab-analisis-grafico-rc.html'}
+            ]},
+            {title:'3.1.2 Prácticas Teóricas',links:[
+                {label:'Aritmética básica',url:'aritmetica-basica.html'},{label:'Porcentajes y Razones',url:'porcentajes-razones.html'},
+                {label:'Álgebra',url:'algebra.html'},{label:'Funciones',url:'funciones.html'},{label:'Geometría',url:'geometria.html'},
+                {label:'Medidas',url:'medidas.html'},{label:'Razonamiento lógico',url:'razonamiento-logico-teoria.html'},
+                {label:'Probabilidad',url:'probabilidad.html'},{label:'Estadística descriptiva',url:'estadistica-descriptiva.html'},
+                {label:'Interpretación de datos',url:'interpretacion-datos.html'}
+            ]}
+        ]},
+        {title:'3.2 Lectura Crítica',icon:'fa-book-reader',subs:[
+            {title:'3.2.1 Prácticas Interactivas',links:[
+                {label:'Biblioteca',url:'biblioteca.html'},{label:'Talleres de escritura y análisis',url:'talleres-escritura-analisis.html'},
+                {label:'Entrenador de velocidad de lectura',url:'velocidad-lectura.html'}
+            ]},
+            {title:'3.2.2 Prácticas Teóricas',links:[
+                {label:'Comprensión literal',url:'comprension-literal.html'},{label:'Comprensión inferencial',url:'comprension-inferencial.html'},
+                {label:'Comprensión crítica',url:'comprension-critica.html'},{label:'Estructura del texto',url:'estructura-texto.html'},
+                {label:'Textos narrativos',url:'textos-narrativos.html'},{label:'Textos expositivos',url:'textos-expositivos.html'},
+                {label:'Textos argumentativos',url:'textos-argumentativos.html'},{label:'Textos científicos',url:'textos-cientificos.html'},
+                {label:'Textos periodísticos',url:'textos-periodisticos.html'},{label:'Análisis intertextual',url:'analisis-intertextual.html'}
+            ]}
+        ]},
+        {title:'3.3 Competencias Ciudadanas',icon:'fa-balance-scale',subs:[
+            {title:'3.3.1 Prácticas Interactivas',links:[
+                {label:'Dilemas + decisiones',url:'dilemas-decisiones.html'},{label:'Contextos sociales',url:'contextos-sociales.html'},
+                {label:'Archivos de casos reales',url:'archivos-casos-reales.html'},{label:'Laboratorio de estrategias',url:'lab-estrategias.html'}
+            ]},
+            {title:'3.3.2 Prácticas Teóricas',links:[
+                {label:'Derechos humanos',url:'derechos-humanos.html'},{label:'Constitución política de Colombia',url:'constitucion-politica.html'},
+                {label:'Democracia',url:'democracia.html'},{label:'Estado y gobierno',url:'estado-gobierno.html'},
+                {label:'Justicia y equidad',url:'justicia-equidad.html'},{label:'Resolución pacífica de conflictos',url:'resolucion-pacifica.html'},
+                {label:'Ética y responsabilidad social',url:'etica-responsabilidad.html'},{label:'Diversidad cultural',url:'diversidad-cultural.html'},
+                {label:'Ciudadanía digital',url:'ciudadania-digital.html'},{label:'Sostenibilidad',url:'sostenibilidad.html'}
+            ]}
+        ]},
+        {title:'3.4 Inglés',icon:'fa-globe',subs:[
+            {title:'3.4.1 Prácticas Interactivas',links:[
+                {label:'Comprensión lectora en inglés',url:'comprension-lectora-ingles.html'},
+                {label:'Vocabulario en contexto',url:'vocabulario-contexto-ingles.html'},{label:'Cohesión en inglés',url:'cohesion-ingles.html'}
+            ]},
+            {title:'3.4.2 Prácticas Teóricas',links:[
+                {label:'Reading comprehension',url:'reading-comprehension.html'},{label:'Vocabulary in context',url:'vocabulary-context.html'},
+                {label:'Grammar',url:'grammar.html'},{label:'Functional language',url:'functional-language.html'},
+                {label:'Connectors and linking words',url:'connectors-linking.html'},{label:'Text types',url:'text-types.html'},
+                {label:'Error identification',url:'error-identification.html'},{label:'Synonym replacement',url:'synonym-replacement.html'},
+                {label:'Everyday situations',url:'everyday-situations.html'},{label:'Academic vocabulary',url:'academic-vocabulary.html'}
+            ]}
+        ]},
+        {title:'3.5 Comunicación Escrita',icon:'fa-pen-fancy',subs:[{title:'Subtemas',links:[
+            {label:'Planteamiento y Argumentación',url:'planteamiento-argumentacion.html'},{label:'Organizar el texto',url:'organizar-texto.html'},
+            {label:'Forma de expresión',url:'forma-expresion.html'},{label:'Precisión Semántica y Claridad',url:'precision-semantica.html'},
+            {label:'Gestión del Tiempo y de la Hoja de Borrador',url:'gestion-tiempo-borrador.html'},{label:'Pertinencia y Enfoque',url:'pertinencia-enfoque.html'}
+        ]}]}
+    ]},
+    {group:'Contenido Específico',icon:'fa-graduation-cap',cats:[
+        {title:'4.1 Administración',icon:'fa-briefcase',subs:[{title:'Subtemas',links:[{label:'Formulación, Evaluación y Gestión de Proyectos',url:'formulacion-gestion-proyectos-admon.html'},{label:'Gestión de organizaciones',url:'gestion-organizaciones.html'},{label:'Gestión Financiera',url:'gestion-financiera-admon.html'}]}]},
+        {title:'4.2 Trabajo Social',icon:'fa-hands-helping',subs:[{title:'Subtemas',links:[{label:'Investigación en ciencias sociales',url:'investigacion-ciencias-sociales-ts.html'},{label:'Intervención en proyectos sociales',url:'intervencion-proyectos-sociales.html'}]}]},
+        {title:'4.3 Licenciatura Educación Infantil',icon:'fa-child',subs:[{title:'Subtemas',links:[{label:'Enseñar',url:'ensenar.html'},{label:'Formar',url:'formar.html'},{label:'Evaluar',url:'evaluar.html'}]}]},
+        {title:'4.4 Psicología',icon:'fa-brain',subs:[{title:'Subtemas',links:[{label:'Análisis de problemas psicológicos',url:'analisis-problemas-psicologicos.html'},{label:'Investigación en ciencias sociales',url:'investigacion-ciencias-sociales-psico.html'},{label:'Intervención en procesos sociales',url:'intervencion-procesos-sociales.html'}]}]},
+        {title:'4.5 Licenciatura Lenguas Extranjeras',icon:'fa-language',note:'Se cubre con Inglés genérico',links:[]},
+        {title:'4.6 Contaduría Pública',icon:'fa-file-invoice-dollar',subs:[{title:'Subtemas',links:[{label:'Información y control contable',url:'informacion-control-contable.html'},{label:'Gestión Financiera',url:'gestion-financiera-contaduria.html'}]}]},
+        {title:'4.7 Ingeniería Industrial',icon:'fa-industry',subs:[{title:'Subtemas',links:[{label:'Formulación de Proyectos de Ingeniería',url:'formulacion-proyectos-ing-industrial.html'},{label:'Diseño de Sistemas Productivos y Logísticos',url:'diseno-sistemas-productivos.html'},{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-industrial.html'}]}]},
+        {title:'4.8 Diseño Gráfico',icon:'fa-palette',subs:[{title:'Subtemas',links:[{label:'Generación de Artefactos',url:'generacion-artefactos.html'}]}]},
+        {title:'4.9 Ingeniería Electrónica',icon:'fa-microchip',subs:[{title:'Subtemas',links:[{label:'Formulación de Proyectos de Ingeniería',url:'formulacion-proyectos-ing-electronica.html'},{label:'Diseño de Sistemas de Control',url:'diseno-sistemas-control.html'},{label:'Pensamiento Científico Ciencias Físicas',url:'pensamiento-cientifico-fisicas.html'},{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-electronica.html'}]}]},
+        {title:'4.10 Tecnología e Informática',icon:'fa-laptop-code',subs:[{title:'Subtemas',links:[{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-ti.html'}]}]},
+        {title:'4.11 Comunicación Social y Periodismo',icon:'fa-newspaper',subs:[{title:'Subtemas',links:[{label:'Procesos comunicativos',url:'procesos-comunicativos.html'}]}]},
+        {title:'4.12 Ingeniería de Sistemas',icon:'fa-server',subs:[{title:'Subtemas',links:[{label:'Formulación de Proyectos de Ingeniería',url:'formulacion-proyectos-ing-sistemas.html'},{label:'Diseño de software',url:'diseno-software.html'},{label:'Pensamiento Científico Matemáticas y Estadística',url:'pensamiento-cientifico-mates-sistemas.html'}]}]}
+    ]}
+];
+
+function renderMenu(){
+    const nav=document.getElementById('sidebar-nav');
+    let h='<div class="menu-no-result" id="menu-no-result">Sin resultados</div>';
+    menuData.forEach(g=>{
+        h+=`<div class="menu-group-label"><i class="fas ${g.icon}"></i> ${g.group}</div>`;
+        g.cats.forEach(cat=>{
+            h+=`<div class="menu-cat" data-name="${cat.title.toLowerCase()}"><button class="menu-cat-btn" aria-expanded="false"><i class="cat-icon fas ${cat.icon}"></i><span>${cat.title}</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-cat-children">`;
+            if(cat.note) h+=`<div class="menu-note">${cat.note}</div>`;
+            if(cat.subs) cat.subs.forEach(sub=>{
+                h+=`<div class="menu-sub" data-name="${sub.title.toLowerCase()}"><button class="menu-sub-btn" aria-expanded="false"><span>${sub.title}</span><i class="fas fa-chevron-right chevron"></i></button><div class="menu-sub-children">`;
+                if(sub.links) sub.links.forEach(lk=>{h+=`<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;});
+                h+='</div></div>';
+            });
+            if(cat.links&&cat.links.length) cat.links.forEach(lk=>{h+=`<a href="${lk.url}" class="menu-link" data-name="${lk.label.toLowerCase()}">${lk.label}</a>`;});
+            h+='</div></div>';
+        });
+    });
+    nav.innerHTML=h;
+    nav.querySelectorAll('.menu-cat-btn').forEach(btn=>{btn.addEventListener('click',()=>{const c=btn.parentElement,w=c.classList.contains('open');c.parentElement.querySelectorAll(':scope>.menu-cat.open').forEach(s=>{if(s!==c)s.classList.remove('open');});c.classList.toggle('open',!w);btn.setAttribute('aria-expanded',String(!w));});});
+    nav.querySelectorAll('.menu-sub-btn').forEach(btn=>{btn.addEventListener('click',()=>{const s=btn.parentElement,w=s.classList.contains('open');s.parentElement.querySelectorAll(':scope>.menu-sub.open').forEach(x=>{if(x!==s)x.classList.remove('open');});s.classList.toggle('open',!w);btn.setAttribute('aria-expanded',String(!w));});});
+    nav.querySelectorAll('.menu-link').forEach(lk=>{if(lk.getAttribute('href')==='ensenar.html')lk.classList.add('active');});
+}
+
+function initSearch(){const i=document.getElementById('sidebar-search'),nr=document.getElementById('menu-no-result');i.addEventListener('input',()=>{const q=i.value.toLowerCase().trim(),nav=document.getElementById('sidebar-nav'),cats=nav.querySelectorAll('.menu-cat');let any=false;cats.forEach(cat=>{const cn=cat.dataset.name||'';const subs=cat.querySelectorAll('.menu-sub');const dl=cat.querySelectorAll(':scope>.menu-cat-children>.menu-link');let cm=cn.includes(q),sh=false;subs.forEach(sub=>{const sn=sub.dataset.name||'';const lks=sub.querySelectorAll('.menu-link');let sm=sn.includes(q),lv=false;lks.forEach(lk=>{const ln=lk.dataset.name||'';const show=!q||ln.includes(q)||sm||cm;lk.classList.toggle('hidden',!show);if(show)lv=true;});sub.classList.toggle('hidden',!lv&&!sm&&!cm&&q);if(sm||lv)sh=true;if(sm||lv)sub.classList.add('open');else sub.classList.remove('open');});dl.forEach(lk=>{const ln=lk.dataset.name||'';const show=!q||ln.includes(q)||cm;lk.classList.toggle('hidden',!show);if(show)sh=true;});cat.classList.toggle('hidden',!sh&&!cm&&q);if(cm||sh)any=true;if(cm||sh)cat.classList.add('open');});nr.classList.toggle('show',!any&&q.length>0);});}
+
+function initSidebar(){const sb=document.getElementById('sidebar'),ov=document.getElementById('sidebar-overlay'),tg=document.getElementById('topbar-toggle'),mw=document.getElementById('main-wrap'),mob=()=>window.innerWidth<=768;function open(){if(mob()){sb.classList.add('open');ov.classList.add('active');}else{sb.classList.remove('collapsed');mw.classList.remove('expanded');}}function close(){if(mob()){sb.classList.remove('open');ov.classList.remove('active');}else{sb.classList.add('collapsed');mw.classList.add('expanded');}}tg.addEventListener('click',()=>{const o=mob()?sb.classList.contains('open'):!sb.classList.contains('collapsed');o?close():open();});ov.addEventListener('click',close);if(!mob())sb.classList.remove('collapsed');window.addEventListener('resize',()=>{if(!mob()){ov.classList.remove('active');sb.classList.remove('open');}});}
+
+function updateClock(){const n=new Date(),h=String(n.getHours()).padStart(2,'0'),m=String(n.getMinutes()).padStart(2,'0'),s=String(n.getSeconds()).padStart(2,'0');document.getElementById('top-clock').textContent=`${h}:${m}:${s}`;const d=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],me=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];document.getElementById('top-date').textContent=`${d[n.getDay()]}, ${n.getDate()} ${me[n.getMonth()]}`;}
+
+/* === Renderizar tarjetas pizarrón === */
+function renderActivities(progressMap={}){
+    const grid=document.getElementById('activity-grid');
+    let done=0,wip=0,none=0;
+    grid.innerHTML=activities.map((a)=>{
+        const st=progressMap[a.id]||'not_started';
+        if(st==='completed')done++;else if(st==='in_progress')wip++;else none++;
+        const statusClass=st==='completed'?'completed':st==='in_progress'?'in-progress':'not-started';
+        const statusLabel=st==='completed'?'Completada':st==='in_progress'?'En progreso':'Sin iniciar';
+        const statusIcon=st==='completed'?'fa-check':st==='in_progress'?'fa-circle-half-stroke':'fa-circle';
+        const barClass=st==='completed'?'full':st==='in_progress'?'half':'zero';
+        const btnClass=st==='completed'?'review':st==='in_progress'?'continue':'start';
+        const btnLabel=st==='completed'?'Repasar':st==='in_progress'?'Continuar':'Iniciar';
+        const btnIcon=st==='completed'?'fa-eye':st==='in_progress'?'fa-play':'fa-arrow-right';
+        return `<div class="activity-card">
+            <div class="card-top-border ${a.cb}"></div>
+            <div class="tape"></div>
+            <div class="chalkboard">
+                <div class="chalk-icon"><i class="fas ${a.icon}"></i></div>
+                <h3>${a.title}</h3>
+                <p class="activity-desc">${a.desc}</p>
+                <div class="status-wrap">
+                    <div class="activity-status ${statusClass}"><i class="fas ${statusIcon}"></i> ${statusLabel}</div>
+                </div>
+                <div class="activity-bar"><div class="activity-bar-fill ${barClass}"></div></div>
+            </div>
+            <div class="card-bottom">
+                <a href="${a.url}" class="activity-btn ${btnClass}"><i class="fas ${btnIcon}"></i> ${btnLabel}</a>
+                <span class="topic-tag ${a.tt}">${a.tag}</span>
+            </div>
+        </div>`;
+    }).join('');
+    document.getElementById('ms-done').textContent=done;
+    document.getElementById('ms-wip').textContent=wip;
+    document.getElementById('ms-none').textContent=none;
+}
+
+/* === Misiones === */
+const LAB_MISSION_NAMES={9:"Acumula tus primeras 200 estrellas",10:"Completa 3 misiones seguidas",13:"Gana 3 juegos distintos",17:"Obtén 500 estrellas acumuladas",23:"Termina 5 juegos de práctica",26:"Suma 1000 estrellas totales",32:"Completa todos los juegos de este módulo",36:"Obtén 2000 estrellas acumuladas",39:"Completa 10 misiones seguidas sin fallar",43:"Consigue 3000 estrellas",44:"Estudia 10 días seguidos"};
+let _medalQueue=[];
+function _showNextMedal(){const o=document.getElementById('medal-overlay');if(!o)return;if(!_medalQueue.length){o.style.display='none';return;}const m=_medalQueue[0];document.getElementById('medal-mission-name').textContent=m.name;document.getElementById('medal-mission-pts').textContent=`+${m.pts} puntos`;o.style.display='grid';}
+async function checkLabMissionsBackup(uid){
+    if(!uid)return;try{
+        const ss=await getDoc(doc(db,'users',uid,'stats','main'));const stats=ss.exists()?ss.data():{};
+        const totalStars=stats.totalStars||0,totalMissionsCompleted=stats.totalMissionsCompleted||0,currentStreak=stats.currentStreak||0,consecutiveSuccesses=stats.consecutiveSuccesses||0;
+        const ms=await getDocs(collection(db,'users',uid,'missions'));const completed={};ms.forEach(d=>{if(d.data().completed)completed[d.id]=true;});
+        const ps=await getDocs(collection(db,'users',uid,'progress'));const pm={};ps.forEach(d=>{pm[d.id]=d.data().status||'not_started';});
+        const LG=['modelos-pedagogicos-teorias','transposicion-didactica','tipologia-contenidos-curriculares','diseno-curricular-planeacion','estilos-aprendizaje-diversidad','gestion-aula','clima-escolar-evaluacion-formativa'];
+        const lc=LG.filter(g=>pm[g]==='completed').length;const ac=Object.values(pm).filter(s=>s==='completed').length;
+        const LM=[{id:9,check:()=>totalStars>=200,pts:30},{id:10,check:()=>consecutiveSuccesses>=3,pts:50},{id:13,check:()=>ac>=3,pts:60},{id:17,check:()=>totalStars>=500,pts:50},{id:23,check:()=>ac>=5,pts:50},{id:26,check:()=>totalStars>=1000,pts:50},{id:32,check:()=>lc>=7,pts:100},{id:36,check:()=>totalStars>=2000,pts:60},{id:39,check:()=>consecutiveSuccesses>=10,pts:100},{id:43,check:()=>totalStars>=3000,pts:120},{id:44,check:()=>currentStreak>=10,pts:130}];
+        _medalQueue=[];let tp=0;
+        for(const m of LM){const mk=`mission_${m.id}`;if(!completed[mk]&&m.check()){completed[mk]=true;tp+=m.pts;_medalQueue.push({name:LAB_MISSION_NAMES[m.id]||`Misión ${m.id}`,pts:m.pts});await setDoc(doc(db,'users',uid,'missions',mk),{completed:true,completedAt:serverTimestamp(),source:'ens-backup'});}}
+        if(_medalQueue.length>0){await setDoc(doc(db,'users',uid,'stats','main'),{totalStars:totalStars+tp,totalMissionsCompleted:totalMissionsCompleted+_medalQueue.length},{merge:true});_showNextMedal();}
+    }catch(e){console.warn('Error en checkLabMissionsBackup:',e);}
+}
+document.addEventListener('click',(e)=>{if(e.target&&e.target.id==='medal-close-btn'){_medalQueue.shift();_showNextMedal();}});
+
+async function loadProgress(uid){
+    const pm={};try{const s=await getDocs(collection(db,'users',uid,'progress'));s.forEach(d=>{const id=d.id;if(activities.find(a=>a.id===id)){pm[id]=d.data().status||'not_started';}});}catch(e){console.warn('Progress no disponible');}renderActivities(pm);
+}
+
+onAuthStateChanged(auth,async(user)=>{
+    if(!user){window.location.href='index.html';return;}
+    document.getElementById('sidebar-username').textContent=user.displayName||'Estudiante';
+    try{const s=await getDoc(doc(db,'users',user.uid,'profile','main'));if(s.exists()){document.getElementById('sidebar-program').textContent=s.data().program||'';}}catch(e){}
+    await loadProgress(user.uid);
+    await checkLabMissionsBackup(user.uid);
+    document.getElementById('logout-btn').addEventListener('click',e=>{e.preventDefault();signOut(auth).then(()=>window.location.href='index.html');});
+});
+
+renderMenu();initSearch();initSidebar();
+updateClock();setInterval(updateClock,1000);
+renderActivities();
+</script>
+</body>
+</html>
